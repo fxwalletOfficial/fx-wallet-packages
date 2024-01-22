@@ -1,15 +1,15 @@
-// import 'dart:typed_data';
+import 'dart:typed_data';
 
-// import 'package:convert/convert.dart' show hex;
+import 'package:convert/convert.dart' show hex;
 
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
 void main() {
-  // final mnemonic =
-  //     "fly lecture gasp juice hover ice business census bless weapon polar upgrade";
-  // final seedTarget =
-  //     '9722a773f4fe09f2d0510a68942c8a4ae668c91771c15fb1a74e42a7c6fa4d03';
+  final mnemonic =
+      "fly lecture gasp juice hover ice business census bless weapon polar upgrade";
+  final seedTarget =
+      '9722a773f4fe09f2d0510a68942c8a4ae668c91771c15fb1a74e42a7c6fa4d03';
   // final message = Uint8List.fromList([
   //   104,
   //   101,
@@ -29,7 +29,7 @@ void main() {
   // final targetAddress =
   //     'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
 
-  // late final Uint8List seed;
+  late final Uint8List seed;
   // late final String privateKey;
   // late final String viewKey;
   // late final String address;
@@ -37,5 +37,10 @@ void main() {
     final int a = 10;
     final int b = 32;
     expect(testRustFFi(a, b), a + b);
+  });
+
+  test('mnemonicToSeed', () {
+    seed = mnemonicToSeed(mnemonic);
+    expect(hex.encode(seed), seedTarget);
   });
 }

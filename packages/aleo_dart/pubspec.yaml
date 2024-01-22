@@ -8,6 +8,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  bip39: ^1.0.6
   ffi: ^2.1.0
 
 dev_dependencies:
