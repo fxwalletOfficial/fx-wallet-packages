@@ -1,0 +1,16 @@
+name: aleo_dart
+description: A sample command-line application.
+version: 1.0.0
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: ^3.1.2
+
+# Add regular dependencies here.
+dependencies:
+  ffi: ^2.1.0
+
+dev_dependencies:
+  convert: ^3.1.1
+  lints: ^2.0.0
+  test: ^1.21.0
