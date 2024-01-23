@@ -207,3 +207,23 @@ pub extern "C" fn privateKeyToAddress(private_key_raw: *const c_char) -> *const 
     let c_string = CString::new(address.to_string()).unwrap();
     c_string.into_raw()
 }
+
+#[no_mangle]
+pub extern "C" fn privateKeyToViewKey(private_key_raw: *const c_char) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::from_string(private_key_str).unwrap();
+    let view_key = private_key.to_view_key();
+    let c_string = CString::new(view_key.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn viewKeyToAddress(view_key_raw: *const c_char) -> *const c_char {
+    let view_key_cstr = unsafe { CStr::from_ptr(view_key_raw) };
+    let view_key_str: &str = view_key_cstr.to_str().unwrap();
+    let view_key = ViewKey::from_string(view_key_str);
+    let address = view_key.to_address();
+    let c_string = CString::new(address.to_string()).unwrap();
+    c_string.into_raw()
+}

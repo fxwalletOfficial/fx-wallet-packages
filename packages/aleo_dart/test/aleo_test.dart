@@ -14,7 +14,7 @@ void main() {
       'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
   final targetAddress =
       'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
-  // final targetViewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
+  final targetViewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
   // final message = Uint8List.fromList([
   //   104,
   //   101,
@@ -32,7 +32,7 @@ void main() {
   late final Uint8List seed;
   late final String privateKey;
   late final String address;
-  // late final String viewKey;
+  late final String viewKey;
   test('test rust ffi', () {
     final int a = 10;
     final int b = 32;
@@ -49,6 +49,10 @@ void main() {
     expect(privateKey, targetPrivateKey);
   });
 
+  test('mnemonicToPrivateKey', () {
+    expect(mnemonicToPrivateKey(mnemonic), targetPrivateKey);
+  });
+
   test('privateKeyToAddress', () {
     address = privateKeyToAddress(privateKey);
     expect(address, targetAddress);
@@ -56,5 +60,18 @@ void main() {
 
   test('mnemonicToAddress', () {
     expect(mnemonicToAddress(mnemonic), targetAddress);
+  });
+
+  test('privateKeyToViewKey', () {
+    viewKey = privateKeyToViewKey(privateKey);
+    expect(viewKey, targetViewKey);
+  });
+
+  test('mnemonicToViewKey', () {
+    expect(mnemonicToViewKey(mnemonic), targetViewKey);
+  });
+
+  test('viewKeyToAddress', () {
+    expect(viewKeyToAddress(viewKey), targetAddress);
   });
 }

@@ -33,4 +33,18 @@ class RustFFI {
             'privateKeyToAddress');
     return privateKeyToAddress(privateKey);
   }
+
+    static ffi.Pointer<Utf8> privateKeyToViewKey(ffi.Pointer<Utf8> privateKey) {
+    final privateKeyToViewKey =
+        dyLib.lookupFunction<TypeStringToString, TypeStringToString>(
+            'privateKeyToViewKey');
+    return privateKeyToViewKey(privateKey);
+  }
+
+  static ffi.Pointer<Utf8> viewKeyToAddress(ffi.Pointer<Utf8> privateKey) {
+    final viewKeyToAddress =
+        dyLib.lookupFunction<TypeStringToString, TypeStringToString>(
+            'viewKeyToAddress');
+    return viewKeyToAddress(privateKey);
+  }
 }
