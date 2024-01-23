@@ -182,7 +182,28 @@ extern "C" {
 }
 
 #[no_mangle]
-pub extern "C" fn test(a: u32, b: u32) -> u32 {
+pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
     let result = a + b;
     result
+}
+
+#[no_mangle]
+pub extern "C" fn seedToPrivateKey(seed_raw: *const u8) -> *const c_char {
+    let seed;
+    unsafe {
+        seed = slice::from_raw_parts(seed_raw, 32);
+    };
+    let private_key = PrivateKey::from_seed_unchecked(seed);
+    let c_string = CString::new(private_key.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn privateKeyToAddress(private_key_raw: *const c_char) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::from_string(private_key_str).unwrap();
+    let address = private_key.to_address();
+    let c_string = CString::new(address.to_string()).unwrap();
+    c_string.into_raw()
 }
