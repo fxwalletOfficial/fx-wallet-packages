@@ -2,12 +2,12 @@ import 'dart:typed_data';
 
 import 'package:bip39/bip39.dart' as bip39;
 
-import 'package:aleo_dart/src/rust_lib/rust_ffi.dart';
+import 'package:aleo_dart/src/rust_lib/account_rust_ffi.dart';
 import 'package:aleo_dart/src/aleo_hd_key.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
 
 int testRustFFi(int a, int b) {
-  return RustFFI.testRustFFi(a, b);
+  return AccountRustFFI.testRustFFi(a, b);
 }
 
 const ALEO_PATH = "m/44/0/0/0";
@@ -19,7 +19,7 @@ Uint8List mnemonicToSeed(String mnemonic) {
 
 String seedToPrivateKey(Uint8List seedRaw) {
   final seed = dartListToC(seedRaw);
-  final privateKey = RustFFI.seedToPrivateKey(seed);
+  final privateKey = AccountRustFFI.seedToPrivateKey(seed);
   return cStrToDart(privateKey);
 }
 
@@ -30,7 +30,7 @@ String mnemonicToPrivateKey(String mnemonic){
 
 String privateKeyToAddress(String privateKeyRaw) {
   final privateKey = dartStrToC(privateKeyRaw);
-  final address = RustFFI.privateKeyToAddress(privateKey);
+  final address = AccountRustFFI.privateKeyToAddress(privateKey);
   return cStrToDart(address);
 }
 
@@ -42,7 +42,7 @@ String mnemonicToAddress(String mnemonic) {
 
 String privateKeyToViewKey(String privateKeyRaw) {
   final privateKey = dartStrToC(privateKeyRaw);
-  final viewKey = RustFFI.privateKeyToViewKey(privateKey);
+  final viewKey = AccountRustFFI.privateKeyToViewKey(privateKey);
   return cStrToDart(viewKey);
 }
 
@@ -50,20 +50,20 @@ String mnemonicToViewKey(String mnemonic) {
   final seed = mnemonicToSeed(mnemonic);
   final privateKeyRaw = seedToPrivateKey(seed);
   final privateKey = dartStrToC(privateKeyRaw);
-  final viewKey = RustFFI.privateKeyToViewKey(privateKey);
+  final viewKey = AccountRustFFI.privateKeyToViewKey(privateKey);
   return cStrToDart(viewKey);
 }
 
 String viewKeyToAddress(String viewKeyRaw) {
   final viewKey = dartStrToC(viewKeyRaw);
-  final address = RustFFI.viewKeyToAddress(viewKey);
+  final address = AccountRustFFI.viewKeyToAddress(viewKey);
   return cStrToDart(address);
 }
 
 String sign(String privateKeyRaw, Uint8List messageRaw) {
   final privateKey = dartStrToC(privateKeyRaw);
   final message = dartListToC(messageRaw);
-  final signature = RustFFI.sign(privateKey, message, messageRaw.length);
+  final signature = AccountRustFFI.sign(privateKey, message, messageRaw.length);
   return cStrToDart(signature);
 }
 
@@ -72,7 +72,7 @@ bool isValidSignature(
   final address = dartStrToC(addressRaw);
   final signature = dartStrToC(signatureRaw);
   final message = dartListToC(messageRaw);
-  return RustFFI.isValidSignature(
+  return AccountRustFFI.isValidSignature(
       address, signature, message, messageRaw.length);
 }
 

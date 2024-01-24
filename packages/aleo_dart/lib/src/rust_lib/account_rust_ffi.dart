@@ -22,7 +22,7 @@ typedef TypeVerifyInDart = int Function(
 final ffi.DynamicLibrary dyLib =
     ffi.DynamicLibrary.open('./aleo_rust/target/debug/libaleo_wasm.so');
 
-class RustFFI {
+class AccountRustFFI {
   static int testRustFFi(int a, int b) {
     var numbers_add =
         dyLib.lookupFunction<TypeTestInRust, TypeTestInDart>('numbers_add');
