@@ -227,3 +227,140 @@ pub extern "C" fn viewKeyToAddress(view_key_raw: *const c_char) -> *const c_char
     let c_string = CString::new(address.to_string()).unwrap();
     c_string.into_raw()
 }
+
+#[no_mangle]
+pub extern "C" fn signMessage(
+    private_key_raw: *const c_char,
+    message_raw: *const u8,
+    length: usize,
+) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::from_string(private_key_str).unwrap();
+
+    let message;
+    unsafe {
+        message = slice::from_raw_parts(message_raw, length);
+    };
+
+    let signature = private_key.sign(message);
+
+    let c_string = CString::new(signature.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn verify(
+    address_raw: *const c_char,
+    signature_raw: *const c_char,
+    message_raw: *const u8,
+    length: usize,
+) -> bool {
+    let address_cstr = unsafe { CStr::from_ptr(address_raw) };
+    let address_str: &str = address_cstr.to_str().unwrap();
+    let address = Address::from_string(address_str);
+
+    let signature_cstr = unsafe { CStr::from_ptr(signature_raw) };
+    let signature_str: &str = signature_cstr.to_str().unwrap();
+    let signature: Signature = Signature::from_string(signature_str);
+
+    let message;
+    unsafe {
+        message = slice::from_raw_parts(message_raw, length);
+    };
+    signature.verify(&address, message)
+}
+
+#[no_mangle]
+pub extern "C" fn encryptPrivateKey(
+    private_key_raw: *const c_char,
+    secret_raw: *const c_char,
+) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::from_string(private_key_str).unwrap();
+
+    let secret_cstr = unsafe { CStr::from_ptr(secret_raw) };
+    let secret: &str = secret_cstr.to_str().unwrap();
+
+    let result = PrivateKeyCiphertext::encrypt_private_key(&private_key, secret).unwrap();
+
+    let c_string = CString::new(result.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+fn cstr_to_string(cstr_raw: *const c_char) -> String {
+    let cstr = unsafe { CStr::from_ptr(cstr_raw) };
+    let str = cstr.to_str().unwrap();
+    String::from(str)
+}
+
+#[no_mangle]
+pub extern "C" fn decryptToPrivateKey(
+    private_key_ciphertext_raw: *const c_char,
+    secret_raw: *const c_char,
+) -> *const c_char {
+    let private_key_ciphertext_cstr = unsafe { CStr::from_ptr(private_key_ciphertext_raw) };
+    let private_key_ciphertext_str: &str = private_key_ciphertext_cstr.to_str().unwrap();
+    let private_key_ciphertext =
+        PrivateKeyCiphertext::from_string(private_key_ciphertext_str.to_string()).unwrap();
+
+    let secret_cstr = unsafe { CStr::from_ptr(secret_raw) };
+    let secret: &str = secret_cstr.to_str().unwrap();
+
+    let private_key = private_key_ciphertext
+        .decrypt_to_private_key(secret)
+        .unwrap();
+    let c_string = CString::new(private_key.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+// transfer
+#[no_mangle]
+pub extern "C" fn serialNumberString(
+    record_plaintext_raw: *const c_char,
+    private_key_raw: *const c_char,
+    program_id_raw: *const c_char,
+    record_name_raw: *const c_char,
+) -> *const c_char {
+    let record_plaintext =
+        RecordPlaintext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
+    let private_key = PrivateKey::from_string(&cstr_to_string(private_key_raw)).unwrap();
+    let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
+    let program_id: &str = program_id_cstr.to_str().unwrap();
+    let record_name_cstr = unsafe { CStr::from_ptr(record_name_raw) };
+    let record_name: &str = record_name_cstr.to_str().unwrap();
+
+    let result = record_plaintext.serial_number_string(&private_key, program_id, record_name);
+    let c_string = CString::new(result.unwrap()).unwrap();
+    c_string.into_raw()
+}
+
+// transfer
+#[no_mangle]
+pub extern "C" fn decryptCipherText(
+    record_plaintext_raw: *const c_char,
+    view_key_raw: *const c_char,
+) -> *const c_char {
+    let record_ciphertext =
+        RecordCiphertext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
+    let view_key = ViewKey::from_string(&cstr_to_string(view_key_raw));
+
+    let result = record_ciphertext.decrypt(&view_key).unwrap();
+    let c_string = CString::new(result.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+// transfer
+#[no_mangle]
+pub extern "C" fn isOwner(
+    record_plaintext_raw: *const c_char,
+    view_key_raw: *const c_char,
+) -> bool {
+    let record_ciphertext =
+        RecordCiphertext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
+    let view_key = ViewKey::from_string(&cstr_to_string(view_key_raw));
+
+    let result: bool = record_ciphertext.is_owner(&view_key);
+    result
+}
