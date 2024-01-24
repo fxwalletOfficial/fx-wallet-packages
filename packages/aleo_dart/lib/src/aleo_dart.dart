@@ -59,3 +59,20 @@ String viewKeyToAddress(String viewKeyRaw) {
   final address = RustFFI.viewKeyToAddress(viewKey);
   return cStrToDart(address);
 }
+
+String sign(String privateKeyRaw, Uint8List messageRaw) {
+  final privateKey = dartStrToC(privateKeyRaw);
+  final message = dartListToC(messageRaw);
+  final signature = RustFFI.sign(privateKey, message, messageRaw.length);
+  return cStrToDart(signature);
+}
+
+bool isValidSignature(
+    String addressRaw, String signatureRaw, Uint8List messageRaw) {
+  final address = dartStrToC(addressRaw);
+  final signature = dartStrToC(signatureRaw);
+  final message = dartListToC(messageRaw);
+  return RustFFI.isValidSignature(
+      address, signature, message, messageRaw.length);
+}
+

@@ -15,19 +15,19 @@ void main() {
   final targetAddress =
       'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
   final targetViewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
-  // final message = Uint8List.fromList([
-  //   104,
-  //   101,
-  //   108,
-  //   108,
-  //   111,
-  //   32,
-  //   119,
-  //   111,
-  //   114,
-  //   108,
-  //   100,
-  // ]);
+  final message = Uint8List.fromList([
+    104,
+    101,
+    108,
+    108,
+    111,
+    32,
+    119,
+    111,
+    114,
+    108,
+    100,
+  ]);
 
   late final Uint8List seed;
   late final String privateKey;
@@ -73,5 +73,15 @@ void main() {
 
   test('viewKeyToAddress', () {
     expect(viewKeyToAddress(viewKey), targetAddress);
+  });
+
+  test('viewKeyToAddress', () {
+    expect(viewKeyToAddress(viewKey), targetAddress);
+  });
+
+  test('sign', () {
+    // sign178e076gmzswtvq68ma2p350g8mfzg87dyzlmggts8348vescdyp07jg5mz52ecnux0at0943hzx5lnzh53tff5l3d9p7teepv64yjprdtl7lkehl0xyhjrhqz3v6ymkm73gs9vvj4t7sv673nhm50pj8p0xa895ta843wlh9wekyuqgwade9z5r0chfzp8ckud8ymt969j8ssc8qn3d
+    final signature = sign(privateKey, message);
+    assert(isValidSignature(address, signature, message));
   });
 }
