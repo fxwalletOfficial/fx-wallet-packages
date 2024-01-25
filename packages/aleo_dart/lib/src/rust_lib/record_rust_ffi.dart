@@ -2,7 +2,7 @@ import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 
 final ffi.DynamicLibrary dyLib =
-    ffi.DynamicLibrary.open('./aleo_rust/target/debug/libaleo_wasm.so');
+    ffi.DynamicLibrary.open('./aleo_rust/wasm/target/debug/libaleo_wasm.so');
 
 typedef TypeStr2To1 = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);

@@ -20,7 +20,7 @@ typedef TypeVerifyInDart = int Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<ffi.Uint8>, int);
 
 final ffi.DynamicLibrary dyLib =
-    ffi.DynamicLibrary.open('./aleo_rust/target/debug/libaleo_wasm.so');
+    ffi.DynamicLibrary.open('./aleo_rust/wasm/target/debug/libaleo_wasm.so');
 
 class AccountRustFFI {
   static int testRustFFi(int a, int b) {
