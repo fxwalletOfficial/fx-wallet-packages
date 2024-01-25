@@ -26,3 +26,5 @@ doc/api/
 .flutter-plugins
 .flutter-plugins-dependencies
 aleo_rust/target
+
+aleo_rust/wasm/target
