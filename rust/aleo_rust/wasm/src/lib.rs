@@ -229,7 +229,6 @@ pub async fn init_thread_pool(url: web_sys::Url, num_threads: usize) -> Result<(
     Ok(())
 }
 
-
 #[no_mangle]
 pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
     let result = a + b;
@@ -278,11 +277,7 @@ pub extern "C" fn viewKeyToAddress(view_key_raw: *const c_char) -> *const c_char
 }
 
 #[no_mangle]
-pub extern "C" fn signMessage(
-    private_key_raw: *const c_char,
-    message_raw: *const u8,
-    length: usize,
-) -> *const c_char {
+pub extern "C" fn signMessage(private_key_raw: *const c_char, message_raw: *const u8, length: usize) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
     let private_key = PrivateKey::from_string(private_key_str).unwrap();
@@ -321,10 +316,7 @@ pub extern "C" fn verify(
 }
 
 #[no_mangle]
-pub extern "C" fn encryptPrivateKey(
-    private_key_raw: *const c_char,
-    secret_raw: *const c_char,
-) -> *const c_char {
+pub extern "C" fn encryptPrivateKey(private_key_raw: *const c_char, secret_raw: *const c_char) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
     let private_key = PrivateKey::from_string(private_key_str).unwrap();
@@ -351,15 +343,12 @@ pub extern "C" fn decryptToPrivateKey(
 ) -> *const c_char {
     let private_key_ciphertext_cstr = unsafe { CStr::from_ptr(private_key_ciphertext_raw) };
     let private_key_ciphertext_str: &str = private_key_ciphertext_cstr.to_str().unwrap();
-    let private_key_ciphertext =
-        PrivateKeyCiphertext::from_string(private_key_ciphertext_str.to_string()).unwrap();
+    let private_key_ciphertext = PrivateKeyCiphertext::from_string(private_key_ciphertext_str.to_string()).unwrap();
 
     let secret_cstr = unsafe { CStr::from_ptr(secret_raw) };
     let secret: &str = secret_cstr.to_str().unwrap();
 
-    let private_key = private_key_ciphertext
-        .decrypt_to_private_key(secret)
-        .unwrap();
+    let private_key = private_key_ciphertext.decrypt_to_private_key(secret).unwrap();
     let c_string = CString::new(private_key.to_string()).unwrap();
     c_string.into_raw()
 }
@@ -372,8 +361,7 @@ pub extern "C" fn serialNumberString(
     program_id_raw: *const c_char,
     record_name_raw: *const c_char,
 ) -> *const c_char {
-    let record_plaintext =
-        RecordPlaintext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
+    let record_plaintext = RecordPlaintext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
     let private_key = PrivateKey::from_string(&cstr_to_string(private_key_raw)).unwrap();
     let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
     let program_id: &str = program_id_cstr.to_str().unwrap();
@@ -387,12 +375,8 @@ pub extern "C" fn serialNumberString(
 
 // transfer
 #[no_mangle]
-pub extern "C" fn decryptCipherText(
-    record_plaintext_raw: *const c_char,
-    view_key_raw: *const c_char,
-) -> *const c_char {
-    let record_ciphertext =
-        RecordCiphertext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
+pub extern "C" fn decryptCipherText(record_plaintext_raw: *const c_char, view_key_raw: *const c_char) -> *const c_char {
+    let record_ciphertext = RecordCiphertext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
     let view_key = ViewKey::from_string(&cstr_to_string(view_key_raw));
 
     let result = record_ciphertext.decrypt(&view_key).unwrap();
@@ -402,14 +386,65 @@ pub extern "C" fn decryptCipherText(
 
 // transfer
 #[no_mangle]
-pub extern "C" fn isOwner(
-    record_plaintext_raw: *const c_char,
-    view_key_raw: *const c_char,
-) -> bool {
-    let record_ciphertext =
-        RecordCiphertext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
+pub extern "C" fn isOwner(record_plaintext_raw: *const c_char, view_key_raw: *const c_char) -> bool {
+    let record_ciphertext = RecordCiphertext::from_string(&cstr_to_string(record_plaintext_raw)).unwrap();
     let view_key = ViewKey::from_string(&cstr_to_string(view_key_raw));
 
     let result: bool = record_ciphertext.is_owner(&view_key);
     result
+}
+
+use crate::types::native::{CurrentAleo, IdentifierNative, ProcessNative, ProgramNative, TransactionNative};
+use js_sys::Array;
+use rand::{rngs::StdRng, SeedableRng};
+
+#[no_mangle]
+pub extern "C" fn transfer_part(
+    private_key_raw: *const c_char,
+    fee_credits: f64,
+    amount_credits: f64,
+    url_raw: *const c_char,
+    transfer_type_raw: *const c_char,
+    recipient_raw: *const c_char,
+) -> *const c_char {
+    let private_key = PrivateKey::from_string(&cstr_to_string(private_key_raw)).unwrap();
+    let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
+    let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
+    let recipient_cstr = unsafe { CStr::from_ptr(recipient_raw) };
+    let recipient: &str = recipient_cstr.to_str().unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap().to_string();
+
+    // let result = ProgramManager::transfer_part(
+    //     &private_key,
+    //     amount_credits,
+    //     recipient,
+    //     transfer_type,
+    //     None,
+    //     fee_credits,
+    //     None,
+    //     Some(url),
+    //     None,
+    //     None,
+    //     None,
+    //     None,
+    //     None,
+    // )
+    // .await;
+    let mut process_native = ProcessNative::load_web().unwrap();
+    let process = &mut process_native;
+    let program_str = ProgramNative::credits().unwrap().to_string();
+    let rng = &mut StdRng::from_entropy();
+    // let inputs = Array::new_with_length(2);
+    // inputs.set(0u32, wasm_bindgen::JsValue::from_str(recipient));
+    // inputs.set(1u32, wasm_bindgen::JsValue::from_str(&amount_credits.to_string().add("u64")));
+
+    log("Loading program");
+    let program = ProgramNative::from_str(&program_str).unwrap();
+    log("Loading function");
+    let program_id = program.id().to_string();
+
+    // let result_str = &result.unwrap().to_string();
+    let c_string = CString::new(program_id).unwrap();
+    c_string.into_raw()
 }

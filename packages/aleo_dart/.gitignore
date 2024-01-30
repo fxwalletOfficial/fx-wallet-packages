@@ -28,3 +28,6 @@ doc/api/
 aleo_rust/target
 aleo_rust/wasm/target
 
+aleo_rust/rust_test
+.vscode/
+
