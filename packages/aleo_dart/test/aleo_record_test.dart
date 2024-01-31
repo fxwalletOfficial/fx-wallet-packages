@@ -29,23 +29,6 @@ void main() {
     expect(expectedSn, result);
   });
 
-  // test('serialNumberString test', () {
-  //   final record = '{\n'
-  //       '  owner: aleo1x6mskfv6yaem7jzxplj9fc9eyqek89e8syv4xud24gal5hl70qyq90wt3y.public,\n'
-  //       '  microcredits: 1000000u64.public,\n'
-  //       '  _nonce: 3077450429259593211617823051143573281856129402760267155982965992208217472983group.public\n'
-  //       '}';
-
-  //   final text =
-  //       "{owner: aleo1x6mskfv6yaem7jzxplj9fc9eyqek89e8syv4xud24gal5hl70qyq90wt3y.public,microcredits: 1000000u64.public,_nonce: 3077450429259593211617823051143573281856129402760267155982965992208217472983group.public}";
-  //   final pk = 'APrivateKey1zkp228BMSYx1FwWhjLSr7t7URQuzUEVmHauKucw2kSWfMGp';
-  //   final programId = "credits.aleo";
-  //   final recordName = "credits";
-
-  //   final result = serialNumberString(record, pk, programId, recordName);
-  //   print(result);
-  // });
-
   test('decryptCipherText', () {
     final recordCipher =
         'record1qyqsqpe2szk2wwwq56akkwx586hkndl3r8vzdwve32lm7elvphh37rsyqyxx66trwfhkxun9v35hguerqqpqzqrtjzeu6vah9x2me2exkgege824sd8x2379scspmrmtvczs0d93qttl7y92ga0k0rsexu409hu3vlehe3yxjhmey3frh2z5pxm5cmxsv4un97q';
@@ -55,5 +38,14 @@ void main() {
     assert(isOwner(recordCipher, viewKey));
     final errorKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
     assert(!isOwner(recordCipher, errorKey));
+  });
+
+  test('record owner', () {
+    final recordCipher =
+        'record1qyqsqpfr4rj0ga9c3j7q40hdv4zasd0dx9creup4f582my6zvncfczqvqyxx66trwfhkxun9v35hguerqqpqzq8rs7l2c2h3ccfqw3gaxt388dwwpcts2847dc7a0pj9jujt2suuqgm3j6tvj4qlp6fh3rk6nzn6k7w0tyx7mk4zjffl22c4gte92t8q6awh66c';
+    final viewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
+    final result = decryptCipherText(recordCipher, viewKey);
+    assert(result.contains(
+        "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn"));
   });
 }

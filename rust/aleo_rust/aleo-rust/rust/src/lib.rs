@@ -249,7 +249,6 @@ impl<N: Network> Credits for Record<N, Plaintext<N>> {
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::c_char;
-use std::slice;
 
 #[no_mangle]
 pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
@@ -257,52 +256,69 @@ pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
     result
 }
 
+use std::thread;
+
 #[no_mangle]
-pub extern "C" fn transfer_part(
+pub extern "C" fn try_transfer(
     private_key_raw: *const c_char,
-    amount_credits: u64,
-    transfer_type_raw: *const c_char,
     recipient_raw: *const c_char,
-    fee_credits: u64,
+    transfer_type_raw: *const c_char,
+    amount: u64,
+    fee: u64,
     url_raw: *const c_char,
 ) -> *const c_char {
+    let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
+    let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
+
+    let visibility = match transfer_type {
+        "transfer_public" => TransferType::Public,
+        "transfer_public_to_private" => TransferType::PublicToPrivate,
+        "transfer_private" => TransferType::Private,
+        "transfer_private_to_public" => TransferType::PrivateToPublic,
+        _ => TransferType::Public,
+    };
+    // let visibility = TransferType::Private;
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
     let recipient_cstr = unsafe { CStr::from_ptr(recipient_raw) };
-    let recipient: &str = recipient_cstr.to_str().unwrap();
-    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
-    let url = url_cstr.to_str().unwrap().to_string();
-
-    let private_key = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let recipient_str: &str = recipient_cstr.to_str().unwrap();
+    let recipient = Address::<Testnet3>::from_str(recipient_str).unwrap();
+    // let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    // let url: String = url_cstr.to_str().unwrap().to_string();
+    println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
     let api_client = AleoAPIClient::<Testnet3>::local_testnet3("3033");
-    let record_finder = RecordFinder::new(api_client.clone());
+
     let program_manager =
-        ProgramManager::<Testnet3>::new(Some(private_key), None, Some(api_client.clone()), None, false).unwrap();
-    let fee = 5_000_000;
-    let amount = 16_666_666;
-
-    let record = record_finder.find_amount_and_fee_records(amount, fee, &private_key);
-    let (amount_record, fee_record) = record.unwrap();
-
-    let recipient_private_key =
-        PrivateKey::<Testnet3>::from_str("APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v").unwrap();
-    let recipient_view_key = ViewKey::try_from(&recipient_private_key).unwrap();
-    let recipient_address = Address::try_from(&recipient_view_key).unwrap();
-
-    let result = program_manager.transfer(
-        amount,
-        fee,
-        recipient_address,
-        TransferType::Private,
-        None,
-        Some(amount_record),
-        Some(fee_record),
-    );
-    if result.is_err() {
-        println!("Transfer error: {} - retrying", result.unwrap_err());
-    } else {
-        println!("Transfer success: {} - retrying", result.unwrap());
+        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false).unwrap();
+    let record_finder = RecordFinder::new(api_client);
+    let mut tx_hash = "error".to_string();
+    for i in 0..10 {
+        let (amount_record, fee_record) = match &visibility {
+            TransferType::Public => (None, None),
+            TransferType::PublicToPrivate => (None, None),
+            _ => {
+                let record = record_finder.find_amount_and_fee_records(amount, fee, &sender);
+                if record.is_err() {
+                    println!("Record not found: {} - retrying", record.unwrap_err());
+                    thread::sleep(std::time::Duration::from_secs(3));
+                    continue;
+                }
+                let (amount_record, fee_record) = record.unwrap();
+                (Some(amount_record), Some(fee_record))
+            }
+        };
+        let result = program_manager.transfer(amount, fee, recipient, visibility, None, amount_record, fee_record);
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            tx_hash = result.unwrap();
+            break;
+        }
     }
-    let c_string = CString::new(url).unwrap();
+    let c_string = CString::new(tx_hash).unwrap();
     c_string.into_raw()
 }

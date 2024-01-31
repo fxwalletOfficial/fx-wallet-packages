@@ -1,18 +1,32 @@
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
+// const sender = {
+//   address: "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px",
+//   path: `m/44'/0'/0'/0'`,
+//   view_key: "AViewKey1mSnpFFC8Mj4fXbK5YiWgZ3mjiV8CxA79bYNa8ymUpTrw",
+//   private_key: "APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH",
+// };
+// const receiver = {
+//   address: "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn",
+//   path: `m/44'/0'/0'/0'`,
+//   view_key: "AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp",
+//   private_key: "APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v",
+// };
+
 void main() {
   final private_key =
       'APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH';
   final recipient =
-      "aleo1x6mskfv6yaem7jzxplj9fc9eyqek89e8syv4xud24gal5hl70qyq90wt3y";
-  final amount_credits = 65883.0;
-  final transfer_type = 'public';
-  final fee_credits = 10.0;
-  final url = 'http://23.20.9.85:3033';
-  test('buildTransferTransaction', () {
-    final tx = buildTransferTransaction(private_key, amount_credits,
-        transfer_type, recipient, fee_credits, url);
+      "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn";
+  final amount_credits = 100000000;
+  final transfer_type = 'transfer_private';
+  final fee_credits = 1000000;
+  final url = 'http://23.20.9.85';
+
+  test('try transfer', () {
+    final tx = tryTransfer(private_key, recipient, transfer_type,
+        amount_credits, fee_credits, url);
     print(tx);
   });
 }
