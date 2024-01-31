@@ -182,12 +182,6 @@ use std::str::FromStr;
 use types::native::RecordPlaintextNative;
 
 // Facilities for cross-platform logging in both web browsers and nodeJS
-#[wasm_bindgen]
-extern "C" {
-    // Log a &str the console in the browser or console.log in nodejs
-    #[wasm_bindgen(js_namespace = console)]
-    pub fn log(s: &str);
-}
 
 /// A trait providing convenient methods for accessing the amount of Aleo present in a record
 pub trait Credits {
@@ -394,18 +388,18 @@ pub extern "C" fn isOwner(record_plaintext_raw: *const c_char, view_key_raw: *co
     result
 }
 
-use crate::types::native::{CurrentAleo, IdentifierNative, ProcessNative, ProgramNative, TransactionNative};
+use crate::types::native::{CurrentAleo, ProcessNative, ProgramNative, QueryNative, TransactionNative};
 use js_sys::Array;
 use rand::{rngs::StdRng, SeedableRng};
 
 #[no_mangle]
 pub extern "C" fn transfer_part(
     private_key_raw: *const c_char,
-    fee_credits: f64,
     amount_credits: f64,
-    url_raw: *const c_char,
     transfer_type_raw: *const c_char,
     recipient_raw: *const c_char,
+    fee_credits: f64,
+    url_raw: *const c_char,
 ) -> *const c_char {
     let private_key = PrivateKey::from_string(&cstr_to_string(private_key_raw)).unwrap();
     let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
@@ -435,16 +429,41 @@ pub extern "C" fn transfer_part(
     let process = &mut process_native;
     let program_str = ProgramNative::credits().unwrap().to_string();
     let rng = &mut StdRng::from_entropy();
-    // let inputs = Array::new_with_length(2);
-    // inputs.set(0u32, wasm_bindgen::JsValue::from_str(recipient));
-    // inputs.set(1u32, wasm_bindgen::JsValue::from_str(&amount_credits.to_string().add("u64")));
 
-    log("Loading program");
+    // log("Loading program");
     let program = ProgramNative::from_str(&program_str).unwrap();
-    log("Loading function");
+    // log("Loading function");
     let program_id = program.id().to_string();
+    println!("transfer_type: {}", transfer_type);
+    println!("recipient: {}", recipient);
 
-    // let result_str = &result.unwrap().to_string();
-    let c_string = CString::new(program_id).unwrap();
+    let inputs = [recipient, "10u64"];
+
+    let authorization = process
+        .authorize::<CurrentAleo, _>(&private_key, program.id(), transfer_type, inputs.into_iter(), rng)
+        .map_err(|err| err.to_string())
+        .unwrap();
+    println!("authorization end-----------------------------------");
+    let (_, mut trace) = process.execute::<CurrentAleo, _>(authorization, rng).unwrap();
+
+    // if let Err(error) = authorization {
+    //     // let c_string = CString::new(error).unwrap();
+    //     println!("Authorization failed: {}", error);
+    //     // c_string.into_raw();
+    // }
+    println!("trace end-----------------------------------");
+    // let offline_query: Option<OfflineQuery> = None;
+    // if let Some(offline_query) = offline_query.as_ref() {
+    //     trace.prepare(offline_query.clone()).map_err(|err| err.to_string());
+    // } else {
+    //     let query = QueryNative::from(url);
+    //     trace.prepare(query).map_err(|err| err.to_string());
+    // }
+    println!("offline_query end-----------------------");
+
+    let execution = trace.prove_execution::<CurrentAleo, _>("credits.aleo/transfer", rng).map_err(|e| e.to_string()).unwrap();
+    let execution_id = execution.to_execution_id().map_err(|e| e.to_string()).unwrap();
+
+    let c_string = CString::new(execution_id.to_string()).unwrap();
     c_string.into_raw()
 }

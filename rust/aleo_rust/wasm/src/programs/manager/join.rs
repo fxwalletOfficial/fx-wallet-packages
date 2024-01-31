@@ -19,7 +19,6 @@ use super::*;
 use crate::{
     execute_fee,
     execute_program,
-    log,
     process_inputs,
     OfflineQuery,
     PrivateKey,
@@ -70,14 +69,14 @@ impl ProgramManager {
         fee_verifying_key: Option<VerifyingKey>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
-        log("Executing join program");
+        // log("Executing join program");
         let fee_microcredits = match &fee_record {
             Some(fee_record) => Self::validate_amount(fee_credits, fee_record, true)?,
             None => (fee_credits * 1_000_000.0) as u64,
         };
         let rng = &mut StdRng::from_entropy();
 
-        log("Setup program and inputs");
+        // log("Setup program and inputs");
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
         let program = ProgramNative::credits().unwrap().to_string();
         let inputs = Array::new_with_length(2);
@@ -104,7 +103,7 @@ impl ProgramManager {
                 .map_err(|e| e.to_string())?;
         }
 
-        log("Executing the join function");
+        // log("Executing the join function");
         let (_, mut trace) = execute_program!(
             process,
             process_inputs!(inputs),
@@ -116,7 +115,7 @@ impl ProgramManager {
             rng
         );
 
-        log("Preparing inclusion proof for the join execution");
+        // log("Preparing inclusion proof for the join execution");
         if let Some(offline_query) = offline_query.as_ref() {
             trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
         } else {
@@ -124,14 +123,14 @@ impl ProgramManager {
             trace.prepare_async(query).await.map_err(|err| err.to_string())?;
         }
 
-        log("Proving the join execution");
+        // log("Proving the join execution");
         let execution = trace.prove_execution::<CurrentAleo, _>("credits.aleo/join", rng).map_err(|e| e.to_string())?;
         let execution_id = execution.to_execution_id().map_err(|e| e.to_string())?;
 
-        log("Verifying the join execution");
+        // log("Verifying the join execution");
         process.verify_execution(&execution).map_err(|err| err.to_string())?;
 
-        log("Executing the fee");
+        // log("Executing the fee");
         let fee = execute_fee!(
             process,
             private_key,
@@ -145,7 +144,7 @@ impl ProgramManager {
             offline_query
         );
 
-        log("Creating execution transaction for join");
+        // log("Creating execution transaction for join");
         let transaction = TransactionNative::from_execution(execution, Some(fee)).map_err(|err| err.to_string())?;
         Ok(Transaction::from(transaction))
     }

@@ -2,7 +2,7 @@ import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 
 final ffi.DynamicLibrary dyLib =
-    ffi.DynamicLibrary.open('./aleo_rust/wasm/target/debug/libaleo_wasm.so');
+    ffi.DynamicLibrary.open('./aleo_rust/aleo-rust/target/debug/libaleo_rust.so');
 
 typedef TypeBuildTransferTransactionInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
@@ -34,7 +34,6 @@ class ProgramsRustFFI {
     final buildTransferTransaction = dyLib.lookupFunction<
         TypeBuildTransferTransactionInRust,
         TypeBuildTransferTransactionInDart>('transfer_part');
-    print(testRustFFi(1, 5));
     return buildTransferTransaction(private_key, amount_credits, transfer_type,
         recipient, fee_credits, url);
   }

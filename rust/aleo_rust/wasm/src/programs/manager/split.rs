@@ -16,7 +16,7 @@
 
 use super::*;
 
-use crate::{execute_program, log, process_inputs, OfflineQuery, PrivateKey, RecordPlaintext, Transaction};
+use crate::{execute_program, process_inputs, OfflineQuery, PrivateKey, RecordPlaintext, Transaction};
 
 use crate::types::native::{CurrentAleo, IdentifierNative, ProcessNative, ProgramNative, TransactionNative};
 use js_sys::Array;
@@ -46,10 +46,10 @@ impl ProgramManager {
         split_verifying_key: Option<VerifyingKey>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
-        log("Executing split program");
+        // log("Executing split program");
         let amount_microcredits = Self::validate_amount(split_amount, &amount_record, false)?;
 
-        log("Setup the program and inputs");
+        // log("Setup the program and inputs");
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
         let program = ProgramNative::credits().unwrap().to_string();
         let inputs = Array::new_with_length(2u32);
@@ -60,7 +60,7 @@ impl ProgramManager {
         let process = &mut process_native;
         let rng = &mut StdRng::from_entropy();
 
-        log("Executing the split function");
+        // log("Executing the split function");
         let (_, mut trace) = execute_program!(
             process,
             process_inputs!(inputs),
@@ -72,7 +72,7 @@ impl ProgramManager {
             rng
         );
 
-        log("Preparing the inclusion proof for the split execution");
+        // log("Preparing the inclusion proof for the split execution");
         if let Some(offline_query) = offline_query.as_ref() {
             trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
         } else {
@@ -80,14 +80,14 @@ impl ProgramManager {
             trace.prepare_async(query).await.map_err(|err| err.to_string())?;
         }
 
-        log("Proving the split execution");
+        // log("Proving the split execution");
         let execution =
             trace.prove_execution::<CurrentAleo, _>("credits.aleo/split", rng).map_err(|e| e.to_string())?;
 
-        log("Verifying the split execution");
+        // log("Verifying the split execution");
         process.verify_execution(&execution).map_err(|err| err.to_string())?;
 
-        log("Creating execution transaction for split");
+        // log("Creating execution transaction for split");
         let transaction = TransactionNative::from_execution(execution, None).map_err(|err| err.to_string())?;
         Ok(Transaction::from(transaction))
     }

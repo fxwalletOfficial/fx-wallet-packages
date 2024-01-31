@@ -20,7 +20,6 @@ use core::ops::Add;
 use crate::{
     execute_fee,
     execute_program,
-    log,
     process_inputs,
     ExecutionResponse,
     OfflineQuery,
@@ -76,7 +75,7 @@ impl ProgramManager {
         url: Option<String>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<ExecutionResponse, String> {
-        log(&format!("Executing local function: {function}"));
+        // log(&format!("Executing local function: {function}"));
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
         let inputs = inputs.to_vec();
         let rng = &mut StdRng::from_entropy();
@@ -84,7 +83,7 @@ impl ProgramManager {
         let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
         let process = &mut process_native;
 
-        log("Check program imports are valid and add them to the process");
+        // log("Check program imports are valid and add them to the process");
         let program_native = ProgramNative::from_str(program).map_err(|e| e.to_string())?;
         ProgramManager::resolve_imports(process, &program_native, imports)?;
 
@@ -100,7 +99,7 @@ impl ProgramManager {
         );
 
         let mut execution_response = if prove_execution {
-            log("Preparing inclusion proofs for execution");
+            // log("Preparing inclusion proofs for execution");
             if let Some(offline_query) = offline_query {
                 trace.prepare_async(offline_query).await.map_err(|err| err.to_string())?;
             } else {
@@ -108,7 +107,7 @@ impl ProgramManager {
                 trace.prepare_async(query).await.map_err(|err| err.to_string())?;
             }
 
-            log("Proving execution");
+            // log("Proving execution");
             let locator = program_native.id().to_string().add("/").add(function);
             let execution = trace.prove_execution::<CurrentAleo, _>(&locator, rng).map_err(|e| e.to_string())?;
             ExecutionResponse::new(Some(execution), function, response, process, program)?
@@ -161,7 +160,7 @@ impl ProgramManager {
         fee_verifying_key: Option<VerifyingKey>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
-        log(&format!("Executing function: {function} on-chain"));
+        // log(&format!("Executing function: {function} on-chain"));
         let fee_microcredits = match &fee_record {
             Some(fee_record) => Self::validate_amount(fee_credits, fee_record, true)?,
             None => (fee_credits * 1_000_000.0) as u64,
@@ -170,12 +169,12 @@ impl ProgramManager {
         let process = &mut process_native;
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
 
-        log("Check program imports are valid and add them to the process");
+        // log("Check program imports are valid and add them to the process");
         let program_native = ProgramNative::from_str(program).map_err(|e| e.to_string())?;
         ProgramManager::resolve_imports(process, &program_native, imports)?;
         let rng = &mut StdRng::from_entropy();
 
-        log("Executing program");
+        // log("Executing program");
         let (_, mut trace) = execute_program!(
             process,
             process_inputs!(inputs),
@@ -187,7 +186,7 @@ impl ProgramManager {
             rng
         );
 
-        log("Preparing inclusion proofs for execution");
+        // log("Preparing inclusion proofs for execution");
         if let Some(offline_query) = offline_query.as_ref() {
             trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
         } else {
@@ -195,7 +194,7 @@ impl ProgramManager {
             trace.prepare_async(query).await.map_err(|err| err.to_string())?;
         }
 
-        log("Proving execution");
+        // log("Proving execution");
         let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
         let locator = program.id().to_string().add("/").add(function);
         let execution = trace
@@ -203,7 +202,7 @@ impl ProgramManager {
             .map_err(|e| e.to_string())?;
         let execution_id = execution.to_execution_id().map_err(|e| e.to_string())?;
 
-        log("Executing fee");
+        // log("Executing fee");
         let fee = execute_fee!(
             process,
             private_key,
@@ -220,7 +219,7 @@ impl ProgramManager {
         // Verify the execution
         process.verify_execution(&execution).map_err(|err| err.to_string())?;
 
-        log("Creating execution transaction");
+        // log("Creating execution transaction");
         let transaction = TransactionNative::from_execution(execution, Some(fee)).map_err(|err| err.to_string())?;
         Ok(Transaction::from(transaction))
     }
@@ -255,20 +254,20 @@ impl ProgramManager {
         verifying_key: Option<VerifyingKey>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<u64, String> {
-        log(
-            "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
-        );
-        log(&format!("Executing local function: {function}"));
+        // log(
+            // "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
+        // );
+        // log(&format!("Executing local function: {function}"));
 
         let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
         let process = &mut process_native;
 
-        log("Check program imports are valid and add them to the process");
+        // log("Check program imports are valid and add them to the process");
         let program_native = ProgramNative::from_str(program).map_err(|e| e.to_string())?;
         ProgramManager::resolve_imports(process, &program_native, imports)?;
         let rng = &mut StdRng::from_entropy();
 
-        log("Generating execution trace");
+        // log("Generating execution trace");
         let (_, mut trace) = execute_program!(
             process,
             process_inputs!(inputs),
@@ -293,7 +292,7 @@ impl ProgramManager {
         let execution = trace.prove_execution::<CurrentAleo, _>(&locator, rng).map_err(|e| e.to_string())?;
 
         // Get the storage cost in bytes for the program execution
-        log("Estimating cost");
+        // log("Estimating cost");
         let storage_cost = execution.size_in_bytes().map_err(|e| e.to_string())?;
 
         // Compute the finalize cost in microcredits.
@@ -330,9 +329,9 @@ impl ProgramManager {
     /// @returns {u64 | Error} Fee in microcredits
     #[wasm_bindgen(js_name = estimateFinalizeFee)]
     pub fn estimate_finalize_fee(program: &str, function: &str) -> Result<u64, String> {
-        log(
-            "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
-        );
+        // log(
+        //     "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
+        // );
         let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
         let function_id = IdentifierNative::from_str(function).map_err(|err| err.to_string())?;
         match program.get_function(&function_id).map_err(|err| err.to_string())?.finalize_logic() {

@@ -16,7 +16,7 @@
 
 use super::*;
 
-use crate::{execute_fee, log, OfflineQuery, PrivateKey, RecordPlaintext, Transaction};
+use crate::{execute_fee, OfflineQuery, PrivateKey, RecordPlaintext, Transaction};
 
 use crate::types::native::{
     CurrentAleo,
@@ -64,7 +64,7 @@ impl ProgramManager {
         fee_verifying_key: Option<VerifyingKey>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
-        log("Creating deployment transaction");
+        // log("Creating deployment transaction");
         // Convert fee to microcredits and check that the fee record has enough credits to pay it
         let fee_microcredits = match &fee_record {
             Some(fee_record) => Self::validate_amount(fee_credits, fee_record, true)?,
@@ -74,21 +74,21 @@ impl ProgramManager {
         let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
         let process = &mut process_native;
 
-        log("Checking program has a valid name");
+        // log("Checking program has a valid name");
         let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
 
-        log("Checking program imports are valid and add them to the process");
+        // log("Checking program imports are valid and add them to the process");
         ProgramManager::resolve_imports(process, &program, imports)?;
         let rng = &mut StdRng::from_entropy();
 
-        log("Creating deployment");
+        // log("Creating deployment");
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
         let deployment = process.deploy::<CurrentAleo, _>(&program, rng).map_err(|err| err.to_string())?;
         if deployment.program().functions().is_empty() {
             return Err("Attempted to create an empty transaction deployment".to_string());
         }
 
-        log("Ensuring the fee is sufficient to pay for the deployment");
+        // log("Ensuring the fee is sufficient to pay for the deployment");
         let (minimum_deployment_cost, (_, _)) =
             deployment_cost::<CurrentNetwork>(&deployment).map_err(|err| err.to_string())?;
         if fee_microcredits < minimum_deployment_cost {
@@ -117,12 +117,12 @@ impl ProgramManager {
         let owner = ProgramOwnerNative::new(private_key, deployment_id, &mut StdRng::from_entropy())
             .map_err(|err| err.to_string())?;
 
-        log("Verifying the deployment and fees");
+        // log("Verifying the deployment and fees");
         process
             .verify_deployment::<CurrentAleo, _>(&deployment, &mut StdRng::from_entropy())
             .map_err(|err| err.to_string())?;
 
-        log("Creating deployment transaction");
+        // log("Creating deployment transaction");
         Ok(Transaction::from(
             TransactionNative::from_deployment(owner, deployment, fee).map_err(|err| err.to_string())?,
         ))
@@ -139,26 +139,26 @@ impl ProgramManager {
     /// @returns {u64 | Error}
     #[wasm_bindgen(js_name = estimateDeploymentFee)]
     pub async fn estimate_deployment_fee(program: &str, imports: Option<Object>) -> Result<u64, String> {
-        log(
-            "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
-        );
+        // log(
+        //     "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
+        // );
         let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
         let process = &mut process_native;
 
-        log("Check program has a valid name");
+        // log("Check program has a valid name");
         let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
 
-        log("Check program imports are valid and add them to the process");
+        // log("Check program imports are valid and add them to the process");
         ProgramManager::resolve_imports(process, &program, imports)?;
 
-        log("Create sample deployment");
+        // log("Create sample deployment");
         let deployment =
             process.deploy::<CurrentAleo, _>(&program, &mut StdRng::from_entropy()).map_err(|err| err.to_string())?;
         if deployment.program().functions().is_empty() {
             return Err("Attempted to create an empty transaction deployment".to_string());
         }
 
-        log("Estimate the deployment fee");
+        // log("Estimate the deployment fee");
         let (minimum_deployment_cost, (_, _)) =
             deployment_cost::<CurrentNetwork>(&deployment).map_err(|err| err.to_string())?;
 
@@ -175,9 +175,9 @@ impl ProgramManager {
     /// @returns {u64 | Error}
     #[wasm_bindgen(js_name = estimateProgramNameCost)]
     pub fn program_name_cost(name: &str) -> Result<u64, String> {
-        log(
-            "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
-        );
+        // log(
+        //     "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
+        // );
         let num_characters = name.chars().count() as u32;
         let namespace_cost = 10u64
             .checked_pow(10u32.saturating_sub(num_characters))
