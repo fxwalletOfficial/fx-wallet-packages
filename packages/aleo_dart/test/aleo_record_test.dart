@@ -15,7 +15,7 @@ void main() {
     final result = rust.encryptPrivateKey(privateKey, password);
     assert(result != ciphertext);
     expect(rust.decryptToPrivateKey(ciphertext, password), privateKey);
-    expect(rust.encryptPrivateKey(result, password), privateKey);
+    expect(rust.decryptToPrivateKey(result, password), privateKey);
   });
 
   final record = '{\n'
