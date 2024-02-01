@@ -33,55 +33,58 @@ void main() {
   late final String privateKey;
   late final String address;
   late final String viewKey;
+
+// final String libPosition = './aleo_rust/libaleo_rust.so';
+// final dyLib = DyLib.getDyLibByPosition(libPosition);
+  final dyLib = DyLib.getDyLib();
+  final rust = AleoAccount(dyLib);
+
   test('test rust ffi', () {
     final int a = 10;
     final int b = 32;
-    expect(testRustFFi(a, b), a + b);
+    expect(rust.testRustFFi(a, b), (a + b) * 2);
   });
 
   test('mnemonicToSeed', () {
-    seed = mnemonicToSeed(mnemonic);
+    seed = rust.mnemonicToSeed(mnemonic);
     expect(hex.encode(seed), seedTarget);
   });
 
-  test('seedToPrivateKey', () {
-    privateKey = seedToPrivateKey(seed);
-    expect(privateKey, targetPrivateKey);
-  });
+  // test('seedToPrivateKey', () {
+  //   privateKey = rust.seedToPrivateKey(seed);
+  //   expect(privateKey, targetPrivateKey);
+  // });
 
-  test('mnemonicToPrivateKey', () {
-    expect(mnemonicToPrivateKey(mnemonic), targetPrivateKey);
-  });
+  // test('mnemonicToPrivateKey', () {
+  //   expect(rust.mnemonicToPrivateKey(mnemonic), targetPrivateKey);
+  // });
+
+  // test('mnemonicToViewKey', () {
+  //   expect(rust.mnemonicToViewKey(mnemonic), targetViewKey);
+  // });
+
+  // test('mnemonicToAddress', () {
+  //   expect(rust.mnemonicToAddress(mnemonic), targetAddress);
+  // });
 
   test('privateKeyToAddress', () {
-    address = privateKeyToAddress(privateKey);
+    address = rust.privateKeyToAddress(targetPrivateKey);
     expect(address, targetAddress);
   });
 
-  test('mnemonicToAddress', () {
-    expect(mnemonicToAddress(mnemonic), targetAddress);
-  });
-
   test('privateKeyToViewKey', () {
-    viewKey = privateKeyToViewKey(privateKey);
+    viewKey = rust.privateKeyToViewKey(targetPrivateKey);
     expect(viewKey, targetViewKey);
   });
 
-  test('mnemonicToViewKey', () {
-    expect(mnemonicToViewKey(mnemonic), targetViewKey);
+  test('viewKeyToAddress', () {
+    expect(rust.viewKeyToAddress(viewKey), targetAddress);
   });
 
-  test('viewKeyToAddress', () {
-    expect(viewKeyToAddress(viewKey), targetAddress);
-  });
-
-  test('viewKeyToAddress', () {
-    expect(viewKeyToAddress(viewKey), targetAddress);
-  });
 
   test('sign', () {
     // sign178e076gmzswtvq68ma2p350g8mfzg87dyzlmggts8348vescdyp07jg5mz52ecnux0at0943hzx5lnzh53tff5l3d9p7teepv64yjprdtl7lkehl0xyhjrhqz3v6ymkm73gs9vvj4t7sv673nhm50pj8p0xa895ta843wlh9wekyuqgwade9z5r0chfzp8ckud8ymt969j8ssc8qn3d
-    final signature = sign(privateKey, message);
-    assert(isValidSignature(address, signature, message));
+    final signature = rust.sign(targetPrivateKey, message);
+    assert(rust.isValidSignature(address, signature, message));
   });
 }

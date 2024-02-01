@@ -249,10 +249,163 @@ impl<N: Network> Credits for Record<N, Plaintext<N>> {
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::c_char;
+use std::slice;
 
 #[no_mangle]
 pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
     let result = a + b + b + a;
+    result
+}
+
+// pub use snarkvm_wasm::{
+//     console::network::Environment,
+//     fields::PrimeField,
+//     utilities::{FromBytes, ToBytes, Uniform},
+// };
+
+// #[no_mangle]
+// pub extern "C" fn seedToPrivateKey(seed_raw: *const u8) -> *const c_char {
+//     let seed;
+//     unsafe {
+//         seed = slice::from_raw_parts(seed_raw, 32);
+//     };
+//     let field = <Testnet3 as Environment>::Field::from_bytes_le_mod_order(&seed);
+//     let private_key =
+//         PrivateKey::<Testnet3>::try_from(FromBytes::read_le(&*field.to_bytes_le().unwrap()).unwrap()).unwrap();
+//     let c_string = CString::new(private_key.to_string()).unwrap();
+//     c_string.into_raw()
+// }
+
+#[no_mangle]
+pub extern "C" fn privateKeyToAddress(private_key_raw: *const c_char) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+    let view_key = ViewKey::try_from(&private_key).unwrap();
+    let address = view_key.to_address();
+    let c_string = CString::new(address.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn privateKeyToViewKey(private_key_raw: *const c_char) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+    let view_key = ViewKey::try_from(&private_key).unwrap();
+    let c_string = CString::new(view_key.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn viewKeyToAddress(view_key_raw: *const c_char) -> *const c_char {
+    let view_key_cstr = unsafe { CStr::from_ptr(view_key_raw) };
+    let view_key_str: &str = view_key_cstr.to_str().unwrap();
+    let view_key = ViewKey::<Testnet3>::from_str(view_key_str).unwrap();
+    let address = view_key.to_address();
+    let c_string = CString::new(address.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+use rand::{rngs::StdRng, SeedableRng};
+
+#[no_mangle]
+pub extern "C" fn signMessage(private_key_raw: *const c_char, message_raw: *const u8, length: usize) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+
+    let message;
+    unsafe {
+        message = slice::from_raw_parts(message_raw, length);
+    };
+    let rng = &mut StdRng::from_entropy();
+    let signature = private_key.sign_bytes(message, rng).unwrap();
+
+    let c_string = CString::new(signature.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn verify(
+    address_raw: *const c_char,
+    signature_raw: *const c_char,
+    message_raw: *const u8,
+    length: usize,
+) -> bool {
+    let address_cstr = unsafe { CStr::from_ptr(address_raw) };
+    let address_str: &str = address_cstr.to_str().unwrap();
+    let address = Address::<Testnet3>::from_str(address_str).unwrap();
+
+    let signature_cstr = unsafe { CStr::from_ptr(signature_raw) };
+    let signature_str: &str = signature_cstr.to_str().unwrap();
+    let signature = Signature::<Testnet3>::from_str(signature_str).unwrap();
+
+    let message;
+    unsafe {
+        message = slice::from_raw_parts(message_raw, length);
+    };
+    signature.verify_bytes(&address, &message)
+}
+
+#[no_mangle]
+pub extern "C" fn encryptPrivateKey(private_key_raw: *const c_char, secret_raw: *const c_char) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+
+    let secret_cstr = unsafe { CStr::from_ptr(secret_raw) };
+    let secret: &str = secret_cstr.to_str().unwrap();
+
+    let result = Encryptor::encrypt_private_key_with_secret(&private_key, secret).unwrap();
+
+    let c_string = CString::new(result.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+fn cstr_to_string(cstr_raw: *const c_char) -> String {
+    let cstr = unsafe { CStr::from_ptr(cstr_raw) };
+    let str = cstr.to_str().unwrap();
+    String::from(str)
+}
+
+#[no_mangle]
+pub extern "C" fn decryptToPrivateKey(
+    private_key_ciphertext_raw: *const c_char,
+    secret_raw: *const c_char,
+) -> *const c_char {
+    let private_key_ciphertext_cstr = unsafe { CStr::from_ptr(private_key_ciphertext_raw) };
+    let private_key_ciphertext_str: &str = private_key_ciphertext_cstr.to_str().unwrap();
+
+    let private_key_ciphertext = Ciphertext::<Testnet3>::from_str(private_key_ciphertext_str).unwrap();
+
+    let secret_cstr = unsafe { CStr::from_ptr(secret_raw) };
+    let secret: &str = secret_cstr.to_str().unwrap();
+
+    let private_key = Encryptor::decrypt_private_key_with_secret(&private_key_ciphertext, secret).unwrap();
+
+    let c_string = CString::new(private_key.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+// transfer
+#[no_mangle]
+pub extern "C" fn decryptCipherText(record_plaintext_raw: *const c_char, view_key_raw: *const c_char) -> *const c_char {
+    let record_ciphertext =
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_plaintext_raw)).unwrap();
+    let view_key = ViewKey::<Testnet3>::from_str(&cstr_to_string(view_key_raw)).unwrap();
+    let result = record_ciphertext.decrypt(&view_key).unwrap();
+    let c_string = CString::new(result.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+// transfer
+#[no_mangle]
+pub extern "C" fn isOwner(record_plaintext_raw: *const c_char, view_key_raw: *const c_char) -> bool {
+    let record_ciphertext =
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_plaintext_raw)).unwrap();
+    let view_key = ViewKey::<Testnet3>::from_str(&cstr_to_string(view_key_raw)).unwrap();
+    let result: bool = record_ciphertext.is_owner(&view_key);
     result
 }
 
@@ -284,10 +437,10 @@ pub extern "C" fn try_transfer(
     let recipient_cstr = unsafe { CStr::from_ptr(recipient_raw) };
     let recipient_str: &str = recipient_cstr.to_str().unwrap();
     let recipient = Address::<Testnet3>::from_str(recipient_str).unwrap();
-    // let url_cstr = unsafe { CStr::from_ptr(url_raw) };
-    // let url: String = url_cstr.to_str().unwrap().to_string();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
     println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
-    let api_client = AleoAPIClient::<Testnet3>::local_testnet3("3033");
+    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
 
     let program_manager =
         ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false).unwrap();
