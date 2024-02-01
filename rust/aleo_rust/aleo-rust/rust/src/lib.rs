@@ -257,24 +257,24 @@ pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
     result
 }
 
-pub use snarkvm_wasm::{
-    console::network::Environment,
-    fields::PrimeField,
-    utilities::{FromBytes, ToBytes, Uniform},
-};
+// pub use snarkvm_wasm::{
+//     console::network::Environment,
+//     fields::PrimeField,
+//     utilities::{FromBytes, ToBytes, Uniform},
+// };
 
-#[no_mangle]
-pub extern "C" fn seedToPrivateKey(seed_raw: *const u8) -> *const c_char {
-    let seed;
-    unsafe {
-        seed = slice::from_raw_parts(seed_raw, 32);
-    };
-    let field = <Testnet3 as Environment>::Field::from_bytes_le_mod_order(&seed);
-    let private_key =
-        PrivateKey::<Testnet3>::try_from(FromBytes::read_le(&*field.to_bytes_le().unwrap()).unwrap()).unwrap();
-    let c_string = CString::new(private_key.to_string()).unwrap();
-    c_string.into_raw()
-}
+// #[no_mangle]
+// pub extern "C" fn seedToPrivateKey(seed_raw: *const u8) -> *const c_char {
+//     let seed;
+//     unsafe {
+//         seed = slice::from_raw_parts(seed_raw, 32);
+//     };
+//     let field = <Testnet3 as Environment>::Field::from_bytes_le_mod_order(&seed);
+//     let private_key =
+//         PrivateKey::<Testnet3>::try_from(FromBytes::read_le(&*field.to_bytes_le().unwrap()).unwrap()).unwrap();
+//     let c_string = CString::new(private_key.to_string()).unwrap();
+//     c_string.into_raw()
+// }
 
 #[no_mangle]
 pub extern "C" fn privateKeyToAddress(private_key_raw: *const c_char) -> *const c_char {

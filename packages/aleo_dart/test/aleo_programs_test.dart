@@ -23,7 +23,7 @@ void main() {
       'APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH';
   final recipient =
       "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn";
-  final amount_credits = 100000000;
+  final amount_credits = 1000000;
   final transfer_type = 'transfer_public';
   final fee_credits = 1000000;
   final url = 'http://23.20.9.85:3033';

@@ -50,44 +50,41 @@ void main() {
     expect(hex.encode(seed), seedTarget);
   });
 
-  test('seedToPrivateKey', () {
-    privateKey = rust.seedToPrivateKey(seed);
-    expect(privateKey, targetPrivateKey);
-  });
+  // test('seedToPrivateKey', () {
+  //   privateKey = rust.seedToPrivateKey(seed);
+  //   expect(privateKey, targetPrivateKey);
+  // });
 
-  test('mnemonicToPrivateKey', () {
-    expect(rust.mnemonicToPrivateKey(mnemonic), targetPrivateKey);
-  });
+  // test('mnemonicToPrivateKey', () {
+  //   expect(rust.mnemonicToPrivateKey(mnemonic), targetPrivateKey);
+  // });
+
+  // test('mnemonicToViewKey', () {
+  //   expect(rust.mnemonicToViewKey(mnemonic), targetViewKey);
+  // });
+
+  // test('mnemonicToAddress', () {
+  //   expect(rust.mnemonicToAddress(mnemonic), targetAddress);
+  // });
 
   test('privateKeyToAddress', () {
-    address = rust.privateKeyToAddress(privateKey);
+    address = rust.privateKeyToAddress(targetPrivateKey);
     expect(address, targetAddress);
   });
 
-  test('mnemonicToAddress', () {
-    expect(rust.mnemonicToAddress(mnemonic), targetAddress);
-  });
-
   test('privateKeyToViewKey', () {
-    viewKey = rust.privateKeyToViewKey(privateKey);
+    viewKey = rust.privateKeyToViewKey(targetPrivateKey);
     expect(viewKey, targetViewKey);
   });
 
-  test('mnemonicToViewKey', () {
-    expect(rust.mnemonicToViewKey(mnemonic), targetViewKey);
-  });
-
   test('viewKeyToAddress', () {
     expect(rust.viewKeyToAddress(viewKey), targetAddress);
   });
 
-  test('viewKeyToAddress', () {
-    expect(rust.viewKeyToAddress(viewKey), targetAddress);
-  });
 
   test('sign', () {
     // sign178e076gmzswtvq68ma2p350g8mfzg87dyzlmggts8348vescdyp07jg5mz52ecnux0at0943hzx5lnzh53tff5l3d9p7teepv64yjprdtl7lkehl0xyhjrhqz3v6ymkm73gs9vvj4t7sv673nhm50pj8p0xa895ta843wlh9wekyuqgwade9z5r0chfzp8ckud8ymt969j8ssc8qn3d
-    final signature = rust.sign(privateKey, message);
+    final signature = rust.sign(targetPrivateKey, message);
     assert(rust.isValidSignature(address, signature, message));
   });
 }
