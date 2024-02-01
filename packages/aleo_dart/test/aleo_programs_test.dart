@@ -13,6 +13,10 @@ import 'package:test/test.dart';
 //   view_key: "AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp",
 //   private_key: "APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v",
 // };
+// final String libPosition = './aleo_rust/libaleo_rust.so';
+// final dyLib = DyLib.getDyLibByPosition(libPosition);
+final dyLib = DyLib.getDyLib();
+final rust = AleoProgram(dyLib);
 
 void main() {
   final private_key =
@@ -20,12 +24,12 @@ void main() {
   final recipient =
       "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn";
   final amount_credits = 100000000;
-  final transfer_type = 'transfer_private';
+  final transfer_type = 'transfer_public';
   final fee_credits = 1000000;
-  final url = 'http://23.20.9.85';
+  final url = 'http://23.20.9.85:3033';
 
   test('try transfer', () {
-    final tx = tryTransfer(private_key, recipient, transfer_type,
+    final tx = rust.tryTransfer(private_key, recipient, transfer_type,
         amount_credits, fee_credits, url);
     print(tx);
   });

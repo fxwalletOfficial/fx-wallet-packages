@@ -1,10 +1,6 @@
 import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 
-final ffi.DynamicLibrary dyLib = ffi.DynamicLibrary.open(
-    './aleo_rust/aleo-rust/target/debug/libaleo_rust.so');
-
-
 typedef TypeTestInRust = ffi.Int Function(ffi.Int, ffi.Int);
 typedef TypeTestInDart = int Function(int, int);
 
@@ -15,15 +11,13 @@ typedef TypeTransferInDart = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int, int, ffi.Pointer<Utf8>);
 
 class ProgramsRustFFI {
+  late ffi.DynamicLibrary dyLib;
 
-  static int testRustFFi(int a, int b) {
-    var numbers_add =
-        dyLib.lookupFunction<TypeTestInRust, TypeTestInDart>('numbers_add');
-    final result = numbers_add(a, b);
-    return result;
+  ProgramsRustFFI(dyLib) {
+    this.dyLib = dyLib;
   }
 
-  static ffi.Pointer<Utf8> transfer(
+  ffi.Pointer<Utf8> transfer(
       ffi.Pointer<Utf8> private_key,
       ffi.Pointer<Utf8> recipient,
       ffi.Pointer<Utf8> transfer_type,

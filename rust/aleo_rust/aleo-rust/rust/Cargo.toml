@@ -77,6 +77,10 @@ workspace = true
 [dependencies.snarkvm-synthesizer]
 workspace = true
 
+[dependencies.snarkvm-wasm]
+version = "0.16.12"
+features = [ "console", "fields", "utilities" ]
+
 [dependencies.getrandom]
 version = "0.2"
 features = [ "js" ]
