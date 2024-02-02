@@ -409,7 +409,7 @@ pub extern "C" fn isOwner(record_plaintext_raw: *const c_char, view_key_raw: *co
     result
 }
 
-use std::thread;
+// use std::thread;
 
 #[no_mangle]
 pub extern "C" fn try_transfer(
@@ -419,6 +419,8 @@ pub extern "C" fn try_transfer(
     amount: u64,
     fee: u64,
     url_raw: *const c_char,
+    amount_record_raw: *const c_char,
+    fee_record_raw: *const c_char,
 ) -> *const c_char {
     let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
     let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
@@ -441,23 +443,32 @@ pub extern "C" fn try_transfer(
     let url = url_cstr.to_str().unwrap();
     println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
     let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
-
+    let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager =
         ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false).unwrap();
-    let record_finder = RecordFinder::new(api_client);
+    // let record_finder = RecordFinder::new(api_client);
     let mut tx_hash = "error".to_string();
     for i in 0..10 {
         let (amount_record, fee_record) = match &visibility {
             TransferType::Public => (None, None),
             TransferType::PublicToPrivate => (None, None),
             _ => {
-                let record = record_finder.find_amount_and_fee_records(amount, fee, &sender);
-                if record.is_err() {
-                    println!("Record not found: {} - retrying", record.unwrap_err());
-                    thread::sleep(std::time::Duration::from_secs(3));
-                    continue;
-                }
-                let (amount_record, fee_record) = record.unwrap();
+                // let record = record_finder.find_amount_and_fee_records(amount, fee, &sender);
+                // if record.is_err() {
+                //     println!("Record not found: {} - retrying", record.unwrap_err());
+                //     thread::sleep(std::time::Duration::from_secs(3));
+                //     continue;
+                // }
+                // let (amount_record, fee_record) = record.unwrap();
+
+                let amount_record_ciphertext =
+                    Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(amount_record_raw)).unwrap();
+                let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
+
+                let fee_record_ciphertext =
+                    Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(fee_record_raw)).unwrap();
+                let fee_record = fee_record_ciphertext.decrypt(&view_key).unwrap();
+
                 (Some(amount_record), Some(fee_record))
             }
         };
