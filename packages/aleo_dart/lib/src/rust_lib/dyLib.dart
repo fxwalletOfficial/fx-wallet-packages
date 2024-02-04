@@ -1,6 +1,6 @@
 import 'dart:ffi' as ffi;
 
-const DEFAULT_RUST_LIB = './aleo_rust/aleo-rust/target/debug/libaleo_rust.so';
+const DEFAULT_RUST_LIB = './aleo_rust/target/debug/libaleo_rust.so';
 
 class DyLib {
   static ffi.DynamicLibrary getDyLibByPosition(String position) {
