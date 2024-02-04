@@ -36,13 +36,13 @@ void main() {
 
 // final String libPosition = './aleo_rust/libaleo_rust.so';
 // final dyLib = DyLib.getDyLibByPosition(libPosition);
-  final dyLib = DyLib.getDyLib();
+  final dyLib = DyLib.getDyLibFromGit();
   final rust = AleoAccount(dyLib);
 
   test('test rust ffi', () {
     final int a = 10;
     final int b = 32;
-    expect(rust.testRustFFi(a, b), (a + b) * 2);
+    expect(rust.testRustFFi(a, b), a + b);
   });
 
   test('mnemonicToSeed', () {

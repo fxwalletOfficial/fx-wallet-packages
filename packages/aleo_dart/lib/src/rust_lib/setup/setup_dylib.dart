@@ -6,10 +6,7 @@ import 'package:aleo_dart/src/rust_lib/setup/cpu_architecture.dart';
 import 'package:aleo_dart/src/rust_lib/setup/library_locator.dart'
     show dynamicLibraryEnvVariable, getDesktopLibName, libBuildOutDir;
 
-/// Downloads the native dynamic library for the current platform.
-/// The output file will be written to `{projectRoot}/.dart_tool/aleo_dart/{dynamicLibrary}`.
-/// This is used by the `WasmRunDart` class to load the native library.
-Future<void> setUpDesktopDynamicLibrary({String? dynamicLibraryPath}) async {
+Future<void> setUpDynamicLibrary({String? dynamicLibraryPath}) async {
   /// Get the CPU architecture.
   final cpuArchitecture = await CpuArchitecture.currentCpuArchitecture();
   final cpuArchitectureEnum = cpuArchitecture.value;
@@ -32,10 +29,12 @@ Future<void> setUpDesktopDynamicLibrary({String? dynamicLibraryPath}) async {
     return file;
   }
 
-  const baseUrl = 'https://github.com/fxwalletOfficial/aleo_dart/releases/download';
-  const version = '0.0.1-dev.1';
-  final archiveName = Platform.isMacOS ? 'macos.tar.gz' : 'other.tar.gz';
-  final archiveUrl = '$baseUrl/aleo_dart-v$version/$archiveName';
+// https://github.com/pzhun/aleo_dart/releases/download/v0.0.1-dev.1/libaleo_rust_so.zip
+  const baseUrl = 'https://github.com/pzhun/aleo_dart/releases/download';
+  const version = 'v0.0.1-dev.1';
+  final archiveName =
+      Platform.isMacOS ? 'libaleo_rust_dyLib.tar.gz' : 'libaleo_rust_so.tar.gz';
+  final archiveUrl = '$baseUrl/$version/$archiveName';
   final libName = getDesktopLibName();
 
   /// Download archive.
@@ -66,9 +65,7 @@ Future<void> setUpDesktopDynamicLibrary({String? dynamicLibraryPath}) async {
   }
 
   /// Copy library.
-  /// `temp/windows-x64/aleo_dart_dart.dll`, `temp/macos-arm64/libaleo_dart_dart.dylib`
-  final inputFilePath =
-      'temp/${Platform.operatingSystem}-${cpuArchitectureEnum.name}/$libName';
+  final inputFilePath = 'temp/$libName';
   final inputFile = File(root.resolve(inputFilePath).toFilePath());
   if (!inputFile.existsSync()) {
     throw Exception(

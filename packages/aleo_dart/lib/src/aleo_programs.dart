@@ -2,6 +2,13 @@ import 'package:aleo_dart/src/rust_lib/programs_rust_ffi.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
 import 'package:ffi/ffi.dart';
 
+class TransferType {
+  static const String public = 'transfer_public';
+  static const String public_to_private = 'transfer_public_to_private';
+  static const String private = 'transfer_private';
+  static const String private_to_public = 'transfer_private_to_public';
+}
+
 class AleoProgram {
   late ProgramsRustFFI programsRustFFI;
 
@@ -32,4 +39,3 @@ class AleoProgram {
         .toDartString();
   }
 }
-

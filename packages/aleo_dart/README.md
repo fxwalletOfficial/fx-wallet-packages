@@ -5,6 +5,22 @@ cargo build
 
 # aleo_dart
 
+first step: dart run aleo_dart:setup  /// download rust ffi dynamic library or download in github.
+second step: 
+```
+import 'package:aleo_dart/aleo.dart';
+
+/// choose the position of dynamic library
+
+final dyLib = DyLib.getDyLib();  /// get dynamic library in default position: './aleo_rust/target/debug/libaleo_rust.so' 
+
+/// or choose position. 
+final String libPosition = './aleo_rust/libaleo_rust.so';
+final dyLib = DyLib.getDyLibByPosition(libPosition);
+
+```
+than, run test.
+
 dart test/aleo_account_test.dart
 
 ```
@@ -43,6 +59,8 @@ final record = rust.decryptCipherText(recordCipher, viewKey);
 '  _nonce: 3077450429259593211617823051143573281856129402760267155982965992208217472983group.public\n'
 '}';
 ```
+
+dart test/aleo_program_test.dart
 
 ```
 import 'package:aleo_dart/aleo.dart';

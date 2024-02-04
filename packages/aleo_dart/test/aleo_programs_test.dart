@@ -15,7 +15,7 @@ import 'package:test/test.dart';
 // };
 // final String libPosition = './aleo_rust/libaleo_rust.so';
 // final dyLib = DyLib.getDyLibByPosition(libPosition);
-final dyLib = DyLib.getDyLib();
+final dyLib = DyLib.getDyLibFromCargo();
 final rust = AleoProgram(dyLib);
 
 final amount_record = 'None';
@@ -29,7 +29,7 @@ void main() {
     final recipient =
         "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px";
     final amount_credits = 1000000;
-    final transfer_type = 'transfer_public';
+    final transfer_type = TransferType.public;
     final fee_credits = 1000000;
 
     final tx = rust.tryTransfer(private_key, recipient, transfer_type,

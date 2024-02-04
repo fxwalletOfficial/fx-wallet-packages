@@ -1,13 +1,13 @@
 import 'dart:io';
 
 /// The expected name of the WasmRun library when compiled for Apple devices.
-const appleLib = 'libaleo_dart_dart.dylib';
+const appleLib = 'libaleo_rust.dylib';
 
 /// The expected name of the WasmRun library when compiled for Linux devices.
-const linuxLib = 'libaleo_dart_dart.so';
+const linuxLib = 'libaleo_rust.so';
 
 /// The expected name of the WasmRun library when compiled for Windows devices.
-const windowsLib = 'aleo_dart_dart.dll';
+const windowsLib = 'aleo_dart.dll';
 
 /// The environment variable used to override the WasmRun library path.
 const dynamicLibraryEnvVariable = 'aleo_dart_DART_DYNAMIC_LIBRARY';

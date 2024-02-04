@@ -253,7 +253,7 @@ use std::slice;
 
 #[no_mangle]
 pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
-    let result = a + b + b + a;
+    let result = a + b;
     result
 }
 use snarkvm::circuit::prelude::PrimeField;
