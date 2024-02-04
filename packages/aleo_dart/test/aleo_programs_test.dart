@@ -43,7 +43,7 @@ void main() {
     final recipient =
         "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px";
     final amount_credits = 1000000;
-    final transfer_type = 'transfer_private';
+    final transfer_type = 'transfer_public';
     final fee_credits = 1000000;
 
     final amount_record =
