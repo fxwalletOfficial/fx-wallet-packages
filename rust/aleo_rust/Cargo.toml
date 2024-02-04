@@ -18,7 +18,7 @@ license = "GPL-3.0"
 edition = "2021"
 
 [workspace]
-members = [ "rust", "rust/develop"]
+members = [ "rust"]
 
 [workspace.dependencies.aleo-rust]
 version = "0.6.6"

@@ -47,4 +47,6 @@ class ProgramsRustFFI {
     return tryTransfer(private_key, recipient, transfer_type, amount_credits,
         fee_credits, url, amount_record, fee_record);
   }
+
+  
 }
