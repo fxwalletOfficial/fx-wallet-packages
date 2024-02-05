@@ -38,4 +38,41 @@ class AleoProgram {
             fee_credits, url, amount_record, fee_record)
         .toDartString();
   }
+
+  String buildTransaction(
+    String private_key_raw,
+    String recipient_raw,
+    String transfer_type_raw,
+    int amount_credits,
+    int fee_credits,
+    String url_raw,
+    String amount_record_raw,
+    String fee_record_raw,
+  ) {
+    final private_key = dartStrToC(private_key_raw);
+    final transfer_type = dartStrToC(transfer_type_raw);
+    final recipient = dartStrToC(recipient_raw);
+    final url = dartStrToC(url_raw);
+    final amount_record = dartStrToC(amount_record_raw);
+    final fee_record = dartStrToC(fee_record_raw);
+
+    return programsRustFFI
+        .buildTransaction(private_key, recipient, transfer_type, amount_credits,
+            fee_credits, url, amount_record, fee_record)
+        .toDartString();
+  }
+
+  String broadcast(
+    String transaction_raw,
+    String url_raw,
+    String transfer_type_raw,
+  ) {
+    final transaction = dartStrToC(transaction_raw);
+    final url = dartStrToC(url_raw);
+    final transfer_type = dartStrToC(transfer_type_raw);
+
+    return programsRustFFI
+        .broadcast(transaction, url, transfer_type)
+        .toDartString();
+  }
 }

@@ -24,6 +24,9 @@ typedef TypeTransferInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
+typedef TypeBroadcast = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
 class ProgramsRustFFI {
   late ffi.DynamicLibrary dyLib;
 
@@ -48,5 +51,32 @@ class ProgramsRustFFI {
         fee_credits, url, amount_record, fee_record);
   }
 
-  
+  ffi.Pointer<Utf8> buildTransaction(
+    ffi.Pointer<Utf8> private_key,
+    ffi.Pointer<Utf8> recipient,
+    ffi.Pointer<Utf8> transfer_type,
+    int amount_credits,
+    int fee_credits,
+    ffi.Pointer<Utf8> url,
+    ffi.Pointer<Utf8> amount_record,
+    ffi.Pointer<Utf8> fee_record,
+  ) {
+    final tryTransfer =
+        dyLib.lookupFunction<TypeTransferInRust, TypeTransferInDart>(
+            'build_transaction');
+
+    return tryTransfer(private_key, recipient, transfer_type, amount_credits,
+        fee_credits, url, amount_record, fee_record);
+  }
+
+  ffi.Pointer<Utf8> broadcast(
+    ffi.Pointer<Utf8> transaction,
+    ffi.Pointer<Utf8> url,
+    ffi.Pointer<Utf8> transfer_type,
+  ) {
+    final tryTransfer =
+        dyLib.lookupFunction<TypeBroadcast, TypeBroadcast>('broadcast');
+
+    return tryTransfer(transaction, url, transfer_type);
+  }
 }

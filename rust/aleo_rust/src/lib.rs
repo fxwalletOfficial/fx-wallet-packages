@@ -198,8 +198,8 @@ pub mod snarkvm_types {
         network::Testnet3,
         prelude::{ToBytes, Uniform},
         program::{
-            Ciphertext, Entry, EntryType, Identifier, Literal, Locator, Network, OutputID, Plaintext, PlaintextType,
-            ProgramID, ProgramOwner, Record, Response, Value, ValueType,
+            Ciphertext, Entry, EntryType, Identifier, Literal, Locator, Network, OutputID,
+            Plaintext, PlaintextType, ProgramID, ProgramOwner, Record, Response, Value, ValueType,
         },
         types::Field,
     };
@@ -309,7 +309,11 @@ pub extern "C" fn viewKeyToAddress(view_key_raw: *const c_char) -> *const c_char
 use rand::{rngs::StdRng, SeedableRng};
 
 #[no_mangle]
-pub extern "C" fn signMessage(private_key_raw: *const c_char, message_raw: *const u8, length: usize) -> *const c_char {
+pub extern "C" fn signMessage(
+    private_key_raw: *const c_char,
+    message_raw: *const u8,
+    length: usize,
+) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
     let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
@@ -348,7 +352,10 @@ pub extern "C" fn verify(
 }
 
 #[no_mangle]
-pub extern "C" fn encryptPrivateKey(private_key_raw: *const c_char, secret_raw: *const c_char) -> *const c_char {
+pub extern "C" fn encryptPrivateKey(
+    private_key_raw: *const c_char,
+    secret_raw: *const c_char,
+) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
     let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
@@ -376,12 +383,14 @@ pub extern "C" fn decryptToPrivateKey(
     let private_key_ciphertext_cstr = unsafe { CStr::from_ptr(private_key_ciphertext_raw) };
     let private_key_ciphertext_str: &str = private_key_ciphertext_cstr.to_str().unwrap();
 
-    let private_key_ciphertext = Ciphertext::<Testnet3>::from_str(private_key_ciphertext_str).unwrap();
+    let private_key_ciphertext =
+        Ciphertext::<Testnet3>::from_str(private_key_ciphertext_str).unwrap();
 
     let secret_cstr = unsafe { CStr::from_ptr(secret_raw) };
     let secret: &str = secret_cstr.to_str().unwrap();
 
-    let private_key = Encryptor::decrypt_private_key_with_secret(&private_key_ciphertext, secret).unwrap();
+    let private_key =
+        Encryptor::decrypt_private_key_with_secret(&private_key_ciphertext, secret).unwrap();
 
     let c_string = CString::new(private_key.to_string()).unwrap();
     c_string.into_raw()
@@ -389,9 +398,13 @@ pub extern "C" fn decryptToPrivateKey(
 
 // transfer
 #[no_mangle]
-pub extern "C" fn decryptCipherText(record_plaintext_raw: *const c_char, view_key_raw: *const c_char) -> *const c_char {
+pub extern "C" fn decryptCipherText(
+    record_plaintext_raw: *const c_char,
+    view_key_raw: *const c_char,
+) -> *const c_char {
     let record_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_plaintext_raw)).unwrap();
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_plaintext_raw))
+            .unwrap();
     let view_key = ViewKey::<Testnet3>::from_str(&cstr_to_string(view_key_raw)).unwrap();
     let result = record_ciphertext.decrypt(&view_key).unwrap();
     let c_string = CString::new(result.to_string()).unwrap();
@@ -400,9 +413,13 @@ pub extern "C" fn decryptCipherText(record_plaintext_raw: *const c_char, view_ke
 
 // transfer
 #[no_mangle]
-pub extern "C" fn isOwner(record_plaintext_raw: *const c_char, view_key_raw: *const c_char) -> bool {
+pub extern "C" fn isOwner(
+    record_plaintext_raw: *const c_char,
+    view_key_raw: *const c_char,
+) -> bool {
     let record_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_plaintext_raw)).unwrap();
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_plaintext_raw))
+            .unwrap();
     let view_key = ViewKey::<Testnet3>::from_str(&cstr_to_string(view_key_raw)).unwrap();
     let result: bool = record_ciphertext.is_owner(&view_key);
     result
@@ -444,7 +461,8 @@ pub extern "C" fn try_transfer(
     let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager =
-        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false).unwrap();
+        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+            .unwrap();
     // let record_finder = RecordFinder::new(api_client);
     let mut tx_hash = "error".to_string();
     for i in 0..10 {
@@ -460,18 +478,30 @@ pub extern "C" fn try_transfer(
                 // }
                 // let (amount_record, fee_record) = record.unwrap();
 
-                let amount_record_ciphertext =
-                    Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(amount_record_raw)).unwrap();
+                let amount_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                    &cstr_to_string(amount_record_raw),
+                )
+                .unwrap();
                 let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
 
-                let fee_record_ciphertext =
-                    Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(fee_record_raw)).unwrap();
+                let fee_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                    &cstr_to_string(fee_record_raw),
+                )
+                .unwrap();
                 let fee_record = fee_record_ciphertext.decrypt(&view_key).unwrap();
 
                 (Some(amount_record), Some(fee_record))
             }
         };
-        let result = program_manager.transfer(amount, fee, recipient, visibility, None, amount_record, fee_record);
+        let result = program_manager.transfer(
+            amount,
+            fee,
+            recipient,
+            visibility,
+            None,
+            amount_record,
+            fee_record,
+        );
         if result.is_err() {
             println!("Transfer error: {} - retrying", result.unwrap_err());
             if i == 9 {
@@ -483,5 +513,117 @@ pub extern "C" fn try_transfer(
         }
     }
     let c_string = CString::new(tx_hash).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn build_transaction(
+    private_key_raw: *const c_char,
+    recipient_raw: *const c_char,
+    transfer_type_raw: *const c_char,
+    amount: u64,
+    fee: u64,
+    url_raw: *const c_char,
+    amount_record_raw: *const c_char,
+    fee_record_raw: *const c_char,
+) -> *const c_char {
+    let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
+    let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
+
+    let visibility = match transfer_type {
+        "transfer_public" => TransferType::Public,
+        "transfer_public_to_private" => TransferType::PublicToPrivate,
+        "transfer_private" => TransferType::Private,
+        "transfer_private_to_public" => TransferType::PrivateToPublic,
+        _ => TransferType::Public,
+    };
+    // let visibility = TransferType::Private;
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let recipient_cstr = unsafe { CStr::from_ptr(recipient_raw) };
+    let recipient_str: &str = recipient_cstr.to_str().unwrap();
+    let recipient = Address::<Testnet3>::from_str(recipient_str).unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
+    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let view_key = ViewKey::try_from(&sender).unwrap();
+    let program_manager =
+        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+            .unwrap();
+    // let record_finder = RecordFinder::new(api_client);
+    let mut tx_hash = "error".to_string();
+    for i in 0..10 {
+        let (amount_record, fee_record) = match &visibility {
+            TransferType::Public => (None, None),
+            TransferType::PublicToPrivate => (None, None),
+            _ => {
+                // let record = record_finder.find_amount_and_fee_records(amount, fee, &sender);
+                // if record.is_err() {
+                //     println!("Record not found: {} - retrying", record.unwrap_err());
+                //     thread::sleep(std::time::Duration::from_secs(3));
+                //     continue;
+                // }
+                // let (amount_record, fee_record) = record.unwrap();
+
+                let amount_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                    &cstr_to_string(amount_record_raw),
+                )
+                .unwrap();
+                let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
+
+                let fee_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                    &cstr_to_string(fee_record_raw),
+                )
+                .unwrap();
+                let fee_record = fee_record_ciphertext.decrypt(&view_key).unwrap();
+
+                (Some(amount_record), Some(fee_record))
+            }
+        };
+        let result = program_manager.build_transaction(
+            amount,
+            fee,
+            recipient,
+            visibility,
+            None,
+            amount_record,
+            fee_record,
+        );
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            tx_hash = result.unwrap();
+            break;
+        }
+    }
+    let c_string = CString::new(tx_hash).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn broadcast(
+    execution_raw: *const c_char,
+    url_raw: *const c_char,
+    transfer_type_raw: *const c_char,
+) -> *const c_char {
+    let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
+    let execution = execution_cstr.to_str().unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
+    let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
+
+    let result = ProgramManager::<Testnet3>::broadcast(
+        execution.to_string(),
+        url.to_string(),
+        transfer_type.to_string(),
+    )
+    .unwrap();
+    let c_string = CString::new(result).unwrap();
     c_string.into_raw()
 }

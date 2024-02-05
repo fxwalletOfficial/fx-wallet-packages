@@ -32,8 +32,23 @@ void main() {
     final transfer_type = TransferType.public;
     final fee_credits = 1000000;
 
-    final tx = rust.tryTransfer(private_key, recipient, transfer_type,
+    final txHash = rust.tryTransfer(private_key, recipient, transfer_type,
         amount_credits, fee_credits, url, amount_record, amount_record);
-    print(tx);
+    print(txHash);
+  });
+
+  test('build transaction', () {
+    final private_key =
+        'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
+    final recipient =
+        "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px";
+    final amount_credits = 1000000;
+    final transfer_type = TransferType.public;
+    final fee_credits = 1000000;
+
+    final tx = rust.buildTransaction(private_key, recipient, transfer_type,
+        amount_credits, fee_credits, url, amount_record, amount_record);
+    final txHash = rust.broadcast(tx, url, transfer_type);
+    print(txHash);
   });
 }

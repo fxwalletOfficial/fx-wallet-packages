@@ -16,7 +16,7 @@ keywords = [
 categories = [ "cryptography::cryptocurrencies" ]
 include = [ "Cargo.toml", "src", "README.md", "LICENSE.md" ]
 license = "GPL-3.0"
-edition = "2024"
+edition = "2021"
 
 
 [lib]
