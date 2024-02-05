@@ -1,10 +1,11 @@
 [package]
-name = "aleo"
-version = "0.6.5"
+name = "aleo_rust"
+version = "0.6.6"
 authors = [ "The Aleo Team <hello@aleo.org>" ]
-description = "Aleo"
+description = "Rust SDK for managing Aleo programs and communicating with the Aleo network"
 homepage = "https://aleo.org"
-repository = "https://github.com/AleoHQ/aleo-rust"
+readme = "README.md"
+repository = "https://github.com/AleoHQ/sdk"
 keywords = [
   "aleo",
   "cryptography",
@@ -13,146 +14,51 @@ keywords = [
   "zero-knowledge"
 ]
 categories = [ "cryptography::cryptocurrencies" ]
-include = [ "Cargo.toml", "cli", "README.md", "LICENSE.md" ]
+include = [ "Cargo.toml", "src", "README.md", "LICENSE.md" ]
 license = "GPL-3.0"
 edition = "2021"
 
-[workspace]
-members = [ "rust"]
-
-[workspace.dependencies.aleo-rust]
-version = "0.6.6"
-path = "rust"
-default-features = false
-
-[workspace.dependencies.snarkvm]
-version = "=0.16.15"
-
-[workspace.dependencies.snarkvm-circuit-network]
-version = "=0.16.15"
-
-[workspace.dependencies.snarkvm-console]
-version = "=0.16.15"
-
-[workspace.dependencies.snarkvm-console-network]
-version = "=0.16.15"
-
-[workspace.dependencies.snarkvm-synthesizer]
-version = "=0.16.15"
-
-[workspace.dependencies.snarkvm-ledger-block]
-version = "=0.16.15"
-
-[workspace.dependencies.snarkvm-ledger-store]
-version = "=0.16.15"
-
-[workspace.dependencies.snarkvm-ledger-query]
-version = "=0.16.15"
-
-[workspace.dependencies.snarkvm-wasm]
-version = "=0.16.15"
 
 [lib]
-path = "cli/lib.rs"
+crate-type = ["cdylib"]
 
-[[bin]]
-name = "aleo"
-path = "cli/main.rs"
-
-[features]
-default = [ ]
-
-[dependencies.aleo-rust]
-features = [ "default" ]
-workspace = true
 
 [dependencies.anyhow]
-version = "1.0"
+version = "1"
 
-[workspace.dependencies.clap]
-version = "4.3.21"
-features = [ "derive", "string" ]
 
-[dependencies.clap]
-workspace = true
+[dependencies.indexmap]
+version = "2.0"
 
-[dependencies.colored]
-version = "2"
-
-[dependencies.num-format]
-version = "0.4.4"
-
-[dependencies.parking_lot]
-version = "0.12"
+[dependencies.once_cell]
+version = "1.18.0"
 
 [dependencies.rand]
-version = "0.8"
-default-features = false
+version = "0.8.5"
 
-[dependencies.rand_chacha]
-version = "0.3.0"
-default-features = false
+[dependencies.ureq]
+features = [ "json" ]
+optional = true
+version = "2.7.1"
 
-[dependencies.rpassword]
-version = "7.2.0"
-
-[dependencies.self_update]
-version = "0.37"
-features = [ "archive-zip" ]
-
-[dependencies.serde]
-version = "1"
-
-[dependencies.serde_json]
-version = "1"
 
 [dependencies.snarkvm]
-workspace = true
-features = [
-"aleo-cli",
-"circuit",
-"console",
-"snarkvm-synthesizer",
-"snarkvm-utilities",
-]
+optional = true
 
-[dependencies.thiserror]
-version = "1.0"
+[dependencies.snarkvm-circuit-network]
 
-[dependencies.tokio]
-version = "1.31"
-features = [ "rt" ]
+[dependencies.snarkvm-console]
 
-[dependencies.warp]
-version = "0.3"
+[dependencies.snarkvm-ledger-store]
 
-[dev-dependencies.rusty-hook]
-version = "0.11.2"
+[dependencies.snarkvm-ledger-query]
 
-[build-dependencies.walkdir]
-version = "2"
+[dependencies.snarkvm-ledger-block]
 
-[profile.release]
-opt-level = 3
-lto = "thin"
-incremental = true
+[dependencies.snarkvm-synthesizer]
 
-[profile.bench]
-opt-level = 3
-debug = false
-rpath = false
-lto = "thin"
-incremental = true
-debug-assertions = false
 
-[profile.dev]
-opt-level = 2
-lto = "thin"
-incremental = true
-
-[profile.test]
-opt-level = 2
-lto = "thin"
-incremental = true
-debug = true
-debug-assertions = true
+[features]
+default = [ "full" ]
+full = [ "ureq", "snarkvm" ]
+serial = [ "snarkvm-console/serial", "snarkvm-synthesizer/serial", "snarkvm-ledger-query/serial", "snarkvm-ledger-block/serial", "snarkvm-ledger-store/serial" ]
