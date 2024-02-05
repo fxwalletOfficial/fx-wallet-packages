@@ -5,14 +5,16 @@ cargo build --release
 
 # aleo_dart
 
-first step: dart run aleo_dart:setup  /// download rust ffi dynamic library or download in github.
+first step: dart run aleo_dart:setup     --- download rust ffi dynamic library or download in github.
 second step: 
 ```
 import 'package:aleo_dart/aleo.dart';
 
 /// choose the position of dynamic library
 
-final dyLib = DyLib.getDyLib();  /// get dynamic library in default position: './aleo_rust/target/debug/libaleo_rust.so' 
+final dyLib = DyLib.getDyLibFromGit();    /// get dynamic library after run **dart run aleo_dart:setup** (recommend)   '.dart_tool/dart_aleo/libaleo_rust.so' 
+final dyLib = DyLib.getDyLibFromCargo();  /// get dynamic library after run **cargo build --release**                  './aleo_rust/target/release/libaleo_rust.so' 
+
 
 /// or choose position. 
 final String libPosition = './aleo_rust/libaleo_rust.so';
