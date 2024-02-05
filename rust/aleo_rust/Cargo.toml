@@ -1,11 +1,11 @@
 [package]
 name = "aleo_rust"
 version = "0.6.6"
-authors = [ "The Aleo Team <hello@aleo.org>" ]
-description = "Rust SDK for managing Aleo programs and communicating with the Aleo network"
-homepage = "https://aleo.org"
+authors = [ "fx wallet <www.fxwallet.com>" ]
+description = "Dart for managing Aleo programs and communicating with the Aleo network"
+homepage = "www.fxwallet.com"
 readme = "README.md"
-repository = "https://github.com/AleoHQ/sdk"
+repository = "https://github.com/fxwalletOfficial/aleo_dart"
 keywords = [
   "aleo",
   "cryptography",
@@ -16,7 +16,7 @@ keywords = [
 categories = [ "cryptography::cryptocurrencies" ]
 include = [ "Cargo.toml", "src", "README.md", "LICENSE.md" ]
 license = "GPL-3.0"
-edition = "2021"
+edition = "2024"
 
 
 [lib]

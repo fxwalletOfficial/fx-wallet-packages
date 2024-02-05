@@ -1,6 +1,6 @@
 import 'dart:ffi' as ffi;
 
-const DEFAULT_RUST_LIB_CARGO = './aleo_rust/target/debug/libaleo_rust.so';
+const DEFAULT_RUST_LIB_CARGO = './aleo_rust/target/release/libaleo_rust.so';
 const DEFAULT_RUST_LIB_GIT = '.dart_tool/dart_aleo/libaleo_rust.so';
 
 class DyLib {

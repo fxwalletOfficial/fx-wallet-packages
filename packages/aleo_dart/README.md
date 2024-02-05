@@ -1,7 +1,7 @@
 # aleo_rust
 
-cd aleo_rust/rust
-cargo build
+cd aleo_rust/
+cargo build --release
 
 # aleo_dart
 

@@ -36,7 +36,7 @@ void main() {
 
 // final String libPosition = './aleo_rust/libaleo_rust.so';
 // final dyLib = DyLib.getDyLibByPosition(libPosition);
-  final dyLib = DyLib.getDyLibFromGit();
+  final dyLib = DyLib.getDyLibFromCargo();
   final rust = AleoAccount(dyLib);
 
   test('test rust ffi', () {
