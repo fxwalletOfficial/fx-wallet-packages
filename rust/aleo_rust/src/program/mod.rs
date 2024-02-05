@@ -19,22 +19,17 @@
 use super::*;
 
 pub mod deploy;
-pub use deploy::*;
 
 pub mod execute;
-pub use execute::*;
 
 pub mod helpers;
 pub use helpers::*;
 
 pub mod network;
-pub use network::*;
 
 pub mod resolver;
-pub use resolver::*;
 
 pub mod transfer;
-pub use transfer::*;
 
 /// Program management object for loading programs for building, execution, and deployment
 ///
@@ -74,7 +69,14 @@ impl<N: Network> ProgramManager<N> {
         } else {
             None
         };
-        Ok(Self { programs, private_key, private_key_ciphertext, local_program_directory, api_client, vm })
+        Ok(Self {
+            programs,
+            private_key,
+            private_key_ciphertext,
+            local_program_directory,
+            api_client,
+            vm,
+        })
     }
 
     /// Manually add a program to the program manager from memory if it does not already exist
@@ -82,7 +84,9 @@ impl<N: Network> ProgramManager<N> {
         if self.contains_program(program.id())? {
             bail!("program already exists")
         };
-        self.programs.entry(*program.id()).or_insert(program.clone());
+        self.programs
+            .entry(*program.id())
+            .or_insert(program.clone());
         Ok(())
     }
 
@@ -95,16 +99,19 @@ impl<N: Network> ProgramManager<N> {
         // Create an ephemeral SnarkVM to store the programs
         // Initialize an RNG and query object for the transaction
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
-        let vm = VM::<N, ConsensusMemory<N>>::from(store)?;
+        let vm: VM<N, ConsensusMemory<N>> = VM::<N, ConsensusMemory<N>>::from(store)?;
 
         // Resolve imports
         let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
-        api_client.get_program_imports_from_source(program)?.iter().try_for_each(|(_, import)| {
-            if import.id() != &credits_id {
-                vm.process().write().add_program(import)?
-            }
-            Ok::<_, Error>(())
-        })?;
+        api_client
+            .get_program_imports_from_source(program)?
+            .iter()
+            .try_for_each(|(_, import)| {
+                if import.id() != &credits_id {
+                    vm.process().write().add_program(import)?
+                }
+                Ok::<_, Error>(())
+            })?;
 
         // If the initialization is for an execution, add the program. Otherwise, don't add it as
         // it will be added during the deployment process
@@ -122,13 +129,21 @@ impl<N: Network> ProgramManager<N> {
 
     /// Retrieve a program from the program manager if it exists
     pub fn get_program(&self, program_id: impl TryInto<ProgramID<N>>) -> Result<Program<N>> {
-        let program_id = program_id.try_into().map_err(|_| anyhow!("invalid program id"))?;
-        self.programs.get(&program_id).map_or(Err(anyhow!("program not found")), |program| Ok(program.clone()))
+        let program_id = program_id
+            .try_into()
+            .map_err(|_| anyhow!("invalid program id"))?;
+        self.programs
+            .get(&program_id)
+            .map_or(Err(anyhow!("program not found")), |program| {
+                Ok(program.clone())
+            })
     }
 
     /// Determine if a program exists in the program manager
     pub fn contains_program(&self, program_id: impl TryInto<ProgramID<N>>) -> Result<bool> {
-        let program_id = program_id.try_into().map_err(|_| anyhow!("invalid program id"))?;
+        let program_id = program_id
+            .try_into()
+            .map_err(|_| anyhow!("invalid program id"))?;
         Ok(self.programs.contains_key(&program_id))
     }
 
@@ -151,12 +166,13 @@ impl<N: Network> ProgramManager<N> {
                 bail!("Private key is already configured, cannot have both private key and private key ciphertext");
             }
 
-            let password = password.ok_or_else(|| anyhow!("Private key is encrypted, password is required"))?;
+            let password = password
+                .ok_or_else(|| anyhow!("Private key is encrypted, password is required"))?;
             return Encryptor::<N>::decrypt_private_key_with_secret(ciphertext, password);
         };
         bail!("Private key configuration error")
     }
-    
+
     pub fn vm(&self) -> &Option<VM<N, ConsensusMemory<N>>> {
         &self.vm
     }
@@ -177,13 +193,19 @@ mod tests {
         let api_client = AleoAPIClient::<Testnet3>::testnet3();
         let private_key = PrivateKey::<Testnet3>::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
         let private_key_ciphertext =
-            Encryptor::<Testnet3>::encrypt_private_key_with_secret(&private_key, "password").unwrap();
+            Encryptor::<Testnet3>::encrypt_private_key_with_secret(&private_key, "password")
+                .unwrap();
         // Create a temp dir without proper programs to test that the hybrid client works even if the local resource directory doesn't exist
         let temp_dir = std::env::temp_dir();
 
         // Ensure that program manager creation fails if no key is provided
-        let program_manager =
-            ProgramManager::<Testnet3>::new(None, None, Some(api_client.clone()), Some(temp_dir.clone()), false);
+        let program_manager = ProgramManager::<Testnet3>::new(
+            None,
+            None,
+            Some(api_client.clone()),
+            Some(temp_dir.clone()),
+            false,
+        );
 
         assert!(program_manager.is_err());
 
@@ -224,7 +246,8 @@ mod tests {
     #[test]
     fn test_program_management_methods() {
         let private_key = PrivateKey::<Testnet3>::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
-        let mut program_manager = ProgramManager::<Testnet3>::new(Some(private_key), None, None, None, false).unwrap();
+        let mut program_manager =
+            ProgramManager::<Testnet3>::new(Some(private_key), None, None, None, false).unwrap();
 
         // Test program addition
         let program = Program::<Testnet3>::from_str(HELLO_PROGRAM).unwrap();
@@ -248,7 +271,8 @@ mod tests {
     fn test_private_key_retrieval_from_ciphertext() {
         let private_key = PrivateKey::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
         let private_key_ciphertext =
-            Encryptor::<Testnet3>::encrypt_private_key_with_secret(&private_key, "password").unwrap();
+            Encryptor::<Testnet3>::encrypt_private_key_with_secret(&private_key, "password")
+                .unwrap();
         let temp_dir = std::env::temp_dir();
         let api_client = AleoAPIClient::<Testnet3>::testnet3();
 
@@ -280,8 +304,14 @@ mod tests {
         let temp_dir = std::env::temp_dir();
         let api_client = AleoAPIClient::<Testnet3>::testnet3();
 
-        let program_manager =
-            ProgramManager::<Testnet3>::new(Some(private_key), None, Some(api_client), Some(temp_dir), false).unwrap();
+        let program_manager = ProgramManager::<Testnet3>::new(
+            Some(private_key),
+            None,
+            Some(api_client),
+            Some(temp_dir),
+            false,
+        )
+        .unwrap();
 
         // Assert private key recovers correctly regardless of password
         let recovered_private_key = program_manager.get_private_key(None).unwrap();
@@ -298,27 +328,70 @@ mod tests {
         let add_program = api_client.get_program("addition_test.aleo").unwrap();
         let multiply_program = api_client.get_program("multiply_test.aleo").unwrap();
         let double_program = api_client.get_program("double_test.aleo").unwrap();
-        let vm_execute = ProgramManager::<Testnet3>::initialize_vm(&api_client, &top_level_program, true).unwrap();
-        let vm_deploy = ProgramManager::<Testnet3>::initialize_vm(&api_client, &top_level_program, false).unwrap();
+        let vm_execute =
+            ProgramManager::<Testnet3>::initialize_vm(&api_client, &top_level_program, true)
+                .unwrap();
+        let vm_deploy =
+            ProgramManager::<Testnet3>::initialize_vm(&api_client, &top_level_program, false)
+                .unwrap();
 
         // Ensure the initialization contained all imported programs
-        let top_program = vm_execute.process().read().get_program("imported_add_mul.aleo").unwrap().clone();
+        let top_program = vm_execute
+            .process()
+            .read()
+            .get_program("imported_add_mul.aleo")
+            .unwrap()
+            .clone();
         assert_eq!(top_level_program, top_program);
-        let add_import = vm_execute.process().read().get_program("addition_test.aleo").unwrap().clone();
+        let add_import = vm_execute
+            .process()
+            .read()
+            .get_program("addition_test.aleo")
+            .unwrap()
+            .clone();
         assert_eq!(add_program, add_import);
-        let multiply_import = vm_execute.process().read().get_program("multiply_test.aleo").unwrap().clone();
+        let multiply_import = vm_execute
+            .process()
+            .read()
+            .get_program("multiply_test.aleo")
+            .unwrap()
+            .clone();
         assert_eq!(multiply_program, multiply_import);
-        let double_import = vm_execute.process().read().get_program("double_test.aleo").unwrap().clone();
+        let double_import = vm_execute
+            .process()
+            .read()
+            .get_program("double_test.aleo")
+            .unwrap()
+            .clone();
         assert_eq!(double_program, double_import);
 
         // Ensure the initialization contained all imported programs except the top level program
-        let top_program = vm_deploy.process().read().get_program("imported_add_mul.aleo").cloned();
+        let top_program = vm_deploy
+            .process()
+            .read()
+            .get_program("imported_add_mul.aleo")
+            .cloned();
         assert!(top_program.is_err());
-        let add_import = vm_deploy.process().read().get_program("addition_test.aleo").unwrap().clone();
+        let add_import = vm_deploy
+            .process()
+            .read()
+            .get_program("addition_test.aleo")
+            .unwrap()
+            .clone();
         assert_eq!(add_program, add_import);
-        let multiply_import = vm_deploy.process().read().get_program("multiply_test.aleo").unwrap().clone();
+        let multiply_import = vm_deploy
+            .process()
+            .read()
+            .get_program("multiply_test.aleo")
+            .unwrap()
+            .clone();
         assert_eq!(multiply_program, multiply_import);
-        let double_import = vm_deploy.process().read().get_program("double_test.aleo").unwrap().clone();
+        let double_import = vm_deploy
+            .process()
+            .read()
+            .get_program("double_test.aleo")
+            .unwrap()
+            .clone();
         assert_eq!(double_program, double_import);
     }
 }

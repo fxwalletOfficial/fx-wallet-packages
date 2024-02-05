@@ -19,7 +19,6 @@
 use super::*;
 
 pub mod blocking;
-pub use blocking::*;
 
 /// Aleo API client for interacting with the Aleo Beacon API
 #[derive(Clone, Debug)]
