@@ -32,8 +32,17 @@ Future<void> setUpDynamicLibrary({String? dynamicLibraryPath}) async {
 // https://github.com/pzhun/aleo_dart/releases/download/v0.0.1-dev.1/libaleo_rust_so.zip
   const baseUrl = 'https://github.com/pzhun/aleo_dart/releases/download';
   const version = 'v0.0.1-dev.1';
-  final archiveName =
-      Platform.isMacOS ? 'libaleo_rust_dyLib.tar.gz' : 'libaleo_rust_so.tar.gz';
+  String archiveName;
+  if (Platform.isLinux) {
+    archiveName = 'libaleo_rust_so.tar.gz';
+  } else if (Platform.isIOS) {
+    archiveName = 'libaleo_rust_dyLib.tar.gz';
+  } else if (Platform.isWindows) {
+    archiveName = 'libaleo_rust_dll.tar.gz';
+  } else {
+    throw Exception('Could not support platform:$Platform');
+  }
+
   final archiveUrl = '$baseUrl/$version/$archiveName';
   final libName = getDesktopLibName();
 
