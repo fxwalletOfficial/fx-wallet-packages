@@ -7,7 +7,7 @@ const appleLib = 'libaleo_rust.dylib';
 const linuxLib = 'libaleo_rust.so';
 
 /// The expected name of the WasmRun library when compiled for Windows devices.
-const windowsLib = 'aleo_dart.dll';
+const windowsLib = 'aleo_rust.dll';
 
 /// The environment variable used to override the WasmRun library path.
 const dynamicLibraryEnvVariable = 'aleo_dart_DART_DYNAMIC_LIBRARY';
