@@ -22,8 +22,8 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
-[target.i686-pc-windows-gnu]
-linker = "i686-w64-mingw32-gcc"
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
 
 [dependencies.anyhow]
 version = "1"

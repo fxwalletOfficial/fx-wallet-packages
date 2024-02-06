@@ -1,14 +1,16 @@
 import 'dart:ffi' as ffi;
 import 'dart:io';
 
-const DEFAULT_RUST_LIB_CARGO_SO = './aleo_rust/target/release/libaleo_rust.so';
+const DEFAULT_RUST_LIB_CARGO_SO =
+    './aleo_rust/target/release/libaleo_rust.so'; // linux
 const DEFAULT_RUST_LIB_CARGO_DLL =
-    'aleo_rust/target/i686-pc-windows-gnu/release/aleo_rust.dll';
-const DEFAULT_RUST_LIB_CARGO_LIB = './aleo_rust/target/release/libaleo_rust.so';
+    'aleo_rust/target/release/aleo_rust.dll'; // windows
+const DEFAULT_RUST_LIB_CARGO_LIB =
+    './aleo_rust/target/release/libaleo_rust.dylib'; // ios
 
 const DEFAULT_RUST_LIB_GIT_SO = '.dart_tool/dart_aleo/libaleo_rust.so';
-const DEFAULT_RUST_LIB_GIT_DLL = '.dart_tool/dart_aleo/libaleo_rust.so';
-const DEFAULT_RUST_LIB_GIT_LIB = '.dart_tool/dart_aleo/libaleo_rust.so';
+const DEFAULT_RUST_LIB_GIT_DLL = '.dart_tool/dart_aleo/aleo_rust.dll';
+const DEFAULT_RUST_LIB_GIT_LIB = '.dart_tool/dart_aleo/libaleo_rust.dylib';
 
 class DyLib {
   static ffi.DynamicLibrary getDyLibByPosition(String position) {

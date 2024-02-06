@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 // final String libPosition = './aleo_rust/libaleo_rust.so';
 // final dyLib = DyLib.getDyLibByPosition(libPosition);
-final dyLib = DyLib.getDyLibFromCargo();
+final dyLib = DyLib.getDyLibFromGit();
 final rust = AleoRecord(dyLib);
 void main() {
   final privateKey =
