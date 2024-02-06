@@ -1,6 +1,11 @@
+import 'dart:io';
+
+import 'package:ffi/ffi.dart';
+import 'package:path/path.dart' as path;
+
 import 'package:aleo_dart/src/rust_lib/programs_rust_ffi.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
-import 'package:ffi/ffi.dart';
+import 'package:aleo_dart/src/rust_lib/setup/library_locator.dart';
 
 class TransferType {
   static const String public = 'transfer_public';
@@ -74,5 +79,51 @@ class AleoProgram {
     return programsRustFFI
         .broadcast(transaction, url, transfer_type)
         .toDartString();
+  }
+
+  Future<void> downloadProvingKey() async {
+    final client = HttpClient();
+    late final rootPath;
+    final root = libBuildOutDir();
+    if (Platform.isLinux) {
+      var rootDirectory = Directory.current;
+      var parts = path.split(rootDirectory.path);
+      rootPath = parts[0] + parts[1] + '/' + parts[2] + '/';
+      print(rootPath);
+    }
+    client.connectionTimeout = Duration(seconds: 300);
+    const downLoadUrl =
+        'https://s3-us-west-1.amazonaws.com/testnet3.parameters/inclusion.prover.cd85cc5';
+    final request = await client.getUrl(Uri.parse(downLoadUrl));
+    final response = await request.close();
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Could not download archive "$downLoadUrl":'
+        ' ${response.statusCode} ${response.reasonPhrase}',
+      );
+    }
+
+    Future<File> writeToFile(String filePath, Stream<List<int>> stream) async {
+      final file = File(root.resolve(filePath).toFilePath());
+      await file.create(recursive: true);
+      final sink = file.openWrite(mode: FileMode.writeOnly);
+      await sink.addStream(stream);
+      await sink.flush();
+      await sink.close();
+      return file;
+    }
+
+    final fileName = 'inclusion.prover.cd85cc5';
+    final provingKey = await writeToFile('temp/$fileName', response);
+    if (!provingKey.existsSync()) {
+      throw Exception('Could not find library "${provingKey.path}"');
+    }
+    final outputPath = rootPath + '.aleo/resources/inclusion.prover.cd85cc5';
+    final outputFile = await provingKey.rename(outputPath);
+    print('Extracted library $provingKey to ${outputFile.path}');
+
+    await Directory(root.resolve('temp').toFilePath()).delete(recursive: true);
+
+    return;
   }
 }
