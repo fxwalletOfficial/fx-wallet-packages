@@ -81,49 +81,53 @@ class AleoProgram {
         .toDartString();
   }
 
-  Future<void> downloadProvingKey() async {
-    final client = HttpClient();
+  Future<void> downloadProvingKey({updateKey = false}) async {
     late final rootPath;
-    final root = libBuildOutDir();
     if (Platform.isLinux) {
       var rootDirectory = Directory.current;
       var parts = path.split(rootDirectory.path);
       rootPath = parts[0] + parts[1] + '/' + parts[2] + '/';
-      print(rootPath);
     }
-    client.connectionTimeout = Duration(seconds: 300);
-    const downLoadUrl =
-        'https://s3-us-west-1.amazonaws.com/testnet3.parameters/inclusion.prover.cd85cc5';
-    final request = await client.getUrl(Uri.parse(downLoadUrl));
-    final response = await request.close();
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Could not download archive "$downLoadUrl":'
-        ' ${response.statusCode} ${response.reasonPhrase}',
-      );
+    final savePath = rootPath + '.aleo/resources/inclusion.prover.cd85cc5';
+
+    final file = File(savePath);
+
+    if (file.existsSync() || !updateKey) {
+      return;
+    } else {
+      print('start downloading');
+      const downLoadUrl =
+          'https://s3-us-west-1.amazonaws.com/testnet3.parameters/inclusion.prover.cd85cc5';
+      await downloadFile(downLoadUrl, savePath);
     }
-
-    Future<File> writeToFile(String filePath, Stream<List<int>> stream) async {
-      final file = File(root.resolve(filePath).toFilePath());
-      await file.create(recursive: true);
-      final sink = file.openWrite(mode: FileMode.writeOnly);
-      await sink.addStream(stream);
-      await sink.flush();
-      await sink.close();
-      return file;
-    }
-
-    final fileName = 'inclusion.prover.cd85cc5';
-    final provingKey = await writeToFile('temp/$fileName', response);
-    if (!provingKey.existsSync()) {
-      throw Exception('Could not find library "${provingKey.path}"');
-    }
-    final outputPath = rootPath + '.aleo/resources/inclusion.prover.cd85cc5';
-    final outputFile = await provingKey.rename(outputPath);
-    print('Extracted library $provingKey to ${outputFile.path}');
-
-    await Directory(root.resolve('temp').toFilePath()).delete(recursive: true);
-
     return;
   }
+}
+
+Future<void> downloadFile(String url, String savePath) async {
+  final httpClient = HttpClient();
+  final request =
+      await httpClient.getUrl(Uri.parse(url)).timeout(Duration(minutes: 3));
+  final response = await request.close();
+  final file = File(savePath);
+  await file.create(recursive: true);
+  final output = file.openWrite();
+
+  int totalBytes = response.contentLength;
+  int receivedBytes = 0;
+
+  await response.forEach((data) {
+    output.add(data);
+    receivedBytes += data.length;
+    print('downing: ${(receivedBytes / totalBytes * 100).toStringAsFixed(2)}%');
+  }).timeout(Duration(minutes: 3), onTimeout: () {
+    throw Exception('timeout');
+  }).catchError((error) {
+    print('downing error: $error');
+    output.close();
+    file.deleteSync();
+    throw error;
+  });
+
+  await output.close();
 }

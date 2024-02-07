@@ -30,7 +30,7 @@ void main() {
     final recipient =
         "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn";
     final amount_credits = 100000000;
-    final transfer_type = TransferType.public;
+    final transfer_type = TransferType.public_to_private;
     final fee_credits = 1000000;
 
     final txHash = rust.tryTransfer(private_key, recipient, transfer_type,
@@ -47,14 +47,15 @@ void main() {
     final transfer_type = TransferType.private;
     final fee_credits = 1000000;
     final amount_record =
-        'record1qyqspz9pjq8y8p3460ax9533qhrrndwflfj0ktxtwsz80erc4k7wg2qdqyxx66trwfhkxun9v35hguerqqpqzq9qjgq9j2ftt62z68qtv9axakajlzk0zz5xfvr2fskyjpvknqyhq9me55r8884mv0svy0z6rxelygnwsm6fryaw5z0vush5gm2zj7rqjhlqshl';
+        'record1qyqspdn8f6lh4eum9a36l93mnxh5vcqssjsep9z4lp4vpya2efgmjdsvqyxx66trwfhkxun9v35hguerqqpqzq9yu3tvsnj4x0a7e2w9w204aya09thraeckdlsn59pve6fnnd3eqv0n7jpp5rsxn48jdjj3z55vhmp42f8hxp7vk5d2430vuvk3fzrsx0w9wqw';
 
     final tx = rust.buildTransaction(private_key, recipient, transfer_type,
         amount_credits, fee_credits, url, amount_record, amount_record);
+    print(tx);
     // final txHash = rust.broadcast(tx, url, transfer_type);
     // print(txHash);
   });
-  // test('downing proving key', () async {
-  //   await rust.downloadProvingKey();
-  // });
+  test('downing proving key', () async {
+    await rust.downloadProvingKey();
+  }, timeout: Timeout(Duration(minutes: 3)));
 }
