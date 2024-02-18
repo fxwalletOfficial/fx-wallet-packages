@@ -6,7 +6,11 @@ import 'package:aleo_dart/src/rust_lib/setup/cpu_architecture.dart';
 import 'package:aleo_dart/src/rust_lib/setup/library_locator.dart'
     show dynamicLibraryEnvVariable, getDesktopLibName, libBuildOutDir;
 
-Future<void> setUpDynamicLibrary({String? dynamicLibraryPath}) async {
+final BASE_URL = 'https://github.com/pzhun/aleo_dart/releases/download';
+final VERSION = 'v0.0.1-dev.1';
+
+Future<void> setUpDynamicLibrary(
+    {String? dynamicLibraryPath, String? userUrl, String? userVersion}) async {
   /// Get the CPU architecture.
   final cpuArchitecture = await CpuArchitecture.currentCpuArchitecture();
   final cpuArchitectureEnum = cpuArchitecture.value;
@@ -30,8 +34,8 @@ Future<void> setUpDynamicLibrary({String? dynamicLibraryPath}) async {
   }
 
 // https://github.com/pzhun/aleo_dart/releases/download/v0.0.1-dev.1/libaleo_rust_so.zip
-  const baseUrl = 'https://github.com/pzhun/aleo_dart/releases/download';
-  const version = 'v0.0.1-dev.1';
+  final baseUrl = userUrl ?? BASE_URL;
+  final version = userVersion ?? VERSION;
   String archiveName;
   if (Platform.isLinux) {
     archiveName = 'libaleo_rust_so.tar.gz';
