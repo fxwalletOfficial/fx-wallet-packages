@@ -5,7 +5,6 @@ import 'package:path/path.dart' as path;
 
 import 'package:aleo_dart/src/rust_lib/programs_rust_ffi.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
-import 'package:aleo_dart/src/rust_lib/setup/library_locator.dart';
 
 class TransferType {
   static const String public = 'transfer_public';

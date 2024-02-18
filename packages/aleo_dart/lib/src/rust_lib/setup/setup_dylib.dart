@@ -35,7 +35,7 @@ Future<void> setUpDynamicLibrary({String? dynamicLibraryPath}) async {
   String archiveName;
   if (Platform.isLinux) {
     archiveName = 'libaleo_rust_so.tar.gz';
-  } else if (Platform.isIOS) {
+  } else if (Platform.isMacOS) {
     archiveName = 'libaleo_rust_dyLib.tar.gz';
   } else if (Platform.isWindows) {
     archiveName = 'libaleo_rust_dll.tar.gz';
