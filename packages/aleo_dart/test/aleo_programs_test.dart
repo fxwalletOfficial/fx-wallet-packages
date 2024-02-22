@@ -24,7 +24,7 @@ void main() {
   // final url =  'https://api.explorer.aleo.org/v1';
   final url = 'http://23.20.9.85:3033';
 
-  test('try transfer with record', () {
+  test('try transfer without record', () {
     final private_key =
         'APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH';
     final recipient =

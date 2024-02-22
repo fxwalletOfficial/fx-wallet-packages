@@ -28,7 +28,7 @@ dart test/aleo_account_test.dart
 ```
 import 'package:aleo_dart/aleo.dart';
 
-final dyLib = DyLib.getDyLib();
+final dyLib = DyLib.getDyLibFromGit();
 final rust = AleoAccount(dyLib);
 
 final mnemonic =
@@ -44,7 +44,7 @@ dart test/aleo_record_test.dart
 ```
 import 'package:aleo_dart/aleo.dart';
 
-final dyLib = DyLib.getDyLib();
+final dyLib = DyLib.getDyLibFromGit();
 final rust = AleoRecord(dyLib);
 
 final ciphertext =
@@ -67,7 +67,7 @@ dart test/aleo_program_test.dart
 ```
 import 'package:aleo_dart/aleo.dart';
 
-final dyLib = DyLib.getDyLib();
+final dyLib = DyLib.getDyLibFromGit();
 final rust = AleoProgram(dyLib);
 
 final url = 'http://23.20.9.85:3033'; // test rpc
