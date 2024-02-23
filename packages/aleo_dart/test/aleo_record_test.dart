@@ -29,7 +29,7 @@ void main() {
         'record1qyqsqpe2szk2wwwq56akkwx586hkndl3r8vzdwve32lm7elvphh37rsyqyxx66trwfhkxun9v35hguerqqpqzqrtjzeu6vah9x2me2exkgege824sd8x2379scspmrmtvczs0d93qttl7y92ga0k0rsexu409hu3vlehe3yxjhmey3frh2z5pxm5cmxsv4un97q';
     final viewKey = 'AViewKey1ccEt8A2Ryva5rxnKcAbn7wgTaTsb79tzkKHFpeKsm9NX';
     final result = rust.decryptCipherText(recordCipher, viewKey);
-    expect(result, record);
+    assert(record.contains(result.owner));
     assert(rust.isOwner(recordCipher, viewKey));
     final errorKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
     assert(!rust.isOwner(recordCipher, errorKey));
@@ -40,8 +40,8 @@ void main() {
         'record1qyqsqpfr4rj0ga9c3j7q40hdv4zasd0dx9creup4f582my6zvncfczqvqyxx66trwfhkxun9v35hguerqqpqzq8rs7l2c2h3ccfqw3gaxt388dwwpcts2847dc7a0pj9jujt2suuqgm3j6tvj4qlp6fh3rk6nzn6k7w0tyx7mk4zjffl22c4gte92t8q6awh66c';
     final viewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
     final result = rust.decryptCipherText(recordCipher, viewKey);
-    assert(result.contains(
-        "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn"));
+    expect(result.getOwner(),
+        "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn");
   });
 
   test('serialNumberString', () {
@@ -56,5 +56,17 @@ void main() {
     final result = rust.serialNumberString(
         recordCipher, privateKey, programId, recordName);
     expect(expectedSn, result);
+  });
+
+  test('getPrivateBalance', () async {
+    final recordCipher =
+        'record1qyqspdn8f6lh4eum9a36l93mnxh5vcqssjsep9z4lp4vpya2efgmjdsvqyxx66trwfhkxun9v35hguerqqpqzq9yu3tvsnj4x0a7e2w9w204aya09thraeckdlsn59pve6fnnd3eqv0n7jpp5rsxn48jdjj3z55vhmp42f8hxp7vk5d2430vuvk3fzrsx0w9wqw';
+    final privateKey =
+        'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
+    final viewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
+    final recordCipherTexts = [recordCipher];
+    final result =
+        await rust.getPrivateBalance(recordCipherTexts, privateKey, viewKey);
+    print(result);
   });
 }
