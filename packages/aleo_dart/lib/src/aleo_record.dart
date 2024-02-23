@@ -58,7 +58,8 @@ class AleoRecord {
       final transactionId = serialNumberString(
           recordCipherText, privateKey, programId, recordName);
       try {
-        await dio.get(this._host + '/find/transitionID/' + transactionId);
+        await dio
+            .get(this._host + '/testnet3/find/transitionID/' + transactionId);
       } catch (error) {
         final record = decryptCipherText(recordCipherText, viewKey);
         balance += BigInt.parse(record.getMicrocredits());
