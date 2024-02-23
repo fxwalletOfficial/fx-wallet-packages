@@ -1,5 +1,9 @@
 import 'dart:io';
 
+// tar -zcvf libaleo_rust_so.tar.gz libaleo_rust.so
+// tar -zcvf libaleo_rust_dll.tar.gz aleo_rust.dll
+// tar -zcvf libaleo_rust_lib.tar.gz libaleo_rust.dylib
+
 /// The expected name of the WasmRun library when compiled for Apple devices.
 const appleLib = 'libaleo_rust.dylib';
 
