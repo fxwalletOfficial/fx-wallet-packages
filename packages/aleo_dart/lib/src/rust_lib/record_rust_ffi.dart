@@ -45,4 +45,15 @@ class RecordRustFFI {
         .lookupFunction<TypeStr2ToBoolInRust, TypeStr2ToBoolInDart>('isOwner');
     return isOwner(record, viewKey) != 0;
   }
+
+  ffi.Pointer<Utf8> serialNumberString(
+      ffi.Pointer<Utf8> recordCipherText,
+      ffi.Pointer<Utf8> privateKey,
+      ffi.Pointer<Utf8> programId,
+      ffi.Pointer<Utf8> recordName) {
+    final serialNumberString =
+        dyLib.lookupFunction<TypeStr4To1, TypeStr4To1>('serialNumberString');
+    return serialNumberString(
+        recordCipherText, privateKey, programId, recordName);
+  }
 }

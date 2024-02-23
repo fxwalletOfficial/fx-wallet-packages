@@ -399,11 +399,11 @@ pub extern "C" fn decryptToPrivateKey(
 // transfer
 #[no_mangle]
 pub extern "C" fn decryptCipherText(
-    record_plaintext_raw: *const c_char,
+    record_ciphertext_raw: *const c_char,
     view_key_raw: *const c_char,
 ) -> *const c_char {
     let record_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_plaintext_raw))
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_ciphertext_raw))
             .unwrap();
     let view_key = ViewKey::<Testnet3>::from_str(&cstr_to_string(view_key_raw)).unwrap();
     let result = record_ciphertext.decrypt(&view_key).unwrap();
@@ -625,5 +625,36 @@ pub extern "C" fn broadcast(
     )
     .unwrap();
     let c_string = CString::new(result).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn serialNumberString(
+    record_ciphertext_raw: *const c_char,
+    private_key_raw: *const c_char,
+    program_id_raw: *const c_char,
+    record_name_raw: *const c_char,
+) -> *const c_char {
+    let record_ciphertext =
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_ciphertext_raw))
+            .unwrap();
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key_str: &str = private_key_cstr.to_str().unwrap();
+    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+    let view_key = ViewKey::try_from(&private_key).unwrap();
+    let record_plaintext = record_ciphertext.decrypt(&view_key).unwrap();
+    let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
+    let program_id: &str = program_id_cstr.to_str().unwrap();
+    let record_name_cstr = unsafe { CStr::from_ptr(record_name_raw) };
+    let record_name: &str = record_name_cstr.to_str().unwrap();
+    let parsed_program_id = ProgramID::<Testnet3>::from_str(program_id).unwrap();
+    let record_identifier = Identifier::<Testnet3>::from_str(record_name).unwrap();
+    let commitment = record_plaintext
+        .to_commitment(&parsed_program_id, &record_identifier)
+        .unwrap();
+    let serial_number =
+        Record::<Testnet3, Plaintext<Testnet3>>::serial_number(private_key, commitment).unwrap();
+
+    let c_string = CString::new(serial_number.to_string()).unwrap();
     c_string.into_raw()
 }

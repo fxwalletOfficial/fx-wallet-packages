@@ -32,4 +32,15 @@ class AleoRecord {
   bool isOwner(String record, String viewKey) {
     return recordRustFFI.isOwner(dartStrToC(record), dartStrToC(viewKey));
   }
+
+  String serialNumberString(String recordCipherTextRaw, String privateKeyRaw,
+      String programIdRaw, String recordNameRaw) {
+    final recordPlainText = dartStrToC(recordCipherTextRaw);
+    final privateKey = dartStrToC(privateKeyRaw);
+    final programId = dartStrToC(programIdRaw);
+    final recordName = dartStrToC(recordNameRaw);
+    final result = recordRustFFI.serialNumberString(
+        recordPlainText, privateKey, programId, recordName);
+    return result.toDartString();
+  }
 }
