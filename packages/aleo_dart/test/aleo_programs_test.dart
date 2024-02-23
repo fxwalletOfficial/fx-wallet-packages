@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
@@ -29,12 +30,15 @@ void main() {
         'APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH';
     final recipient =
         "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn";
-    final amount_credits = 100000000;
+    final amount_credits = 10000000;
     final transfer_type = TransferType.public_to_private;
     final fee_credits = 1000000;
 
-    final txHash = rust.tryTransfer(private_key, recipient, transfer_type,
+    final tx = rust.buildTransaction(private_key, recipient, transfer_type,
         amount_credits, fee_credits, url, amount_record, amount_record);
+    final txJson = json.decode(tx);
+    print(txJson["execution"]["transitions"][0]["outputs"][0]["value"]);
+    final txHash = rust.broadcast(tx, url, transfer_type);
     print(txHash);
   });
 
@@ -47,13 +51,14 @@ void main() {
     final transfer_type = TransferType.private;
     final fee_credits = 1000000;
     final amount_record =
-        'record1qyqspdn8f6lh4eum9a36l93mnxh5vcqssjsep9z4lp4vpya2efgmjdsvqyxx66trwfhkxun9v35hguerqqpqzq9yu3tvsnj4x0a7e2w9w204aya09thraeckdlsn59pve6fnnd3eqv0n7jpp5rsxn48jdjj3z55vhmp42f8hxp7vk5d2430vuvk3fzrsx0w9wqw';
-
+        'record1qyqspj8md5yhtk774sum5r5lp0q7ysrz3uljtw98aqj9n9626ga9kqqxqyxx66trwfhkxun9v35hguerqqpqzqrwzmj36tyjlqnnsfk9j29739zusxxccj5ls0cztztp40aguqu9qvuh09t8r9fsjlvmhhcku6wkz7dejcc43yh4rlwf4gk24hwrpgnswcdfanf';
+    final fee_record =
+        'record1qyqsprkmsytx67gvzffjwgjcrh0dwhutl8yhpzv3jpya44hqcg0futg2qyxx66trwfhkxun9v35hguerqqpqzq8aaxazt5sk6lv7jqewhurxn4fupj2qzx4kjpptdpxnyds3tjx2q654uzaxfuffvcvs7s5cqnektergh4qltgpkp9gnzht5ct7zfkrqqlkppme';
     final tx = rust.buildTransaction(private_key, recipient, transfer_type,
-        amount_credits, fee_credits, url, amount_record, amount_record);
-    print(tx);
-    // final txHash = rust.broadcast(tx, url, transfer_type);
-    // print(txHash);
+        amount_credits, fee_credits, url, amount_record, fee_record);
+    // print(tx);
+    final txHash = rust.broadcast(tx, url, transfer_type);
+    print(txHash);
   });
   test('downing proving key', () async {
     await rust.downloadProvingKey();
