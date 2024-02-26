@@ -61,15 +61,13 @@ void main() {
   test('getPrivateBalance', () async {
     final privateKey =
         'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
-    final viewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
     final recordCipherTexts = [
       'record1qyqspdn8f6lh4eum9a36l93mnxh5vcqssjsep9z4lp4vpya2efgmjdsvqyxx66trwfhkxun9v35hguerqqpqzq9yu3tvsnj4x0a7e2w9w204aya09thraeckdlsn59pve6fnnd3eqv0n7jpp5rsxn48jdjj3z55vhmp42f8hxp7vk5d2430vuvk3fzrsx0w9wqw',
       'record1qyqsqlqqe6juvqslkdhucee33dmsntt5amqptxcddys2e5td3j0mtgq3qyxx66trwfhkxun9v35hguerqqpqzqy9csc67ez5gzezsx2ja59u0727ydfsa4fkgh3d55fgmd5t9yccphss9v6ffmr68yt9jkcex7yg9zzwh57zpznce80zh6rranmcgyus208vey6',
       'record1qyqspj8md5yhtk774sum5r5lp0q7ysrz3uljtw98aqj9n9626ga9kqqxqyxx66trwfhkxun9v35hguerqqpqzqrwzmj36tyjlqnnsfk9j29739zusxxccj5ls0cztztp40aguqu9qvuh09t8r9fsjlvmhhcku6wkz7dejcc43yh4rlwf4gk24hwrpgnswcdfanf',
     ];
     // at1rg96xyzu0m7wk4kxqn6pwjcxen0xvdgpnru2qmdq6d4jj0wxccqqdtl4et
-    final result =
-        await rust.getPrivateBalance(recordCipherTexts, privateKey, viewKey);
+    final result = await rust.getPrivateBalance(recordCipherTexts, privateKey);
     print(result);
   });
 }

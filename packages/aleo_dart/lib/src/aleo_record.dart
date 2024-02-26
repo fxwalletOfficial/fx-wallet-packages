@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:ffi/ffi.dart';
 
 import 'package:aleo_dart/src/rust_lib/record_rust_ffi.dart';
@@ -48,22 +47,45 @@ class AleoRecord {
     return result.toDartString();
   }
 
-  Future<String> getPrivateBalance(
-      List<String> recordCipherTexts, String privateKey, String viewKey) async {
+  List<String> serialNumberStrings(
+      List<String> recordCipherTexts, String privateKey, String viewKey) {
     final programId = "credits.aleo";
     final recordName = "credits";
-    final dio = Dio();
+    final List<String> list = [];
+    for (final recordCipherText in recordCipherTexts) {
+      final result = isOwner(recordCipherText, viewKey);
+      if (result) {
+        final numberString = serialNumberString(
+            recordCipherText, privateKey, programId, recordName);
+        list.add(numberString);
+      }
+    }
+    return list;
+  }
+
+  String findRecord(List<String> recordCipherTexts, String targetNumberString,
+      String privateKey, String viewKey) {
+    final programId = "credits.aleo";
+    final recordName = "credits";
+    for (final recordCipherText in recordCipherTexts) {
+      final result = isOwner(recordCipherText, viewKey);
+      if (result) {
+        final numberString = serialNumberString(
+            recordCipherText, privateKey, programId, recordName);
+        if (numberString == targetNumberString) {
+          return recordCipherText;
+        }
+      }
+    }
+    return '';
+  }
+
+  Future<String> getPrivateBalance(
+      List<String> recordCipherTexts, String viewKey) async {
     BigInt balance = BigInt.from(0);
     for (final recordCipherText in recordCipherTexts) {
-      final transactionId = serialNumberString(
-          recordCipherText, privateKey, programId, recordName);
-      try {
-        await dio
-            .get(this._host + '/testnet3/find/transitionID/' + transactionId);
-      } catch (error) {
-        final record = decryptCipherText(recordCipherText, viewKey);
-        balance += BigInt.parse(record.getMicrocredits());
-      }
+      final record = decryptCipherText(recordCipherText, viewKey);
+      balance += BigInt.parse(record.getMicrocredits());
     }
     return balance.toString();
   }
