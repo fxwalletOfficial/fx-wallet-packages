@@ -1,4 +1,6 @@
-class TransferType {
+import 'package:aleo_dart/src/aleo_record.dart';
+
+class TransferMethod {
   static const String public = 'transfer_public';
   static const String public_to_private = 'transfer_public_to_private';
   static const String private = 'transfer_private';
@@ -8,6 +10,11 @@ class TransferType {
 class FeeType {
   static const String public = 'fee_public';
   static const String private = 'fee_private';
+}
+
+class TransferType {
+  static const String income = 'income';
+  static const String expense = 'expense';
 }
 
 class AleoTransaction {
@@ -23,6 +30,8 @@ class AleoTransaction {
   String fee;
   String change = ''; // 找零
   String transferType = '';
+  String amount_record = '';
+  String fee_record = '';
 
   AleoTransaction({
     required this.type,
@@ -51,7 +60,6 @@ class AleoTransaction {
     final String transitionType = transition['function'];
     final txOutput = findFuture(transition['outputs']);
     final feeOutput = findFuture(feeTx['outputs']);
-
     String inputAddress = '';
     String outputAddress = '';
     String value = '';
@@ -59,7 +67,7 @@ class AleoTransaction {
 
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
     switch (transitionType) {
-      case TransferType.private:
+      case TransferMethod.private:
         final outputs = transition['outputs'];
         value = outputs
             .map((e) => e['value'])
@@ -67,21 +75,25 @@ class AleoTransaction {
             .replaceAll('(', '')
             .replaceAll(')', '')
             .replaceAll(' ', '');
+        if (feeType == FeeType.public) {
+          fee = feeOutput[1].split('u')[0]; // fee is private, fee = ''
+        }
+
         break;
-      case TransferType.private_to_public:
+      case TransferMethod.private_to_public:
         outputAddress = txOutput[0];
         value = txOutput[1].split('u')[0]; // input is private.
         if (feeType == FeeType.public) {
           fee = feeOutput[1].split('u')[0]; // fee is private, fee = ''
         }
         break;
-      case TransferType.public:
+      case TransferMethod.public:
         inputAddress = txOutput[0];
         outputAddress = txOutput[1];
         value = txOutput[2].split('u')[0];
         fee = feeOutput[1].split('u')[0];
         break;
-      case TransferType.public_to_private:
+      case TransferMethod.public_to_private:
         inputAddress = txOutput[0];
         value = txOutput[1].split('u')[0]; // output is private, can not get.
         fee = feeOutput[1].split('u')[0];
@@ -91,17 +103,16 @@ class AleoTransaction {
     }
 
     return AleoTransaction(
-      type: type,
-      transactionId: transactionId,
-      transitionIds: transitionIds,
-      program: program,
-      transitionType: transitionType,
-      inputAddress: inputAddress,
-      outputAddress: outputAddress,
-      value: value,
-      feeType: feeType,
-      fee: fee,
-    );
+        type: type,
+        transactionId: transactionId,
+        transitionIds: transitionIds,
+        program: program,
+        transitionType: transitionType,
+        inputAddress: inputAddress,
+        outputAddress: outputAddress,
+        value: value,
+        feeType: feeType,
+        fee: fee);
   }
 
   Map<String, dynamic> toJson() {
@@ -116,7 +127,10 @@ class AleoTransaction {
       'value': value,
       'feeType': feeType,
       'fee': fee,
-      'transferType': transferType
+      'transferType': transferType,
+      'change': change,
+      'amount_record': amount_record,
+      'fee_record': fee_record
     };
   }
 
@@ -130,10 +144,75 @@ class AleoTransaction {
             .replaceAll('}', '')
             .replaceAll('[', '')
             .replaceAll(']', '');
-        int argumentsIndex = value.indexOf("arguments:");
+        int argumentsIndex = value.indexOf('arguments:');
         String argumentsString =
-            value.substring(argumentsIndex + "arguments:".length);
+            value.substring(argumentsIndex + 'arguments:'.length);
         return argumentsString.split(',');
+      }
+    }
+  }
+
+  static findInputRecord(List<dynamic> inputs) {
+    for (final input in inputs) {
+      if (input['type'] == 'record') {
+        return input['id'];
+      }
+    }
+    return '';
+  }
+
+  /// 解析outputs中，属于该地址的部分，作为value。
+  processPrivateTx(AleoRecord rust, String viewKey, String privateKey,
+      Map<String, dynamic> json, List<String> recordCipherTexts) {
+    if (this.transitionType == TransferMethod.private) {
+      final amountRecordId =
+          findInputRecord(json['execution']['transitions'][0]['inputs']);
+      final feeRecordId = findInputRecord(json['fee']['transition']['inputs']);
+      final programId = 'credits.aleo';
+      final recordName = 'credits';
+      for (final recordCipherText in recordCipherTexts) {
+        final numberString = rust.serialNumberString(
+            recordCipherText, privateKey, programId, recordName);
+        if (numberString == amountRecordId) {
+          this.amount_record = recordCipherText;
+        }
+        if (numberString == feeRecordId) {
+          this.fee_record = recordCipherText;
+        }
+      }
+      if (this.transferType == TransferType.expense) {
+        if (this.amount_record != '') {
+          final record = rust.decryptCipherText(this.amount_record, viewKey);
+          this.value = record.getMicrocredits();
+          for (final output in json['execution']['transitions'][0]['outputs']) {
+            if (output['type'] == 'record') {
+              final recordCipherText = output['value'];
+              if (rust.isOwner(recordCipherText, viewKey)) {
+                final recordPlainText =
+                    rust.decryptCipherText(recordCipherText, viewKey);
+                this.change = recordPlainText.getMicrocredits();
+                this.value =
+                    (BigInt.parse(this.value) - BigInt.parse(this.change))
+                        .toString();
+              }
+            }
+          }
+          // if (this.fee_record != '') {
+          //   final record = rust.decryptCipherText(this.amount_record, viewKey);
+          //   this.fee = record.getMicrocredits();
+          // }
+        } else {
+          final records = this.value.split(',');
+          BigInt income = BigInt.from(0);
+          for (final record in records) {
+            if (rust.isOwner(record, viewKey)) {
+              final RecordPlainText recordPlainText =
+                  rust.decryptCipherText(record, viewKey);
+              income += BigInt.parse(recordPlainText.getMicrocredits());
+            }
+          }
+          this.value = income.toString();
+        }
       }
     }
   }

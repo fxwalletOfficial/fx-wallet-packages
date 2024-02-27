@@ -5,42 +5,22 @@ import 'package:dio/dio.dart';
 
 import 'package:aleo_dart/aleo.dart';
 
-String host = "https://api.fxwallet.in";
+String host = 'https://api.fxwallet.in';
 int decimal = 6;
 final dyLib = DyLib.getDyLibFromGit();
 final rust = AleoRecord(dyLib);
 
 void main() async {
-  final inTxs = []; // 收入列表
-  final outTxs = [];
+  final txs = []; // 交易列表
   final privateKey =
       'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
   final viewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
+  final address =
+      'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
 
-  /// 解析收入交易列表
-  final List<dynamic> inTxsJson = json.decode(
-      new File('./test/data/aleo_records.json')
-          .readAsStringSync(encoding: utf8))['relatedTransactions'];
+  final List<String> txIds = [];
 
-  for (final inTxJson in inTxsJson) {
-    final tx = AleoTransaction.fromJson(inTxJson['transaction']);
-    tx.transferType = 'in';
-    if (tx.transitionType == TransferType.private) {
-      final records = tx.value.split(',');
-      BigInt income = BigInt.from(0);
-      for (final record in records) {
-        if (rust.isOwner(record, viewKey)) {
-          final RecordPlainText recordPlainText =
-              rust.decryptCipherText(record, viewKey);
-          income += BigInt.parse(recordPlainText.getMicrocredits());
-        }
-      }
-      tx.value = income.toString();
-    }
-    inTxs.add(tx);
-  }
-
-  /// 根据record，查询record是否被使用，并得到支出交易列表
+  /// 根据record，查询record是否被使用，并得到支出交易列表,先查支出，方便填充支出地址。
   final List<dynamic> recordCipherTextsJson = json.decode(
       new File('./test/data/aleo_records.json')
           .readAsStringSync(encoding: utf8))['records'];
@@ -53,19 +33,49 @@ void main() async {
 
   final transactions = await getTransactions(serialNumbers, viewKey);
   BigInt privateBalance = BigInt.from(0);
-  for (final tx in transactions) {
-    if (tx["transition"] == null) {
+  for (final outTxJson in transactions) {
+    if (outTxJson['transition'] == null) {
       /// 交易详情为空时，说明该record未被使用，加入余额
       final recordCipherText = rust.findRecord(
-          recordCipherTexts, tx["serialNumber"], privateKey, viewKey);
+          recordCipherTexts, outTxJson['serialNumber'], privateKey, viewKey);
       final RecordPlainText record =
           rust.decryptCipherText(recordCipherText, viewKey);
       privateBalance += BigInt.parse(record.getMicrocredits());
     } else {
-      print(tx["transition"]);
+      final transactionId = outTxJson['transition']['id'];
+      if (!txIds.contains(transactionId)) {
+        final outTx = AleoTransaction.fromJson(outTxJson['transition']);
+        outTx.transferType = TransferType.expense;
+        outTx.processPrivateTx(rust, viewKey, privateKey,
+            outTxJson['transition'], recordCipherTexts);
+        txs.add(outTx);
+        txIds.add(outTx.transactionId);
+        outTx.inputAddress = address;
+      } // 包含时，说明有两个record被用作同个交易。即用了 fee_private
     }
   }
   print(privateBalance);
+
+  /// 解析收入交易列表
+  final List<dynamic> inTxsJson = json.decode(
+      new File('./test/data/aleo_records.json')
+          .readAsStringSync(encoding: utf8))['relatedTransactions'];
+  for (final inTxJson in inTxsJson) {
+    final transactionId = inTxJson['transaction']['id'];
+    if (!txIds.contains(transactionId)) {
+      final tx = AleoTransaction.fromJson(inTxJson['transaction']);
+      tx.processPrivateTx(rust, viewKey, privateKey, inTxJson['transaction'],
+          recordCipherTexts);
+      tx.transferType = TransferType.income;
+      txs.add(tx);
+      txIds.add(tx.transactionId.toString());
+      tx.outputAddress = address;
+    }
+  }
+
+  for (final tx in txs) {
+    print(tx.toJson());
+  }
 }
 
 /// 调用服务端接口，获取serialNumbers对应的交易。
@@ -76,7 +86,7 @@ Future<List> getTransactions(List<String> serialNumbers, String viewKey) async {
     },
   ));
   List<dynamic> list = [];
-  final String serialNumber = serialNumbers.join(",");
+  final String serialNumber = serialNumbers.join(',');
   final response =
       await dio.get(host + '/wallet/aleo/find/transactions/' + serialNumber);
   if (response.statusCode == 200) {
