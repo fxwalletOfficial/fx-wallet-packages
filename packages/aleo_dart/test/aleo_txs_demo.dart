@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import 'package:aleo_dart/aleo.dart';
@@ -8,20 +11,49 @@ final dyLib = DyLib.getDyLibFromGit();
 final rust = AleoRecord(dyLib);
 
 void main() async {
-  final recordCipherTexts = [
-    'record1qyqspdn8f6lh4eum9a36l93mnxh5vcqssjsep9z4lp4vpya2efgmjdsvqyxx66trwfhkxun9v35hguerqqpqzq9yu3tvsnj4x0a7e2w9w204aya09thraeckdlsn59pve6fnnd3eqv0n7jpp5rsxn48jdjj3z55vhmp42f8hxp7vk5d2430vuvk3fzrsx0w9wqw',
-    'record1qyqsqlqqe6juvqslkdhucee33dmsntt5amqptxcddys2e5td3j0mtgq3qyxx66trwfhkxun9v35hguerqqpqzqy9csc67ez5gzezsx2ja59u0727ydfsa4fkgh3d55fgmd5t9yccphss9v6ffmr68yt9jkcex7yg9zzwh57zpznce80zh6rranmcgyus208vey6',
-    'record1qyqspj8md5yhtk774sum5r5lp0q7ysrz3uljtw98aqj9n9626ga9kqqxqyxx66trwfhkxun9v35hguerqqpqzqrwzmj36tyjlqnnsfk9j29739zusxxccj5ls0cztztp40aguqu9qvuh09t8r9fsjlvmhhcku6wkz7dejcc43yh4rlwf4gk24hwrpgnswcdfanf',
-  ];
+  final inTxs = []; // 收入列表
+  final outTxs = [];
   final privateKey =
       'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
   final viewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
+
+  /// 解析收入交易列表
+  final List<dynamic> inTxsJson = json.decode(
+      new File('./test/data/aleo_records.json')
+          .readAsStringSync(encoding: utf8))['relatedTransactions'];
+
+  for (final inTxJson in inTxsJson) {
+    final tx = AleoTransaction.fromJson(inTxJson['transaction']);
+    tx.transferType = 'in';
+    if (tx.transitionType == TransferType.private) {
+      final records = tx.value.split(',');
+      BigInt income = BigInt.from(0);
+      for (final record in records) {
+        if (rust.isOwner(record, viewKey)) {
+          final RecordPlainText recordPlainText =
+              rust.decryptCipherText(record, viewKey);
+          income += BigInt.parse(recordPlainText.getMicrocredits());
+        }
+      }
+      tx.value = income.toString();
+    }
+    inTxs.add(tx);
+  }
+
+  /// 根据record，查询record是否被使用，并得到支出交易列表
+  final List<dynamic> recordCipherTextsJson = json.decode(
+      new File('./test/data/aleo_records.json')
+          .readAsStringSync(encoding: utf8))['records'];
+
+  final List<String> recordCipherTexts =
+      recordCipherTextsJson.map((element) => element.toString()).toList();
+
   final serialNumbers =
       rust.serialNumberStrings(recordCipherTexts, privateKey, viewKey);
 
-  final tansactions = await getTransactions(serialNumbers, viewKey);
+  final transactions = await getTransactions(serialNumbers, viewKey);
   BigInt privateBalance = BigInt.from(0);
-  for (final tx in tansactions) {
+  for (final tx in transactions) {
     if (tx["transition"] == null) {
       /// 交易详情为空时，说明该record未被使用，加入余额
       final recordCipherText = rust.findRecord(

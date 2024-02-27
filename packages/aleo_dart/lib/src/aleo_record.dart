@@ -5,7 +5,6 @@ import 'package:aleo_dart/src/rust_lib/utils.dart';
 
 class AleoRecord {
   late RecordRustFFI recordRustFFI;
-  String _host = "http://23.20.9.85:3033";
   int decimal = 6;
 
   AleoRecord(dyLib) {
@@ -49,8 +48,8 @@ class AleoRecord {
 
   List<String> serialNumberStrings(
       List<String> recordCipherTexts, String privateKey, String viewKey) {
-    final programId = "credits.aleo";
-    final recordName = "credits";
+    final programId = 'credits.aleo';
+    final recordName = 'credits';
     final List<String> list = [];
     for (final recordCipherText in recordCipherTexts) {
       final result = isOwner(recordCipherText, viewKey);
@@ -65,8 +64,8 @@ class AleoRecord {
 
   String findRecord(List<String> recordCipherTexts, String targetNumberString,
       String privateKey, String viewKey) {
-    final programId = "credits.aleo";
-    final recordName = "credits";
+    final programId = 'credits.aleo';
+    final recordName = 'credits';
     for (final recordCipherText in recordCipherTexts) {
       final result = isOwner(recordCipherText, viewKey);
       if (result) {
@@ -91,22 +90,27 @@ class AleoRecord {
   }
 
   RecordPlainText processRecord(String recordRaw) {
-    final record = recordRaw
-        .replaceAll('\n', '')
-        .replaceAll(' ', '')
-        .replaceAll('{', '')
-        .replaceAll('}', '');
-    final fields = record.split(',');
-    Map<String, dynamic> map = {};
-    for (final field in fields) {
-      final key = field.split(':');
-      map[key[0]] = key[1];
-    }
+    final map = stringToMap(recordRaw);
     return RecordPlainText(
         owner: map['owner'],
         microcredits: map['microcredits'],
         nonce: map['_nonce']);
   }
+}
+
+Map<String, dynamic> stringToMap(String string) {
+  final record = string
+      .replaceAll('\n', '')
+      .replaceAll(' ', '')
+      .replaceAll('{', '')
+      .replaceAll('}', '');
+  final fields = record.split(',');
+  Map<String, dynamic> map = {};
+  for (final field in fields) {
+    final key = field.split(':');
+    map[key[0]] = key[1];
+  }
+  return map;
 }
 
 class RecordPlainText {
