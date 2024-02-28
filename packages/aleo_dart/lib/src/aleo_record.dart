@@ -36,7 +36,8 @@ class AleoRecord {
   }
 
   String serialNumberString(String recordCipherTextRaw, String privateKeyRaw,
-      String programIdRaw, String recordNameRaw) {
+      {String programIdRaw = 'credits.aleo',
+      String recordNameRaw = 'credits'}) {
     final recordPlainText = dartStrToC(recordCipherTextRaw);
     final privateKey = dartStrToC(privateKeyRaw);
     final programId = dartStrToC(programIdRaw);
@@ -48,14 +49,11 @@ class AleoRecord {
 
   List<String> serialNumberStrings(
       List<String> recordCipherTexts, String privateKey, String viewKey) {
-    final programId = 'credits.aleo';
-    final recordName = 'credits';
     final List<String> list = [];
     for (final recordCipherText in recordCipherTexts) {
       final result = isOwner(recordCipherText, viewKey);
       if (result) {
-        final numberString = serialNumberString(
-            recordCipherText, privateKey, programId, recordName);
+        final numberString = serialNumberString(recordCipherText, privateKey);
         list.add(numberString);
       }
     }
@@ -64,13 +62,10 @@ class AleoRecord {
 
   String findRecord(List<String> recordCipherTexts, String targetNumberString,
       String privateKey, String viewKey) {
-    final programId = 'credits.aleo';
-    final recordName = 'credits';
     for (final recordCipherText in recordCipherTexts) {
       final result = isOwner(recordCipherText, viewKey);
       if (result) {
-        final numberString = serialNumberString(
-            recordCipherText, privateKey, programId, recordName);
+        final numberString = serialNumberString(recordCipherText, privateKey);
         if (numberString == targetNumberString) {
           return recordCipherText;
         }

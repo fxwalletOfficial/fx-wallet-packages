@@ -63,7 +63,7 @@ class AleoTransaction {
     String inputAddress = '';
     String outputAddress = '';
     String value = '';
-    String fee = '';
+    String fee = getFee(feeOutput);
 
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
     switch (transitionType) {
@@ -75,28 +75,19 @@ class AleoTransaction {
             .replaceAll('(', '')
             .replaceAll(')', '')
             .replaceAll(' ', '');
-        if (feeType == FeeType.public) {
-          fee = feeOutput[1].split('u')[0]; // fee is private, fee = ''
-        }
-
         break;
       case TransferMethod.private_to_public:
         outputAddress = txOutput[0];
-        value = txOutput[1].split('u')[0]; // input is private.
-        if (feeType == FeeType.public) {
-          fee = feeOutput[1].split('u')[0]; // fee is private, fee = ''
-        }
+        value = getValue(txOutput[1]); // input is private.
         break;
       case TransferMethod.public:
         inputAddress = txOutput[0];
         outputAddress = txOutput[1];
-        value = txOutput[2].split('u')[0];
-        fee = feeOutput[1].split('u')[0];
+        value = getValue(txOutput[2]);
         break;
       case TransferMethod.public_to_private:
         inputAddress = txOutput[0];
-        value = txOutput[1].split('u')[0]; // output is private, can not get.
-        fee = feeOutput[1].split('u')[0];
+        value = getValue(txOutput[1]); // output is private, can not get.
         break;
       default:
         break;
@@ -134,6 +125,22 @@ class AleoTransaction {
     };
   }
 
+  static String getValue(String microcredits) {
+    if (microcredits.contains('u64')) {
+      return microcredits.split('u')[0];
+    } else {
+      return '';
+    }
+  }
+
+  static String getFee(feeOutput) {
+    if (feeOutput == null) {
+      return '';
+    } else {
+      return getValue(feeOutput[1]);
+    }
+  }
+
   static findFuture(List<dynamic> outputs) {
     for (final output in outputs) {
       if (output['type'] == 'future') {
@@ -168,11 +175,10 @@ class AleoTransaction {
       final amountRecordId =
           findInputRecord(json['execution']['transitions'][0]['inputs']);
       final feeRecordId = findInputRecord(json['fee']['transition']['inputs']);
-      final programId = 'credits.aleo';
-      final recordName = 'credits';
+
       for (final recordCipherText in recordCipherTexts) {
-        final numberString = rust.serialNumberString(
-            recordCipherText, privateKey, programId, recordName);
+        final numberString =
+            rust.serialNumberString(recordCipherText, privateKey);
         if (numberString == amountRecordId) {
           this.amount_record = recordCipherText;
         }
@@ -197,10 +203,6 @@ class AleoTransaction {
               }
             }
           }
-          // if (this.fee_record != '') {
-          //   final record = rust.decryptCipherText(this.amount_record, viewKey);
-          //   this.fee = record.getMicrocredits();
-          // }
         } else {
           final records = this.value.split(',');
           BigInt income = BigInt.from(0);
@@ -213,6 +215,70 @@ class AleoTransaction {
           }
           this.value = income.toString();
         }
+      }
+    }
+  }
+}
+
+class TxsResult {
+  List<String> txIds = [];
+  List<AleoTransaction> txs = [];
+  String privateBalance = '0';
+  AleoRecord recordFFI;
+  List<String> recordCipherTexts;
+  String viewKey;
+  String address;
+
+  TxsResult(
+      {required this.recordFFI,
+      required this.recordCipherTexts,
+      required this.viewKey,
+      required this.address});
+
+  getOutputTxs(
+    List<dynamic> transactions,
+    String privateKey,
+  ) {
+    BigInt privateBalance = BigInt.from(0);
+
+    for (final outTxJson in transactions) {
+      if (outTxJson['transition'] == null) {
+        /// 交易详情为空时，说明该record未被使用，加入余额
+        final recordCipherText = recordFFI.findRecord(
+            recordCipherTexts, outTxJson['serialNumber'], privateKey, viewKey);
+        final RecordPlainText record =
+            recordFFI.decryptCipherText(recordCipherText, viewKey);
+        privateBalance += BigInt.parse(record.getMicrocredits());
+      } else {
+        final transactionId = outTxJson['transition']['id'];
+        if (!txIds.contains(transactionId)) {
+          final outTx = AleoTransaction.fromJson(outTxJson['transition']);
+          outTx.transferType = TransferType.expense;
+          outTx.processPrivateTx(recordFFI, viewKey, privateKey,
+              outTxJson['transition'], recordCipherTexts);
+          txs.add(outTx);
+          txIds.add(outTx.transactionId);
+          outTx.inputAddress = address;
+        } // 包含时，说明有两个record被用作同个交易。即用了 fee_private
+      }
+    }
+    this.privateBalance = privateBalance.toString();
+  }
+
+  getInputTxs(
+    List<dynamic> inTxsJson,
+    String privateKey,
+  ) {
+    for (final inTxJson in inTxsJson) {
+      final transactionId = inTxJson['transaction']['id'];
+      if (!txIds.contains(transactionId)) {
+        final tx = AleoTransaction.fromJson(inTxJson['transaction']);
+        tx.processPrivateTx(recordFFI, viewKey, privateKey,
+            inTxJson['transaction'], recordCipherTexts);
+        tx.transferType = TransferType.income;
+        txs.add(tx);
+        txIds.add(tx.transactionId.toString());
+        tx.outputAddress = address;
       }
     }
   }

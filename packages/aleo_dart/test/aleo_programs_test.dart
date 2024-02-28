@@ -50,7 +50,7 @@ void main() {
         'aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px';
     final amount_credits = 1000000;
     final transfer_type = TransferMethod.private;
-    final fee_credits = 1000000;
+    final fee_credits = 100000;
     final amount_record =
         'record1qyqspj8md5yhtk774sum5r5lp0q7ysrz3uljtw98aqj9n9626ga9kqqxqyxx66trwfhkxun9v35hguerqqpqzqrwzmj36tyjlqnnsfk9j29739zusxxccj5ls0cztztp40aguqu9qvuh09t8r9fsjlvmhhcku6wkz7dejcc43yh4rlwf4gk24hwrpgnswcdfanf';
     final fee_record =

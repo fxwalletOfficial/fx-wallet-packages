@@ -49,12 +49,9 @@ void main() {
         'record1qyqspdn8f6lh4eum9a36l93mnxh5vcqssjsep9z4lp4vpya2efgmjdsvqyxx66trwfhkxun9v35hguerqqpqzq9yu3tvsnj4x0a7e2w9w204aya09thraeckdlsn59pve6fnnd3eqv0n7jpp5rsxn48jdjj3z55vhmp42f8hxp7vk5d2430vuvk3fzrsx0w9wqw';
     final privateKey =
         'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
-    final programId = "credits.aleo";
-    final recordName = "credits";
     final expectedSn =
         "832456939067524461249417512029753636275825913577828456140675004985222334481field";
-    final result = rust.serialNumberString(
-        recordCipher, privateKey, programId, recordName);
+    final result = rust.serialNumberString(recordCipher, privateKey);
     expect(expectedSn, result);
   });
 
