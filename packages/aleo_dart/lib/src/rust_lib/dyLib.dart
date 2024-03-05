@@ -17,6 +17,10 @@ class DyLib {
     return ffi.DynamicLibrary.open(position);
   }
 
+  static ffi.DynamicLibrary getLocalDyLib() {
+    return ffi.DynamicLibrary.open('./aleo_rust.dll');
+  }
+
   static ffi.DynamicLibrary getDyLibFromCargo() {
     if (Platform.isLinux) {
       return ffi.DynamicLibrary.open(DEFAULT_RUST_LIB_CARGO_SO);
