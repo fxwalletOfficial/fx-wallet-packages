@@ -1,10 +1,10 @@
 import 'package:aleo_dart/aleo.dart';
 
-final dyLib = DyLib.getLocalDyLib();
+final position = '.dart_tool/test/libcasher.so';
+final dyLib = DyLib.getDyLibByPosition(position);
 final rust = AleoAccount(dyLib);
 void main() {
-  final mnemonic =
-      "fly lecture gasp juice hover ice business census bless weapon polar upgrade";
-  final result = rust.mnemonicToAddress(mnemonic);
-  print(result);
+  final int a = 10;
+  final int b = 32;
+  print(rust.testRustFFi(a, b));
 }
