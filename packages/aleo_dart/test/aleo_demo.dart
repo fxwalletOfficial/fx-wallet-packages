@@ -1,6 +1,6 @@
 import 'package:aleo_dart/aleo.dart';
 
-final position = 'aleo_rust.dll';
+final position = 'test/rust_test.dll';
 final dyLib = DyLib.getDyLibByPosition(position);
 final rust = AleoAccount(dyLib);
 void main() {
