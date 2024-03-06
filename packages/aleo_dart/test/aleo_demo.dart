@@ -1,6 +1,6 @@
 import 'package:aleo_dart/aleo.dart';
 
-final position = '.dart_tool/test/libcasher.so';
+final position = 'aleo_rust.dll';
 final dyLib = DyLib.getDyLibByPosition(position);
 final rust = AleoAccount(dyLib);
 void main() {
