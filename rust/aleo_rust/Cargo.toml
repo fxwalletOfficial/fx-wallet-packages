@@ -22,9 +22,6 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
-[target.x86_64-pc-windows-gnu]
-linker = "x86_64-w64-mingw32-gcc"
-
 [dependencies.anyhow]
 version = "1"
 
@@ -45,28 +42,30 @@ version = "2.7.1"
 
 
 [dependencies.snarkvm]
-version = "0.16.18"
+git = "https://github.com/pzhun/snarkVM-0.16.18.git"
 optional = true
 
 [dependencies.snarkvm-circuit-network]
-version = "0.16.18"
+git = "https://github.com/pzhun/snarkVM-0.16.18.git"
 
 [dependencies.snarkvm-console]
-version = "0.16.18"
+git = "https://github.com/pzhun/snarkVM-0.16.18.git"
 
 [dependencies.snarkvm-ledger-store]
-version = "0.16.18"
+git = "https://github.com/pzhun/snarkVM-0.16.18.git"
 
 [dependencies.snarkvm-ledger-query]
-version = "0.16.18"
+git = "https://github.com/pzhun/snarkVM-0.16.18.git"
 
 [dependencies.snarkvm-ledger-block]
-version = "0.16.18"
+git = "https://github.com/pzhun/snarkVM-0.16.18.git"
 
 [dependencies.snarkvm-synthesizer]
-version = "0.16.18"
+git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+
+[dependencies.snarkvm-console-network]
+git = "https://github.com/pzhun/snarkVM-0.16.18.git"
 
 [features]
 default = [ "full" ]
 full = [ "ureq", "snarkvm" ]
-serial = [ "snarkvm-console/serial", "snarkvm-synthesizer/serial", "snarkvm-ledger-query/serial", "snarkvm-ledger-block/serial", "snarkvm-ledger-store/serial" ]

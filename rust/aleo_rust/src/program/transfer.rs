@@ -198,15 +198,56 @@ impl<N: Network> ProgramManager<N> {
             };
 
             // Create a new transaction.
-            vm.execute(
-                &private_key,
-                ("credits.aleo", transfer_function),
-                inputs.iter(),
-                fee_record,
-                fee,
-                Some(query),
-                rng,
-            )?
+            let some_query = Some(query.clone());
+            // Compute the authorization.
+            let authorization =
+                vm.authorize(&private_key, "credits.aleo", transfer_function, inputs, rng)?;
+            // Determine if a fee is required.
+            let is_fee_required = !authorization.is_split();
+            // Determine if a priority fee is declared.
+            let is_priority_fee_declared = fee > 0;
+
+            // Compute the execution.
+            let execution = vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
+            println!(
+                " {}",
+                Transaction::from_execution(execution.clone(), None)
+                    .unwrap()
+                    .to_string()
+            );
+            //******************************************************* */
+            // Compute the fee.
+            let fee = match is_fee_required || is_priority_fee_declared {
+                true => {
+                    // Compute the minimum execution cost.
+                    let (minimum_execution_cost, (_, _)) = execution_cost(&vm, &execution)?;
+                    // Compute the execution ID.
+                    let execution_id = execution.to_execution_id()?;
+                    // Authorize the fee.
+                    let authorization = match fee_record {
+                        Some(record) => vm.authorize_fee_private(
+                            &private_key,
+                            record,
+                            minimum_execution_cost,
+                            fee,
+                            execution_id,
+                            rng,
+                        )?,
+                        None => vm.authorize_fee_public(
+                            &private_key,
+                            minimum_execution_cost,
+                            fee,
+                            execution_id,
+                            rng,
+                        )?,
+                    };
+                    // Execute the fee.
+                    Some(vm.execute_fee_authorization_raw(authorization, some_query, rng)?)
+                }
+                false => None,
+            };
+            // Return the execute transaction.
+            Transaction::from_execution(execution, fee)?
         };
         Ok(execution.to_string())
     }
