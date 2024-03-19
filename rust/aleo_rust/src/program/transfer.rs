@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo SDK library. If not, see <https://www.gnu.org/licenses/>.
 
+use snarkvm_synthesizer::Authorization;
+
 use super::*;
 
 impl<N: Network> ProgramManager<N> {
@@ -207,14 +209,11 @@ impl<N: Network> ProgramManager<N> {
             // Determine if a priority fee is declared.
             let is_priority_fee_declared = fee > 0;
 
+            // Compute the trace
+            // let authorization_t = Authorization::<N>::from_str(&authorization.to_string()).unwrap();
+
             // Compute the execution.
             let execution = vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
-            println!(
-                " {}",
-                Transaction::from_execution(execution.clone(), None)
-                    .unwrap()
-                    .to_string()
-            );
             //******************************************************* */
             // Compute the fee.
             let fee = match is_fee_required || is_priority_fee_declared {
@@ -241,6 +240,7 @@ impl<N: Network> ProgramManager<N> {
                             rng,
                         )?,
                     };
+                    // println!(" {}", authorization.to_string());
                     // Execute the fee.
                     Some(vm.execute_fee_authorization_raw(authorization, some_query, rng)?)
                 }
@@ -274,6 +274,155 @@ impl<N: Network> ProgramManager<N> {
             );
         }
         result
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn execution_authorization(
+        &self,
+        amount: u64,
+        recipient_address: Address<N>,
+        transfer_type: TransferType,
+        password: Option<&str>,
+        amount_record: Option<Record<N, Plaintext<N>>>,
+    ) -> Result<String> {
+        // Ensure records provided have enough credits to cover the transfer amount and fee
+        if let Some(amount_record) = amount_record.as_ref() {
+            ensure!(
+                amount_record.microcredits()? >= amount,
+                "Credits in amount record must greater than transfer amount specified"
+            );
+        }
+        // Retrieve the private key.
+        let private_key = self.get_private_key(password)?;
+
+        // Generate the execution transaction
+        let authorization = {
+            let rng = &mut rand::thread_rng();
+
+            // Initialize a VM
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let vm = VM::from(store)?;
+
+            // Prepare the inputs for a transfer.
+            let (transfer_function, inputs) = match transfer_type {
+                TransferType::Public => {
+                    let inputs = vec![
+                        Value::from_str(&recipient_address.to_string())?,
+                        Value::from_str(&format!("{}u64", amount))?,
+                    ];
+                    ("transfer_public", inputs)
+                }
+                TransferType::Private => {
+                    if amount_record.is_none() {
+                        bail!("Amount record must be specified for private transfers");
+                    } else {
+                        let inputs = vec![
+                            Value::Record(amount_record.unwrap()),
+                            Value::from_str(&recipient_address.to_string())?,
+                            Value::from_str(&format!("{}u64", amount))?,
+                        ];
+                        ("transfer_private", inputs)
+                    }
+                }
+                TransferType::PublicToPrivate => {
+                    let inputs = vec![
+                        Value::from_str(&recipient_address.to_string())?,
+                        Value::from_str(&format!("{}u64", amount))?,
+                    ];
+                    ("transfer_public_to_private", inputs)
+                }
+                TransferType::PrivateToPublic => {
+                    if amount_record.is_none() {
+                        bail!("Amount record must be specified for private transfers");
+                    } else {
+                        let inputs = vec![
+                            Value::Record(amount_record.unwrap()),
+                            Value::from_str(&recipient_address.to_string())?,
+                            Value::from_str(&format!("{}u64", amount))?,
+                        ];
+                        ("transfer_private_to_public", inputs)
+                    }
+                }
+            };
+            // Compute the authorization.
+            vm.authorize(&private_key, "credits.aleo", transfer_function, inputs, rng)?
+        };
+        Ok(authorization.to_string())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn execution_fee_authorization(
+        &self,
+        fee: u64,
+        password: Option<&str>,
+        fee_record: Option<Record<N, Plaintext<N>>>,
+        execution: Execution<N>,
+    ) -> Result<String> {
+        // Ensure records provided have enough credits to cover the transfer amount and fee
+        if let Some(fee_record) = fee_record.as_ref() {
+            ensure!(
+                fee_record.microcredits()? >= fee,
+                "Credits in fee record must greater than fee specified"
+            );
+        }
+        // Retrieve the private key.
+        let private_key = self.get_private_key(password)?;
+
+        // Generate the execution transaction
+        let rng = &mut rand::thread_rng();
+
+        // Initialize a VM
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let vm = VM::from(store)?;
+        // Compute the fee.
+
+        // Compute the minimum execution cost.
+        let (minimum_execution_cost, (_, _)) = execution_cost(&vm, &execution)?;
+        // Compute the execution ID.
+        let execution_id = execution.to_execution_id()?;
+        // Authorize the fee.
+        let fee_authorization = match fee_record {
+            Some(record) => vm.authorize_fee_private(
+                &private_key,
+                record,
+                minimum_execution_cost,
+                fee,
+                execution_id,
+                rng,
+            )?,
+            None => vm.authorize_fee_public(
+                &private_key,
+                minimum_execution_cost,
+                fee,
+                execution_id,
+                rng,
+            )?,
+        };
+        Ok(fee_authorization.to_string())
+    }
+
+    pub fn execute_proof(&self, authorization: Authorization<N>) -> Result<String> {
+        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
+        let some_query = Some(query.clone());
+        // Initialize a VM
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let vm = VM::from(store)?;
+        let rng = &mut rand::thread_rng();
+        // Compute the execution.
+        let execution = vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
+        Ok(execution.to_string())
+    }
+
+    pub fn execute_fee_proof(&self, authorization: Authorization<N>) -> Result<String> {
+        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
+        let some_query = Some(query.clone());
+        // Initialize a VM
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let vm = VM::from(store)?;
+        let rng = &mut rand::thread_rng();
+        // Compute the execution.
+        let execution = vm.execute_fee_authorization_raw(authorization, some_query, rng)?;
+        Ok(execution.to_string())
     }
 }
 

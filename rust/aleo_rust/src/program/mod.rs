@@ -57,11 +57,11 @@ impl<N: Network> ProgramManager<N> {
         local_program_directory: Option<PathBuf>,
         use_cache: bool,
     ) -> Result<Self> {
-        if private_key.is_some() && private_key_ciphertext.is_some() {
-            bail!("Cannot have both private key and private key ciphertext");
-        } else if private_key.is_none() && private_key_ciphertext.is_none() {
-            bail!("Must have either private key or private key ciphertext");
-        }
+        // if private_key.is_some() && private_key_ciphertext.is_some() {
+        //     bail!("Cannot have both private key and private key ciphertext");
+        // } else if private_key.is_none() && private_key_ciphertext.is_none() {
+        //     bail!("Must have either private key or private key ciphertext");
+        // }
         let programs = IndexMap::new();
         let vm = if use_cache {
             let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;

@@ -6,8 +6,6 @@ import 'package:path/path.dart' as path;
 import 'package:aleo_dart/src/rust_lib/programs_rust_ffi.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
 
-
-
 class AleoProgram {
   late ProgramsRustFFI programsRustFFI;
 
@@ -72,6 +70,74 @@ class AleoProgram {
 
     return programsRustFFI
         .broadcast(transaction, url, transfer_type)
+        .toDartString();
+  }
+
+  String executionAuthorization(
+    String private_key_raw,
+    String recipient_raw,
+    String transfer_type_raw,
+    int amount_credits,
+    String url_raw,
+    String amount_record_raw,
+  ) {
+    final private_key = dartStrToC(private_key_raw);
+    final transfer_type = dartStrToC(transfer_type_raw);
+    final recipient = dartStrToC(recipient_raw);
+    final url = dartStrToC(url_raw);
+    final amount_record = dartStrToC(amount_record_raw);
+
+    return programsRustFFI
+        .executionAuthorization(private_key, recipient, transfer_type,
+            amount_credits, url, amount_record)
+        .toDartString();
+  }
+
+  String executionFeeAuthorization(
+      String private_key_raw,
+      String transfer_type_raw,
+      int fee_credits,
+      String url_raw,
+      String fee_record_raw,
+      String execution_raw) {
+    final private_key = dartStrToC(private_key_raw);
+    final transfer_type = dartStrToC(transfer_type_raw);
+    final url = dartStrToC(url_raw);
+    final fee_record = dartStrToC(fee_record_raw);
+    final execution = dartStrToC(execution_raw);
+
+    return programsRustFFI
+        .executionFeeAuthorization(
+            private_key, transfer_type, fee_credits, url, fee_record, execution)
+        .toDartString();
+  }
+
+  String executeProof(
+    String url_raw,
+    String authorization_raw,
+  ) {
+    final url = dartStrToC(url_raw);
+    final authorization = dartStrToC(authorization_raw);
+    return programsRustFFI.executeProof(url, authorization).toDartString();
+  }
+
+  String executeFeeProof(
+    String url_raw,
+    String authorization_raw,
+  ) {
+    final url = dartStrToC(url_raw);
+    final authorization = dartStrToC(authorization_raw);
+    return programsRustFFI.executeFeeProof(url, authorization).toDartString();
+  }
+
+  String buildTransactionOffline(
+    String execution_raw,
+    String fee_raw,
+  ) {
+    final execution = dartStrToC(execution_raw);
+    final fee = dartStrToC(fee_raw);
+    return programsRustFFI
+        .buildTransactionOffline(execution, fee)
         .toDartString();
   }
 

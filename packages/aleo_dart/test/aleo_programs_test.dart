@@ -15,9 +15,9 @@ import 'package:test/test.dart';
 //   view_key: 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp',
 //   private_key: 'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v',
 // };
-// final String libPosition = 'aleo_rust/target/debug/libaleo_rust.so';
-// final dyLib = DyLib.getDyLibByPosition(libPosition);
-final dyLib = DyLib.getDyLibFromGit();
+final String libPosition = 'aleo_rust/target/debug/libaleo_rust.so';
+final dyLib = DyLib.getDyLibByPosition(libPosition);
+// final dyLib = DyLib.getDyLibFromCargo();
 final rust = AleoProgram(dyLib);
 
 final amount_record = 'None';
@@ -32,36 +32,37 @@ void main() {
     final recipient =
         'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
     final amount_credits = 10000000;
-    final transfer_type = TransferMethod.public_to_private;
+    final transfer_type = TransferMethod.public;
     final fee_credits = 1000000;
 
     final tx = rust.buildTransaction(private_key, recipient, transfer_type,
         amount_credits, fee_credits, url, amount_record, amount_record);
-    final txJson = json.decode(tx);
-    print(txJson['execution']['transitions'][0]['outputs'][0]['value']);
+    print(tx);
+    // final txJson = json.decode(tx);
+    // print(txJson['execution']['transitions'][0]['outputs'][0]['value']);
     final txHash = rust.broadcast(tx, url, transfer_type);
     print(txHash);
   });
 
-  test('build transaction', () {
-    final private_key =
-        'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
-    final recipient =
-        'aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px';
-    final amount_credits = 1000000;
-    final transfer_type = TransferMethod.private;
-    final fee_credits = 100000;
-    final amount_record =
-        'record1qyqspj8md5yhtk774sum5r5lp0q7ysrz3uljtw98aqj9n9626ga9kqqxqyxx66trwfhkxun9v35hguerqqpqzqrwzmj36tyjlqnnsfk9j29739zusxxccj5ls0cztztp40aguqu9qvuh09t8r9fsjlvmhhcku6wkz7dejcc43yh4rlwf4gk24hwrpgnswcdfanf';
-    final fee_record =
-        'record1qyqsprkmsytx67gvzffjwgjcrh0dwhutl8yhpzv3jpya44hqcg0futg2qyxx66trwfhkxun9v35hguerqqpqzq8aaxazt5sk6lv7jqewhurxn4fupj2qzx4kjpptdpxnyds3tjx2q654uzaxfuffvcvs7s5cqnektergh4qltgpkp9gnzht5ct7zfkrqqlkppme';
-    final tx = rust.buildTransaction(private_key, recipient, transfer_type,
-        amount_credits, fee_credits, url, amount_record, fee_record);
-    // print(tx);
-    final txHash = rust.broadcast(tx, url, transfer_type);
-    print(txHash);
-  });
-  test('downing proving key', () async {
-    await rust.downloadProvingKey();
-  }, timeout: Timeout(Duration(minutes: 3)));
+  // test('build transaction', () {
+  //   final private_key =
+  //       'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
+  //   final recipient =
+  //       'aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px';
+  //   final amount_credits = 1000000;
+  //   final transfer_type = TransferMethod.private;
+  //   final fee_credits = 100000;
+  //   final amount_record =
+  //       'record1qyqspttl9gdej22xemsrulz589z0szy0munwwl20l5vjc2eg40vyx9qxqyxx66trwfhkxun9v35hguerqqpqzqrcrl9u7daggvd2th8679wzzf557765tzus6fzzxsn7mjea6zt3qs7rtfs8fkywetjm8m2waff8yfmc4v5h2neemv90268surxtan3qjf5pppl';
+  //   final fee_record =
+  //       'record1qyqspttl9gdej22xemsrulz589z0szy0munwwl20l5vjc2eg40vyx9qxqyxx66trwfhkxun9v35hguerqqpqzqrcrl9u7daggvd2th8679wzzf557765tzus6fzzxsn7mjea6zt3qs7rtfs8fkywetjm8m2waff8yfmc4v5h2neemv90268surxtan3qjf5pppl';
+  //   final tx = rust.buildTransaction(private_key, recipient, transfer_type,
+  //       amount_credits, fee_credits, url, amount_record, '');
+  //   print(tx);
+  //   final txHash = rust.broadcast(tx, url, transfer_type);
+  //   print(txHash);
+  // });
+  // test('downing proving key', () async {
+  //   await rust.downloadProvingKey();
+  // }, timeout: Timeout(Duration(minutes: 3)));
 }

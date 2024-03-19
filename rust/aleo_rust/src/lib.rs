@@ -184,6 +184,8 @@ pub use program::{OnChainProgramState, ProgramManager, RecordFinder, TransferTyp
 #[cfg(test)]
 #[cfg(feature = "full")]
 pub mod test_utils;
+use snarkvm_ledger_block::Fee;
+use snarkvm_synthesizer::Authorization;
 #[cfg(test)]
 #[cfg(feature = "full")]
 pub use test_utils::*;
@@ -517,6 +519,206 @@ pub extern "C" fn try_transfer(
 }
 
 #[no_mangle]
+pub extern "C" fn execution_authorization(
+    private_key_raw: *const c_char,
+    recipient_raw: *const c_char,
+    transfer_type_raw: *const c_char,
+    amount: u64,
+    url_raw: *const c_char,
+    amount_record_raw: *const c_char,
+) -> *const c_char {
+    let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
+    let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
+
+    let visibility = match transfer_type {
+        "transfer_public" => TransferType::Public,
+        "transfer_public_to_private" => TransferType::PublicToPrivate,
+        "transfer_private" => TransferType::Private,
+        "transfer_private_to_public" => TransferType::PrivateToPublic,
+        _ => TransferType::Public,
+    };
+    // let visibility = TransferType::Private;
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let recipient_cstr = unsafe { CStr::from_ptr(recipient_raw) };
+    let recipient_str: &str = recipient_cstr.to_str().unwrap();
+    let recipient = Address::<Testnet3>::from_str(recipient_str).unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
+    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let view_key = ViewKey::try_from(&sender).unwrap();
+    let program_manager =
+        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+            .unwrap();
+    // let record_finder = RecordFinder::new(api_client);
+    let mut authorization = "error".to_string();
+    for i in 0..10 {
+        let amount_record = match &visibility {
+            TransferType::Public => None,
+            TransferType::PublicToPrivate => None,
+            _ => {
+                let amount_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                    &cstr_to_string(amount_record_raw),
+                )
+                .unwrap();
+                let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
+
+                Some(amount_record)
+            }
+        };
+        let result = program_manager.execution_authorization(
+            amount,
+            recipient,
+            visibility,
+            None,
+            amount_record,
+        );
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            authorization = result.unwrap();
+            break;
+        }
+    }
+    let c_string = CString::new(authorization).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn execute_proof(
+    url_raw: *const c_char,
+    authorization_raw: *const c_char,
+) -> *const c_char {
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let program_manager =
+        ProgramManager::<Testnet3>::new(None, None, Some(api_client.clone()), None, false).unwrap();
+    let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
+    let authorization_str: &str = authorization_cstr.to_str().unwrap();
+    let authorization =
+        Authorization::<Testnet3>::from_str(&authorization_str.to_string()).unwrap();
+    let execution = program_manager.execute_proof(authorization).unwrap();
+    let c_string = CString::new(execution.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn execution_fee_authorization(
+    private_key_raw: *const c_char,
+    transfer_type_raw: *const c_char,
+    url_raw: *const c_char,
+    fee: u64,
+    fee_record_raw: *const c_char,
+    execution_raw: *const c_char,
+) -> *const c_char {
+    let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
+    let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
+
+    let visibility = match transfer_type {
+        "transfer_public" => TransferType::Public,
+        "transfer_public_to_private" => TransferType::PublicToPrivate,
+        "transfer_private" => TransferType::Private,
+        "transfer_private_to_public" => TransferType::PrivateToPublic,
+        _ => TransferType::Public,
+    };
+
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+
+    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let view_key = ViewKey::try_from(&sender).unwrap();
+    let program_manager =
+        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+            .unwrap();
+    let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
+    let execution_str: &str = execution_cstr.to_str().unwrap();
+    let execution = Execution::<Testnet3>::from_str(&execution_str.to_string()).unwrap();
+
+    let mut authorization = "error".to_string();
+    for i in 0..10 {
+        let fee_record = match &visibility {
+            TransferType::Public => None,
+            TransferType::PublicToPrivate => None,
+            _ => {
+                let fee_record_string: String = cstr_to_string(fee_record_raw);
+                let fee_record;
+
+                if fee_record_string.is_empty() {
+                    fee_record = None;
+                } else {
+                    let fee_record_ciphertext =
+                        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&fee_record_string)
+                            .unwrap();
+                    fee_record = Some(fee_record_ciphertext.decrypt(&view_key).unwrap());
+                }
+
+                fee_record
+            }
+        };
+        let result =
+            program_manager.execution_fee_authorization(fee, None, fee_record, execution.clone());
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            authorization = result.unwrap();
+            break;
+        }
+    }
+    let c_string = CString::new(authorization).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn execute_fee_proof(
+    url_raw: *const c_char,
+    authorization_raw: *const c_char,
+) -> *const c_char {
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let program_manager =
+        ProgramManager::<Testnet3>::new(None, None, Some(api_client.clone()), None, false).unwrap();
+    let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
+    let authorization_str: &str = authorization_cstr.to_str().unwrap();
+    let authorization =
+        Authorization::<Testnet3>::from_str(&authorization_str.to_string()).unwrap();
+    let execution = program_manager.execute_fee_proof(authorization).unwrap();
+    let c_string = CString::new(execution.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn build_transaction_offline(
+    execution_raw: *const c_char,
+    fee_raw: *const c_char,
+) -> *const c_char {
+    let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
+    let execution_str: &str = execution_cstr.to_str().unwrap();
+    let execution = Execution::<Testnet3>::from_str(&execution_str.to_string()).unwrap();
+
+    let fee_cstr = unsafe { CStr::from_ptr(fee_raw) };
+    let fee_str: &str = fee_cstr.to_str().unwrap();
+    let fee = Some(Fee::<Testnet3>::from_str(&fee_str.to_string()).unwrap());
+    let transaction = Transaction::from_execution(execution, fee).unwrap();
+
+    let c_string = CString::new(transaction.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
 pub extern "C" fn build_transaction(
     private_key_raw: *const c_char,
     recipient_raw: *const c_char,
@@ -559,27 +761,25 @@ pub extern "C" fn build_transaction(
             TransferType::Public => (None, None),
             TransferType::PublicToPrivate => (None, None),
             _ => {
-                // let record = record_finder.find_amount_and_fee_records(amount, fee, &sender);
-                // if record.is_err() {
-                //     println!("Record not found: {} - retrying", record.unwrap_err());
-                //     thread::sleep(std::time::Duration::from_secs(3));
-                //     continue;
-                // }
-                // let (amount_record, fee_record) = record.unwrap();
-
                 let amount_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
                     &cstr_to_string(amount_record_raw),
                 )
                 .unwrap();
                 let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
 
-                let fee_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
-                    &cstr_to_string(fee_record_raw),
-                )
-                .unwrap();
-                let fee_record = fee_record_ciphertext.decrypt(&view_key).unwrap();
+                let fee_record_string: String = cstr_to_string(fee_record_raw);
+                let fee_record;
 
-                (Some(amount_record), Some(fee_record))
+                if fee_record_string.is_empty() {
+                    fee_record = None;
+                } else {
+                    let fee_record_ciphertext =
+                        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&fee_record_string)
+                            .unwrap();
+                    fee_record = Some(fee_record_ciphertext.decrypt(&view_key).unwrap());
+                }
+
+                (Some(amount_record), fee_record)
             }
         };
         let result = program_manager.build_transaction(
