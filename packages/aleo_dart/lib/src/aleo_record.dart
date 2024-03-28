@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:ffi/ffi.dart';
 
 import 'package:aleo_dart/src/rust_lib/record_rust_ffi.dart';
@@ -74,14 +76,14 @@ class AleoRecord {
     return '';
   }
 
-  Future<String> getPrivateBalance(
+  Future<double> getPrivateBalance(
       List<String> recordCipherTexts, String viewKey) async {
     BigInt balance = BigInt.from(0);
     for (final recordCipherText in recordCipherTexts) {
       final record = decryptCipherText(recordCipherText, viewKey);
       balance += BigInt.parse(record.getMicrocredits());
     }
-    return balance.toString();
+    return balance.toDouble() / pow(10, 6);
   }
 
   RecordPlainText processRecord(String recordRaw) {
