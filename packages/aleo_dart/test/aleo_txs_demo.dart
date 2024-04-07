@@ -41,8 +41,23 @@ void main() async {
   /// 获取顺序不可颠倒，需要先处理找零
   result.getOutputTxs(transactions, privateKey);
   result.getInputTxs(inTxsJson, privateKey);
-  print(result.privateBalance);
-  for (final tx in result.txs) {
+  // print(result.privateBalance);
+  // for (final tx in result.txs) {
+  //   print(tx.toJson());
+  // }
+
+  /// 公开交易解析， public方为该地址的所有交易，通过viewkey筛掉，确保与隐私交易不重复。
+  final List<dynamic> pubTxsJson = json.decode(
+      new File('./test/data/aleo_records.json')
+          .readAsStringSync(encoding: utf8))['pubilcTransactions'];
+  // print(pubTxsJson);
+  final TxsResult publicTxs = TxsResult(
+      recordFFI: recordFFI,
+      recordCipherTexts: [],
+      viewKey: viewKey,
+      address: address);
+  publicTxs.getPublicTxs(pubTxsJson);
+  for (final tx in publicTxs.txs) {
     print(tx.toJson());
   }
 }

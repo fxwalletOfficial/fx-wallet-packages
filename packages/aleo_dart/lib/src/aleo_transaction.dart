@@ -282,4 +282,14 @@ class TxsResult {
       }
     }
   }
+
+  getPublicTxs(List<dynamic> inTxsJson) {
+    if (recordCipherTexts.length != 0) {
+      throw Exception("Unsupport record in public txs");
+    }
+    for (final inTxJson in inTxsJson) {
+      final tx = AleoTransaction.fromJson(inTxJson['transaction']);
+      txs.add(tx);
+    }
+  }
 }
