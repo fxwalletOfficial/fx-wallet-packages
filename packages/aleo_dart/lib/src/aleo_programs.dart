@@ -13,7 +13,7 @@ class AleoProgram {
     this.programsRustFFI = ProgramsRustFFI(dyLib);
   }
 
-  String tryTransfer(
+  Future<String> tryTransfer(
     String private_key_raw,
     String recipient_raw,
     String transfer_type_raw,
@@ -22,21 +22,26 @@ class AleoProgram {
     String url_raw,
     String amount_record_raw,
     String fee_record_raw,
-  ) {
+  ) async {
     final private_key = dartStrToC(private_key_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
     final recipient = dartStrToC(recipient_raw);
     final url = dartStrToC(url_raw);
     final amount_record = dartStrToC(amount_record_raw);
     final fee_record = dartStrToC(fee_record_raw);
-
-    return programsRustFFI
-        .transfer(private_key, recipient, transfer_type, amount_credits,
-            fee_credits, url, amount_record, fee_record)
-        .toDartString();
+    final result = await programsRustFFI.transfer(
+        private_key,
+        recipient,
+        transfer_type,
+        amount_credits,
+        fee_credits,
+        url,
+        amount_record,
+        fee_record);
+    return result.toDartString();
   }
 
-  String buildTransaction(
+  Future<String> buildTransaction(
     String private_key_raw,
     String recipient_raw,
     String transfer_type_raw,
@@ -45,7 +50,7 @@ class AleoProgram {
     String url_raw,
     String amount_record_raw,
     String fee_record_raw,
-  ) {
+  ) async {
     final private_key = dartStrToC(private_key_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
     final recipient = dartStrToC(recipient_raw);
@@ -53,92 +58,98 @@ class AleoProgram {
     final amount_record = dartStrToC(amount_record_raw);
     final fee_record = dartStrToC(fee_record_raw);
 
-    return programsRustFFI
-        .buildTransaction(private_key, recipient, transfer_type, amount_credits,
-            fee_credits, url, amount_record, fee_record)
-        .toDartString();
+    final result = await programsRustFFI.buildTransaction(
+        private_key,
+        recipient,
+        transfer_type,
+        amount_credits,
+        fee_credits,
+        url,
+        amount_record,
+        fee_record);
+    return result.toDartString();
   }
 
-  String broadcast(
+  Future<String> broadcast(
     String transaction_raw,
     String url_raw,
     String transfer_type_raw,
-  ) {
+  ) async {
     final transaction = dartStrToC(transaction_raw);
     final url = dartStrToC(url_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
 
-    return programsRustFFI
-        .broadcast(transaction, url, transfer_type)
-        .toDartString();
+    final result =
+        await programsRustFFI.broadcast(transaction, url, transfer_type);
+    return result.toDartString();
   }
 
-  String executionAuthorization(
+  Future<String> executionAuthorization(
     String private_key_raw,
     String recipient_raw,
     String transfer_type_raw,
     int amount_credits,
     String url_raw,
     String amount_record_raw,
-  ) {
+  ) async {
     final private_key = dartStrToC(private_key_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
     final recipient = dartStrToC(recipient_raw);
     final url = dartStrToC(url_raw);
     final amount_record = dartStrToC(amount_record_raw);
 
-    return programsRustFFI
-        .executionAuthorization(private_key, recipient, transfer_type,
-            amount_credits, url, amount_record)
-        .toDartString();
+    final result = await programsRustFFI.executionAuthorization(private_key,
+        recipient, transfer_type, amount_credits, url, amount_record);
+    return result.toDartString();
   }
 
-  String executionFeeAuthorization(
+  Future<String> executionFeeAuthorization(
       String private_key_raw,
       String transfer_type_raw,
       int fee_credits,
       String url_raw,
       String fee_record_raw,
-      String execution_raw) {
+      String execution_raw) async {
     final private_key = dartStrToC(private_key_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
     final url = dartStrToC(url_raw);
     final fee_record = dartStrToC(fee_record_raw);
     final execution = dartStrToC(execution_raw);
 
-    return programsRustFFI
-        .executionFeeAuthorization(
-            private_key, transfer_type, fee_credits, url, fee_record, execution)
-        .toDartString();
+    final result = await programsRustFFI.executionFeeAuthorization(
+        private_key, transfer_type, fee_credits, url, fee_record, execution);
+    return result.toDartString();
   }
 
-  String executeProof(
+  Future<String> executeProof(
     String url_raw,
     String authorization_raw,
-  ) {
+  ) async {
     final url = dartStrToC(url_raw);
     final authorization = dartStrToC(authorization_raw);
-    return programsRustFFI.executeProof(url, authorization).toDartString();
+    final result = await programsRustFFI.executeProof(url, authorization);
+    return result.toDartString();
   }
 
-  String executeFeeProof(
+  Future<String> executeFeeProof(
     String url_raw,
     String authorization_raw,
-  ) {
+  ) async {
     final url = dartStrToC(url_raw);
     final authorization = dartStrToC(authorization_raw);
-    return programsRustFFI.executeFeeProof(url, authorization).toDartString();
+    final result = await programsRustFFI.executeFeeProof(url, authorization);
+    return result.toDartString();
   }
 
-  String buildTransactionOffline(
+  Future<String> buildTransactionOffline(
     String execution_raw,
     String fee_raw,
-  ) {
+  ) async {
     final execution = dartStrToC(execution_raw);
     final fee = dartStrToC(fee_raw);
-    return programsRustFFI
-        .buildTransactionOffline(execution, fee)
-        .toDartString();
+    final result =
+        await programsRustFFI.buildTransactionOffline(execution, fee);
+    return result.toDartString();
   }
 
   Future<void> downloadProvingKey({updateKey = false}) async {

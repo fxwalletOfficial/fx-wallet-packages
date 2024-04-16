@@ -23,7 +23,7 @@ final fee_record = '';
 void main() {
   final url = 'http://23.20.9.85:3033';
 
-  test('transfer offline', () {
+  test('transfer offline', () async {
     final private_key =
         'APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH';
     final recipient =
@@ -32,14 +32,15 @@ void main() {
     final transfer_type = TransferMethod.public_to_private;
     final fee_credits = 1000000;
 
-    final authorization = rust.executionAuthorization(private_key, recipient,
-        transfer_type, amount_credits, url, amount_record);
-    final proof = rust.executeProof(url, authorization); // in server
-    final feeAuthorization = rust.executionFeeAuthorization(
+    final authorization = await rust.executionAuthorization(private_key,
+        recipient, transfer_type, amount_credits, url, amount_record);
+    final proof = await rust.executeProof(url, authorization); // in server
+    final feeAuthorization = await rust.executionFeeAuthorization(
         private_key, transfer_type, fee_credits, url, fee_record, proof);
-    final feeProof = rust.executeFeeProof(url, feeAuthorization); // in server
-    final offlineTx = rust.buildTransactionOffline(proof, feeProof);
-    final txHash = rust.broadcast(offlineTx, url, transfer_type);
+    final feeProof =
+        await rust.executeFeeProof(url, feeAuthorization); // in server
+    final offlineTx = await rust.buildTransactionOffline(proof, feeProof);
+    final txHash = await rust.broadcast(offlineTx, url, transfer_type);
     print(txHash);
   });
 }
