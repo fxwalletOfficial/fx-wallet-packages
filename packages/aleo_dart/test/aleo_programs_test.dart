@@ -15,33 +15,40 @@ import 'package:test/test.dart';
 //   view_key: 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp',
 //   private_key: 'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v',
 // };
-final String libPosition = 'aleo_rust/target/debug/libaleo_rust.so';
+final String libPosition = 'aleo_rust/target/release/libaleo_rust.so';
 final dyLib = DyLib.getDyLibByPosition(libPosition);
 // final dyLib = DyLib.getDyLibFromCargo();
 final rust = AleoProgram(dyLib);
 
 final amount_record = 'None';
 final fee_record = 'None';
-void main() {
+void main() async {
   // final url =  'https://api.explorer.aleo.org/v1';
   final url = 'http://23.20.9.85:3033';
-
-  test('try transfer without record', () {
+  
+  test('try transfer without record', () async {
     final private_key =
         'APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH';
     final recipient =
-        'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
-    final amount_credits = 10000000;
+        'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795 eyrdnyh3uzqnf8nfn';
+    final amount_credits = 1000000;
     final transfer_type = TransferMethod.public;
     final fee_credits = 1000000;
 
-    final tx = rust.buildTransaction(private_key, recipient, transfer_type,
-        amount_credits, fee_credits, url, amount_record, amount_record);
+    final tx = await rust.buildTransaction(
+        private_key,
+        recipient,
+        transfer_type,
+        amount_credits,
+        fee_credits,
+        url,
+        amount_record,
+        amount_record);
     print(tx);
     // final txJson = json.decode(tx);
     // print(txJson['execution']['transitions'][0]['outputs'][0]['value']);
-    final txHash = rust.broadcast(tx, url, transfer_type);
-    print(txHash);
+    // final txHash = rust.broadcast(tx, url, transfer_type);
+    // print(txHash);
   });
 
   // test('build transaction', () {
