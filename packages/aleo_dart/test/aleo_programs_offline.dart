@@ -21,16 +21,16 @@ final rust = AleoProgram(dyLib);
 final amount_record = '';
 final fee_record = '';
 void main() {
-  final url = 'http://23.20.9.85:3033';
+  final url = 'https://api.explorer.aleo.org/v1';
 
   test('transfer offline', () async {
     final private_key =
-        'APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH';
+        'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
     final recipient =
         'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
-    final amount_credits = 10000000;
+    final amount_credits = 1000000;
     final transfer_type = TransferMethod.public_to_private;
-    final fee_credits = 1000000;
+    final fee_credits = 3000000;
 
     final authorization = await rust.executionAuthorization(private_key,
         recipient, transfer_type, amount_credits, url, amount_record);
