@@ -32,21 +32,25 @@ class AleoTransaction {
   String transferType = '';
   String amount_record = '';
   String fee_record = '';
+  int? height;
+  int? timestamp;
 
-  AleoTransaction({
-    required this.type,
-    required this.transactionId,
-    required this.transitionIds,
-    required this.program,
-    required this.transitionType,
-    required this.inputAddress,
-    required this.outputAddress,
-    required this.value,
-    required this.feeType,
-    required this.fee,
-  });
+  AleoTransaction(
+      {required this.type,
+      required this.transactionId,
+      required this.transitionIds,
+      required this.program,
+      required this.transitionType,
+      required this.inputAddress,
+      required this.outputAddress,
+      required this.value,
+      required this.feeType,
+      required this.fee,
+      this.height,
+      this.timestamp});
 
-  factory AleoTransaction.fromJson(Map<String, dynamic> json) {
+  factory AleoTransaction.fromJson(Map<String, dynamic> jsonRaw) {
+    final json = jsonRaw['transaction'];
     final type = json['type'];
     final transactionId = json['id'];
     final transition = json['execution']['transitions'][0];
@@ -103,12 +107,16 @@ class AleoTransaction {
         outputAddress: outputAddress,
         value: value,
         feeType: feeType,
-        fee: fee);
+        fee: fee,
+        height: jsonRaw["height"],
+        timestamp: jsonRaw["timestamp"]);
   }
 
   Map<String, dynamic> toJson() {
     return {
       'type': type,
+      'height': height,
+      'timestamp': timestamp,
       'transactionId': transactionId,
       'transitionIds': transitionIds,
       'program': program,
@@ -252,7 +260,7 @@ class TxsResult {
       } else {
         final transactionId = outTxJson['transition']['id'];
         if (!txIds.contains(transactionId)) {
-          final outTx = AleoTransaction.fromJson(outTxJson['transition']);
+          final outTx = AleoTransaction.fromJson(outTxJson);
           outTx.transferType = TransferType.expense;
           outTx.processPrivateTx(recordFFI, viewKey, privateKey,
               outTxJson['transition'], recordCipherTexts);
@@ -272,7 +280,7 @@ class TxsResult {
     for (final inTxJson in inTxsJson) {
       final transactionId = inTxJson['transaction']['id'];
       if (!txIds.contains(transactionId)) {
-        final tx = AleoTransaction.fromJson(inTxJson['transaction']);
+        final tx = AleoTransaction.fromJson(inTxJson);
         tx.processPrivateTx(recordFFI, viewKey, privateKey,
             inTxJson['transaction'], recordCipherTexts);
         tx.transferType = TransferType.income;
@@ -288,7 +296,7 @@ class TxsResult {
       throw Exception("Unsupport record in public txs");
     }
     for (final inTxJson in inTxsJson) {
-      final tx = AleoTransaction.fromJson(inTxJson['transaction']);
+      final tx = AleoTransaction.fromJson(inTxJson);
       txs.add(tx);
     }
   }
