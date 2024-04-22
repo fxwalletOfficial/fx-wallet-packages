@@ -46,6 +46,22 @@ typedef TypeAuthorizationInDart = ffi.Pointer<Utf8> Function(
 typedef TypeProof = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
+typedef TypeJoinInRust = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Int,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
+typedef TypeJoinInDart = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    int,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
 class ProgramsRustFFI {
   late ffi.DynamicLibrary dyLib;
 
@@ -68,6 +84,21 @@ class ProgramsRustFFI {
 
     return rustFunction(private_key, recipient, transfer_type, amount_credits,
         fee_credits, url, amount_record, fee_record);
+  }
+
+  Future<ffi.Pointer<Utf8>> join(
+    ffi.Pointer<Utf8> private_key,
+    ffi.Pointer<Utf8> record_1,
+    ffi.Pointer<Utf8> record_2,
+    int fee_credits,
+    ffi.Pointer<Utf8> fee_record,
+    ffi.Pointer<Utf8> url,
+  ) async {
+    final rustFunction =
+        dyLib.lookupFunction<TypeJoinInRust, TypeJoinInDart>('try_join');
+
+    return rustFunction(
+        private_key, record_1, record_2, fee_credits, fee_record, url);
   }
 
   Future<ffi.Pointer<Utf8>> buildTransaction(

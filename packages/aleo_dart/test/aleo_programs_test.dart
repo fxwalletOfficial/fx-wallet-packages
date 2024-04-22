@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
@@ -32,8 +30,8 @@ void main() async {
     final recipient =
         'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
     final amount_credits = 1000000;
-    final transfer_type = TransferMethod.public;
-    final fee_credits = 1000000;
+    final transfer_type = TransferMethod.public_to_private;
+    final fee_credits = 10000;
 
     final tx = await rust.buildTransaction(
         private_key,

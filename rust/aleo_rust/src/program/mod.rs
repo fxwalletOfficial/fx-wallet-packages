@@ -22,6 +22,8 @@ pub mod deploy;
 
 pub mod execute;
 
+pub mod join;
+
 pub mod helpers;
 pub use helpers::*;
 

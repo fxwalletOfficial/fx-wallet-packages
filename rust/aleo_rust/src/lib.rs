@@ -858,3 +858,61 @@ pub extern "C" fn serialNumberString(
     let c_string = CString::new(serial_number.to_string()).unwrap();
     c_string.into_raw()
 }
+
+#[no_mangle]
+pub extern "C" fn try_join(
+    private_key_raw: *const c_char,
+    record_1_raw: *const c_char,
+    record_2_raw: *const c_char,
+    fee: u64,
+    fee_record_raw: *const c_char,
+    url_raw: *const c_char,
+) -> *const c_char {
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let view_key = ViewKey::try_from(&sender).unwrap();
+    let program_manager =
+        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+            .unwrap();
+
+    let record1_ciphertext =
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_1_raw)).unwrap();
+    let record1 = record1_ciphertext.decrypt(&view_key).unwrap();
+    let record2_ciphertext =
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_2_raw)).unwrap();
+    let record2 = record2_ciphertext.decrypt(&view_key).unwrap();
+
+    let fee_record_string: String = cstr_to_string(fee_record_raw);
+    let fee_record;
+
+    if fee_record_string.is_empty() {
+        fee_record = None;
+    } else {
+        let fee_record_ciphertext =
+            Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&fee_record_string).unwrap();
+        fee_record = Some(fee_record_ciphertext.decrypt(&view_key).unwrap());
+    }
+
+    // let record_finder = RecordFinder::new(api_client);
+    let mut tx_hash = "error".to_string();
+
+    for i in 0..10 {
+        let result =
+            program_manager.join(record1.clone(), record2.clone(), fee_record.clone(), fee);
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            tx_hash = result.unwrap();
+            break;
+        }
+    }
+    let c_string = CString::new(tx_hash).unwrap();
+    c_string.into_raw()
+}

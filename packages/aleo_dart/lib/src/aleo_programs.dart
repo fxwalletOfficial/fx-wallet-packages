@@ -41,6 +41,24 @@ class AleoProgram {
     return result.toDartString();
   }
 
+  Future<String> tryJoin(
+    String private_key_raw,
+    String record_1_raw,
+    String record_2_raw,
+    int fee_credits,
+    String fee_record_raw,
+    String url_raw,
+  ) async {
+    final private_key = dartStrToC(private_key_raw);
+    final record_1 = dartStrToC(record_1_raw);
+    final record_2 = dartStrToC(record_2_raw);
+    final fee_record = dartStrToC(fee_record_raw);
+    final url = dartStrToC(url_raw);
+    final result = await programsRustFFI.join(
+        private_key, record_1, record_2, fee_credits, fee_record, url);
+    return result.toDartString();
+  }
+
   Future<String> buildTransaction(
     String private_key_raw,
     String recipient_raw,
