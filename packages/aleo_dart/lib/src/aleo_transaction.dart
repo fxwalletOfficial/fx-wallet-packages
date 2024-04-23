@@ -176,6 +176,15 @@ class AleoTransaction {
     return '';
   }
 
+  static findRecordValue(List<dynamic> inputs) {
+    for (final input in inputs) {
+      if (input['type'] == 'record') {
+        return input['value'];
+      }
+    }
+    return '';
+  }
+
   /// 解析outputs中，属于该地址的部分，作为value。
   processPrivateTx(AleoRecord rust, String viewKey, String privateKey,
       Map<String, dynamic> json, List<String> recordCipherTexts) {
@@ -297,7 +306,29 @@ class TxsResult {
     }
     for (final inTxJson in inTxsJson) {
       final tx = AleoTransaction.fromJson(inTxJson);
-      txs.add(tx);
+      switch (tx.transitionType) {
+        case TransferMethod.public_to_private:
+          final outputs =
+              inTxJson['transaction']['execution']['transitions'][0]['outputs'];
+          final record = AleoTransaction.findRecordValue(outputs);
+          if (!recordFFI.isOwner(record, viewKey)) {
+            txs.add(tx);
+          }
+          break;
+        case TransferMethod.private_to_public:
+          final inputs =
+              inTxJson['transaction']['execution']['transitions'][0]['inputs'];
+          final record = AleoTransaction.findRecordValue(inputs);
+          if (!recordFFI.isOwner(record, viewKey)) {
+            txs.add(tx);
+          }
+          break;
+        case TransferMethod.public:
+          txs.add(tx);
+          break;
+        default:
+          break;
+      }
     }
   }
 }
