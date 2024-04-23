@@ -62,6 +62,9 @@ typedef TypeJoinInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
+typedef TypeJoinAuthorization = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
 class ProgramsRustFFI {
   late ffi.DynamicLibrary dyLib;
 
@@ -99,6 +102,19 @@ class ProgramsRustFFI {
 
     return rustFunction(
         private_key, record_1, record_2, fee_credits, fee_record, url);
+  }
+
+  Future<ffi.Pointer<Utf8>> joinAuthorization(
+    ffi.Pointer<Utf8> private_key,
+    ffi.Pointer<Utf8> record_1,
+    ffi.Pointer<Utf8> record_2,
+    ffi.Pointer<Utf8> url,
+  ) async {
+    final rustFunction =
+        dyLib.lookupFunction<TypeJoinAuthorization, TypeJoinAuthorization>(
+            'join_authorization');
+
+    return rustFunction(private_key, record_1, record_2, url);
   }
 
   Future<ffi.Pointer<Utf8>> buildTransaction(

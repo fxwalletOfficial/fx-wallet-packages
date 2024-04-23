@@ -916,3 +916,48 @@ pub extern "C" fn try_join(
     let c_string = CString::new(tx_hash).unwrap();
     c_string.into_raw()
 }
+
+#[no_mangle]
+pub extern "C" fn join_authorization(
+    private_key_raw: *const c_char,
+    record_1_raw: *const c_char,
+    record_2_raw: *const c_char,
+    url_raw: *const c_char,
+) -> *const c_char {
+    // let visibility = TransferType::Private;
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let view_key = ViewKey::try_from(&sender).unwrap();
+
+    let record1_ciphertext =
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_1_raw)).unwrap();
+    let record1 = record1_ciphertext.decrypt(&view_key).unwrap();
+    let record2_ciphertext =
+        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_2_raw)).unwrap();
+    let record2 = record2_ciphertext.decrypt(&view_key).unwrap();
+
+    println!("Attempting to transfer of type: join");
+    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let program_manager =
+        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+            .unwrap();
+    // let record_finder = RecordFinder::new(api_client);
+    let mut authorization = "error".to_string();
+    for i in 0..10 {
+        let result = program_manager.join_authorization(record1.clone(), record2.clone(), None);
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            authorization = result.unwrap();
+            break;
+        }
+    }
+    let c_string = CString::new(authorization).unwrap();
+    c_string.into_raw()
+}

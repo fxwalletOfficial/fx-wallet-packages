@@ -424,6 +424,31 @@ impl<N: Network> ProgramManager<N> {
         let execution = vm.execute_fee_authorization_raw(authorization, some_query, rng)?;
         Ok(execution.to_string())
     }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn join_authorization(
+        &self,
+        record_1: Record<N, Plaintext<N>>,
+        record_2: Record<N, Plaintext<N>>,
+        password: Option<&str>,
+    ) -> Result<String> {
+        // Retrieve the private key.
+        let private_key = self.get_private_key(password)?;
+
+        // Generate the execution transaction
+        let authorization = {
+            let rng = &mut rand::thread_rng();
+
+            // Initialize a VM
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let vm = VM::from(store)?;
+            let inputs = vec![Value::Record(record_1), Value::Record(record_2)];
+
+            // Compute the authorization.
+            vm.authorize(&private_key, "credits.aleo", "join", inputs, rng)?
+        };
+        Ok(authorization.to_string())
+    }
 }
 
 #[cfg(test)]
