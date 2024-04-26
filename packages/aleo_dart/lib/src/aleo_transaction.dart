@@ -259,7 +259,7 @@ class TxsResult {
     BigInt privateBalance = BigInt.from(0);
 
     for (final outTxJson in transactions) {
-      if (outTxJson['transition'] == null) {
+      if (outTxJson['transaction'] == null) {
         /// 交易详情为空时，说明该record未被使用，加入余额
         final recordCipherText = recordFFI.findRecord(
             recordCipherTexts, outTxJson['serialNumber'], privateKey, viewKey);
@@ -267,12 +267,12 @@ class TxsResult {
             recordFFI.decryptCipherText(recordCipherText, viewKey);
         privateBalance += BigInt.parse(record.getMicrocredits());
       } else {
-        final transactionId = outTxJson['transition']['id'];
+        final transactionId = outTxJson['transaction']['id'];
         if (!txIds.contains(transactionId)) {
           final outTx = AleoTransaction.fromJson(outTxJson);
           outTx.transferType = TransferType.expense;
           outTx.processPrivateTx(recordFFI, viewKey, privateKey,
-              outTxJson['transition'], recordCipherTexts);
+              outTxJson['transaction'], recordCipherTexts);
           txs.add(outTx);
           txIds.add(outTx.transactionId);
           outTx.inputAddress = address;
