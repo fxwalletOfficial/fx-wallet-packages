@@ -4,26 +4,26 @@ import 'package:web_socket_channel/io.dart';
 
 import 'package:aleo_dart/aleo.dart';
 
-void main() {
-  final String libPosition = 'aleo_rust/target/debug/libaleo_rust.so';
+Future<void> main() async {
+  final String libPosition = 'aleo_rust/target/release/libaleo_rust.so';
   final dyLib = DyLib.getDyLibByPosition(libPosition);
 // final dyLib = DyLib.getDyLibFromCargo();
   final rustLib = AleoProgram(dyLib);
 
-  final wss = 'ws://127.0.0.1:14042/wallet/aleo/delegate';
-  // final wss = 'wss://api.fxwallet.in/wallet/aleo/delegate';
+  final wss = 'ws://47.120.24.231:31551/wallet/aleo/delegate';
+  // final wss = 'wss://api.fxwallet.in/wallet/aleo/record';
 
-  final url = 'http://23.20.9.85:3033';
+  final url = 'https://api.explorer.aleo.org/v1';
 
   final private_key =
-      'APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH';
+      'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
   final recipient =
       'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
-  final amount_credits = 10000000;
-  final fee_credits = 1000000;
+  final amount_credits = 1000000;
+  final fee_credits = 100000;
   final transfer_type = 'transfer_public';
 
-  final authorization = rustLib.executionAuthorization(
+  final authorization = await rustLib.executionAuthorization(
     private_key,
     recipient,
     transfer_type,
@@ -39,10 +39,10 @@ void main() {
     'authorization': authorization
   }));
 
-  channel.stream.listen((data) {
+  channel.stream.listen((data) async {
     final String message = data.toString();
     if (message.contains('proof')) {
-      final feeAuthorization = rustLib.executionFeeAuthorization(
+      final feeAuthorization = await rustLib.executionFeeAuthorization(
           private_key, transfer_type, fee_credits, url, "", message);
 
       channel.sink.add(jsonEncode({

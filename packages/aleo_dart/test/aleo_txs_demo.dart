@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:aleo_dart/aleo.dart';
 
 String host = 'https://api.fxwallet.in';
+// String host = "http://127.0.0.1:14042";
 int decimal = 6;
 final dyLib = DyLib.getDyLibFromGit();
 final recordFFI = AleoRecord(dyLib);
@@ -29,14 +30,18 @@ void main() async {
 
   final serialNumbers =
       recordFFI.serialNumberStrings(recordCipherTexts, privateKey, viewKey);
-  final transactions = await getTransactions(serialNumbers, viewKey);
+  final transactions = await getTransactions([
+    '4775316136567027422469909554081132673061515973831856190895264347775107022190field',
+    '4664111833154054231879463096168632726079903950894832866280659902063967214328field'
+  ], viewKey);
   /************************************/
-
   final TxsResult result = TxsResult(
       recordFFI: recordFFI,
       recordCipherTexts: recordCipherTexts,
       viewKey: viewKey,
       address: address);
+
+  print("隐私余额+tx");
 
   /// 获取顺序不可颠倒，需要先处理找零
   result.getOutputTxs(transactions, privateKey);
@@ -51,6 +56,7 @@ void main() async {
       new File('./test/data/aleo_records.json')
           .readAsStringSync(encoding: utf8))['publicTransactions'];
   // print(pubTxsJson);
+  print("公开tx");
   final TxsResult publicTxs = TxsResult(
       recordFFI: recordFFI,
       recordCipherTexts: [],
