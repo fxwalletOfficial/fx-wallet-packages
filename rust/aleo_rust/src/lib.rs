@@ -603,8 +603,12 @@ pub extern "C" fn execute_proof(
     let authorization_str: &str = authorization_cstr.to_str().unwrap();
     let authorization =
         Authorization::<Testnet3>::from_str(&authorization_str.to_string()).unwrap();
-    let execution = program_manager.execute_proof(authorization).unwrap();
-    let c_string = CString::new(execution.to_string()).unwrap();
+    let execution = program_manager.execute_proof(authorization);
+    let result = match execution {
+        Ok(value) => value,
+        Err(err) => format!("Error: {}!", err.to_string()),
+    };
+    let c_string = CString::new(result.to_string()).unwrap();
     c_string.into_raw()
 }
 
@@ -695,8 +699,12 @@ pub extern "C" fn execute_fee_proof(
     let authorization_str: &str = authorization_cstr.to_str().unwrap();
     let authorization =
         Authorization::<Testnet3>::from_str(&authorization_str.to_string()).unwrap();
-    let execution = program_manager.execute_fee_proof(authorization).unwrap();
-    let c_string = CString::new(execution.to_string()).unwrap();
+    let execution = program_manager.execute_fee_proof(authorization);
+    let result = match execution {
+        Ok(value) => value,
+        Err(err) => format!("Error: {}!", err.to_string()),
+    };
+    let c_string = CString::new(result.to_string()).unwrap();
     c_string.into_raw()
 }
 

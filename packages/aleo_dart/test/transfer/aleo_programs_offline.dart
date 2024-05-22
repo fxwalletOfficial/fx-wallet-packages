@@ -29,12 +29,14 @@ void main() {
     final recipient =
         'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
     final amount_credits = 1000000;
-    final transfer_type = TransferMethod.public_to_private;
-    final fee_credits = 3000000;
+    final transfer_type = TransferMethod.public;
+    final fee_credits = 1000000;
 
     final authorization = await rust.executionAuthorization(private_key,
         recipient, transfer_type, amount_credits, url, amount_record);
-    final proof = await rust.executeProof(url, authorization); // in server
+    final String proof =
+        await rust.executeProof(url, authorization); // in server
+    if (proof.contains('Error')) return false;
     final feeAuthorization = await rust.executionFeeAuthorization(
         private_key, transfer_type, fee_credits, url, fee_record, proof);
     final feeProof =
