@@ -212,10 +212,11 @@ pub mod snarkvm_types {
         BlockStore, ConsensusStore,
     };
     pub use snarkvm_synthesizer::{
-        cost_in_microcredits, deployment_cost, execution_cost,
         snark::{Proof, ProvingKey, VerifyingKey},
         Process, Program, Trace, VM,
     };
+
+    pub use snarkvm_synthesizer::prelude::{cost_in_microcredits, execution_cost};
 }
 
 pub use snarkvm_types::*;
@@ -404,9 +405,10 @@ pub extern "C" fn decryptCipherText(
     record_ciphertext_raw: *const c_char,
     view_key_raw: *const c_char,
 ) -> *const c_char {
-    let record_ciphertext =
-        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_ciphertext_raw))
-            .unwrap();
+    let record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(
+        record_ciphertext_raw,
+    ))
+    .unwrap();
     let view_key = ViewKey::<MainnetV0>::from_str(&cstr_to_string(view_key_raw)).unwrap();
     let result = record_ciphertext.decrypt(&view_key).unwrap();
     let c_string = CString::new(result.to_string()).unwrap();
@@ -480,10 +482,11 @@ pub extern "C" fn try_transfer(
                 // }
                 // let (amount_record, fee_record) = record.unwrap();
 
-                let amount_record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(
-                    &cstr_to_string(amount_record_raw),
-                )
-                .unwrap();
+                let amount_record_ciphertext =
+                    Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(
+                        amount_record_raw,
+                    ))
+                    .unwrap();
                 let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
 
                 let fee_record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(
@@ -559,10 +562,11 @@ pub extern "C" fn execution_authorization(
             TransferType::Public => None,
             TransferType::PublicToPrivate => None,
             _ => {
-                let amount_record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(
-                    &cstr_to_string(amount_record_raw),
-                )
-                .unwrap();
+                let amount_record_ciphertext =
+                    Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(
+                        amount_record_raw,
+                    ))
+                    .unwrap();
                 let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
 
                 Some(amount_record)
@@ -769,10 +773,11 @@ pub extern "C" fn build_transaction(
             TransferType::Public => (None, None),
             TransferType::PublicToPrivate => (None, None),
             _ => {
-                let amount_record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(
-                    &cstr_to_string(amount_record_raw),
-                )
-                .unwrap();
+                let amount_record_ciphertext =
+                    Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(
+                        amount_record_raw,
+                    ))
+                    .unwrap();
                 let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
 
                 let fee_record_string: String = cstr_to_string(fee_record_raw);
@@ -843,9 +848,10 @@ pub extern "C" fn serialNumberString(
     program_id_raw: *const c_char,
     record_name_raw: *const c_char,
 ) -> *const c_char {
-    let record_ciphertext =
-        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_ciphertext_raw))
-            .unwrap();
+    let record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(
+        record_ciphertext_raw,
+    ))
+    .unwrap();
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
     let private_key = PrivateKey::<MainnetV0>::from_str(private_key_str).unwrap();
@@ -888,10 +894,12 @@ pub extern "C" fn try_join(
             .unwrap();
 
     let record1_ciphertext =
-        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_1_raw)).unwrap();
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_1_raw))
+            .unwrap();
     let record1 = record1_ciphertext.decrypt(&view_key).unwrap();
     let record2_ciphertext =
-        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_2_raw)).unwrap();
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_2_raw))
+            .unwrap();
     let record2 = record2_ciphertext.decrypt(&view_key).unwrap();
 
     let fee_record_string: String = cstr_to_string(fee_record_raw);
@@ -941,10 +949,12 @@ pub extern "C" fn join_authorization(
     let view_key = ViewKey::try_from(&sender).unwrap();
 
     let record1_ciphertext =
-        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_1_raw)).unwrap();
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_1_raw))
+            .unwrap();
     let record1 = record1_ciphertext.decrypt(&view_key).unwrap();
     let record2_ciphertext =
-        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_2_raw)).unwrap();
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_2_raw))
+            .unwrap();
     let record2 = record2_ciphertext.decrypt(&view_key).unwrap();
 
     println!("Attempting to transfer of type: join");

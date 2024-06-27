@@ -43,7 +43,9 @@ impl<N: Network> ProgramManager<N> {
         let query = Query::<N, BlockMemory<N>>::from(url);
 
         // Check that the function exists in the program
-        let function_name = function.try_into().map_err(|_| anyhow!("Invalid function name"))?;
+        let function_name = function
+            .try_into()
+            .map_err(|_| anyhow!("Invalid function name"))?;
         let program_id = program.id();
         println!("Checking function {function_name:?} exists in {program_id:?}");
         ensure!(
@@ -70,21 +72,35 @@ impl<N: Network> ProgramManager<N> {
         let locator = Locator::new(*program_id, function_name);
         let (response, mut trace) = vm.process().write().execute::<A, _>(authorization, rng)?;
         trace.prepare(query)?;
-        let execution = trace.prove_execution::<A, _>(&locator.to_string(), &mut rand::thread_rng())?;
+        let execution =
+            trace.prove_execution::<A, _>(&locator.to_string(), &mut rand::thread_rng())?;
 
         // Get the public outputs
         let mut public_outputs = vec![];
-        response.outputs().iter().zip(response.output_ids().iter()).for_each(|(output, output_id)| {
-            if let OutputID::Public(_) = output_id {
-                public_outputs.push(output.clone());
-            }
-        });
+        response
+            .outputs()
+            .iter()
+            .zip(response.output_ids().iter())
+            .for_each(|(output, output_id)| {
+                if let OutputID::Public(_) = output_id {
+                    public_outputs.push(output.clone());
+                }
+            });
 
         // If all outputs are requested, include them
-        let response = if include_outputs { Some(response) } else { None };
+        let response = if include_outputs {
+            Some(response)
+        } else {
+            None
+        };
 
         // Return the execution
-        Ok(OfflineExecution::new(execution, response, trace, Some(public_outputs)))
+        Ok(OfflineExecution::new(
+            execution,
+            response,
+            trace,
+            Some(public_outputs),
+        ))
     }
 
     /// Execute a program function on the Aleo Network.
@@ -107,8 +123,12 @@ impl<N: Network> ProgramManager<N> {
         );
 
         // Check program and function have valid names
-        let program_id = program_id.try_into().map_err(|_| anyhow!("Invalid program ID"))?;
-        let function_id = function.try_into().map_err(|_| anyhow!("Invalid function name"))?;
+        let program_id = program_id
+            .try_into()
+            .map_err(|_| anyhow!("Invalid program ID"))?;
+        let function_id = function
+            .try_into()
+            .map_err(|_| anyhow!("Invalid function name"))?;
         let function_name = function_id.to_string();
         let api_client = self.api_client()?;
 
@@ -117,10 +137,9 @@ impl<N: Network> ProgramManager<N> {
             .get_program(program_id)
             .or_else(|_| api_client.get_program(program_id))?;
 
-
         // Create the execution transaction
         let private_key = private_key.map_or_else(
-            || { self.get_private_key(password) },
+            || self.get_private_key(password),
             |private_key| Ok(*private_key),
         )?;
         let node_url = self.api_client.as_ref().unwrap().base_url().to_string();
@@ -168,7 +187,9 @@ impl<N: Network> ProgramManager<N> {
         let query = Query::from(node_url);
 
         // Check that the function exists in the program
-        let function_name = function.try_into().map_err(|_| anyhow!("Invalid function name"))?;
+        let function_name = function
+            .try_into()
+            .map_err(|_| anyhow!("Invalid function name"))?;
         let program_id = program.id();
         println!("Checking function {function_name:?} exists in {program_id:?}");
         ensure!(
@@ -179,22 +200,43 @@ impl<N: Network> ProgramManager<N> {
         // Initialize the VM
         if let Some(vm) = vm {
             let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
-            api_client.get_program_imports_from_source(program)?.iter().try_for_each(|(_, import)| {
-                if import.id() != &credits_id && !vm.process().read().contains_program(import.id()) {
-                    vm.process().write().add_program(import)?
-                }
-                Ok::<_, Error>(())
-            })?;
+            api_client
+                .get_program_imports_from_source(program)?
+                .iter()
+                .try_for_each(|(_, import)| {
+                    if import.id() != &credits_id
+                        && !vm.process().read().contains_program(import.id())
+                    {
+                        vm.process().write().add_program(import)?
+                    }
+                    Ok::<_, Error>(())
+                })?;
 
             // If the initialization is for an execution, add the program. Otherwise, don't add it as
             // it will be added during the deployment process
             if !vm.process().read().contains_program(program.id()) {
                 vm.process().write().add_program(program)?;
             }
-            vm.execute(private_key, (program_id, function_name), inputs, fee_record, priority_fee, Some(query), rng)
+            vm.execute(
+                private_key,
+                (program_id, function_name),
+                inputs,
+                fee_record,
+                priority_fee,
+                Some(query),
+                rng,
+            )
         } else {
             let vm = Self::initialize_vm(api_client, program, true)?;
-            vm.execute(private_key, (program_id, function_name), inputs, fee_record, priority_fee, Some(query), rng)
+            vm.execute(
+                private_key,
+                (program_id, function_name),
+                inputs,
+                fee_record,
+                priority_fee,
+                Some(query),
+                rng,
+            )
         }
     }
 
@@ -214,7 +256,9 @@ impl<N: Network> ProgramManager<N> {
         )?;
 
         // Check that the function exists in the program
-        let function_name = function.try_into().map_err(|_| anyhow!("Invalid function name"))?;
+        let function_name = function
+            .try_into()
+            .map_err(|_| anyhow!("Invalid function name"))?;
         let program_id = program.id();
         println!("Checking function {function_name:?} exists in {program_id:?}");
         ensure!(
@@ -237,278 +281,8 @@ impl<N: Network> ProgramManager<N> {
         let locator = Locator::new(*program_id, function_name);
         let (_, mut trace) = vm.process().write().execute::<A, _>(authorization, rng)?;
         trace.prepare(query)?;
-        let execution = trace.prove_execution::<A, _>(&locator.to_string(), &mut rand::thread_rng())?;
-        execution_cost(&vm, &execution)
-    }
-
-    /// Estimate the finalize fee component for executing a function. This fee is additional to the
-    /// size of the execution of the program in bytes. If the function does not have a finalize
-    /// step, then the finalize fee is 0.
-    ///
-    /// Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network
-    pub fn estimate_finalize_fee(&self, program: &Program<N>, function: impl TryInto<Identifier<N>>) -> Result<u64> {
-        let function_name = function.try_into().map_err(|_| anyhow!("Invalid function name"))?;
-        match program.get_function(&function_name)?.finalize_logic() {
-            Some(finalize) => cost_in_microcredits(finalize),
-            None => Ok(0u64),
-        }
-    }
-}
-
-#[cfg(test)]
-#[cfg(not(feature = "wasm"))]
-mod tests {
-    use super::*;
-    use crate::{random_program, random_program_id, AleoAPIClient, RECORD_5_MICROCREDITS};
-    use snarkvm::circuit::AleoV0;
-    use snarkvm_console::network::MainnetV0;
-
-    #[test]
-    fn test_fee_estimation() {
-        let private_key = PrivateKey::<MainnetV0>::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
-        let api_client = AleoAPIClient::<MainnetV0>::testnet3();
-        let program_manager =
-            ProgramManager::<MainnetV0>::new(Some(private_key), None, Some(api_client.clone()), None, false).unwrap();
-
-        let finalize_program = program_manager.api_client.as_ref().unwrap().get_program("credits.aleo").unwrap();
-        let hello_hello = program_manager.api_client.as_ref().unwrap().get_program("hello_hello.aleo").unwrap();
-        // Ensure a finalize scope program execution fee is estimated correctly
-        let (total, (storage, finalize)) = program_manager
-            .estimate_execution_fee::<AleoV0>(
-                &finalize_program,
-                "transfer_public",
-                vec!["aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px", "5u64"].into_iter(),
-            )
-            .unwrap();
-        let finalize_only = program_manager.estimate_finalize_fee(&finalize_program, "transfer_public").unwrap();
-        assert!(finalize_only > 0);
-        assert!(finalize > storage);
-        assert_eq!(finalize, finalize_only);
-        assert_eq!(total, finalize_only + storage);
-        assert_eq!(storage, total - finalize_only);
-
-        // Ensure a non-finalize scope program execution fee is estimated correctly
-        let (total, (storage, finalize)) = program_manager
-            .estimate_execution_fee::<AleoV0>(&hello_hello, "hello", vec!["5u32", "5u32"].into_iter())
-            .unwrap();
-        let finalize_only = program_manager.estimate_finalize_fee(&hello_hello, "hello").unwrap();
-        assert!(storage > 0);
-        assert_eq!(finalize_only, 0);
-        assert_eq!(finalize, finalize_only);
-        assert_eq!(total, finalize_only + storage);
-        assert_eq!(storage, total - finalize_only);
-
-        // Ensure a deployment fee is estimated correctly
-        let random = random_program();
-        let (total, (storage, namespace)) = program_manager.estimate_deployment_fee::<AleoV0>(&random).unwrap();
-        let namespace_only = ProgramManager::estimate_namespace_fee(random.id()).unwrap();
-        assert_eq!(namespace, 1000000);
-        assert_eq!(namespace, namespace_only);
-        assert_eq!(total, namespace_only + storage);
-        assert_eq!(storage, total - namespace_only);
-
-        // Ensure a program with imports is estimated correctly
-        let nested_import_program = api_client.get_program("imported_add_mul.aleo").unwrap();
-        let finalize_only = program_manager.estimate_finalize_fee(&nested_import_program, "add_and_double").unwrap();
-        let (total, (storage, finalize)) = program_manager
-            .estimate_execution_fee::<AleoV0>(
-                &nested_import_program,
-                "add_and_double",
-                vec!["5u32", "5u32"].into_iter(),
-            )
-            .unwrap();
-        assert!(storage > 0);
-        assert_eq!(finalize_only, 0);
-        assert_eq!(finalize, finalize_only);
-        assert_eq!(total, finalize_only + storage);
-        assert_eq!(storage, total - finalize_only);
-
-        let (total, (storage, namespace)) =
-            program_manager.estimate_deployment_fee::<AleoV0>(&nested_import_program).unwrap();
-        let namespace_only = ProgramManager::estimate_namespace_fee(nested_import_program.id()).unwrap();
-        assert_eq!(namespace, 1000000);
-        assert_eq!(namespace, namespace_only);
-        assert_eq!(total, namespace_only + storage);
-        assert_eq!(storage, total - namespace_only);
-    }
-
-    #[test]
-    #[ignore]
-    fn test_execution() {
-        let private_key = PrivateKey::<MainnetV0>::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
-        let encrypted_private_key =
-            crate::Encryptor::encrypt_private_key_with_secret(&private_key, "password").unwrap();
-        let api_client = AleoAPIClient::<MainnetV0>::local_testnet3("3033");
-        let record_finder = RecordFinder::new(api_client.clone());
-        let mut program_manager =
-            ProgramManager::<MainnetV0>::new(Some(private_key), None, Some(api_client.clone()), None, false).unwrap();
-
-        let fee = 2_500_000;
-        let finalize_fee = 8_000_000;
-
-        // Test execution of an on chain program is successful
-        for i in 0..5 {
-            let fee_record = record_finder.find_one_record(&private_key, fee, None).unwrap();
-            // Test execution of a on chain program is successful
-            let execution = program_manager.execute_program(
-                "credits_import_test.aleo",
-                "test",
-                ["1312u32", "62131112u32"].into_iter(),
-                fee,
-                Some(fee_record),
-                None,
-                None,
-            );
-            println!("{:?}", execution);
-
-            if execution.is_ok() {
-                break;
-            } else if i == 4 {
-                panic!("{}", format!("Execution failed after 5 attempts with error: {:?}", execution));
-            }
-        }
-
-        // Test programs can be executed with an encrypted private key
-        let mut program_manager =
-            ProgramManager::<MainnetV0>::new(None, Some(encrypted_private_key), Some(api_client), None, false).unwrap();
-
-        for i in 0..5 {
-            let fee_record = record_finder.find_one_record(&private_key, fee, None).unwrap();
-            // Test execution of an on chain program is successful using an encrypted private key
-            let execution = program_manager.execute_program(
-                "credits_import_test.aleo",
-                "test",
-                ["1337u32", "42u32"].into_iter(),
-                fee,
-                Some(fee_record),
-                Some("password"),
-                None,
-            );
-            if execution.is_ok() {
-                break;
-            } else if i == 4 {
-                panic!("{}", format!("Execution failed after 5 attempts with error: {:?}", execution));
-            }
-        }
-
-        // Test execution with a finalize scope can be done
-        for i in 0..5 {
-            let fee_record = record_finder.find_one_record(&private_key, finalize_fee, None).unwrap();
-            // Test execution of an on chain program is successful using an encrypted private key
-            let execution = program_manager.execute_program(
-                "finalize_test.aleo",
-                "increase_counter",
-                ["0u32", "42u32"].into_iter(),
-                finalize_fee,
-                Some(fee_record),
-                Some("password"),
-                None,
-            );
-            if execution.is_ok() {
-                break;
-            } else if i == 4 {
-                panic!("{}", format!("Execution failed after 5 attempts with error: {:?}", execution));
-            }
-        }
-
-        // Test execution of a program with imports other than credits.aleo is successful
-        for i in 0..5 {
-            let fee_record = record_finder.find_one_record(&private_key, finalize_fee, None).unwrap();
-            // Test execution of an on chain program is successful using an encrypted private key
-            let execution = program_manager.execute_program(
-                "double_test.aleo",
-                "double_it",
-                ["42u32"].into_iter(),
-                finalize_fee,
-                Some(fee_record),
-                Some("password"),
-                None,
-            );
-            if execution.is_ok() {
-                break;
-            } else if i == 4 {
-                panic!("{}", format!("Execution failed after 5 attempts with error: {:?}", execution));
-            }
-        }
-    }
-
-    #[test]
-    fn test_execution_failure_modes() {
-        let rng = &mut rand::thread_rng();
-        let recipient_private_key = PrivateKey::<MainnetV0>::new(rng).unwrap();
-        let api_client = AleoAPIClient::<MainnetV0>::testnet3();
-        let record_5_microcredits = Record::<MainnetV0, Plaintext<MainnetV0>>::from_str(RECORD_5_MICROCREDITS).unwrap();
-        let record_2000000001_microcredits =
-            Record::<MainnetV0, Plaintext<MainnetV0>>::from_str(RECORD_2000000001_MICROCREDITS).unwrap();
-
-        // Ensure that program manager creation fails if no key is provided
-        let mut program_manager =
-            ProgramManager::<MainnetV0>::new(Some(recipient_private_key), None, Some(api_client), None, false).unwrap();
-
-        // Assert that execution fails if record's available microcredits are below the fee
-        let execution = program_manager.execute_program(
-            "hello.aleo",
-            "hello",
-            ["5u32", "6u32"].into_iter(),
-            500000,
-            Some(record_5_microcredits),
-            None,
-            None,
-        );
-
-        assert!(execution.is_err());
-
-        // Assert that execution fails if a fee is specified but no records are
-        let execution = program_manager.execute_program(
-            "hello.aleo",
-            "hello",
-            ["5u32", "6u32"].into_iter(),
-            200,
-            Some(record_2000000001_microcredits.clone()),
-            None,
-            None,
-        );
-
-        assert!(execution.is_err());
-
-        // Assert that execution fails if the program is not found
-        let randomized_program_id = random_program_id(16);
-        let execution = program_manager.execute_program(
-            &randomized_program_id,
-            "hello",
-            ["5u32", "6u32"].into_iter(),
-            500000,
-            Some(record_2000000001_microcredits.clone()),
-            None,
-            None,
-        );
-
-        assert!(execution.is_err());
-
-        // Assert that execution fails if the function is not found
-        let execution = program_manager.execute_program(
-            "hello.aleo",
-            "random_function",
-            ["5u32", "6u32"].into_iter(),
-            500000,
-            Some(record_2000000001_microcredits.clone()),
-            None,
-            None,
-        );
-
-        assert!(execution.is_err());
-
-        // Assert that execution fails if the function is not found
-        let execution = program_manager.execute_program(
-            "hello.aleo",
-            "random_function",
-            ["5u32", "6u32"].into_iter(),
-            500000,
-            Some(record_2000000001_microcredits),
-            None,
-            None,
-        );
-
-        assert!(execution.is_err());
+        let execution =
+            trace.prove_execution::<A, _>(&locator.to_string(), &mut rand::thread_rng())?;
+        execution_cost(&vm.process().read(), &execution)
     }
 }

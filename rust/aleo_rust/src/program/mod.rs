@@ -18,8 +18,6 @@
 
 use super::*;
 
-pub mod deploy;
-
 pub mod execute;
 
 pub mod join;
