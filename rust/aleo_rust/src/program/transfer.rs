@@ -219,8 +219,8 @@ impl<N: Network> ProgramManager<N> {
         url: String,
         transaction_type: String,
     ) -> Result<String> {
-        let execution = Transaction::<MainnetV0>::from_str(&execution_raw).unwrap();
-        let api_client = AleoAPIClient::<MainnetV0>::aleo_net(&url);
+        let execution = Transaction::<CurrentNetwork>::from_str(&execution_raw).unwrap();
+        let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(&url);
         let result = api_client.transaction_broadcast(execution);
         if result.is_ok() {
             println!(
