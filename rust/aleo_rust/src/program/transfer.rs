@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo SDK library. If not, see <https://www.gnu.org/licenses/>.
 
-// use snarkvm_synthesizer::Authorization;
 
 use super::*;
 
@@ -363,29 +362,29 @@ impl<N: Network> ProgramManager<N> {
         Ok(fee_authorization.to_string())
     }
 
-    // pub fn execute_proof(&self, authorization: Authorization<N>) -> Result<String> {
-    //     let query = Query::from(self.api_client.as_ref().unwrap().base_url());
-    //     let some_query = Some(query.clone());
-    //     // Initialize a VM
-    //     let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
-    //     let vm = VM::from(store)?;
-    //     let rng = &mut rand::thread_rng();
-    //     // Compute the execution.
-    //     let execution = vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
-    //     Ok(execution.to_string())
-    // }
+    pub fn execute_proof(&self, authorization: Authorization<N>) -> Result<String> {
+        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
+        let some_query = Some(query.clone());
+        // Initialize a VM
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let vm = VM::from(store)?;
+        let rng = &mut rand::thread_rng();
+        // Compute the execution.
+        let execution = vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
+        Ok(execution.to_string())
+    }
 
-    // pub fn execute_fee_proof(&self, authorization: Authorization<N>) -> Result<String> {
-    //     let query = Query::from(self.api_client.as_ref().unwrap().base_url());
-    //     let some_query = Some(query.clone());
-    //     // Initialize a VM
-    //     let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
-    //     let vm = VM::from(store)?;
-    //     let rng = &mut rand::thread_rng();
-    //     // Compute the execution.
-    //     let execution = vm.execute_fee_authorization_raw(authorization, some_query, rng)?;
-    //     Ok(execution.to_string())
-    // }
+    pub fn execute_fee_proof(&self, authorization: Authorization<N>) -> Result<String> {
+        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
+        let some_query = Some(query.clone());
+        // Initialize a VM
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let vm = VM::from(store)?;
+        let rng = &mut rand::thread_rng();
+        // Compute the execution.
+        let execution = vm.execute_fee_authorization_raw(authorization, some_query, rng)?;
+        Ok(execution.to_string())
+    }
 
     #[allow(clippy::too_many_arguments)]
     pub fn join_authorization(

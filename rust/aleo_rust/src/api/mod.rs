@@ -53,7 +53,7 @@ impl<N: Network> AleoAPIClient<N> {
     }
 
     pub fn aleo_net(rpc: &str) -> Self {
-        Self::new(rpc, "testnet3").unwrap()
+        Self::new(rpc, "testnet").unwrap()
     }
 
     /// Get base URL

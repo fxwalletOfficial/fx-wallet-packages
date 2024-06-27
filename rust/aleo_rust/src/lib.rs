@@ -215,7 +215,7 @@ pub mod snarkvm_types {
         snark::{Proof, ProvingKey, VerifyingKey},
         Process, Program, Trace, VM,
     };
-
+    pub use snarkvm_synthesizer::Authorization;
     pub use snarkvm_synthesizer::prelude::{cost_in_microcredits, execution_cost};
 }
 
@@ -605,28 +605,28 @@ pub extern "C" fn execution_authorization(
     c_string.into_raw()
 }
 
-// #[no_mangle]
-// pub extern "C" fn execute_proof(
-//     url_raw: *const c_char,
-//     authorization_raw: *const c_char,
-// ) -> *const c_char {
-//     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
-//     let url = url_cstr.to_str().unwrap();
-//     let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
-//     let program_manager =
-//         ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false).unwrap();
-//     let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
-//     let authorization_str: &str = authorization_cstr.to_str().unwrap();
-//     let authorization =
-//         Authorization::<CurrentNetwork>::from_str(&authorization_str.to_string()).unwrap();
-//     let execution = program_manager.execute_proof(authorization);
-//     let result = match execution {
-//         Ok(value) => value,
-//         Err(err) => format!("Error: {}!", err.to_string()),
-//     };
-//     let c_string = CString::new(result.to_string()).unwrap();
-//     c_string.into_raw()
-// }
+#[no_mangle]
+pub extern "C" fn execute_proof(
+    url_raw: *const c_char,
+    authorization_raw: *const c_char,
+) -> *const c_char {
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    let program_manager =
+        ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false).unwrap();
+    let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
+    let authorization_str: &str = authorization_cstr.to_str().unwrap();
+    let authorization =
+        Authorization::<CurrentNetwork>::from_str(&authorization_str.to_string()).unwrap();
+    let execution = program_manager.execute_proof(authorization);
+    let result = match execution {
+        Ok(value) => value,
+        Err(err) => format!("Error: {}!", err.to_string()),
+    };
+    let c_string = CString::new(result.to_string()).unwrap();
+    c_string.into_raw()
+}
 
 #[no_mangle]
 pub extern "C" fn execution_fee_authorization(
@@ -708,28 +708,28 @@ pub extern "C" fn execution_fee_authorization(
     c_string.into_raw()
 }
 
-// #[no_mangle]
-// pub extern "C" fn execute_fee_proof(
-//     url_raw: *const c_char,
-//     authorization_raw: *const c_char,
-// ) -> *const c_char {
-//     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
-//     let url = url_cstr.to_str().unwrap();
-//     let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
-//     let program_manager =
-//         ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false).unwrap();
-//     let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
-//     let authorization_str: &str = authorization_cstr.to_str().unwrap();
-//     let authorization =
-//         Authorization::<CurrentNetwork>::from_str(&authorization_str.to_string()).unwrap();
-//     let execution = program_manager.execute_fee_proof(authorization);
-//     let result = match execution {
-//         Ok(value) => value,
-//         Err(err) => format!("Error: {}!", err.to_string()),
-//     };
-//     let c_string = CString::new(result.to_string()).unwrap();
-//     c_string.into_raw()
-// }
+#[no_mangle]
+pub extern "C" fn execute_fee_proof(
+    url_raw: *const c_char,
+    authorization_raw: *const c_char,
+) -> *const c_char {
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    let program_manager =
+        ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false).unwrap();
+    let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
+    let authorization_str: &str = authorization_cstr.to_str().unwrap();
+    let authorization =
+        Authorization::<CurrentNetwork>::from_str(&authorization_str.to_string()).unwrap();
+    let execution = program_manager.execute_fee_proof(authorization);
+    let result = match execution {
+        Ok(value) => value,
+        Err(err) => format!("Error: {}!", err.to_string()),
+    };
+    let c_string = CString::new(result.to_string()).unwrap();
+    c_string.into_raw()
+}
 
 #[no_mangle]
 pub extern "C" fn build_transaction_offline(
