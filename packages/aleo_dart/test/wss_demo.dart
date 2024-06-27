@@ -10,7 +10,7 @@ Future<void> main() async {
 // final dyLib = DyLib.getDyLibFromCargo();
   final rustLib = AleoProgram(dyLib);
 
-  final wss = 'ws://47.120.24.231:31551/wallet/aleo/delegate';
+  final wss = 'ws://aleo.fxwallet.com/wallet/aleo/delegate';
   // final wss = 'wss://api.fxwallet.in/wallet/aleo/record';
 
   final url = 'https://api.explorer.aleo.org/v1';
@@ -40,8 +40,9 @@ Future<void> main() async {
   }));
 
   channel.stream.listen((data) async {
+    print(data);
     final String message = data.toString();
-    if (message.contains('proof')) {
+    if (message.contains('proof1')) {
       final feeAuthorization = await rustLib.executionFeeAuthorization(
           private_key, transfer_type, fee_credits, url, "", message);
 
