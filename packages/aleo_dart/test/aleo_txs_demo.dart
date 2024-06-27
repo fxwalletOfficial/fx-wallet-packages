@@ -28,8 +28,8 @@ void main() async {
   final List<String> recordCipherTexts =
       recordCipherTextsJson.map((element) => element.toString()).toList();
 
-  final serialNumbers =
-      recordFFI.serialNumberStrings(recordCipherTexts, privateKey, viewKey);
+  // final serialNumbers =
+  //     recordFFI.serialNumberStrings(recordCipherTexts, privateKey, viewKey);
   final transactions = await getTransactions([
     '4775316136567027422469909554081132673061515973831856190895264347775107022190field',
     '4664111833154054231879463096168632726079903950894832866280659902063967214328field'

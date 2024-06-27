@@ -43,12 +43,12 @@
 //!   use aleo_rust::AleoAPIClient;
 //!   use snarkvm_console::{
 //!       account::PrivateKey,
-//!       network::Testnet3,
+//!       network::MainnetV0,
 //!   };
 //!   use rand::thread_rng;
 //!
 //!   // Create a client that interacts with the testnet3 program
-//!   let api_client = AleoAPIClient::<Testnet3>::testnet3();
+//!   let api_client = AleoAPIClient::<MainnetV0>::testnet3();
 //!
 //!   // FIND A PROGRAM ON THE ALEO NETWORK
 //!   let hello = api_client.get_program("hello.aleo").unwrap();
@@ -81,7 +81,7 @@
 //! ```no_run
 //!   use aleo_rust::{
 //!     AleoAPIClient, Encryptor, ProgramManager, RecordFinder,
-//!     snarkvm_types::{Address, PrivateKey, Testnet3, Program},
+//!     snarkvm_types::{Address, PrivateKey, MainnetV0, Program},
 //!     TransferType
 //!   };
 //!   use rand::thread_rng;
@@ -90,21 +90,21 @@
 //!   // Create the necessary components to create the program manager
 //!   let mut rng = thread_rng();
 //!   // Create an api client to query the network state
-//!   let api_client = AleoAPIClient::<Testnet3>::testnet3();
+//!   let api_client = AleoAPIClient::<MainnetV0>::testnet3();
 //!   // Create a private key (in practice, this would be a user's private key)
-//!   let private_key = PrivateKey::<Testnet3>::new(&mut rng).unwrap();
+//!   let private_key = PrivateKey::<MainnetV0>::new(&mut rng).unwrap();
 //!   // Encrypt the private key with a password
-//!   let private_key_ciphertext = Encryptor::<Testnet3>::encrypt_private_key_with_secret(&private_key, "password").unwrap();
+//!   let private_key_ciphertext = Encryptor::<MainnetV0>::encrypt_private_key_with_secret(&private_key, "password").unwrap();
 //!
 //!   // Create the program manager
 //!   // (Note: An optional local directory can be provided to manage local program data)
-//!   let mut program_manager = ProgramManager::<Testnet3>::new(None, Some(private_key_ciphertext), Some(api_client), None, false).unwrap();
+//!   let mut program_manager = ProgramManager::<MainnetV0>::new(None, Some(private_key_ciphertext), Some(api_client), None, false).unwrap();
 //!
 //!   // ------------------
 //!   // EXECUTE PROGRAM STEPS
 //!   // ------------------
 //!
-//!   let record_finder = RecordFinder::<Testnet3>::new(AleoAPIClient::testnet3());
+//!   let record_finder = RecordFinder::<MainnetV0>::new(AleoAPIClient::testnet3());
 //!   // Set the fee for the deployment transaction (in units of microcredits)
 //!   let fee_microcredits = 300000;
 //!   // Find a record to fund the deployment fee (requires an account with a balance)
@@ -131,7 +131,7 @@
 //!   // the program on disk when the program manager is created)
 //!   program_manager.add_program(&program).unwrap();
 //!   // Create a record finder to find records to fund the deployment fee
-//!   let record_finder = RecordFinder::<Testnet3>::new(AleoAPIClient::testnet3());
+//!   let record_finder = RecordFinder::<MainnetV0>::new(AleoAPIClient::testnet3());
 //!   // Set the fee for the deployment transaction (in units of microcredits)
 //!   let fee_microcredits = 300000;
 //!   // Find a record to fund the deployment fee (requires an account with a balance)
@@ -140,7 +140,7 @@
 //!   program_manager.deploy_program(program_name, fee_microcredits, Some(fee_record), Some("password")).unwrap();
 //!
 //!   // Wait several minutes.. then check the program exists on the network
-//!   let api_client = AleoAPIClient::<Testnet3>::testnet3();
+//!   let api_client = AleoAPIClient::<MainnetV0>::testnet3();
 //!   let program_on_chain = api_client.get_program(program_name).unwrap();
 //!   let program_on_chain_name = program_on_chain.id().to_string();
 //!   assert_eq!(&program_on_chain_name, program_name);
@@ -150,7 +150,7 @@
 //!   // ------------------
 //!
 //!   // Create a recipient (in practice, the recipient would send their address to the sender)
-//!   let recipient_key = PrivateKey::<Testnet3>::new(&mut rng).unwrap();
+//!   let recipient_key = PrivateKey::<MainnetV0>::new(&mut rng).unwrap();
 //!   let recipient_address = Address::try_from(recipient_key).unwrap();
 //!   // Create amount and fee (both in units of microcredits)
 //!   let amount = 30000;
@@ -185,7 +185,7 @@ pub use program::{OnChainProgramState, ProgramManager, RecordFinder, TransferTyp
 #[cfg(feature = "full")]
 pub mod test_utils;
 use snarkvm_ledger_block::Fee;
-use snarkvm_synthesizer::Authorization;
+// use snarkvm_synthesizer::Authorization;
 #[cfg(test)]
 #[cfg(feature = "full")]
 pub use test_utils::*;
@@ -197,7 +197,7 @@ pub mod snarkvm_types {
     pub use snarkvm_circuit_network::{Aleo, AleoV0};
     pub use snarkvm_console::{
         account::{Address, PrivateKey, Signature, ViewKey},
-        network::Testnet3,
+        network::MainnetV0,
         prelude::{ToBytes, Uniform},
         program::{
             Ciphertext, Entry, EntryType, Identifier, Literal, Locator, Network, OutputID,
@@ -269,10 +269,10 @@ pub extern "C" fn seedToPrivateKey(seed_raw: *const u8) -> *const c_char {
         seed = slice::from_raw_parts(seed_raw, 32);
     };
 
-    let field_mid = <Testnet3 as Environment>::Field::from_bytes_le_mod_order(seed);
+    let field_mid = <MainnetV0 as Environment>::Field::from_bytes_le_mod_order(seed);
     let field = FromBytes::read_le(&*field_mid.to_bytes_le().unwrap()).unwrap();
 
-    let private_key = PrivateKey::<Testnet3>::try_from(field).unwrap();
+    let private_key = PrivateKey::<MainnetV0>::try_from(field).unwrap();
     let c_string = CString::new(private_key.to_string()).unwrap();
     c_string.into_raw()
 }
@@ -281,7 +281,7 @@ pub extern "C" fn seedToPrivateKey(seed_raw: *const u8) -> *const c_char {
 pub extern "C" fn privateKeyToAddress(private_key_raw: *const c_char) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
-    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+    let private_key = PrivateKey::<MainnetV0>::from_str(private_key_str).unwrap();
     let view_key = ViewKey::try_from(&private_key).unwrap();
     let address = view_key.to_address();
     let c_string = CString::new(address.to_string()).unwrap();
@@ -292,7 +292,7 @@ pub extern "C" fn privateKeyToAddress(private_key_raw: *const c_char) -> *const 
 pub extern "C" fn privateKeyToViewKey(private_key_raw: *const c_char) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
-    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+    let private_key = PrivateKey::<MainnetV0>::from_str(private_key_str).unwrap();
     let view_key = ViewKey::try_from(&private_key).unwrap();
     let c_string = CString::new(view_key.to_string()).unwrap();
     c_string.into_raw()
@@ -302,7 +302,7 @@ pub extern "C" fn privateKeyToViewKey(private_key_raw: *const c_char) -> *const 
 pub extern "C" fn viewKeyToAddress(view_key_raw: *const c_char) -> *const c_char {
     let view_key_cstr = unsafe { CStr::from_ptr(view_key_raw) };
     let view_key_str: &str = view_key_cstr.to_str().unwrap();
-    let view_key = ViewKey::<Testnet3>::from_str(view_key_str).unwrap();
+    let view_key = ViewKey::<MainnetV0>::from_str(view_key_str).unwrap();
     let address = view_key.to_address();
     let c_string = CString::new(address.to_string()).unwrap();
     c_string.into_raw()
@@ -318,7 +318,7 @@ pub extern "C" fn signMessage(
 ) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
-    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+    let private_key = PrivateKey::<MainnetV0>::from_str(private_key_str).unwrap();
 
     let message;
     unsafe {
@@ -340,11 +340,11 @@ pub extern "C" fn verify(
 ) -> bool {
     let address_cstr = unsafe { CStr::from_ptr(address_raw) };
     let address_str: &str = address_cstr.to_str().unwrap();
-    let address = Address::<Testnet3>::from_str(address_str).unwrap();
+    let address = Address::<MainnetV0>::from_str(address_str).unwrap();
 
     let signature_cstr = unsafe { CStr::from_ptr(signature_raw) };
     let signature_str: &str = signature_cstr.to_str().unwrap();
-    let signature = Signature::<Testnet3>::from_str(signature_str).unwrap();
+    let signature = Signature::<MainnetV0>::from_str(signature_str).unwrap();
 
     let message;
     unsafe {
@@ -360,7 +360,7 @@ pub extern "C" fn encryptPrivateKey(
 ) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
-    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+    let private_key = PrivateKey::<MainnetV0>::from_str(private_key_str).unwrap();
 
     let secret_cstr = unsafe { CStr::from_ptr(secret_raw) };
     let secret: &str = secret_cstr.to_str().unwrap();
@@ -386,7 +386,7 @@ pub extern "C" fn decryptToPrivateKey(
     let private_key_ciphertext_str: &str = private_key_ciphertext_cstr.to_str().unwrap();
 
     let private_key_ciphertext =
-        Ciphertext::<Testnet3>::from_str(private_key_ciphertext_str).unwrap();
+        Ciphertext::<MainnetV0>::from_str(private_key_ciphertext_str).unwrap();
 
     let secret_cstr = unsafe { CStr::from_ptr(secret_raw) };
     let secret: &str = secret_cstr.to_str().unwrap();
@@ -405,9 +405,9 @@ pub extern "C" fn decryptCipherText(
     view_key_raw: *const c_char,
 ) -> *const c_char {
     let record_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_ciphertext_raw))
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_ciphertext_raw))
             .unwrap();
-    let view_key = ViewKey::<Testnet3>::from_str(&cstr_to_string(view_key_raw)).unwrap();
+    let view_key = ViewKey::<MainnetV0>::from_str(&cstr_to_string(view_key_raw)).unwrap();
     let result = record_ciphertext.decrypt(&view_key).unwrap();
     let c_string = CString::new(result.to_string()).unwrap();
     c_string.into_raw()
@@ -420,9 +420,9 @@ pub extern "C" fn isOwner(
     view_key_raw: *const c_char,
 ) -> bool {
     let record_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_plaintext_raw))
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_plaintext_raw))
             .unwrap();
-    let view_key = ViewKey::<Testnet3>::from_str(&cstr_to_string(view_key_raw)).unwrap();
+    let view_key = ViewKey::<MainnetV0>::from_str(&cstr_to_string(view_key_raw)).unwrap();
     let result: bool = record_ciphertext.is_owner(&view_key);
     result
 }
@@ -453,17 +453,17 @@ pub extern "C" fn try_transfer(
     // let visibility = TransferType::Private;
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
-    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let sender = PrivateKey::<MainnetV0>::from_str(private_key).unwrap();
     let recipient_cstr = unsafe { CStr::from_ptr(recipient_raw) };
     let recipient_str: &str = recipient_cstr.to_str().unwrap();
-    let recipient = Address::<Testnet3>::from_str(recipient_str).unwrap();
+    let recipient = Address::<MainnetV0>::from_str(recipient_str).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
     println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
-    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let api_client = AleoAPIClient::<MainnetV0>::aleo_net(url);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager =
-        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+        ProgramManager::<MainnetV0>::new(Some(sender), None, Some(api_client.clone()), None, false)
             .unwrap();
     // let record_finder = RecordFinder::new(api_client);
     let mut tx_hash = "error".to_string();
@@ -480,13 +480,13 @@ pub extern "C" fn try_transfer(
                 // }
                 // let (amount_record, fee_record) = record.unwrap();
 
-                let amount_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                let amount_record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(
                     &cstr_to_string(amount_record_raw),
                 )
                 .unwrap();
                 let amount_record = amount_record_ciphertext.decrypt(&view_key).unwrap();
 
-                let fee_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                let fee_record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(
                     &cstr_to_string(fee_record_raw),
                 )
                 .unwrap();
@@ -540,17 +540,17 @@ pub extern "C" fn execution_authorization(
     // let visibility = TransferType::Private;
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
-    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let sender = PrivateKey::<MainnetV0>::from_str(private_key).unwrap();
     let recipient_cstr = unsafe { CStr::from_ptr(recipient_raw) };
     let recipient_str: &str = recipient_cstr.to_str().unwrap();
-    let recipient = Address::<Testnet3>::from_str(recipient_str).unwrap();
+    let recipient = Address::<MainnetV0>::from_str(recipient_str).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
     println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
-    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let api_client = AleoAPIClient::<MainnetV0>::aleo_net(url);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager =
-        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+        ProgramManager::<MainnetV0>::new(Some(sender), None, Some(api_client.clone()), None, false)
             .unwrap();
     // let record_finder = RecordFinder::new(api_client);
     let mut authorization = "error".to_string();
@@ -559,7 +559,7 @@ pub extern "C" fn execution_authorization(
             TransferType::Public => None,
             TransferType::PublicToPrivate => None,
             _ => {
-                let amount_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                let amount_record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(
                     &cstr_to_string(amount_record_raw),
                 )
                 .unwrap();
@@ -589,28 +589,28 @@ pub extern "C" fn execution_authorization(
     c_string.into_raw()
 }
 
-#[no_mangle]
-pub extern "C" fn execute_proof(
-    url_raw: *const c_char,
-    authorization_raw: *const c_char,
-) -> *const c_char {
-    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
-    let url = url_cstr.to_str().unwrap();
-    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
-    let program_manager =
-        ProgramManager::<Testnet3>::new(None, None, Some(api_client.clone()), None, false).unwrap();
-    let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
-    let authorization_str: &str = authorization_cstr.to_str().unwrap();
-    let authorization =
-        Authorization::<Testnet3>::from_str(&authorization_str.to_string()).unwrap();
-    let execution = program_manager.execute_proof(authorization);
-    let result = match execution {
-        Ok(value) => value,
-        Err(err) => format!("Error: {}!", err.to_string()),
-    };
-    let c_string = CString::new(result.to_string()).unwrap();
-    c_string.into_raw()
-}
+// #[no_mangle]
+// pub extern "C" fn execute_proof(
+//     url_raw: *const c_char,
+//     authorization_raw: *const c_char,
+// ) -> *const c_char {
+//     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+//     let url = url_cstr.to_str().unwrap();
+//     let api_client = AleoAPIClient::<MainnetV0>::aleo_net(url);
+//     let program_manager =
+//         ProgramManager::<MainnetV0>::new(None, None, Some(api_client.clone()), None, false).unwrap();
+//     let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
+//     let authorization_str: &str = authorization_cstr.to_str().unwrap();
+//     let authorization =
+//         Authorization::<MainnetV0>::from_str(&authorization_str.to_string()).unwrap();
+//     let execution = program_manager.execute_proof(authorization);
+//     let result = match execution {
+//         Ok(value) => value,
+//         Err(err) => format!("Error: {}!", err.to_string()),
+//     };
+//     let c_string = CString::new(result.to_string()).unwrap();
+//     c_string.into_raw()
+// }
 
 #[no_mangle]
 pub extern "C" fn execution_fee_authorization(
@@ -634,19 +634,19 @@ pub extern "C" fn execution_fee_authorization(
 
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
-    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let sender = PrivateKey::<MainnetV0>::from_str(private_key).unwrap();
 
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
 
-    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let api_client = AleoAPIClient::<MainnetV0>::aleo_net(url);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager =
-        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+        ProgramManager::<MainnetV0>::new(Some(sender), None, Some(api_client.clone()), None, false)
             .unwrap();
     let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
     let execution_str: &str = execution_cstr.to_str().unwrap();
-    let execution = Execution::<Testnet3>::from_str(&execution_str.to_string()).unwrap();
+    let execution = Execution::<MainnetV0>::from_str(&execution_str.to_string()).unwrap();
 
     let mut authorization = "error".to_string();
     for i in 0..10 {
@@ -661,7 +661,7 @@ pub extern "C" fn execution_fee_authorization(
                     fee_record = None;
                 } else {
                     let fee_record_ciphertext =
-                        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&fee_record_string)
+                        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&fee_record_string)
                             .unwrap();
                     fee_record = Some(fee_record_ciphertext.decrypt(&view_key).unwrap());
                 }
@@ -685,28 +685,28 @@ pub extern "C" fn execution_fee_authorization(
     c_string.into_raw()
 }
 
-#[no_mangle]
-pub extern "C" fn execute_fee_proof(
-    url_raw: *const c_char,
-    authorization_raw: *const c_char,
-) -> *const c_char {
-    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
-    let url = url_cstr.to_str().unwrap();
-    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
-    let program_manager =
-        ProgramManager::<Testnet3>::new(None, None, Some(api_client.clone()), None, false).unwrap();
-    let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
-    let authorization_str: &str = authorization_cstr.to_str().unwrap();
-    let authorization =
-        Authorization::<Testnet3>::from_str(&authorization_str.to_string()).unwrap();
-    let execution = program_manager.execute_fee_proof(authorization);
-    let result = match execution {
-        Ok(value) => value,
-        Err(err) => format!("Error: {}!", err.to_string()),
-    };
-    let c_string = CString::new(result.to_string()).unwrap();
-    c_string.into_raw()
-}
+// #[no_mangle]
+// pub extern "C" fn execute_fee_proof(
+//     url_raw: *const c_char,
+//     authorization_raw: *const c_char,
+// ) -> *const c_char {
+//     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+//     let url = url_cstr.to_str().unwrap();
+//     let api_client = AleoAPIClient::<MainnetV0>::aleo_net(url);
+//     let program_manager =
+//         ProgramManager::<MainnetV0>::new(None, None, Some(api_client.clone()), None, false).unwrap();
+//     let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
+//     let authorization_str: &str = authorization_cstr.to_str().unwrap();
+//     let authorization =
+//         Authorization::<MainnetV0>::from_str(&authorization_str.to_string()).unwrap();
+//     let execution = program_manager.execute_fee_proof(authorization);
+//     let result = match execution {
+//         Ok(value) => value,
+//         Err(err) => format!("Error: {}!", err.to_string()),
+//     };
+//     let c_string = CString::new(result.to_string()).unwrap();
+//     c_string.into_raw()
+// }
 
 #[no_mangle]
 pub extern "C" fn build_transaction_offline(
@@ -715,11 +715,11 @@ pub extern "C" fn build_transaction_offline(
 ) -> *const c_char {
     let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
     let execution_str: &str = execution_cstr.to_str().unwrap();
-    let execution = Execution::<Testnet3>::from_str(&execution_str.to_string()).unwrap();
+    let execution = Execution::<MainnetV0>::from_str(&execution_str.to_string()).unwrap();
 
     let fee_cstr = unsafe { CStr::from_ptr(fee_raw) };
     let fee_str: &str = fee_cstr.to_str().unwrap();
-    let fee = Some(Fee::<Testnet3>::from_str(&fee_str.to_string()).unwrap());
+    let fee = Some(Fee::<MainnetV0>::from_str(&fee_str.to_string()).unwrap());
     let transaction = Transaction::from_execution(execution, fee).unwrap();
 
     let c_string = CString::new(transaction.to_string()).unwrap();
@@ -750,17 +750,17 @@ pub extern "C" fn build_transaction(
     // let visibility = TransferType::Private;
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
-    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let sender = PrivateKey::<MainnetV0>::from_str(private_key).unwrap();
     let recipient_cstr = unsafe { CStr::from_ptr(recipient_raw) };
     let recipient_str: &str = recipient_cstr.to_str().unwrap();
-    let recipient = Address::<Testnet3>::from_str(recipient_str).unwrap();
+    let recipient = Address::<MainnetV0>::from_str(recipient_str).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
     println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
-    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let api_client = AleoAPIClient::<MainnetV0>::aleo_net(url);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager =
-        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+        ProgramManager::<MainnetV0>::new(Some(sender), None, Some(api_client.clone()), None, false)
             .unwrap();
     // let record_finder = RecordFinder::new(api_client);
     let mut tx_hash = "error".to_string();
@@ -769,7 +769,7 @@ pub extern "C" fn build_transaction(
             TransferType::Public => (None, None),
             TransferType::PublicToPrivate => (None, None),
             _ => {
-                let amount_record_ciphertext = Record::<Testnet3, Ciphertext<Testnet3>>::from_str(
+                let amount_record_ciphertext = Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(
                     &cstr_to_string(amount_record_raw),
                 )
                 .unwrap();
@@ -782,7 +782,7 @@ pub extern "C" fn build_transaction(
                     fee_record = None;
                 } else {
                     let fee_record_ciphertext =
-                        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&fee_record_string)
+                        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&fee_record_string)
                             .unwrap();
                     fee_record = Some(fee_record_ciphertext.decrypt(&view_key).unwrap());
                 }
@@ -826,7 +826,7 @@ pub extern "C" fn broadcast(
     let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
     let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
 
-    let result = ProgramManager::<Testnet3>::broadcast(
+    let result = ProgramManager::<MainnetV0>::broadcast(
         execution.to_string(),
         url.to_string(),
         transfer_type.to_string(),
@@ -844,24 +844,24 @@ pub extern "C" fn serialNumberString(
     record_name_raw: *const c_char,
 ) -> *const c_char {
     let record_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_ciphertext_raw))
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_ciphertext_raw))
             .unwrap();
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
-    let private_key = PrivateKey::<Testnet3>::from_str(private_key_str).unwrap();
+    let private_key = PrivateKey::<MainnetV0>::from_str(private_key_str).unwrap();
     let view_key = ViewKey::try_from(&private_key).unwrap();
     let record_plaintext = record_ciphertext.decrypt(&view_key).unwrap();
     let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
     let program_id: &str = program_id_cstr.to_str().unwrap();
     let record_name_cstr = unsafe { CStr::from_ptr(record_name_raw) };
     let record_name: &str = record_name_cstr.to_str().unwrap();
-    let parsed_program_id = ProgramID::<Testnet3>::from_str(program_id).unwrap();
-    let record_identifier = Identifier::<Testnet3>::from_str(record_name).unwrap();
+    let parsed_program_id = ProgramID::<MainnetV0>::from_str(program_id).unwrap();
+    let record_identifier = Identifier::<MainnetV0>::from_str(record_name).unwrap();
     let commitment = record_plaintext
         .to_commitment(&parsed_program_id, &record_identifier)
         .unwrap();
     let serial_number =
-        Record::<Testnet3, Plaintext<Testnet3>>::serial_number(private_key, commitment).unwrap();
+        Record::<MainnetV0, Plaintext<MainnetV0>>::serial_number(private_key, commitment).unwrap();
 
     let c_string = CString::new(serial_number.to_string()).unwrap();
     c_string.into_raw()
@@ -878,20 +878,20 @@ pub extern "C" fn try_join(
 ) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
-    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let sender = PrivateKey::<MainnetV0>::from_str(private_key).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
-    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let api_client = AleoAPIClient::<MainnetV0>::aleo_net(url);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager =
-        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+        ProgramManager::<MainnetV0>::new(Some(sender), None, Some(api_client.clone()), None, false)
             .unwrap();
 
     let record1_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_1_raw)).unwrap();
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_1_raw)).unwrap();
     let record1 = record1_ciphertext.decrypt(&view_key).unwrap();
     let record2_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_2_raw)).unwrap();
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_2_raw)).unwrap();
     let record2 = record2_ciphertext.decrypt(&view_key).unwrap();
 
     let fee_record_string: String = cstr_to_string(fee_record_raw);
@@ -901,7 +901,7 @@ pub extern "C" fn try_join(
         fee_record = None;
     } else {
         let fee_record_ciphertext =
-            Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&fee_record_string).unwrap();
+            Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&fee_record_string).unwrap();
         fee_record = Some(fee_record_ciphertext.decrypt(&view_key).unwrap());
     }
 
@@ -935,22 +935,22 @@ pub extern "C" fn join_authorization(
     // let visibility = TransferType::Private;
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
-    let sender = PrivateKey::<Testnet3>::from_str(private_key).unwrap();
+    let sender = PrivateKey::<MainnetV0>::from_str(private_key).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
     let view_key = ViewKey::try_from(&sender).unwrap();
 
     let record1_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_1_raw)).unwrap();
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_1_raw)).unwrap();
     let record1 = record1_ciphertext.decrypt(&view_key).unwrap();
     let record2_ciphertext =
-        Record::<Testnet3, Ciphertext<Testnet3>>::from_str(&cstr_to_string(record_2_raw)).unwrap();
+        Record::<MainnetV0, Ciphertext<MainnetV0>>::from_str(&cstr_to_string(record_2_raw)).unwrap();
     let record2 = record2_ciphertext.decrypt(&view_key).unwrap();
 
     println!("Attempting to transfer of type: join");
-    let api_client = AleoAPIClient::<Testnet3>::aleo_net(url);
+    let api_client = AleoAPIClient::<MainnetV0>::aleo_net(url);
     let program_manager =
-        ProgramManager::<Testnet3>::new(Some(sender), None, Some(api_client.clone()), None, false)
+        ProgramManager::<MainnetV0>::new(Some(sender), None, Some(api_client.clone()), None, false)
             .unwrap();
     // let record_finder = RecordFinder::new(api_client);
     let mut authorization = "error".to_string();

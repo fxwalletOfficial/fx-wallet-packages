@@ -42,29 +42,29 @@ version = "2.7.1"
 
 
 [dependencies.snarkvm]
-git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+git = "https://github.com/AleoNet/snarkVM.git"
 optional = true
 
 [dependencies.snarkvm-circuit-network]
-git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+git = "https://github.com/AleoNet/snarkVM.git"
 
 [dependencies.snarkvm-console]
-git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+git = "https://github.com/AleoNet/snarkVM.git"
 
 [dependencies.snarkvm-ledger-store]
-git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+git = "https://github.com/AleoNet/snarkVM.git"
 
 [dependencies.snarkvm-ledger-query]
-git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+git = "https://github.com/AleoNet/snarkVM.git"
 
 [dependencies.snarkvm-ledger-block]
-git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+git = "https://github.com/AleoNet/snarkVM.git"
 
 [dependencies.snarkvm-synthesizer]
-git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+git = "https://github.com/AleoNet/snarkVM.git"
 
 [dependencies.snarkvm-console-network]
-git = "https://github.com/pzhun/snarkVM-0.16.18.git"
+git = "https://github.com/AleoNet/snarkVM.git"
 
 [features]
 default = [ "full" ]

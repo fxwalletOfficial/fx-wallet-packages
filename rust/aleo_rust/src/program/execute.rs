@@ -261,14 +261,14 @@ mod tests {
     use super::*;
     use crate::{random_program, random_program_id, AleoAPIClient, RECORD_5_MICROCREDITS};
     use snarkvm::circuit::AleoV0;
-    use snarkvm_console::network::Testnet3;
+    use snarkvm_console::network::MainnetV0;
 
     #[test]
     fn test_fee_estimation() {
-        let private_key = PrivateKey::<Testnet3>::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
-        let api_client = AleoAPIClient::<Testnet3>::testnet3();
+        let private_key = PrivateKey::<MainnetV0>::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
+        let api_client = AleoAPIClient::<MainnetV0>::testnet3();
         let program_manager =
-            ProgramManager::<Testnet3>::new(Some(private_key), None, Some(api_client.clone()), None, false).unwrap();
+            ProgramManager::<MainnetV0>::new(Some(private_key), None, Some(api_client.clone()), None, false).unwrap();
 
         let finalize_program = program_manager.api_client.as_ref().unwrap().get_program("credits.aleo").unwrap();
         let hello_hello = program_manager.api_client.as_ref().unwrap().get_program("hello_hello.aleo").unwrap();
@@ -335,13 +335,13 @@ mod tests {
     #[test]
     #[ignore]
     fn test_execution() {
-        let private_key = PrivateKey::<Testnet3>::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
+        let private_key = PrivateKey::<MainnetV0>::from_str(RECIPIENT_PRIVATE_KEY).unwrap();
         let encrypted_private_key =
             crate::Encryptor::encrypt_private_key_with_secret(&private_key, "password").unwrap();
-        let api_client = AleoAPIClient::<Testnet3>::local_testnet3("3033");
+        let api_client = AleoAPIClient::<MainnetV0>::local_testnet3("3033");
         let record_finder = RecordFinder::new(api_client.clone());
         let mut program_manager =
-            ProgramManager::<Testnet3>::new(Some(private_key), None, Some(api_client.clone()), None, false).unwrap();
+            ProgramManager::<MainnetV0>::new(Some(private_key), None, Some(api_client.clone()), None, false).unwrap();
 
         let fee = 2_500_000;
         let finalize_fee = 8_000_000;
@@ -370,7 +370,7 @@ mod tests {
 
         // Test programs can be executed with an encrypted private key
         let mut program_manager =
-            ProgramManager::<Testnet3>::new(None, Some(encrypted_private_key), Some(api_client), None, false).unwrap();
+            ProgramManager::<MainnetV0>::new(None, Some(encrypted_private_key), Some(api_client), None, false).unwrap();
 
         for i in 0..5 {
             let fee_record = record_finder.find_one_record(&private_key, fee, None).unwrap();
@@ -435,15 +435,15 @@ mod tests {
     #[test]
     fn test_execution_failure_modes() {
         let rng = &mut rand::thread_rng();
-        let recipient_private_key = PrivateKey::<Testnet3>::new(rng).unwrap();
-        let api_client = AleoAPIClient::<Testnet3>::testnet3();
-        let record_5_microcredits = Record::<Testnet3, Plaintext<Testnet3>>::from_str(RECORD_5_MICROCREDITS).unwrap();
+        let recipient_private_key = PrivateKey::<MainnetV0>::new(rng).unwrap();
+        let api_client = AleoAPIClient::<MainnetV0>::testnet3();
+        let record_5_microcredits = Record::<MainnetV0, Plaintext<MainnetV0>>::from_str(RECORD_5_MICROCREDITS).unwrap();
         let record_2000000001_microcredits =
-            Record::<Testnet3, Plaintext<Testnet3>>::from_str(RECORD_2000000001_MICROCREDITS).unwrap();
+            Record::<MainnetV0, Plaintext<MainnetV0>>::from_str(RECORD_2000000001_MICROCREDITS).unwrap();
 
         // Ensure that program manager creation fails if no key is provided
         let mut program_manager =
-            ProgramManager::<Testnet3>::new(Some(recipient_private_key), None, Some(api_client), None, false).unwrap();
+            ProgramManager::<MainnetV0>::new(Some(recipient_private_key), None, Some(api_client), None, false).unwrap();
 
         // Assert that execution fails if record's available microcredits are below the fee
         let execution = program_manager.execute_program(
