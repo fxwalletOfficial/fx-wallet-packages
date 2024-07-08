@@ -202,7 +202,7 @@ class AleoProgram {
     } else {
       print('start downloading');
       const downLoadUrl =
-          'https://s3-us-west-1.amazonaws.com/testnet3.parameters/inclusion.prover.cd85cc5';
+          'https://s3-us-west-1.amazonaws.com/testnet.parameters/inclusion.prover.cd85cc5';
       await downloadFile(downLoadUrl, savePath);
     }
     return;

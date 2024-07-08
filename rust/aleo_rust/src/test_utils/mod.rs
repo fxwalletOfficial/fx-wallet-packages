@@ -24,10 +24,15 @@ use snarkvm_console::{
 
 use anyhow::Result;
 use snarkvm::synthesizer::Program;
-use std::{fs, fs::File, io::Write, ops::Add, panic::catch_unwind, path::PathBuf, str::FromStr, thread::sleep};
+use std::{
+    fs, fs::File, io::Write, ops::Add, panic::catch_unwind, path::PathBuf, str::FromStr,
+    thread::sleep,
+};
 
-pub const RECIPIENT_PRIVATE_KEY: &str = "APrivateKey1zkp3dQx4WASWYQVWKkq14v3RoQDfY2kbLssUj7iifi1VUQ6";
-pub const RECIPIENT_ADDRESS: &str = "aleo184vuwr5u7u0ha5f5k44067dd2uaqewxx6pe5ltha5pv99wvhfqxqv339h4";
+pub const RECIPIENT_PRIVATE_KEY: &str =
+    "APrivateKey1zkp3dQx4WASWYQVWKkq14v3RoQDfY2kbLssUj7iifi1VUQ6";
+pub const RECIPIENT_ADDRESS: &str =
+    "aleo184vuwr5u7u0ha5f5k44067dd2uaqewxx6pe5ltha5pv99wvhfqxqv339h4";
 pub const BEACON_PRIVATE_KEY: &str = "APrivateKey1zkp8CZNn3yeCseEtxuVPbDCwSyhGW6yZKUYKfgXmcpoGPWH";
 
 pub const IMPORT_PROGRAM: &str = "
@@ -158,17 +163,26 @@ pub fn random_program_id(len: usize) -> String {
 
 /// Get a random program
 pub fn random_program() -> Program<MainnetV0> {
-    let random_program = String::from("program ").add(&random_program_id(15)).add(";").add(GENERIC_PROGRAM_BODY);
+    let random_program = String::from("program ")
+        .add(&random_program_id(15))
+        .add(";")
+        .add(GENERIC_PROGRAM_BODY);
     Program::<MainnetV0>::from_str(&random_program).unwrap()
 }
 
 /// Create temp directory with test data
-pub fn setup_directory(directory_name: &str, main_program: &str, imports: Vec<(&str, &str)>) -> Result<PathBuf> {
+pub fn setup_directory(
+    directory_name: &str,
+    main_program: &str,
+    imports: Vec<(&str, &str)>,
+) -> Result<PathBuf> {
     // Crate a temporary directory for the test.
     let directory = std::env::temp_dir().join(directory_name);
 
     catch_unwind(|| {
-        let _ = &directory.exists().then(|| fs::remove_dir_all(&directory).unwrap());
+        let _ = &directory
+            .exists()
+            .then(|| fs::remove_dir_all(&directory).unwrap());
         fs::create_dir(&directory).unwrap();
 
         let imports_directory = directory.join("imports");
@@ -207,7 +221,7 @@ pub fn transfer_to_test_account(
     recipient_private_key: PrivateKey<MainnetV0>,
     port: &str,
 ) -> Result<Vec<Record<MainnetV0, Plaintext<MainnetV0>>>> {
-    let api_client = AleoAPIClient::<MainnetV0>::local_testnet3(port);
+    let api_client = AleoAPIClient::<MainnetV0>::local_testnet(port);
     let beacon_private_key = PrivateKey::<MainnetV0>::from_str(BEACON_PRIVATE_KEY)?;
 
     let recipient_view_key = ViewKey::<MainnetV0>::try_from(&recipient_private_key)?;
@@ -215,14 +229,21 @@ pub fn transfer_to_test_account(
 
     let record_finder = RecordFinder::<MainnetV0>::new(api_client.clone());
 
-    let program_manager =
-        ProgramManager::<MainnetV0>::new(Some(beacon_private_key), None, Some(api_client), None, false).unwrap();
+    let program_manager = ProgramManager::<MainnetV0>::new(
+        Some(beacon_private_key),
+        None,
+        Some(api_client),
+        None,
+        false,
+    )
+    .unwrap();
 
     let fee = 500_000;
     let mut transfer_successes = 0;
     let mut retries = 0;
     loop {
-        let input_record = record_finder.find_amount_and_fee_records(amount, fee, &beacon_private_key);
+        let input_record =
+            record_finder.find_amount_and_fee_records(amount, fee, &beacon_private_key);
         if input_record.is_err() {
             println!("No records found, retrying");
             retries += 1;
@@ -259,6 +280,7 @@ pub fn transfer_to_test_account(
 
     let client = program_manager.api_client()?;
     let latest_height = client.latest_height()?;
-    let records = client.get_unspent_records(&recipient_private_key, 0..latest_height, None, None)?;
+    let records =
+        client.get_unspent_records(&recipient_private_key, 0..latest_height, None, None)?;
     Ok(records.into_iter().map(|(_cm, record)| record).collect())
 }
