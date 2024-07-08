@@ -211,12 +211,12 @@ pub mod snarkvm_types {
         helpers::memory::{BlockMemory, ConsensusMemory},
         BlockStore, ConsensusStore,
     };
+    pub use snarkvm_synthesizer::prelude::{cost_in_microcredits, execution_cost};
+    pub use snarkvm_synthesizer::Authorization;
     pub use snarkvm_synthesizer::{
         snark::{Proof, ProvingKey, VerifyingKey},
         Process, Program, Trace, VM,
     };
-    pub use snarkvm_synthesizer::Authorization;
-    pub use snarkvm_synthesizer::prelude::{cost_in_microcredits, execution_cost};
 }
 
 pub use snarkvm_types::*;
@@ -442,9 +442,12 @@ pub extern "C" fn try_transfer(
     url_raw: *const c_char,
     amount_record_raw: *const c_char,
     fee_record_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
     let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
     let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
 
     let visibility = match transfer_type {
         "transfer_public" => TransferType::Public,
@@ -462,8 +465,10 @@ pub extern "C" fn try_transfer(
     let recipient = Address::<CurrentNetwork>::from_str(recipient_str).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
-    println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
-    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    println!(
+        "Attempting to transfer in {network} of type : {visibility:?} of {amount} to {recipient:?}"
+    );
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager = ProgramManager::<CurrentNetwork>::new(
         Some(sender),
@@ -536,10 +541,12 @@ pub extern "C" fn execution_authorization(
     amount: u64,
     url_raw: *const c_char,
     amount_record_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
     let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
     let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
-
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
     let visibility = match transfer_type {
         "transfer_public" => TransferType::Public,
         "transfer_public_to_private" => TransferType::PublicToPrivate,
@@ -556,8 +563,10 @@ pub extern "C" fn execution_authorization(
     let recipient = Address::<CurrentNetwork>::from_str(recipient_str).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
-    println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
-    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    println!(
+        "Attempting to transfer in {network} of type : {visibility:?} of {amount} to {recipient:?}"
+    );
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager = ProgramManager::<CurrentNetwork>::new(
         Some(sender),
@@ -609,12 +618,16 @@ pub extern "C" fn execution_authorization(
 pub extern "C" fn execute_proof(
     url_raw: *const c_char,
     authorization_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
-    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
     let program_manager =
-        ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false).unwrap();
+        ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false)
+            .unwrap();
     let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
     let authorization_str: &str = authorization_cstr.to_str().unwrap();
     let authorization =
@@ -636,10 +649,12 @@ pub extern "C" fn execution_fee_authorization(
     fee: u64,
     fee_record_raw: *const c_char,
     execution_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
     let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
     let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
-
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
     let visibility = match transfer_type {
         "transfer_public" => TransferType::Public,
         "transfer_public_to_private" => TransferType::PublicToPrivate,
@@ -655,7 +670,7 @@ pub extern "C" fn execution_fee_authorization(
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
 
-    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager = ProgramManager::<CurrentNetwork>::new(
         Some(sender),
@@ -712,12 +727,16 @@ pub extern "C" fn execution_fee_authorization(
 pub extern "C" fn execute_fee_proof(
     url_raw: *const c_char,
     authorization_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
-    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
     let program_manager =
-        ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false).unwrap();
+        ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false)
+            .unwrap();
     let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
     let authorization_str: &str = authorization_cstr.to_str().unwrap();
     let authorization =
@@ -759,10 +778,12 @@ pub extern "C" fn build_transaction(
     url_raw: *const c_char,
     amount_record_raw: *const c_char,
     fee_record_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
     let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
     let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
-
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
     let visibility = match transfer_type {
         "transfer_public" => TransferType::Public,
         "transfer_public_to_private" => TransferType::PublicToPrivate,
@@ -779,8 +800,10 @@ pub extern "C" fn build_transaction(
     let recipient = Address::<CurrentNetwork>::from_str(recipient_str).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
-    println!("Attempting to transfer of type: {visibility:?} of {amount} to {recipient:?}");
-    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    println!(
+        "Attempting to transfer in {network} of type : {visibility:?} of {amount} to {recipient:?}"
+    );
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager = ProgramManager::<CurrentNetwork>::new(
         Some(sender),
@@ -849,7 +872,10 @@ pub extern "C" fn broadcast(
     execution_raw: *const c_char,
     url_raw: *const c_char,
     transfer_type_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
     let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
     let execution = execution_cstr.to_str().unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
@@ -861,6 +887,7 @@ pub extern "C" fn broadcast(
         execution.to_string(),
         url.to_string(),
         transfer_type.to_string(),
+        network.to_string(),
     )
     .unwrap();
     let c_string = CString::new(result).unwrap();
@@ -908,13 +935,16 @@ pub extern "C" fn try_join(
     fee: u64,
     fee_record_raw: *const c_char,
     url_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
     let sender = PrivateKey::<CurrentNetwork>::from_str(private_key).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
-    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
     let view_key = ViewKey::try_from(&sender).unwrap();
     let program_manager = ProgramManager::<CurrentNetwork>::new(
         Some(sender),
@@ -974,8 +1004,11 @@ pub extern "C" fn join_authorization(
     record_1_raw: *const c_char,
     record_2_raw: *const c_char,
     url_raw: *const c_char,
+    network_raw: *const c_char,
 ) -> *const c_char {
     // let visibility = TransferType::Private;
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
     let sender = PrivateKey::<CurrentNetwork>::from_str(private_key).unwrap();
@@ -994,8 +1027,8 @@ pub extern "C" fn join_authorization(
     .unwrap();
     let record2 = record2_ciphertext.decrypt(&view_key).unwrap();
 
-    println!("Attempting to transfer of type: join");
-    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url);
+    println!("Attempting to transfer in {network} of type : join");
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
     let program_manager = ProgramManager::<CurrentNetwork>::new(
         Some(sender),
         None,

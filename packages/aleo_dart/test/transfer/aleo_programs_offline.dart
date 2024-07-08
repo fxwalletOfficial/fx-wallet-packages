@@ -14,8 +14,8 @@ import 'package:test/test.dart';
 //   private_key: 'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v',
 // };
 final String libPosition = 'aleo_rust/target/debug/libaleo_rust.so';
-final dyLib = DyLib.getDyLibByPosition(libPosition);
-// final dyLib = DyLib.getDyLibFromCargo();
+// final dyLib = DyLib.getDyLibByPosition(libPosition);
+final dyLib = DyLib.getDyLibFromCargo();
 final rust = AleoProgram(dyLib);
 
 final amount_record = '';

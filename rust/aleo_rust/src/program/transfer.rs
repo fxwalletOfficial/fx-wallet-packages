@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo SDK library. If not, see <https://www.gnu.org/licenses/>.
 
-
 use super::*;
 
 impl<N: Network> ProgramManager<N> {
@@ -217,9 +216,10 @@ impl<N: Network> ProgramManager<N> {
         execution_raw: String,
         url: String,
         transaction_type: String,
+        network: String,
     ) -> Result<String> {
         let execution = Transaction::<CurrentNetwork>::from_str(&execution_raw).unwrap();
-        let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(&url);
+        let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(&url, &network);
         let result = api_client.transaction_broadcast(execution);
         if result.is_ok() {
             println!(

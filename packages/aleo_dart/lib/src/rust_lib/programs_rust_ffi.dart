@@ -12,6 +12,7 @@ typedef TypeTransferInRust = ffi.Pointer<Utf8> Function(
     ffi.Int,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
 typedef TypeTransferInDart = ffi.Pointer<Utf8> Function(
@@ -22,16 +23,18 @@ typedef TypeTransferInDart = ffi.Pointer<Utf8> Function(
     int,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
 typedef TypeBroadcast = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
 typedef TypeAuthorizationInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Int,
+    ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
@@ -41,16 +44,18 @@ typedef TypeAuthorizationInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     int,
     ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
 typedef TypeProof = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
 typedef TypeJoinInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Int,
+    ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
@@ -60,17 +65,17 @@ typedef TypeJoinInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     int,
     ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
-typedef TypeJoinAuthorization = ffi.Pointer<Utf8> Function(
+typedef TypeJoinAuthorization = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
 class ProgramsRustFFI {
-  late ffi.DynamicLibrary dyLib;
+  final ffi.DynamicLibrary dyLib;
+  final network;
 
-  ProgramsRustFFI(dyLib) {
-    this.dyLib = dyLib;
-  }
+  ProgramsRustFFI(this.dyLib, this.network);
 
   Future<ffi.Pointer<Utf8>> transfer(
     ffi.Pointer<Utf8> private_key,
@@ -86,7 +91,7 @@ class ProgramsRustFFI {
         .lookupFunction<TypeTransferInRust, TypeTransferInDart>('try_transfer');
 
     return rustFunction(private_key, recipient, transfer_type, amount_credits,
-        fee_credits, url, amount_record, fee_record);
+        fee_credits, url, amount_record, fee_record, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> join(
@@ -100,8 +105,8 @@ class ProgramsRustFFI {
     final rustFunction =
         dyLib.lookupFunction<TypeJoinInRust, TypeJoinInDart>('try_join');
 
-    return rustFunction(
-        private_key, record_1, record_2, fee_credits, fee_record, url);
+    return rustFunction(private_key, record_1, record_2, fee_credits,
+        fee_record, url, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> joinAuthorization(
@@ -114,7 +119,7 @@ class ProgramsRustFFI {
         dyLib.lookupFunction<TypeJoinAuthorization, TypeJoinAuthorization>(
             'join_authorization');
 
-    return rustFunction(private_key, record_1, record_2, url);
+    return rustFunction(private_key, record_1, record_2, url, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> buildTransaction(
@@ -132,7 +137,7 @@ class ProgramsRustFFI {
             'build_transaction');
 
     return rustFunction(private_key, recipient, transfer_type, amount_credits,
-        fee_credits, url, amount_record, fee_record);
+        fee_credits, url, amount_record, fee_record, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> broadcast(
@@ -143,7 +148,7 @@ class ProgramsRustFFI {
     final rustFunction =
         dyLib.lookupFunction<TypeBroadcast, TypeBroadcast>('broadcast');
 
-    return rustFunction(transaction, url, transfer_type);
+    return rustFunction(transaction, url, transfer_type, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> executionAuthorization(
@@ -159,7 +164,7 @@ class ProgramsRustFFI {
             'execution_authorization');
 
     return rustFunction(private_key, recipient, transfer_type, amount_credits,
-        url, amount_record);
+        url, amount_record, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> executionFeeAuthorization(
@@ -174,8 +179,8 @@ class ProgramsRustFFI {
         dyLib.lookupFunction<TypeAuthorizationInRust, TypeAuthorizationInDart>(
             'execution_fee_authorization');
 
-    return rustFunction(
-        private_key, transfer_type, url, fee_credits, fee_record, execution);
+    return rustFunction(private_key, transfer_type, url, fee_credits,
+        fee_record, execution, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> executeProof(
@@ -185,7 +190,7 @@ class ProgramsRustFFI {
     final rustFunction =
         dyLib.lookupFunction<TypeProof, TypeProof>('execute_proof');
 
-    return rustFunction(url, authorization);
+    return rustFunction(url, authorization, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> executeFeeProof(
@@ -195,7 +200,7 @@ class ProgramsRustFFI {
     final rustFunction =
         dyLib.lookupFunction<TypeProof, TypeProof>('execute_fee_proof');
 
-    return rustFunction(url, authorization);
+    return rustFunction(url, authorization, this.network);
   }
 
   Future<ffi.Pointer<Utf8>> buildTransactionOffline(
@@ -204,6 +209,6 @@ class ProgramsRustFFI {
   ) async {
     final rustFunction =
         dyLib.lookupFunction<TypeProof, TypeProof>('build_transaction_offline');
-    return rustFunction(execution, fee);
+    return rustFunction(execution, fee, this.network);
   }
 }

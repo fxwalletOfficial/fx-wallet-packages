@@ -52,8 +52,12 @@ impl<N: Network> AleoAPIClient<N> {
         Self::new(&format!("http://23.20.9.85:{}", port), "testnet3").unwrap()
     }
 
-    pub fn aleo_net(rpc: &str) -> Self {
-        Self::new(rpc, "testnet").unwrap()
+    pub fn aleo_net(rpc: &str, network: &str) -> Self {
+        let chain = match network {
+            "mainnet" => "mainnet",
+            _ => "testnet",
+        };
+        Self::new(rpc, chain).unwrap()
     }
 
     /// Get base URL
