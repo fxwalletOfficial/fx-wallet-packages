@@ -760,13 +760,17 @@ pub extern "C" fn broadcast(
     let transfer_type_cstr = unsafe { CStr::from_ptr(transfer_type_raw) };
     let transfer_type: &str = transfer_type_cstr.to_str().unwrap();
 
-    let result = ProgramManager::<CurrentNetwork>::broadcast(
+    let broadcast_result = ProgramManager::<CurrentNetwork>::broadcast(
         execution.to_string(),
         url.to_string(),
         transfer_type.to_string(),
         network.to_string(),
-    )
-    .unwrap();
+    );
+
+    let result = match broadcast_result {
+        Ok(value) => value,
+        Err(err) => format!("Error: {}!", err.to_string()),
+    };
     let c_string = CString::new(result).unwrap();
     c_string.into_raw()
 }
