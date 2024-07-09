@@ -39,7 +39,6 @@
 //! * Inspecting chain data such as block content, transaction content, etc.
 //!
 
-
 pub mod account;
 #[doc(inline)]
 pub use account::Encryptor;
@@ -70,6 +69,9 @@ pub mod snarkvm_types {
     #[cfg(feature = "full")]
     pub use snarkvm::{file::Manifest, package::Package};
     pub use snarkvm_circuit_network::{Aleo, AleoV0};
+    #[cfg(feature = "mainnet")]
+    pub use snarkvm_console::network::MainnetV0 as CurrentNetwork;
+    #[cfg(feature = "testnet")]
     pub use snarkvm_console::network::TestnetV0 as CurrentNetwork;
     pub use snarkvm_console::{
         account::{Address, PrivateKey, Signature, ViewKey},
