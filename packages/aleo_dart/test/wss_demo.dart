@@ -21,7 +21,8 @@ Future<void> main() async {
       'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
   final amount_credits = 1000000;
   final fee_credits = 100000;
-  final transfer_type = 'transfer_public';
+  final transfer_type = 'transfer_private';
+  final amount_record = '';
 
   final authorization = await rustLib.executionAuthorization(
     private_key,
@@ -29,7 +30,7 @@ Future<void> main() async {
     transfer_type,
     amount_credits,
     url,
-    '',
+    amount_record,
   );
   final channel = IOWebSocketChannel.connect(wss);
 
