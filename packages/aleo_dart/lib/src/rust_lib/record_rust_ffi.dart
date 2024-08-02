@@ -13,11 +13,10 @@ typedef TypeStr2ToBoolInDart = int Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
 class RecordRustFFI {
-  late ffi.DynamicLibrary dyLib;
+  final ffi.DynamicLibrary dyLib;
+  final network;
 
-  RecordRustFFI(dyLib) {
-    this.dyLib = dyLib;
-  }
+  RecordRustFFI(this.dyLib, this.network);
 
   ffi.Pointer<Utf8> encryptPrivateKey(
       ffi.Pointer<Utf8> privateKey, ffi.Pointer<Utf8> secret) {

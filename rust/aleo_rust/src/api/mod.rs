@@ -43,17 +43,15 @@ impl<N: Network> AleoAPIClient<N> {
             _network: PhantomData,
         })
     }
-
-    pub fn testnet3() -> Self {
-        Self::new("https://api.explorer.aleo.org/v1", "testnet3").unwrap()
+    pub fn local_testnet(port: &str) -> Self {
+        Self::new(&format!("http://23.20.9.85:{}", port), "testnet").unwrap()
     }
-
-    pub fn local_testnet3(port: &str) -> Self {
-        Self::new(&format!("http://23.20.9.85:{}", port), "testnet3").unwrap()
-    }
-
-    pub fn aleo_net(rpc: &str) -> Self {
-        Self::new(rpc, "testnet3").unwrap()
+    pub fn aleo_net(rpc: &str, network: &str) -> Self {
+        let chain = match network {
+            "mainnet" => "mainnet",
+            _ => "testnet",
+        };
+        Self::new(rpc, chain).unwrap()
     }
 
     /// Get base URL

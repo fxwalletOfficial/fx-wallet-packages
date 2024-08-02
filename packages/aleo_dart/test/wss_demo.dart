@@ -10,7 +10,7 @@ Future<void> main() async {
 // final dyLib = DyLib.getDyLibFromCargo();
   final rustLib = AleoProgram(dyLib);
 
-  final wss = 'ws://47.120.24.231:31551/wallet/aleo/delegate';
+  final wss = 'ws://aleo.fxwallet.com/wallet/aleo/delegate';
   // final wss = 'wss://api.fxwallet.in/wallet/aleo/record';
 
   final url = 'https://api.explorer.aleo.org/v1';
@@ -21,7 +21,8 @@ Future<void> main() async {
       'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
   final amount_credits = 1000000;
   final fee_credits = 100000;
-  final transfer_type = 'transfer_public';
+  final transfer_type = 'transfer_private';
+  final amount_record = '';
 
   final authorization = await rustLib.executionAuthorization(
     private_key,
@@ -29,7 +30,7 @@ Future<void> main() async {
     transfer_type,
     amount_credits,
     url,
-    '',
+    amount_record,
   );
   final channel = IOWebSocketChannel.connect(wss);
 
@@ -40,8 +41,9 @@ Future<void> main() async {
   }));
 
   channel.stream.listen((data) async {
+    print(data);
     final String message = data.toString();
-    if (message.contains('proof')) {
+    if (message.contains('proof1')) {
       final feeAuthorization = await rustLib.executionFeeAuthorization(
           private_key, transfer_type, fee_credits, url, "", message);
 

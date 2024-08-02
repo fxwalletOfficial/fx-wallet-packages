@@ -9,8 +9,9 @@ import 'package:aleo_dart/src/rust_lib/utils.dart';
 class AleoProgram {
   late ProgramsRustFFI programsRustFFI;
 
-  AleoProgram(dyLib) {
-    this.programsRustFFI = ProgramsRustFFI(dyLib);
+  AleoProgram(dyLib, [network_raw = 'testnet']) {
+    final network = dartStrToC(network_raw);
+    this.programsRustFFI = ProgramsRustFFI(dyLib, network);
   }
 
   Future<String> tryTransfer(
@@ -201,7 +202,7 @@ class AleoProgram {
     } else {
       print('start downloading');
       const downLoadUrl =
-          'https://s3-us-west-1.amazonaws.com/testnet3.parameters/inclusion.prover.cd85cc5';
+          'https://s3-us-west-1.amazonaws.com/testnet.parameters/inclusion.prover.cd85cc5';
       await downloadFile(downLoadUrl, savePath);
     }
     return;

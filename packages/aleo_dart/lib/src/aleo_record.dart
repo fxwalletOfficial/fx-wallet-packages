@@ -9,8 +9,9 @@ class AleoRecord {
   late RecordRustFFI recordRustFFI;
   int decimal = 6;
 
-  AleoRecord(dyLib) {
-    this.recordRustFFI = RecordRustFFI(dyLib);
+  AleoRecord(dyLib, [network_raw = 'testnet']) {
+    final network = dartStrToC(network_raw);
+    this.recordRustFFI = RecordRustFFI(dyLib, network);
   }
 
   String encryptPrivateKey(privateKeyRaw, secretRaw) {

@@ -20,11 +20,11 @@ typedef TypeVerifyInDart = int Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<ffi.Uint8>, int);
 
 class AccountRustFFI {
-  late ffi.DynamicLibrary dyLib;
+  final ffi.DynamicLibrary dyLib;
+  final network;
 
-  AccountRustFFI(dyLib) {
-    this.dyLib = dyLib;
-  }
+  AccountRustFFI(this.dyLib, this.network);
+
   int testRustFFi(int a, int b) {
     var numbers_add = this
         .dyLib

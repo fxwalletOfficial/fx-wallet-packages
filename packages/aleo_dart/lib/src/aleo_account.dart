@@ -10,9 +10,9 @@ const ALEO_PATH = "m/44/0/0/0";
 
 class AleoAccount {
   late AccountRustFFI accountRustFFI;
-
-  AleoAccount(dyLib) {
-    this.accountRustFFI = AccountRustFFI(dyLib);
+  AleoAccount(dyLib, [network_raw = 'testnet']) {
+    final network = dartStrToC(network_raw);
+    this.accountRustFFI = AccountRustFFI(dyLib, network);
   }
 
   int testRustFFi(int a, int b) {
