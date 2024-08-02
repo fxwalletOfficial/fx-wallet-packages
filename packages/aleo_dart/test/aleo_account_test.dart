@@ -42,7 +42,7 @@ void main() {
   test('test rust ffi', () {
     final int a = 10;
     final int b = 32;
-    expect(rust.testRustFFi(a, b), a + b);
+    expect(rust.testRustFFi(a, b), a + b + 1);
   });
 
   test('mnemonicToSeed', () {

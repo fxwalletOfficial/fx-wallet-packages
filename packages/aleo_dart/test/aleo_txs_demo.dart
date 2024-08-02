@@ -8,7 +8,7 @@ import 'package:aleo_dart/aleo.dart';
 String host = 'https://api.fxwallet.in';
 // String host = "http://127.0.0.1:14042";
 int decimal = 6;
-final dyLib = DyLib.getDyLibFromGit();
+final dyLib = DyLib.getDyLibFromCargo();
 final recordFFI = AleoRecord(dyLib);
 final accountFFI = AleoAccount(dyLib);
 
