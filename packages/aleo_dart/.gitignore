@@ -33,3 +33,4 @@ aleo_rust/aleo-rust/.resources
 aleo_rust/rust_test
 .vscode/
 
+test/local

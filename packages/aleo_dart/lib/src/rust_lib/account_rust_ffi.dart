@@ -37,7 +37,7 @@ class AccountRustFFI {
     final seedToPrivateKey = this
         .dyLib
         .lookupFunction<TypeU8listToString, TypeU8listToString>(
-            'seedToPrivateKey');
+            'seed_to_private_key');
     return seedToPrivateKey(seed);
   }
 
@@ -45,7 +45,7 @@ class AccountRustFFI {
     final privateKeyToAddress = this
         .dyLib
         .lookupFunction<TypeStringToString, TypeStringToString>(
-            'privateKeyToAddress');
+            'private_key_to_address');
     return privateKeyToAddress(privateKey);
   }
 
@@ -53,7 +53,7 @@ class AccountRustFFI {
     final privateKeyToViewKey = this
         .dyLib
         .lookupFunction<TypeStringToString, TypeStringToString>(
-            'privateKeyToViewKey');
+            'private_key_to_view_key');
     return privateKeyToViewKey(privateKey);
   }
 
@@ -61,7 +61,7 @@ class AccountRustFFI {
     final viewKeyToAddress = this
         .dyLib
         .lookupFunction<TypeStringToString, TypeStringToString>(
-            'viewKeyToAddress');
+            'view_key_to_address');
     return viewKeyToAddress(privateKey);
   }
 
@@ -69,7 +69,7 @@ class AccountRustFFI {
       ffi.Pointer<ffi.Uint8> message, int length) {
     final signMessage = this
         .dyLib
-        .lookupFunction<TypeSignInRust, TypeSignInDart>('signMessage');
+        .lookupFunction<TypeSignInRust, TypeSignInDart>('sign_message');
     return signMessage(privateKey, message, length);
   }
 

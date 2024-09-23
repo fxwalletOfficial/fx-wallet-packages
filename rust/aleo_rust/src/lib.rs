@@ -71,8 +71,8 @@ pub mod snarkvm_types {
     pub use snarkvm_circuit_network::{Aleo, AleoV0};
     #[cfg(feature = "mainnet")]
     pub use snarkvm_console::network::MainnetV0 as CurrentNetwork;
-    #[cfg(feature = "testnet")]
-    pub use snarkvm_console::network::TestnetV0 as CurrentNetwork;
+    // #[cfg(feature = "testnet")]
+    // pub use snarkvm_console::network::TestnetV0 as CurrentNetwork;
     pub use snarkvm_console::{
         account::{Address, PrivateKey, Signature, ViewKey},
         prelude::{ToBytes, Uniform},
@@ -142,7 +142,7 @@ pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
 }
 
 #[no_mangle]
-pub extern "C" fn seedToPrivateKey(seed_raw: *const u8) -> *const c_char {
+pub extern "C" fn seed_to_private_key(seed_raw: *const u8) -> *const c_char {
     let seed;
     unsafe {
         seed = slice::from_raw_parts(seed_raw, 32);
@@ -157,7 +157,7 @@ pub extern "C" fn seedToPrivateKey(seed_raw: *const u8) -> *const c_char {
 }
 
 #[no_mangle]
-pub extern "C" fn privateKeyToAddress(private_key_raw: *const c_char) -> *const c_char {
+pub extern "C" fn private_key_to_address(private_key_raw: *const c_char) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
     let private_key = PrivateKey::<CurrentNetwork>::from_str(private_key_str).unwrap();
@@ -168,7 +168,7 @@ pub extern "C" fn privateKeyToAddress(private_key_raw: *const c_char) -> *const 
 }
 
 #[no_mangle]
-pub extern "C" fn privateKeyToViewKey(private_key_raw: *const c_char) -> *const c_char {
+pub extern "C" fn private_key_to_view_key(private_key_raw: *const c_char) -> *const c_char {
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key_str: &str = private_key_cstr.to_str().unwrap();
     let private_key = PrivateKey::<CurrentNetwork>::from_str(private_key_str).unwrap();
@@ -178,7 +178,7 @@ pub extern "C" fn privateKeyToViewKey(private_key_raw: *const c_char) -> *const 
 }
 
 #[no_mangle]
-pub extern "C" fn viewKeyToAddress(view_key_raw: *const c_char) -> *const c_char {
+pub extern "C" fn view_key_to_address(view_key_raw: *const c_char) -> *const c_char {
     let view_key_cstr = unsafe { CStr::from_ptr(view_key_raw) };
     let view_key_str: &str = view_key_cstr.to_str().unwrap();
     let view_key = ViewKey::<CurrentNetwork>::from_str(view_key_str).unwrap();
@@ -190,7 +190,7 @@ pub extern "C" fn viewKeyToAddress(view_key_raw: *const c_char) -> *const c_char
 use rand::{rngs::StdRng, SeedableRng};
 
 #[no_mangle]
-pub extern "C" fn signMessage(
+pub extern "C" fn sign_message(
     private_key_raw: *const c_char,
     message_raw: *const u8,
     length: usize,
@@ -233,7 +233,7 @@ pub extern "C" fn verify(
 }
 
 #[no_mangle]
-pub extern "C" fn encryptPrivateKey(
+pub extern "C" fn encrypt_private_key(
     private_key_raw: *const c_char,
     secret_raw: *const c_char,
 ) -> *const c_char {
@@ -257,7 +257,7 @@ fn cstr_to_string(cstr_raw: *const c_char) -> String {
 }
 
 #[no_mangle]
-pub extern "C" fn decryptToPrivateKey(
+pub extern "C" fn decrypt_to_private_key(
     private_key_ciphertext_raw: *const c_char,
     secret_raw: *const c_char,
 ) -> *const c_char {
@@ -279,7 +279,7 @@ pub extern "C" fn decryptToPrivateKey(
 
 // transfer
 #[no_mangle]
-pub extern "C" fn decryptCipherText(
+pub extern "C" fn decrypt_cipher_text(
     record_ciphertext_raw: *const c_char,
     view_key_raw: *const c_char,
 ) -> *const c_char {
@@ -295,7 +295,7 @@ pub extern "C" fn decryptCipherText(
 
 // transfer
 #[no_mangle]
-pub extern "C" fn isOwner(
+pub extern "C" fn is_owner(
     record_plaintext_raw: *const c_char,
     view_key_raw: *const c_char,
 ) -> bool {
@@ -777,7 +777,7 @@ pub extern "C" fn broadcast(
 }
 
 #[no_mangle]
-pub extern "C" fn serialNumberString(
+pub extern "C" fn serial_number_string(
     record_ciphertext_raw: *const c_char,
     private_key_raw: *const c_char,
     program_id_raw: *const c_char,

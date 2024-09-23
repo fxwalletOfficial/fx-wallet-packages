@@ -21,27 +21,27 @@ class RecordRustFFI {
   ffi.Pointer<Utf8> encryptPrivateKey(
       ffi.Pointer<Utf8> privateKey, ffi.Pointer<Utf8> secret) {
     final encryptPrivateKey =
-        dyLib.lookupFunction<TypeStr2To1, TypeStr2To1>('encryptPrivateKey');
+        dyLib.lookupFunction<TypeStr2To1, TypeStr2To1>('encrypt_private_key');
     return encryptPrivateKey(privateKey, secret);
   }
 
   ffi.Pointer<Utf8> decryptToPrivateKey(
       ffi.Pointer<Utf8> ciphertext, ffi.Pointer<Utf8> secret) {
     final decryptToPrivateKey =
-        dyLib.lookupFunction<TypeStr2To1, TypeStr2To1>('decryptToPrivateKey');
+        dyLib.lookupFunction<TypeStr2To1, TypeStr2To1>('decrypt_to_private_key');
     return decryptToPrivateKey(ciphertext, secret);
   }
 
   ffi.Pointer<Utf8> decryptCipherText(
       ffi.Pointer<Utf8> record, ffi.Pointer<Utf8> viewKey) {
     final decryptCipherText =
-        dyLib.lookupFunction<TypeStr2To1, TypeStr2To1>('decryptCipherText');
+        dyLib.lookupFunction<TypeStr2To1, TypeStr2To1>('decrypt_cipher_text');
     return decryptCipherText(record, viewKey);
   }
 
   bool isOwner(ffi.Pointer<Utf8> record, ffi.Pointer<Utf8> viewKey) {
     final isOwner = dyLib
-        .lookupFunction<TypeStr2ToBoolInRust, TypeStr2ToBoolInDart>('isOwner');
+        .lookupFunction<TypeStr2ToBoolInRust, TypeStr2ToBoolInDart>('is_owner');
     return isOwner(record, viewKey) != 0;
   }
 
@@ -51,7 +51,7 @@ class RecordRustFFI {
       ffi.Pointer<Utf8> programId,
       ffi.Pointer<Utf8> recordName) {
     final serialNumberString =
-        dyLib.lookupFunction<TypeStr4To1, TypeStr4To1>('serialNumberString');
+        dyLib.lookupFunction<TypeStr4To1, TypeStr4To1>('serial_number_string');
     return serialNumberString(
         recordCipherText, privateKey, programId, recordName);
   }
