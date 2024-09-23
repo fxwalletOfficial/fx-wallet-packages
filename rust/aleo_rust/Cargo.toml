@@ -67,7 +67,7 @@ git = "https://github.com/AleoNet/snarkVM.git"
 git = "https://github.com/AleoNet/snarkVM.git"
 
 [features]
-default = [ "full","testnet" ]
+default = [ "full","mainnet" ]
 full = [ "ureq", "snarkvm" ]
 testnet = []
 mainnet = []

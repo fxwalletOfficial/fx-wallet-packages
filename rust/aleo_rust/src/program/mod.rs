@@ -31,8 +31,6 @@ pub mod resolver;
 
 pub mod transfer;
 
-pub mod ffi;
-
 /// Program management object for loading programs for building, execution, and deployment
 ///
 /// This object is meant to be a software abstraction that can be consumed by software like
