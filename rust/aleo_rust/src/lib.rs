@@ -936,3 +936,25 @@ pub extern "C" fn join_authorization(
     let c_string = CString::new(authorization).unwrap();
     c_string.into_raw()
 }
+
+#[no_mangle]
+pub extern "C" fn get_base_fee(
+    url_raw: *const c_char,
+    execution_raw: *const c_char,
+    network_raw: *const c_char,
+) -> u64 {
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
+
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
+    let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
+    let execution_str: &str = execution_cstr.to_str().unwrap();
+    let execution = Execution::<CurrentNetwork>::from_str(&execution_str.to_string()).unwrap();
+    let program_manager =
+        ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false)
+            .unwrap();
+    let base_fee = program_manager.get_base_fee(execution).unwrap();
+    base_fee
+}

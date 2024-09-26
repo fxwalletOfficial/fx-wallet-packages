@@ -312,6 +312,19 @@ impl<N: Network> ProgramManager<N> {
     }
 
     #[allow(clippy::too_many_arguments)]
+    pub fn get_base_fee(&self, execution: Execution<N>) -> Result<u64> {
+        // Initialize a VM
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let vm = VM::from(store)?;
+        // Compute the fee.
+
+        // Compute the minimum execution cost.
+        let (minimum_execution_cost, (_, _)) = execution_cost(&vm.process().read(), &execution)?;
+        // Compute the execution ID.
+        Ok(minimum_execution_cost)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn execution_fee_authorization(
         &self,
         fee: u64,

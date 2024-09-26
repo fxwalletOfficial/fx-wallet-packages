@@ -71,6 +71,18 @@ typedef TypeJoinInDart = ffi.Pointer<Utf8> Function(
 typedef TypeJoinAuthorization = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
+typedef TypeGetBaseFeeInRust = ffi.Int Function(
+  ffi.Pointer<Utf8>,
+  ffi.Pointer<Utf8>,
+  ffi.Pointer<Utf8>,
+);
+
+typedef TypeGetBaseFeeInDart = int Function(
+  ffi.Pointer<Utf8>,
+  ffi.Pointer<Utf8>,
+  ffi.Pointer<Utf8>,
+);
+
 class ProgramsRustFFI {
   final ffi.DynamicLibrary dyLib;
   final network;
@@ -210,5 +222,15 @@ class ProgramsRustFFI {
     final rustFunction =
         dyLib.lookupFunction<TypeProof, TypeProof>('build_transaction_offline');
     return rustFunction(execution, fee, this.network);
+  }
+
+  Future<int> getBaseFee(
+    ffi.Pointer<Utf8> url,
+    ffi.Pointer<Utf8> execution,
+  ) async {
+    final rustFunction =
+        dyLib.lookupFunction<TypeGetBaseFeeInRust, TypeGetBaseFeeInDart>(
+            'get_base_fee');
+    return rustFunction(url, execution, this.network);
   }
 }

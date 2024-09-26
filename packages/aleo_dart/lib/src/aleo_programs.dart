@@ -186,6 +186,16 @@ class AleoProgram {
     return result.toDartString();
   }
 
+  Future<int> getBaseFee(
+    String url_raw,
+    String execution_raw,
+  ) async {
+    final execution = dartStrToC(execution_raw);
+    final url = dartStrToC(url_raw);
+    final result = await programsRustFFI.getBaseFee(url, execution);
+    return result;
+  }
+
   Future<void> downloadProvingKey({updateKey = false}) async {
     late final rootPath;
     if (Platform.isLinux) {
