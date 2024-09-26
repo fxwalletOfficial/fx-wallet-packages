@@ -316,12 +316,7 @@ class TxsResult {
           }
           break;
         case TransferMethod.private_to_public:
-          final inputs =
-              inTxJson['transaction']['execution']['transitions'][0]['inputs'];
-          final record = AleoTransaction.findRecordValue(inputs);
-          if (!recordFFI.isOwner(record, viewKey)) {
-            txs.add(tx);
-          }
+          txs.add(tx);
           break;
         case TransferMethod.public:
           txs.add(tx);
