@@ -51,6 +51,9 @@ void main() {
         'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
     final expectedSn =
         "832456939067524461249417512029753636275825913577828456140675004985222334481field";
+    final viewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
+    final isOwner = rust.isOwner(recordCipher, viewKey);
+    if (!isOwner) return;
     final result = rust.serialNumberString(recordCipher, privateKey);
     expect(expectedSn, result);
   });

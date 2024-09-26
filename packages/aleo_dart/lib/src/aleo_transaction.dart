@@ -194,6 +194,8 @@ class AleoTransaction {
       final feeRecordId = findInputRecord(json['fee']['transition']['inputs']);
 
       for (final recordCipherText in recordCipherTexts) {
+        final isOwner = rust.isOwner(recordCipherText, viewKey);
+        if (!isOwner) continue;
         final numberString =
             rust.serialNumberString(recordCipherText, privateKey);
         if (numberString == amountRecordId) {
