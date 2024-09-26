@@ -263,6 +263,7 @@ class TxsResult {
         /// 交易详情为空时，说明该record未被使用，加入余额
         final recordCipherText = recordFFI.findRecord(
             recordCipherTexts, outTxJson['serialNumber'], privateKey, viewKey);
+        if (recordCipherText == '') continue;
         final RecordPlainText record =
             recordFFI.decryptCipherText(recordCipherText, viewKey);
         privateBalance += BigInt.parse(record.getMicrocredits());
