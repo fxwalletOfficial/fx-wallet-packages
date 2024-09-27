@@ -17,6 +17,19 @@ class TransferType {
   static const String expense = 'expense';
 }
 
+class FeeDetail {
+  String fee;
+  String baseFee;
+  String priorityFee;
+  String change = '0'; // 找零
+
+  FeeDetail({
+    required this.fee,
+    required this.baseFee,
+    required this.priorityFee,
+  });
+}
+
 class AleoTransaction {
   String type;
   String transactionId;
@@ -28,6 +41,9 @@ class AleoTransaction {
   String value;
   String feeType;
   String fee;
+  String baseFee;
+  String priorityFee;
+  String feeChange = '';
   String change = ''; // 找零
   String transferType = '';
   String amount_record = '';
@@ -46,6 +62,9 @@ class AleoTransaction {
       required this.value,
       required this.feeType,
       required this.fee,
+      required this.baseFee,
+      required this.priorityFee,
+      required this.feeChange,
       this.height,
       this.timestamp});
 
@@ -63,11 +82,11 @@ class AleoTransaction {
     final program = transition['program'];
     final String transitionType = transition['function'];
     final txOutput = findFuture(transition['outputs']);
-    final feeOutput = findFuture(feeTx['outputs']);
     String inputAddress = '';
     String outputAddress = '';
     String value = '';
-    String fee = getFee(feeOutput);
+
+    FeeDetail feeDetail = getFee(feeTx);
 
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
     switch (transitionType) {
@@ -107,9 +126,12 @@ class AleoTransaction {
         outputAddress: outputAddress,
         value: value,
         feeType: feeType,
-        fee: fee,
-        height: jsonRaw["height"],
-        timestamp: jsonRaw["timestamp"]);
+        fee: feeDetail.fee,
+        baseFee: feeDetail.baseFee,
+        priorityFee: feeDetail.priorityFee,
+        feeChange: feeDetail.change,
+        height: jsonRaw['height'],
+        timestamp: jsonRaw['timestamp']);
   }
 
   Map<String, dynamic> toJson() {
@@ -126,8 +148,11 @@ class AleoTransaction {
       'value': value,
       'feeType': feeType,
       'fee': fee,
+      'baseFee': baseFee,
+      'priorityFee': priorityFee,
       'transferType': transferType,
       'change': change,
+      'feeChange': feeChange,
       'amount_record': amount_record,
       'fee_record': fee_record
     };
@@ -141,11 +166,33 @@ class AleoTransaction {
     }
   }
 
-  static String getFee(feeOutput) {
-    if (feeOutput == null) {
-      return '';
-    } else {
-      return getValue(feeOutput[1]);
+  static FeeDetail getFee(feeTx) {
+    final function = feeTx['function'];
+    final inputs = feeTx['inputs'];
+    final outputs = feeTx['outputs'];
+
+    String baseFee = '0';
+    String priorityFee = '0';
+    String fee = '0';
+
+    switch (function) {
+      case FeeType.private:
+        baseFee = getValue(inputs[1]['value']);
+        priorityFee = getValue(inputs[2]['value']);
+        fee = (int.parse(priorityFee) + int.parse(baseFee)).toString();
+
+        final feeDetail =
+            FeeDetail(baseFee: baseFee, priorityFee: priorityFee, fee: fee);
+        feeDetail.change = outputs[0]['value'];
+        return feeDetail;
+      case FeeType.public:
+        baseFee = getValue(inputs[0]['value']);
+        priorityFee = getValue(inputs[1]['value']);
+        fee = (int.parse(priorityFee) + int.parse(baseFee)).toString();
+
+        return FeeDetail(baseFee: baseFee, priorityFee: priorityFee, fee: fee);
+      default:
+        return FeeDetail(baseFee: baseFee, priorityFee: priorityFee, fee: fee);
     }
   }
 
@@ -192,6 +239,15 @@ class AleoTransaction {
       final amountRecordId =
           findInputRecord(json['execution']['transitions'][0]['inputs']);
       final feeRecordId = findInputRecord(json['fee']['transition']['inputs']);
+
+      /// 处理fee找零
+      if (this.feeType == FeeType.private && this.feeChange != '0') {
+        final isOwner = rust.isOwner(this.feeChange, viewKey);
+        if (isOwner) {
+          final feeRecord = rust.decryptCipherText(this.feeChange, viewKey);
+          this.feeChange = feeRecord.getMicrocredits();
+        }
+      }
 
       for (final recordCipherText in recordCipherTexts) {
         final isOwner = rust.isOwner(recordCipherText, viewKey);
@@ -305,7 +361,7 @@ class TxsResult {
 
   getPublicTxs(List<dynamic> inTxsJson) {
     if (recordCipherTexts.length != 0) {
-      throw Exception("Unsupport record in public txs");
+      throw Exception('Unsupport record in public txs');
     }
     for (final inTxJson in inTxsJson) {
       final tx = AleoTransaction.fromJson(inTxJson);
