@@ -291,6 +291,17 @@ class AleoTransaction {
           this.value = income.toString();
         }
       }
+      if (this.value.contains('record')) {
+        final records = this.value.split(",");
+        for (final record in records) {
+          final isOwner = rust.isOwner(record, viewKey);
+          if (isOwner) {
+            final recordText = rust.decryptCipherText(record, viewKey);
+            this.value = recordText.getMicrocredits();
+            break;
+          }
+        }
+      }
     }
   }
 }
