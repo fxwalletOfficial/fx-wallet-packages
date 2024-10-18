@@ -5,6 +5,8 @@ class TransferMethod {
   static const String public_to_private = 'transfer_public_to_private';
   static const String private = 'transfer_private';
   static const String private_to_public = 'transfer_private_to_public';
+  static const String join = 'join';
+  static const String split = 'split';
 }
 
 class FeeType {
@@ -91,6 +93,7 @@ class AleoTransaction {
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
     switch (transitionType) {
       case TransferMethod.private:
+      case TransferMethod.join:
         final outputs = transition['outputs'];
         value = outputs
             .map((e) => e['value'])
@@ -291,15 +294,15 @@ class AleoTransaction {
           this.value = income.toString();
         }
       }
-      if (this.value.contains('record')) {
-        final records = this.value.split(",");
-        for (final record in records) {
-          final isOwner = rust.isOwner(record, viewKey);
-          if (isOwner) {
-            final recordText = rust.decryptCipherText(record, viewKey);
-            this.value = recordText.getMicrocredits();
-            break;
-          }
+    }
+    if (this.value.contains('record')) {
+      final records = this.value.split(",");
+      for (final record in records) {
+        final isOwner = rust.isOwner(record, viewKey);
+        if (isOwner) {
+          final recordText = rust.decryptCipherText(record, viewKey);
+          this.value = recordText.getMicrocredits();
+          break;
         }
       }
     }
