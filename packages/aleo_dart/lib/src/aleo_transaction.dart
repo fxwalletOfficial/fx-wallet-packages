@@ -363,6 +363,13 @@ class TxsResult {
       final transactionId = inTxJson['transaction']['id'];
       if (!txIds.contains(transactionId)) {
         final tx = AleoTransaction.fromJson(inTxJson);
+        if (tx.transitionType == TransferMethod.private_to_public) {
+          tx.transferType = TransferType.expense;
+          txs.add(tx);
+          txIds.add(tx.transactionId.toString());
+          continue;
+        }
+
         tx.processPrivateTx(recordFFI, viewKey, privateKey,
             inTxJson['transaction'], recordCipherTexts);
         tx.transferType = TransferType.income;
