@@ -88,7 +88,7 @@ pub mod snarkvm_types {
         helpers::memory::{BlockMemory, ConsensusMemory},
         BlockStore, ConsensusStore,
     };
-    pub use snarkvm_synthesizer::prelude::{cost_in_microcredits, execution_cost};
+    pub use snarkvm_synthesizer::prelude::{cost_in_microcredits_v2, execution_cost_v2};
     pub use snarkvm_synthesizer::Authorization;
     pub use snarkvm_synthesizer::{
         snark::{Proof, ProvingKey, VerifyingKey},

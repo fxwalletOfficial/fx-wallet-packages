@@ -283,6 +283,6 @@ impl<N: Network> ProgramManager<N> {
         trace.prepare(query)?;
         let execution =
             trace.prove_execution::<A, _>(&locator.to_string(), &mut rand::thread_rng())?;
-        execution_cost(&vm.process().read(), &execution)
+        execution_cost_v2(&vm.process().read(), &execution)
     }
 }

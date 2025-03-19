@@ -16,7 +16,6 @@
 
 use super::*;
 
-#[cfg(not(feature = "async"))]
 #[allow(clippy::type_complexity)]
 impl<N: Network> AleoAPIClient<N> {
     /// Get the latest block height

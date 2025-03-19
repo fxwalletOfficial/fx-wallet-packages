@@ -319,7 +319,7 @@ impl<N: Network> ProgramManager<N> {
         // Compute the fee.
 
         // Compute the minimum execution cost.
-        let (minimum_execution_cost, (_, _)) = execution_cost(&vm.process().read(), &execution)?;
+        let (minimum_execution_cost, (_, _)) = execution_cost_v2(&vm.process().read(), &execution)?;
         // Compute the execution ID.
         Ok(minimum_execution_cost)
     }
@@ -351,7 +351,7 @@ impl<N: Network> ProgramManager<N> {
         // Compute the fee.
 
         // Compute the minimum execution cost.
-        let (minimum_execution_cost, (_, _)) = execution_cost(&vm.process().read(), &execution)?;
+        let (minimum_execution_cost, (_, _)) = execution_cost_v2(&vm.process().read(), &execution)?;
         // Compute the execution ID.
         let execution_id = execution.to_execution_id()?;
         // Authorize the fee.
