@@ -72,8 +72,11 @@ impl<N: Network> ProgramManager<N> {
         let locator = Locator::new(*program_id, function_name);
         let (response, mut trace) = vm.process().write().execute::<A, _>(authorization, rng)?;
         trace.prepare(query)?;
-        let execution =
-            trace.prove_execution::<A, _>(&locator.to_string(), &mut rand::thread_rng())?;
+        let execution = trace.prove_execution::<A, _>(
+            &locator.to_string(),
+            VarunaVersion::V2,
+            &mut rand::thread_rng(),
+        )?;
 
         // Get the public outputs
         let mut public_outputs = vec![];
@@ -281,8 +284,11 @@ impl<N: Network> ProgramManager<N> {
         let locator = Locator::new(*program_id, function_name);
         let (_, mut trace) = vm.process().write().execute::<A, _>(authorization, rng)?;
         trace.prepare(query)?;
-        let execution =
-            trace.prove_execution::<A, _>(&locator.to_string(), &mut rand::thread_rng())?;
+        let execution = trace.prove_execution::<A, _>(
+            &locator.to_string(),
+            VarunaVersion::V2,
+            &mut rand::thread_rng(),
+        )?;
         execution_cost_v2(&vm.process().read(), &execution)
     }
 }

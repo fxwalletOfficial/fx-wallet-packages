@@ -94,6 +94,7 @@ pub mod snarkvm_types {
         snark::{Proof, ProvingKey, VerifyingKey},
         Process, Program, Trace, VM,
     };
+    pub use snarkvm_algorithms::snark::varuna::VarunaVersion;
 }
 
 pub use snarkvm_types::*;

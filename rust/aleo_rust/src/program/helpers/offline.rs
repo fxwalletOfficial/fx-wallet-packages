@@ -33,7 +33,12 @@ impl<N: Network> OfflineExecution<N> {
         trace: Trace<N>,
         public_outputs: Option<Vec<Value<N>>>,
     ) -> Self {
-        Self { execution, response, trace, public_outputs }
+        Self {
+            execution,
+            response,
+            trace,
+            public_outputs,
+        }
     }
 
     /// Get the execution
@@ -74,6 +79,7 @@ impl<N: Network> OfflineExecution<N> {
         verifier_inputs: Vec<(VerifyingKey<N>, Vec<Vec<N::Field>>)>,
         execution: &Execution<N>,
     ) -> Result<(), String> {
-        Trace::verify_execution_proof(locator, verifier_inputs, execution).map_err(|e| e.to_string())
+        Trace::verify_execution_proof(locator, VarunaVersion::V2, verifier_inputs, execution)
+            .map_err(|e| e.to_string())
     }
 }
