@@ -15,6 +15,7 @@ void main() {
   final targetAddress =
       'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
   final targetViewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
+  print(targetViewKey.substring(9).length);
   final message = Uint8List.fromList([
     104,
     101,
@@ -85,5 +86,20 @@ void main() {
     // sign178e076gmzswtvq68ma2p350g8mfzg87dyzlmggts8348vescdyp07jg5mz52ecnux0at0943hzx5lnzh53tff5l3d9p7teepv64yjprdtl7lkehl0xyhjrhqz3v6ymkm73gs9vvj4t7sv673nhm50pj8p0xa895ta843wlh9wekyuqgwade9z5r0chfzp8ckud8ymt969j8ssc8qn3d
     final signature = rust.sign(targetPrivateKey, message);
     assert(rust.isValidSignature(address, signature, message));
+  });
+
+  group('test error', () {
+    test('test invalid private key', () {
+      final invalidPrivateKey =
+          'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8';
+      expect(
+          () => rust.privateKeyToAddress(invalidPrivateKey), throwsException);
+    });
+
+    test('test invalid view key', () {
+      final invalidViewKey =
+          'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBd';
+      expect(() => rust.viewKeyToAddress(invalidViewKey), throwsException);
+    });
   });
 }
