@@ -15,7 +15,6 @@ void main() {
   final targetAddress =
       'aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn';
   final targetViewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
-  print(targetViewKey.substring(9).length);
   final message = Uint8List.fromList([
     104,
     101,

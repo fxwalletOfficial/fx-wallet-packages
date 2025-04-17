@@ -5,6 +5,7 @@ import 'package:bip39/bip39.dart' as bip39;
 import 'package:aleo_dart/src/rust_lib/account_rust_ffi.dart';
 import 'package:aleo_dart/src/aleo_hd_key.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
+import 'package:aleo_dart/src/aleo_utils.dart';
 
 const ALEO_PATH = "m/44/0/0/0";
 
@@ -36,7 +37,7 @@ class AleoAccount {
   }
 
   String privateKeyToAddress(String privateKeyRaw) {
-    checkPrivateKey(privateKeyRaw);
+    AleoUtils.checkPrivateKey(privateKeyRaw);
     final privateKey = dartStrToC(privateKeyRaw);
     final address = accountRustFFI.privateKeyToAddress(privateKey);
     return cStrToDart(address);
@@ -49,7 +50,7 @@ class AleoAccount {
   }
 
   String privateKeyToViewKey(String privateKeyRaw) {
-    checkPrivateKey(privateKeyRaw);
+    AleoUtils.checkPrivateKey(privateKeyRaw);
     final privateKey = dartStrToC(privateKeyRaw);
     final viewKey = accountRustFFI.privateKeyToViewKey(privateKey);
     return cStrToDart(viewKey);
@@ -64,7 +65,7 @@ class AleoAccount {
   }
 
   String viewKeyToAddress(String viewKeyRaw) {
-    checkViewKey(viewKeyRaw);
+    AleoUtils.checkViewKey(viewKeyRaw);
     final viewKey = dartStrToC(viewKeyRaw);
     final address = accountRustFFI.viewKeyToAddress(viewKey);
     return cStrToDart(address);
@@ -85,26 +86,5 @@ class AleoAccount {
     final message = dartListToC(messageRaw);
     return accountRustFFI.isValidSignature(
         address, signature, message, messageRaw.length);
-  }
-
-  checkPrivateKey(String privateKeyRaw) {
-    // check privatekey is valid
-    if (!privateKeyRaw.startsWith('APrivateKey1')) {
-      throw Exception('Invalid private key prefix');
-    }
-    final reg = RegExp(r'^[a-zA-Z0-9]{47}$');
-    if (!reg.hasMatch(privateKeyRaw.substring(12))) {
-      throw Exception('Invalid private key length');
-    }
-  }
-
-  checkViewKey(String viewKeyRaw) {
-    if (!viewKeyRaw.startsWith('AViewKey1')) {
-      throw Exception('Invalid view key prefix');
-    }
-    final reg = RegExp(r'^[a-zA-Z0-9]{44}$');
-    if (!reg.hasMatch(viewKeyRaw.substring(9))) {
-      throw Exception('Invalid view key length');
-    }
   }
 }

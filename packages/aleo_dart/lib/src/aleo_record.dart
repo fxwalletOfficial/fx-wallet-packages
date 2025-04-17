@@ -4,6 +4,7 @@ import 'package:ffi/ffi.dart';
 
 import 'package:aleo_dart/src/rust_lib/record_rust_ffi.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
+import 'package:aleo_dart/src/aleo_utils.dart';
 
 class AleoRecord {
   late RecordRustFFI recordRustFFI;
@@ -15,6 +16,7 @@ class AleoRecord {
   }
 
   String encryptPrivateKey(privateKeyRaw, secretRaw) {
+    AleoUtils.checkPrivateKey(privateKeyRaw);
     final privateKey = dartStrToC(privateKeyRaw);
     final secret = dartStrToC(secretRaw);
     final ciphertext = recordRustFFI.encryptPrivateKey(privateKey, secret);
@@ -29,18 +31,28 @@ class AleoRecord {
   }
 
   RecordPlainText decryptCipherText(String record, String viewKey) {
+    AleoUtils.checkRecord(record);
+    AleoUtils.checkViewKey(viewKey);
+    final flag = isOwner(record, viewKey);
+    if (!flag) {
+      throw Exception('Record is not owned by the view key');
+    }
     final result = recordRustFFI.decryptCipherText(
         dartStrToC(record), dartStrToC(viewKey));
     return processRecord(result.toDartString());
   }
 
   bool isOwner(String record, String viewKey) {
+    AleoUtils.checkRecord(record);
+    AleoUtils.checkViewKey(viewKey);
     return recordRustFFI.isOwner(dartStrToC(record), dartStrToC(viewKey));
   }
 
   String serialNumberString(String recordCipherTextRaw, String privateKeyRaw,
       {String programIdRaw = 'credits.aleo',
       String recordNameRaw = 'credits'}) {
+    AleoUtils.checkRecord(recordCipherTextRaw);
+    AleoUtils.checkPrivateKey(privateKeyRaw);
     final recordPlainText = dartStrToC(recordCipherTextRaw);
     final privateKey = dartStrToC(privateKeyRaw);
     final programId = dartStrToC(programIdRaw);
@@ -53,7 +65,10 @@ class AleoRecord {
   List<String> serialNumberStrings(
       List<String> recordCipherTexts, String privateKey, String viewKey) {
     final List<String> list = [];
+    AleoUtils.checkViewKey(viewKey);
+    AleoUtils.checkPrivateKey(privateKey);
     for (final recordCipherText in recordCipherTexts) {
+      AleoUtils.checkRecord(recordCipherText);
       final result = isOwner(recordCipherText, viewKey);
       if (result) {
         final numberString = serialNumberString(recordCipherText, privateKey);
@@ -65,6 +80,8 @@ class AleoRecord {
 
   String findRecord(List<String> recordCipherTexts, String targetNumberString,
       String privateKey, String viewKey) {
+    AleoUtils.checkViewKey(viewKey);
+    AleoUtils.checkPrivateKey(privateKey);
     for (final recordCipherText in recordCipherTexts) {
       final result = isOwner(recordCipherText, viewKey);
       if (result) {
