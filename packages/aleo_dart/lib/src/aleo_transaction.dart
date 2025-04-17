@@ -386,6 +386,12 @@ class TxsResult {
     }
     for (final inTxJson in inTxsJson) {
       final tx = AleoTransaction.fromJson(inTxJson);
+      if (tx.inputAddress == address) {
+        tx.transferType = TransferType.expense;
+      }
+      if (tx.outputAddress == address) {
+        tx.transferType = TransferType.income;
+      }
       switch (tx.transitionType) {
         case TransferMethod.public_to_private:
           final outputs =
