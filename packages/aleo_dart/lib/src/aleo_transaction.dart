@@ -7,6 +7,7 @@ class TransferMethod {
   static const String private_to_public = 'transfer_private_to_public';
   static const String join = 'join';
   static const String split = 'split';
+  static const String contract = 'contract';
 }
 
 class FeeType {
@@ -17,6 +18,20 @@ class FeeType {
 class TransferType {
   static const String income = 'income';
   static const String expense = 'expense';
+}
+
+class FunctionName {
+  static const String deposit = 'deposit_public_as_signer';
+  static const String withdraw = 'instant_withdraw_public_signer';
+  static const String mint = 'mint_public';
+  static const String burn = 'burn_public';
+  static const String transfer = 'transfer_public';
+  static const String transfer_as_signer = 'transfer_public_as_signer';
+}
+
+class ProgramName {
+  static const String pondo = 'pondo_protocol.aleo';
+  static const String tokenRegistry = 'token_registry.aleo';
 }
 
 class FeeDetail {
@@ -30,6 +45,26 @@ class FeeDetail {
     required this.baseFee,
     required this.priorityFee,
   });
+}
+
+class TokenTransfer {
+  String transferType;
+  String value;
+  int decimal = 6;
+  String symbol = '';
+  TokenTransfer({
+    required this.transferType,
+    required this.value,
+    required this.symbol,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'transferType': transferType,
+      'value': value,
+      'symbol': symbol,
+    };
+  }
 }
 
 class AleoTransaction {
@@ -52,7 +87,7 @@ class AleoTransaction {
   String fee_record = '';
   int? height;
   int? timestamp;
-
+  List<TokenTransfer> tokenTransfers = [];
   AleoTransaction(
       {required this.type,
       required this.transactionId,
@@ -67,6 +102,7 @@ class AleoTransaction {
       required this.baseFee,
       required this.priorityFee,
       required this.feeChange,
+      this.tokenTransfers = const [],
       this.height,
       this.timestamp});
 
@@ -82,13 +118,14 @@ class AleoTransaction {
       feeTx['id'].toString()
     ];
     final program = transition['program'];
-    final String transitionType = transition['function'];
+    String transitionType = transition['function'];
     final txOutput = findFuture(transition['outputs']);
     String inputAddress = '';
     String outputAddress = '';
     String value = '';
 
     FeeDetail feeDetail = getFee(feeTx);
+    List<TokenTransfer> tokenTransfers = [];
 
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
     switch (transitionType) {
@@ -116,6 +153,8 @@ class AleoTransaction {
         value = getValue(txOutput[1]); // output is private, can not get.
         break;
       default:
+        tokenTransfers = parseTokenTransfer(json['execution']['transitions']);
+        transitionType = TransferMethod.contract;
         break;
     }
 
@@ -134,7 +173,8 @@ class AleoTransaction {
         priorityFee: feeDetail.priorityFee,
         feeChange: feeDetail.change,
         height: jsonRaw['height'],
-        timestamp: jsonRaw['timestamp']);
+        timestamp: jsonRaw['timestamp'],
+        tokenTransfers: tokenTransfers);
   }
 
   Map<String, dynamic> toJson() {
@@ -157,7 +197,8 @@ class AleoTransaction {
       'change': change,
       'feeChange': feeChange,
       'amount_record': amount_record,
-      'fee_record': fee_record
+      'fee_record': fee_record,
+      'tokenTransfers': tokenTransfers.map((e) => e.toJson()).toList()
     };
   }
 
@@ -197,6 +238,47 @@ class AleoTransaction {
       default:
         return FeeDetail(baseFee: baseFee, priorityFee: priorityFee, fee: fee);
     }
+  }
+
+  static List<TokenTransfer> parseTokenTransfer(List<dynamic> transitions) {
+    final List<TokenTransfer> tokenTransfers = [];
+    for (final transition in transitions) {
+      String inputSymbol = '';
+      String outputSymbol = '';
+      final inputs = transition['inputs'];
+      String valueIn = getValue(inputs[1]['value']);
+      String valueOut = getValue(inputs[0]['value']);
+      switch (transition['program']) {
+        case ProgramName.pondo:
+          switch (transition['function']) {
+            case FunctionName.deposit:
+              inputSymbol = "paleo";
+              outputSymbol = "aleo";
+              break;
+            case FunctionName.withdraw:
+              outputSymbol = "paleo";
+              inputSymbol = "aleo";
+              break;
+            default:
+              break;
+          }
+          if ([FunctionName.deposit, FunctionName.withdraw]
+              .contains(transition['function'])) {
+            tokenTransfers.add(TokenTransfer(
+                transferType: TransferType.income,
+                value: valueIn,
+                symbol: inputSymbol));
+            tokenTransfers.add(TokenTransfer(
+                transferType: TransferType.expense,
+                value: valueOut,
+                symbol: outputSymbol));
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    return tokenTransfers;
   }
 
   static findFuture(List<dynamic> outputs) {
@@ -405,6 +487,9 @@ class TxsResult {
           txs.add(tx);
           break;
         case TransferMethod.public:
+          txs.add(tx);
+          break;
+        case TransferMethod.contract:
           txs.add(tx);
           break;
         default:
