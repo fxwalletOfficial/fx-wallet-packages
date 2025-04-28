@@ -423,6 +423,32 @@ impl<N: Network> ProgramManager<N> {
         };
         Ok(authorization.to_string())
     }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn contract_execution(
+        &self,
+        program_id: String,
+        function_name: String,
+        arguments: Vec<Value<N>>,
+        password: Option<&str>,
+    ) -> Result<String> {
+        let private_key = self.get_private_key(password)?;
+
+        // Generate the execution transaction
+        let authorization = {
+            let rng = &mut rand::thread_rng();
+
+            // Initialize a VM
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let vm = VM::from(store)?;
+            let inputs = arguments;
+            let program = Program::<N>::from_str(&program_id)?;
+            vm.process().write().add_program(&program)?;
+            // Compute the authorization.
+            vm.authorize(&private_key, program_id, function_name, inputs, rng)?
+        };
+        Ok(authorization.to_string())
+    }
 }
 
 #[cfg(test)]

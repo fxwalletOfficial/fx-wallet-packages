@@ -83,6 +83,40 @@ typedef TypeGetBaseFeeInDart = int Function(
   ffi.Pointer<Utf8>,
 );
 
+typedef TypeContractExecutionInRust = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
+typedef TypeContractExecutionInDart = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
+typedef TypeExecuteProgramInRust = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Int,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
+typedef TypeExecuteProgramInDart = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    int,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
 class ProgramsRustFFI {
   final ffi.DynamicLibrary dyLib;
   final network;
@@ -232,5 +266,33 @@ class ProgramsRustFFI {
         dyLib.lookupFunction<TypeGetBaseFeeInRust, TypeGetBaseFeeInDart>(
             'get_base_fee');
     return rustFunction(url, execution, this.network);
+  }
+
+  Future<ffi.Pointer<Utf8>> executeProgram(
+    ffi.Pointer<Utf8> private_key,
+    ffi.Pointer<Utf8> program_id,
+    ffi.Pointer<Utf8> function_name,
+    ffi.Pointer<Utf8> arguments,
+    int fee,
+    ffi.Pointer<Utf8> url,
+  ) async {
+    final rustFunction = dyLib.lookupFunction<TypeExecuteProgramInRust,
+        TypeExecuteProgramInDart>('execute_program');
+
+    return rustFunction(private_key, program_id, function_name, arguments, fee,
+        url, this.network);
+  }
+
+  Future<ffi.Pointer<Utf8>> contractExecution(
+    ffi.Pointer<Utf8> private_key,
+    ffi.Pointer<Utf8> program_id,
+    ffi.Pointer<Utf8> function_name,
+    ffi.Pointer<Utf8> arguments,
+    ffi.Pointer<Utf8> url,
+  ) async {
+    final rustFunction = dyLib.lookupFunction<TypeContractExecutionInRust,
+        TypeContractExecutionInDart>('contract_execution');
+    return rustFunction(
+        private_key, program_id, function_name, arguments, url, this.network);
   }
 }

@@ -73,6 +73,7 @@ pub mod snarkvm_types {
     pub use snarkvm_console::network::MainnetV0 as CurrentNetwork;
     // #[cfg(feature = "testnet")]
     // pub use snarkvm_console::network::TestnetV0 as CurrentNetwork;
+    pub use snarkvm_algorithms::snark::varuna::VarunaVersion;
     pub use snarkvm_console::{
         account::{Address, PrivateKey, Signature, ViewKey},
         prelude::{ToBytes, Uniform},
@@ -94,7 +95,6 @@ pub mod snarkvm_types {
         snark::{Proof, ProvingKey, VerifyingKey},
         Process, Program, Trace, VM,
     };
-    pub use snarkvm_algorithms::snark::varuna::VarunaVersion;
 }
 
 pub use snarkvm_types::*;
@@ -958,4 +958,126 @@ pub extern "C" fn get_base_fee(
             .unwrap();
     let base_fee = program_manager.get_base_fee(execution).unwrap();
     base_fee
+}
+
+#[no_mangle]
+pub extern "C" fn execute_program(
+    private_key_raw: *const c_char,
+    program_id_raw: *const c_char,
+    function_name_raw: *const c_char,
+    arguments_raw: *const c_char,
+    fee: u64,
+    url_raw: *const c_char,
+    network_raw: *const c_char,
+) -> *const c_char {
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
+    let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
+    let program_id: &str = program_id_cstr.to_str().unwrap();
+    let function_name_cstr = unsafe { CStr::from_ptr(function_name_raw) };
+    let function_name: &str = function_name_cstr.to_str().unwrap();
+    let arguments_cstr = unsafe { CStr::from_ptr(arguments_raw) };
+    let arguments: &str = arguments_cstr.to_str().unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<CurrentNetwork>::from_str(private_key).unwrap();
+    let view_key = ViewKey::try_from(&sender).unwrap();
+    let address = view_key.to_address();
+
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
+
+    let amount = 1000000;
+    let arguments = vec![
+        Value::from_str(&format!("{}u64", amount)).unwrap(),
+        Value::from_str(&address.to_string()).unwrap(),
+    ];
+
+    let mut program_manager =
+        ProgramManager::<CurrentNetwork>::new(Some(sender), None, Some(api_client.clone()), None, false)
+            .unwrap();
+    let result = program_manager
+        .execute_program(
+            program_id,
+            function_name,
+            arguments.into_iter(),
+            fee,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+    let c_string = CString::new(result).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn contract_execution(
+    private_key_raw: *const c_char,
+    program_id_raw: *const c_char,
+    function_name_raw: *const c_char,
+    arguments_raw: *const c_char,
+    url_raw: *const c_char,
+    network_raw: *const c_char,
+) -> *const c_char {
+    // let visibility = TransferType::Private;
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<CurrentNetwork>::from_str(private_key).unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let view_key = ViewKey::try_from(&sender).unwrap();
+    let address = view_key.to_address().to_string();
+
+    let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
+    let program_id: &str = program_id_cstr.to_str().unwrap();
+    let function_name_cstr = unsafe { CStr::from_ptr(function_name_raw) };
+    let function_name: &str = function_name_cstr.to_str().unwrap();
+
+    println!("Attempting to transfer in {network} of type : {program_id}::{function_name}");
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
+
+    // let record_finder = RecordFinder::new(api_client);
+    let mut authorization = "error".to_string();
+
+    let program_manager = ProgramManager::<CurrentNetwork>::new(
+        Some(sender),
+        None,
+        Some(api_client.clone()),
+        None,
+        false,
+    )
+    .unwrap();
+
+    let amount = 1000000;
+    let arguments = vec![
+        Value::from_str(&format!("{}u64", amount)).unwrap(),
+        Value::from_str(&address.to_string()).unwrap(),
+    ];
+
+    for i in 0..10 {
+        let result = program_manager.contract_execution(
+            program_id.to_string(),
+            function_name.to_string(),
+            arguments.clone(),
+            None,
+        );
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            authorization = result.unwrap();
+            break;
+        }
+    }
+
+    let c_string = CString::new(authorization).unwrap();
+    c_string.into_raw()
 }

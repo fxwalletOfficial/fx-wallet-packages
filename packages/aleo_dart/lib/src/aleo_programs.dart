@@ -217,6 +217,41 @@ class AleoProgram {
     }
     return;
   }
+
+  Future<String> contractExecution(
+    String private_key_raw,
+    String program_id_raw,
+    String function_name_raw,
+    String arguments_raw,
+    String url_raw,
+  ) async {
+    final private_key = dartStrToC(private_key_raw);
+    final program_id = dartStrToC(program_id_raw);
+    final function_name = dartStrToC(function_name_raw);
+    final arguments = dartStrToC(arguments_raw);
+    final url = dartStrToC(url_raw);
+    final result = await programsRustFFI.contractExecution(
+        private_key, program_id, function_name, arguments, url);
+    return result.toDartString();
+  }
+
+  Future<String> executeProgram(
+    String private_key_raw,
+    String program_id_raw,
+    String function_name_raw,
+    String arguments_raw,
+    int fee,
+    String url_raw,
+  ) async {
+    final private_key = dartStrToC(private_key_raw);
+    final program_id = dartStrToC(program_id_raw);
+    final function_name = dartStrToC(function_name_raw);
+    final arguments = dartStrToC(arguments_raw);
+    final url = dartStrToC(url_raw);
+    final result = await programsRustFFI.executeProgram(
+        private_key, program_id, function_name, arguments, fee, url);
+    return result.toDartString();
+  }
 }
 
 Future<void> downloadFile(String url, String savePath) async {
