@@ -978,31 +978,29 @@ pub extern "C" fn execute_program(
     let function_name: &str = function_name_cstr.to_str().unwrap();
     let arguments_cstr = unsafe { CStr::from_ptr(arguments_raw) };
     let arguments: &str = arguments_cstr.to_str().unwrap();
+    let inputs: Vec<&str> = arguments.split(",").collect();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
 
     let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
     let private_key: &str = private_key_cstr.to_str().unwrap();
     let sender = PrivateKey::<CurrentNetwork>::from_str(private_key).unwrap();
-    let view_key = ViewKey::try_from(&sender).unwrap();
-    let address = view_key.to_address();
 
     let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
 
-    let amount = 1000000;
-    let arguments = vec![
-        Value::from_str(&format!("{}u64", amount)).unwrap(),
-        Value::from_str(&address.to_string()).unwrap(),
-    ];
-
-    let mut program_manager =
-        ProgramManager::<CurrentNetwork>::new(Some(sender), None, Some(api_client.clone()), None, false)
-            .unwrap();
+    let mut program_manager = ProgramManager::<CurrentNetwork>::new(
+        Some(sender),
+        None,
+        Some(api_client.clone()),
+        None,
+        false,
+    )
+    .unwrap();
     let result = program_manager
         .execute_program(
             program_id,
             function_name,
-            arguments.into_iter(),
+            inputs.into_iter(),
             fee,
             None,
             None,
@@ -1031,13 +1029,15 @@ pub extern "C" fn contract_execution(
     let sender = PrivateKey::<CurrentNetwork>::from_str(private_key).unwrap();
     let url_cstr = unsafe { CStr::from_ptr(url_raw) };
     let url = url_cstr.to_str().unwrap();
-    let view_key = ViewKey::try_from(&sender).unwrap();
-    let address = view_key.to_address().to_string();
 
     let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
     let program_id: &str = program_id_cstr.to_str().unwrap();
     let function_name_cstr = unsafe { CStr::from_ptr(function_name_raw) };
     let function_name: &str = function_name_cstr.to_str().unwrap();
+
+    let arguments_cstr = unsafe { CStr::from_ptr(arguments_raw) };
+    let arguments: &str = arguments_cstr.to_str().unwrap();
+    let inputs: Vec<&str> = arguments.split(",").collect();
 
     println!("Attempting to transfer in {network} of type : {program_id}::{function_name}");
     let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
@@ -1054,17 +1054,11 @@ pub extern "C" fn contract_execution(
     )
     .unwrap();
 
-    let amount = 1000000;
-    let arguments = vec![
-        Value::from_str(&format!("{}u64", amount)).unwrap(),
-        Value::from_str(&address.to_string()).unwrap(),
-    ];
-
     for i in 0..10 {
         let result = program_manager.contract_execution(
             program_id.to_string(),
             function_name.to_string(),
-            arguments.clone(),
+            inputs.clone(),
             None,
         );
         if result.is_err() {

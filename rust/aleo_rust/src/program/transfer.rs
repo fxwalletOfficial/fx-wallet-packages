@@ -429,7 +429,7 @@ impl<N: Network> ProgramManager<N> {
         &self,
         program_id: String,
         function_name: String,
-        arguments: Vec<Value<N>>,
+        arguments: Vec<&str>,
         password: Option<&str>,
     ) -> Result<String> {
         let private_key = self.get_private_key(password)?;
