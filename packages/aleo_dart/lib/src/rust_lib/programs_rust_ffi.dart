@@ -120,6 +120,22 @@ typedef TypeExecuteProgramInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
+typedef TypeContractFeeExecutionInRust = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Int,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
+typedef TypeContractFeeExecutionInDart = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    int,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
 class ProgramsRustFFI {
   final ffi.DynamicLibrary dyLib;
   final network;
@@ -298,5 +314,17 @@ class ProgramsRustFFI {
         TypeContractExecutionInDart>('contract_execution');
     return rustFunction(
         private_key, program_id, function_name, arguments, url, this.network);
+  }
+
+  Future<ffi.Pointer<Utf8>> contractFeeExecution(
+    ffi.Pointer<Utf8> private_key,
+    int fee,
+    ffi.Pointer<Utf8> execution,
+    ffi.Pointer<Utf8> program_id,
+    ffi.Pointer<Utf8> url,
+  ) async {
+    final rustFunction = dyLib.lookupFunction<TypeContractFeeExecutionInRust,
+        TypeContractFeeExecutionInDart>('contract_fee_execution');
+    return rustFunction(private_key, fee, execution, program_id, url, this.network);
   }
 }

@@ -499,6 +499,58 @@ impl<N: Network> ProgramManager<N> {
         };
         Ok(authorization.to_string())
     }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn contract_fee_execution(
+        &self,
+        fee: u64,
+        password: Option<&str>,
+        execution: Execution<N>,
+        program_id: String,
+        api_client: &AleoAPIClient<N>,
+    ) -> Result<String> {
+        // Retrieve the private key.
+        let private_key = self.get_private_key(password)?;
+        let program_id = ProgramID::<N>::from_str(&program_id)?;
+        // Generate the execution transaction
+        let rng = &mut rand::thread_rng();
+
+        // Initialize a VM
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let vm = VM::from(store)?;
+        // Compute the fee.
+
+        // Add the program to the VM
+        let program = self
+            .get_program(program_id)
+            .or_else(|_| api_client.get_program(program_id))?;
+
+        let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
+        api_client
+            .get_program_imports_from_source(&program)?
+            .iter()
+            .try_for_each(|(_, import)| {
+                if import.id() != &credits_id && !vm.process().read().contains_program(import.id())
+                {
+                    vm.process().write().add_program(import)?
+                }
+                Ok::<_, Error>(())
+            })?;
+
+        // If the initialization is for an execution, add the program. Otherwise, don't add it as
+        // it will be added during the deployment process
+        if !vm.process().read().contains_program(program.id()) {
+            vm.process().write().add_program(&program)?;
+        }
+        // Compute the minimum execution cost.
+        let (minimum_execution_cost, (_, _)) = execution_cost_v2(&vm.process().read(), &execution)?;
+        // Compute the execution ID.
+        let execution_id = execution.to_execution_id()?;
+        // Authorize the fee.
+        let fee_authorization =
+            vm.authorize_fee_public(&private_key, minimum_execution_cost, fee, execution_id, rng)?;
+        Ok(fee_authorization.to_string())
+    }
 }
 
 #[cfg(test)]

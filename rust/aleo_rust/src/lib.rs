@@ -1080,3 +1080,59 @@ pub extern "C" fn contract_execution(
     let c_string = CString::new(authorization).unwrap();
     c_string.into_raw()
 }
+
+#[no_mangle]
+pub extern "C" fn contract_fee_execution(
+    private_key_raw: *const c_char,
+    fee: u64,
+    execution_raw: *const c_char,
+    program_id_raw: *const c_char,
+    url_raw: *const c_char,
+    network_raw: *const c_char,
+) -> *const c_char {
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
+    let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
+    let program_id: &str = program_id_cstr.to_str().unwrap();
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<CurrentNetwork>::from_str(private_key).unwrap();
+
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
+    let program_manager = ProgramManager::<CurrentNetwork>::new(
+        Some(sender),
+        None,
+        Some(api_client.clone()),
+        None,
+        false,
+    )
+    .unwrap();
+    let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
+    let execution_str: &str = execution_cstr.to_str().unwrap();
+    let execution = Execution::<CurrentNetwork>::from_str(&execution_str.to_string()).unwrap();
+
+    let mut authorization = "error".to_string();
+    for i in 0..10 {
+        let result = program_manager.contract_fee_execution(
+            fee,
+            None,
+            execution.clone(),
+            program_id.to_string(),
+            &api_client,
+        );
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            authorization = result.unwrap();
+            break;
+        }
+    }
+    let c_string = CString::new(authorization).unwrap();
+    c_string.into_raw()
+}
