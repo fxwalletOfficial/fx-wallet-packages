@@ -1060,6 +1060,7 @@ pub extern "C" fn contract_execution(
             function_name.to_string(),
             inputs.clone(),
             None,
+            &api_client,
         );
         if result.is_err() {
             println!("Transfer error: {} - retrying", result.unwrap_err());

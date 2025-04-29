@@ -431,9 +431,10 @@ impl<N: Network> ProgramManager<N> {
         function_name: String,
         arguments: Vec<&str>,
         password: Option<&str>,
+        api_client: &AleoAPIClient<N>,
     ) -> Result<String> {
         let private_key = self.get_private_key(password)?;
-
+        let program_id = ProgramID::<N>::from_str(&program_id)?;
         // Generate the execution transaction
         let authorization = {
             let rng = &mut rand::thread_rng();
@@ -442,8 +443,30 @@ impl<N: Network> ProgramManager<N> {
             let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
             let vm = VM::from(store)?;
             let inputs = arguments;
-            let program = Program::<N>::from_str(&program_id)?;
-            vm.process().write().add_program(&program)?;
+
+            // Add the program to the VM
+            let program = self
+                .get_program(program_id)
+                .or_else(|_| api_client.get_program(program_id))?;
+
+            let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
+            api_client
+                .get_program_imports_from_source(&program)?
+                .iter()
+                .try_for_each(|(_, import)| {
+                    if import.id() != &credits_id
+                        && !vm.process().read().contains_program(import.id())
+                    {
+                        vm.process().write().add_program(import)?
+                    }
+                    Ok::<_, Error>(())
+                })?;
+
+            // If the initialization is for an execution, add the program. Otherwise, don't add it as
+            // it will be added during the deployment process
+            if !vm.process().read().contains_program(program.id()) {
+                vm.process().write().add_program(&program)?;
+            }
             // Compute the authorization.
             vm.authorize(&private_key, program_id, function_name, inputs, rng)?
         };
