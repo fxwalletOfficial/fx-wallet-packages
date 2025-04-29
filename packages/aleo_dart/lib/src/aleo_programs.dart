@@ -155,13 +155,13 @@ class AleoProgram {
     return result.toDartString();
   }
 
-  Future<String> executeProof(
-    String url_raw,
-    String authorization_raw,
-  ) async {
+  Future<String> executeProof(String url_raw, String authorization_raw,
+      {String program_id_raw = 'credits.aleo'}) async {
     final url = dartStrToC(url_raw);
     final authorization = dartStrToC(authorization_raw);
-    final result = await programsRustFFI.executeProof(url, authorization);
+    final program_id = dartStrToC(program_id_raw);
+    final result =
+        await programsRustFFI.executeProof(url, authorization, program_id);
     return result.toDartString();
   }
 

@@ -375,12 +375,39 @@ impl<N: Network> ProgramManager<N> {
         Ok(fee_authorization.to_string())
     }
 
-    pub fn execute_proof(&self, authorization: Authorization<N>) -> Result<String> {
+    pub fn execute_proof(
+        &self,
+        authorization: Authorization<N>,
+        program_id: String,
+        api_client: &AleoAPIClient<N>,
+    ) -> Result<String> {
         let query = Query::from(self.api_client.as_ref().unwrap().base_url());
         let some_query = Some(query.clone());
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
         let vm = VM::from(store)?;
+        let program_id = ProgramID::<N>::from_str(&program_id)?;
+        let program = self
+            .get_program(program_id)
+            .or_else(|_| api_client.get_program(program_id))?;
+
+        let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
+        api_client
+            .get_program_imports_from_source(&program)?
+            .iter()
+            .try_for_each(|(_, import)| {
+                if import.id() != &credits_id && !vm.process().read().contains_program(import.id())
+                {
+                    vm.process().write().add_program(import)?
+                }
+                Ok::<_, Error>(())
+            })?;
+
+        // If the initialization is for an execution, add the program. Otherwise, don't add it as
+        // it will be added during the deployment process
+        if !vm.process().read().contains_program(program.id()) {
+            vm.process().write().add_program(&program)?;
+        }
         let rng = &mut rand::thread_rng();
         // Compute the execution.
         let execution = vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;

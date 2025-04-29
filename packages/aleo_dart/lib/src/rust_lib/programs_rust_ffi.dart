@@ -50,6 +50,9 @@ typedef TypeAuthorizationInDart = ffi.Pointer<Utf8> Function(
 typedef TypeProof = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
+typedef TypeExecuteProof = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
 typedef TypeJoinInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
@@ -232,11 +235,12 @@ class ProgramsRustFFI {
   Future<ffi.Pointer<Utf8>> executeProof(
     ffi.Pointer<Utf8> url,
     ffi.Pointer<Utf8> authorization,
+    ffi.Pointer<Utf8> program_id,
   ) async {
-    final rustFunction =
-        dyLib.lookupFunction<TypeProof, TypeProof>('execute_proof');
+    final rustFunction = dyLib
+        .lookupFunction<TypeExecuteProof, TypeExecuteProof>('execute_proof');
 
-    return rustFunction(url, authorization, this.network);
+    return rustFunction(url, authorization, this.network, program_id);
   }
 
   Future<ffi.Pointer<Utf8>> executeFeeProof(
