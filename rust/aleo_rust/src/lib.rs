@@ -498,6 +498,33 @@ pub extern "C" fn execute_proof(
     url_raw: *const c_char,
     authorization_raw: *const c_char,
     network_raw: *const c_char,
+) -> *const c_char {
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
+    let program_manager =
+        ProgramManager::<CurrentNetwork>::new(None, None, Some(api_client.clone()), None, false)
+            .unwrap();
+    let authorization_cstr = unsafe { CStr::from_ptr(authorization_raw) };
+    let authorization_str: &str = authorization_cstr.to_str().unwrap();
+    let authorization =
+        Authorization::<CurrentNetwork>::from_str(&authorization_str.to_string()).unwrap();
+    let execution = program_manager.execute_proof(authorization);
+    let result = match execution {
+        Ok(value) => value,
+        Err(err) => format!("Error: {}!", err.to_string()),
+    };
+    let c_string = CString::new(result.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn execute_program_proof(
+    url_raw: *const c_char,
+    authorization_raw: *const c_char,
+    network_raw: *const c_char,
     program_id_raw: *const c_char,
 ) -> *const c_char {
     let program_id_cstr = unsafe { CStr::from_ptr(program_id_raw) };
@@ -515,7 +542,7 @@ pub extern "C" fn execute_proof(
     let authorization =
         Authorization::<CurrentNetwork>::from_str(&authorization_str.to_string()).unwrap();
     let execution =
-        program_manager.execute_proof(authorization, program_id.to_string(), &api_client);
+        program_manager.execute_program_proof(authorization, program_id.to_string(), &api_client);
     let result = match execution {
         Ok(value) => value,
         Err(err) => format!("Error: {}!", err.to_string()),

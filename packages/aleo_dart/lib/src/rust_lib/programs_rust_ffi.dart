@@ -51,6 +51,9 @@ typedef TypeProof = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
 typedef TypeExecuteProof = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
+typedef TypeExecuteProgramProof = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
 typedef TypeJoinInRust = ffi.Pointer<Utf8> Function(
@@ -251,10 +254,21 @@ class ProgramsRustFFI {
   Future<ffi.Pointer<Utf8>> executeProof(
     ffi.Pointer<Utf8> url,
     ffi.Pointer<Utf8> authorization,
-    ffi.Pointer<Utf8> program_id,
   ) async {
     final rustFunction = dyLib
         .lookupFunction<TypeExecuteProof, TypeExecuteProof>('execute_proof');
+
+    return rustFunction(url, authorization, this.network);
+  }
+
+  Future<ffi.Pointer<Utf8>> executeProgramProof(
+    ffi.Pointer<Utf8> url,
+    ffi.Pointer<Utf8> authorization,
+    ffi.Pointer<Utf8> program_id,
+  ) async {
+    final rustFunction = dyLib
+        .lookupFunction<TypeExecuteProgramProof, TypeExecuteProgramProof>(
+            'execute_program_proof');
 
     return rustFunction(url, authorization, this.network, program_id);
   }
@@ -325,6 +339,7 @@ class ProgramsRustFFI {
   ) async {
     final rustFunction = dyLib.lookupFunction<TypeContractFeeExecutionInRust,
         TypeContractFeeExecutionInDart>('contract_fee_execution');
-    return rustFunction(private_key, fee, execution, program_id, url, this.network);
+    return rustFunction(
+        private_key, fee, execution, program_id, url, this.network);
   }
 }
