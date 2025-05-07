@@ -5,30 +5,37 @@ import 'package:web_socket_channel/io.dart';
 import 'package:aleo_dart/aleo.dart';
 
 Future<void> main() async {
+  // 基本配置
   final String libPosition = 'aleo_rust/target/release/libaleo_rust.so';
   final dyLib = DyLib.getDyLibByPosition(libPosition);
   final rustLib = AleoProgram(dyLib, "mainnet");
-
   final wss = 'ws://localhost:31551/wallet/aleo/execute';
-
   final url = '';
-
   final private_key = '';
-  final recipient = '';
+
+  // 交易类型 token转账都使用public
   final transfer_type = TransferMethod.public;
+
+  // 交易程序id, 后续在token info中获取
+  final program_id = 'betastaking.aleo';
+  // 调用token转账方法
+  final function =  TransferMethod.public;
+
+  // 交易优先费
   final fee_credits = 0;
 
-  final program_id = 'betastaking.aleo';
-  final function = TransferMethod.public;
+  // 收款地址与转账数量
+  final recipient = '';
   final amount = '100000u64';
 
-  final argments = [recipient, amount];
+  // 交易参数 最终需转换为字符串 arguments 处理可以放在服务端。
+  final arguments = [recipient, amount];
 
   final authorizationJson = await rustLib.contractExecution(
     private_key,
     program_id,
     function,
-    argments.join(','),
+    arguments.join(','),
     url,
   );
 
@@ -57,19 +64,4 @@ Future<void> main() async {
       channel.sink.close();
     }
   });
-
-  // final data = {"request": [], "transitions": []};
-  // final transitions = authorization['transitions'];
-  // for (var request in authorization['requests']) {
-  //   final pragma = request['pragma'];
-  //   final function = request['function'];
-  //   for (var transition in transitions) {
-  //     if (transition['pragma'] == pragma &&
-  //         transition['function'] == function) {
-  //       data['transitions']!.add(transition);
-  //       data['request']!.add(request);
-  //     }
-  //   }
-  // }
-  // print(data);
 }
