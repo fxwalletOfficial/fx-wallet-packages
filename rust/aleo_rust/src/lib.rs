@@ -73,6 +73,7 @@ pub mod snarkvm_types {
     pub use snarkvm_console::network::MainnetV0 as CurrentNetwork;
     // #[cfg(feature = "testnet")]
     // pub use snarkvm_console::network::TestnetV0 as CurrentNetwork;
+    pub use aleo_std_storage::StorageMode;
     pub use snarkvm_algorithms::snark::varuna::VarunaVersion;
     pub use snarkvm_console::{
         account::{Address, PrivateKey, Signature, ViewKey},

@@ -54,7 +54,7 @@ impl<N: Network> ProgramManager<N> {
         );
 
         // Create an ephemeral SnarkVM to store the programs
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::<N, ConsensusMemory<N>>::from(store)?;
         let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
         imports.iter().try_for_each(|program| {

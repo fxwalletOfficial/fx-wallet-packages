@@ -64,7 +64,7 @@ impl<N: Network> ProgramManager<N> {
         // }
         let programs = IndexMap::new();
         let vm = if use_cache {
-            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
             Some(VM::<N, ConsensusMemory<N>>::from(store)?)
         } else {
             None
@@ -98,7 +98,7 @@ impl<N: Network> ProgramManager<N> {
     ) -> Result<VM<N, ConsensusMemory<N>>> {
         // Create an ephemeral SnarkVM to store the programs
         // Initialize an RNG and query object for the transaction
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm: VM<N, ConsensusMemory<N>> = VM::<N, ConsensusMemory<N>>::from(store)?;
 
         // Resolve imports

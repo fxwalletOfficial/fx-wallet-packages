@@ -46,7 +46,7 @@ impl<N: Network> ProgramManager<N> {
             let rng = &mut rand::thread_rng();
 
             // Initialize a VM
-            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
             let vm = VM::from(store)?;
 
             // Create a new transaction.

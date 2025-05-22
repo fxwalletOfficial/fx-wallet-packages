@@ -55,7 +55,7 @@ impl<N: Network> ProgramManager<N> {
             let rng = &mut rand::thread_rng();
 
             // Initialize a VM
-            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
             let vm = VM::from(store)?;
 
             // Prepare the inputs for a transfer.
@@ -152,7 +152,7 @@ impl<N: Network> ProgramManager<N> {
             let rng = &mut rand::thread_rng();
 
             // Initialize a VM
-            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
             let vm = VM::from(store)?;
 
             // Prepare the inputs for a transfer.
@@ -261,7 +261,7 @@ impl<N: Network> ProgramManager<N> {
             let rng = &mut rand::thread_rng();
 
             // Initialize a VM
-            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
             let vm = VM::from(store)?;
 
             // Prepare the inputs for a transfer.
@@ -314,7 +314,7 @@ impl<N: Network> ProgramManager<N> {
     #[allow(clippy::too_many_arguments)]
     pub fn get_base_fee(&self, execution: Execution<N>) -> Result<u64> {
         // Initialize a VM
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         // Compute the fee.
 
@@ -346,7 +346,7 @@ impl<N: Network> ProgramManager<N> {
         let rng = &mut rand::thread_rng();
 
         // Initialize a VM
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         // Compute the fee.
 
@@ -379,12 +379,13 @@ impl<N: Network> ProgramManager<N> {
         let query = Query::from(self.api_client.as_ref().unwrap().base_url());
         let some_query = Some(query.clone());
         // Initialize a VM
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         let rng = &mut rand::thread_rng();
         // Compute the execution.
-        let execution = vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
-        Ok(execution.to_string())
+        let (execution, _response) =
+            vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
+        Ok(format!("{:?}", execution))
     }
 
     pub fn execute_program_proof(
@@ -396,7 +397,7 @@ impl<N: Network> ProgramManager<N> {
         let query = Query::from(self.api_client.as_ref().unwrap().base_url());
         let some_query = Some(query.clone());
         // Initialize a VM
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         let program_id = ProgramID::<N>::from_str(&program_id)?;
         let program = self
@@ -422,15 +423,16 @@ impl<N: Network> ProgramManager<N> {
         }
         let rng = &mut rand::thread_rng();
         // Compute the execution.
-        let execution = vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
-        Ok(execution.to_string())
+        let (execution, _response) =
+            vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
+        Ok(format!("{:?}", execution))
     }
 
     pub fn execute_fee_proof(&self, authorization: Authorization<N>) -> Result<String> {
         let query = Query::from(self.api_client.as_ref().unwrap().base_url());
         let some_query = Some(query.clone());
         // Initialize a VM
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         let rng = &mut rand::thread_rng();
         // Compute the execution.
@@ -453,7 +455,7 @@ impl<N: Network> ProgramManager<N> {
             let rng = &mut rand::thread_rng();
 
             // Initialize a VM
-            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
             let vm = VM::from(store)?;
             let inputs = vec![Value::Record(record_1), Value::Record(record_2)];
 
@@ -479,7 +481,7 @@ impl<N: Network> ProgramManager<N> {
             let rng = &mut rand::thread_rng();
 
             // Initialize a VM
-            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+            let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
             let vm = VM::from(store)?;
             let inputs = arguments;
 
@@ -528,7 +530,7 @@ impl<N: Network> ProgramManager<N> {
         let rng = &mut rand::thread_rng();
 
         // Initialize a VM
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(None)?;
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         // Compute the fee.
 
