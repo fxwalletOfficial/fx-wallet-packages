@@ -87,7 +87,7 @@ class AleoTransaction {
   String fee_record = '';
   int? height;
   int? timestamp;
-  // List<TokenTransfer> tokenTransfers = [];
+  List<TokenTransfer> tokenTransfers = [];
   AleoTransaction(
       {required this.type,
       required this.transactionId,
@@ -102,7 +102,7 @@ class AleoTransaction {
       required this.baseFee,
       required this.priorityFee,
       required this.feeChange,
-      // this.tokenTransfers = const [],
+      this.tokenTransfers = const [],
       this.height,
       this.timestamp});
 
@@ -126,7 +126,7 @@ class AleoTransaction {
     String value = '';
 
     FeeDetail feeDetail = getFee(feeTx);
-    // List<TokenTransfer> tokenTransfers = [];
+    List<TokenTransfer> tokenTransfers = [];
 
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
     switch (transitionType) {
@@ -154,30 +154,32 @@ class AleoTransaction {
         value = getValue(txOutput[1]); // output is private, can not get.
         break;
       default:
-        // tokenTransfers = parseTokenTransfer(json['execution']['transitions']);
-        program = findProgram(json['execution']['transitions'], programs);
+        final tokenTransferData = parseTokenTransfer(
+            json['execution']['transitions'],
+            programs: programs);
+        tokenTransfers = tokenTransferData['tokenTransfers'];
+        program = tokenTransferData['program'];
         transitionType = TransferMethod.contract;
         break;
     }
 
     return AleoTransaction(
-      type: type,
-      transactionId: transactionId,
-      transitionIds: transitionIds,
-      program: program,
-      transitionType: transitionType,
-      inputAddress: inputAddress,
-      outputAddress: outputAddress,
-      value: value,
-      feeType: feeType,
-      fee: feeDetail.fee,
-      baseFee: feeDetail.baseFee,
-      priorityFee: feeDetail.priorityFee,
-      feeChange: feeDetail.change,
-      height: jsonRaw['height'],
-      timestamp: jsonRaw['timestamp'],
-      // tokenTransfers: tokenTransfers
-    );
+        type: type,
+        transactionId: transactionId,
+        transitionIds: transitionIds,
+        program: program,
+        transitionType: transitionType,
+        inputAddress: inputAddress,
+        outputAddress: outputAddress,
+        value: value,
+        feeType: feeType,
+        fee: feeDetail.fee,
+        baseFee: feeDetail.baseFee,
+        priorityFee: feeDetail.priorityFee,
+        feeChange: feeDetail.change,
+        height: jsonRaw['height'],
+        timestamp: jsonRaw['timestamp'],
+        tokenTransfers: tokenTransfers);
   }
 
   Map<String, dynamic> toJson() {
@@ -201,7 +203,7 @@ class AleoTransaction {
       'feeChange': feeChange,
       'amount_record': amount_record,
       'fee_record': fee_record,
-      // 'tokenTransfers': tokenTransfers.map((e) => e.toJson()).toList()
+      'tokenTransfers': tokenTransfers.map((e) => e.toJson()).toList()
     };
   }
 
@@ -243,9 +245,15 @@ class AleoTransaction {
     }
   }
 
-  static List<TokenTransfer> parseTokenTransfer(List<dynamic> transitions) {
+  static Map<String, dynamic> parseTokenTransfer(List<dynamic> transitions,
+      {List<String> programs = const []}) {
     final List<TokenTransfer> tokenTransfers = [];
+    String program = 'contract';
     for (final transition in transitions) {
+      if (programs.contains(transition['program'])) {
+        program = transition['program'];
+      }
+
       String inputSymbol = '';
       String outputSymbol = '';
       final inputs = transition['inputs'];
@@ -281,7 +289,7 @@ class AleoTransaction {
           break;
       }
     }
-    return tokenTransfers;
+    return {'program': program, 'tokenTransfers': tokenTransfers};
   }
 
   static findFuture(List<dynamic> outputs) {
@@ -318,16 +326,6 @@ class AleoTransaction {
       }
     }
     return '';
-  }
-
-  static String findProgram(List<dynamic> transitions, List<String> programs) {
-    for (final transition in transitions) {
-      if (programs.contains(transition['program'])) {
-        return transition['program'];
-      }
-    }
-
-    return 'contract';
   }
 
   /// 解析outputs中，属于该地址的部分，作为value。
@@ -511,5 +509,18 @@ class TxsResult {
           break;
       }
     }
+  }
+
+  // 从交易中找出token交易
+  getTokenTxs(List<AleoTransaction> txs, String program) {
+    final tokenTxs = [];
+    for (final tx in txs) {
+      // 如果交易类型为contract
+      if (tx.transitionType == TransferMethod.contract &&
+          tx.program == program) {
+        tokenTxs.add(tx);
+      }
+    }
+    return tokenTxs;
   }
 }
