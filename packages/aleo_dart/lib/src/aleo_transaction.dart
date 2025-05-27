@@ -87,7 +87,7 @@ class AleoTransaction {
   String fee_record = '';
   int? height;
   int? timestamp;
-  List<TokenTransfer> tokenTransfers = [];
+  // List<TokenTransfer> tokenTransfers = [];
   AleoTransaction(
       {required this.type,
       required this.transactionId,
@@ -102,11 +102,12 @@ class AleoTransaction {
       required this.baseFee,
       required this.priorityFee,
       required this.feeChange,
-      this.tokenTransfers = const [],
+      // this.tokenTransfers = const [],
       this.height,
       this.timestamp});
 
-  factory AleoTransaction.fromJson(Map<String, dynamic> jsonRaw) {
+  factory AleoTransaction.fromJson(Map<String, dynamic> jsonRaw,
+      {List<String> programs = const []}) {
     final json = jsonRaw['transaction'];
     final type = json['type'];
     final transactionId = json['id'];
@@ -117,7 +118,7 @@ class AleoTransaction {
       transition['id'].toString(),
       feeTx['id'].toString()
     ];
-    final program = transition['program'];
+    String program = transition['program'];
     String transitionType = transition['function'];
     final txOutput = findFuture(transition['outputs']);
     String inputAddress = '';
@@ -125,7 +126,7 @@ class AleoTransaction {
     String value = '';
 
     FeeDetail feeDetail = getFee(feeTx);
-    List<TokenTransfer> tokenTransfers = [];
+    // List<TokenTransfer> tokenTransfers = [];
 
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
     switch (transitionType) {
@@ -153,28 +154,30 @@ class AleoTransaction {
         value = getValue(txOutput[1]); // output is private, can not get.
         break;
       default:
-        tokenTransfers = parseTokenTransfer(json['execution']['transitions']);
+        // tokenTransfers = parseTokenTransfer(json['execution']['transitions']);
+        program = findProgram(json['execution']['transitions'], programs);
         transitionType = TransferMethod.contract;
         break;
     }
 
     return AleoTransaction(
-        type: type,
-        transactionId: transactionId,
-        transitionIds: transitionIds,
-        program: program,
-        transitionType: transitionType,
-        inputAddress: inputAddress,
-        outputAddress: outputAddress,
-        value: value,
-        feeType: feeType,
-        fee: feeDetail.fee,
-        baseFee: feeDetail.baseFee,
-        priorityFee: feeDetail.priorityFee,
-        feeChange: feeDetail.change,
-        height: jsonRaw['height'],
-        timestamp: jsonRaw['timestamp'],
-        tokenTransfers: tokenTransfers);
+      type: type,
+      transactionId: transactionId,
+      transitionIds: transitionIds,
+      program: program,
+      transitionType: transitionType,
+      inputAddress: inputAddress,
+      outputAddress: outputAddress,
+      value: value,
+      feeType: feeType,
+      fee: feeDetail.fee,
+      baseFee: feeDetail.baseFee,
+      priorityFee: feeDetail.priorityFee,
+      feeChange: feeDetail.change,
+      height: jsonRaw['height'],
+      timestamp: jsonRaw['timestamp'],
+      // tokenTransfers: tokenTransfers
+    );
   }
 
   Map<String, dynamic> toJson() {
@@ -198,7 +201,7 @@ class AleoTransaction {
       'feeChange': feeChange,
       'amount_record': amount_record,
       'fee_record': fee_record,
-      'tokenTransfers': tokenTransfers.map((e) => e.toJson()).toList()
+      // 'tokenTransfers': tokenTransfers.map((e) => e.toJson()).toList()
     };
   }
 
@@ -317,6 +320,16 @@ class AleoTransaction {
     return '';
   }
 
+  static String findProgram(List<dynamic> transitions, List<String> programs) {
+    for (final transition in transitions) {
+      if (programs.contains(transition['program'])) {
+        return transition['program'];
+      }
+    }
+
+    return 'contract';
+  }
+
   /// 解析outputs中，属于该地址的部分，作为value。
   processPrivateTx(AleoRecord rust, String viewKey, String privateKey,
       Map<String, dynamic> json, List<String> recordCipherTexts) {
@@ -399,12 +412,14 @@ class TxsResult {
   List<String> recordCipherTexts;
   String viewKey;
   String address;
+  List<String> programs;
 
   TxsResult(
       {required this.recordFFI,
       required this.recordCipherTexts,
       required this.viewKey,
-      required this.address});
+      required this.address,
+      this.programs = const []});
 
   getOutputTxs(
     List<dynamic> transactions,
@@ -467,7 +482,7 @@ class TxsResult {
       throw Exception('Unsupport record in public txs');
     }
     for (final inTxJson in inTxsJson) {
-      final tx = AleoTransaction.fromJson(inTxJson);
+      final tx = AleoTransaction.fromJson(inTxJson, programs: programs);
       if (tx.inputAddress == address) {
         tx.transferType = TransferType.expense;
       }

@@ -57,15 +57,20 @@ void main() async {
           .readAsStringSync(encoding: utf8))['publicTransactions'];
   // print(pubTxsJson);
   print("公开tx");
+  final programs = ['betastaking.aleo'];
   final TxsResult publicTxs = TxsResult(
       recordFFI: recordFFI,
       recordCipherTexts: [],
       viewKey: viewKey,
-      address: address);
+      address: address,
+      programs: programs);  
   publicTxs.getPublicTxs(pubTxsJson);
   for (final tx in publicTxs.txs) {
     print(tx.toJson());
   }
+
+  // 如果需要解析token交易，则在所有交易中过滤出contract交易，并找出对应token的交易。
+
 }
 
 /// 调用服务端接口，获取serialNumbers对应的交易。
