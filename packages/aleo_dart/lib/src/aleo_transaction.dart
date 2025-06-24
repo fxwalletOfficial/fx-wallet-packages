@@ -22,16 +22,20 @@ class TransferType {
 
 class FunctionName {
   static const String deposit = 'deposit_public_as_signer';
-  static const String withdraw = 'instant_withdraw_public_signer';
+  static const String instant_withdraw_public_signer =
+      'instant_withdraw_public_signer';
   static const String mint = 'mint_public';
   static const String burn = 'burn_public';
   static const String transfer = 'transfer_public';
   static const String transfer_as_signer = 'transfer_public_as_signer';
+  static const String stake_public = 'stake_public';
+  static const String withdraw = 'withdraw';
 }
 
 class ProgramName {
   static const String pondo = 'pondo_protocol.aleo';
   static const String tokenRegistry = 'token_registry.aleo';
+  static const String betastaking = 'betastaking.aleo';
 }
 
 class FeeDetail {
@@ -266,14 +270,42 @@ class AleoTransaction {
               inputSymbol = "paleo";
               outputSymbol = "aleo";
               break;
-            case FunctionName.withdraw:
+            case FunctionName.instant_withdraw_public_signer:
               outputSymbol = "paleo";
               inputSymbol = "aleo";
               break;
             default:
               break;
           }
-          if ([FunctionName.deposit, FunctionName.withdraw]
+          if ([
+            FunctionName.deposit,
+            FunctionName.instant_withdraw_public_signer
+          ].contains(transition['function'])) {
+            tokenTransfers.add(TokenTransfer(
+                transferType: TransferType.income,
+                value: valueIn,
+                symbol: inputSymbol));
+            tokenTransfers.add(TokenTransfer(
+                transferType: TransferType.expense,
+                value: valueOut,
+                symbol: outputSymbol));
+          }
+          break;
+        case ProgramName.betastaking:
+          switch (transition['function']) {
+            case FunctionName.stake_public:
+              inputSymbol = "staleo";
+              outputSymbol = "aleo";
+              break;
+            case FunctionName.withdraw:
+              inputSymbol = "aleo";
+              outputSymbol = "staleo";
+              break;
+            default:
+              break;
+          }
+          print(transition['function']);
+          if ([FunctionName.stake_public, FunctionName.withdraw]
               .contains(transition['function'])) {
             tokenTransfers.add(TokenTransfer(
                 transferType: TransferType.income,
