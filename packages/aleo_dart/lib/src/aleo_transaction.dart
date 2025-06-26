@@ -14,7 +14,6 @@ class ContractMethod {
   static const String stake = 'stake';
   static const String withdraw = 'withdraw';
   static const String claim = 'claim';
-
 }
 
 class FeeType {
@@ -191,6 +190,17 @@ class AleoTransaction {
         height: jsonRaw['height'],
         timestamp: jsonRaw['timestamp'],
         tokenTransfers: tokenTransfers);
+  }
+
+  getSymbol(String program) {
+    switch (program) {
+      case ProgramName.pondo:
+        return 'paleo';
+      case ProgramName.betastaking:
+        return 'staleo';
+      default:
+        return '';
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -557,6 +567,14 @@ class TxsResult {
       // 如果交易类型为contract
       if (tx.transitionType == TransferMethod.contract &&
           tx.program == program) {
+        tokenTxs.add(tx);
+      }
+      if (tx.transitionType == TransferMethod.public && tx.program == program) {
+        tx.tokenTransfers.add(TokenTransfer(
+            transferType: tx.transferType,
+            value: tx.value,
+            symbol: tx.getSymbol(program)));
+        tx.value = '';
         tokenTxs.add(tx);
       }
     }

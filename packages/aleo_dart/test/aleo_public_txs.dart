@@ -32,8 +32,16 @@ void main() async {
   publicTxs.getPublicTxs(pubTxsJson);
 
   // token交易解析
-  final tokenTxs = publicTxs.getTokenTxs(publicTxs.txs, 'pondo_protocol.aleo');
-  for (final tx in tokenTxs) {
+  print("pondo_protocol.aleo");
+  final tokenTxs1 = publicTxs.getTokenTxs(publicTxs.txs, 'pondo_protocol.aleo');
+  for (final tx in tokenTxs1) {
+    print(tx.toJson());
+  }
+
+  // token交易解析
+  print("betastaking.aleo");
+  final tokenTxs2 = publicTxs.getTokenTxs(publicTxs.txs, 'betastaking.aleo');
+  for (final tx in tokenTxs2) {
     print(tx.toJson());
   }
 }
