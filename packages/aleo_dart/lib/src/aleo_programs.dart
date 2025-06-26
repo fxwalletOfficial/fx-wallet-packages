@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as path;
@@ -274,6 +275,26 @@ class AleoProgram {
     final result = await programsRustFFI.contractFeeExecution(
         private_key, fee, execution, program_id, url);
     return result.toDartString();
+  }
+
+  String modifyAuthorization(
+    String authorizationJson,
+  ) {
+    final authorization = json.decode(authorizationJson);
+    final data = {'requests': [], 'transitions': []};
+    final transitions = authorization['transitions'];
+    for (var request in authorization['requests']) {
+      final program = request['program'];
+      final function = request['function'];
+      for (var transition in transitions) {
+        if (transition['program'] == program &&
+            transition['function'] == function) {
+          data['transitions']!.add(transition);
+          data['requests']!.add(request);
+        }
+      }
+    }
+    return json.encode(data);
   }
 }
 

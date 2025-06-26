@@ -10,6 +10,15 @@ class TransferMethod {
   static const String contract = 'contract';
 }
 
+class ContractMethod {
+  static const String stake_public = 'stake_public';
+  static const String unstake_token = 'unstake_token';
+  static const String withdraw = 'withdraw';
+  static const String bond_public = 'bond_public';
+  static const String unbond_public = 'unbond_public';
+  static const String claim_unbond_public = 'claim_unbond_public';
+}
+
 class FeeType {
   static const String public = 'fee_public';
   static const String private = 'fee_private';
