@@ -93,14 +93,14 @@ Future<Map<String, String>> getArgumentsAndFunction(
   try {
     final response = await dio.post(host + uri, data: {
       'program_id': programId,
-      'function_name': function,
+      'function_name_raw': function,
       'args': arguments,
     });
 
     if (response.statusCode == 200) {
       return {
         'args': response.data["data"]["args"],
-        'function': response.data["data"]["function"]
+        'function': response.data["data"]["function_name"]
       };
     }
     return {};
