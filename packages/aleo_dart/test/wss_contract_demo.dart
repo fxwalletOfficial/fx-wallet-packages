@@ -20,8 +20,13 @@ Future<void> main() async {
 
   // 交易程序id, 流动性质押目前只支持 betastaking.aleo
   final program_id = 'betastaking.aleo';
-  // 调用合约方法，质押方法
-  final function = ContractMethod.stake_public;
+  // 调用合约方法
+  // 质押方法
+  final function = ContractMethod.stake;
+  // 赎回方法
+  // final function = ContractMethod.withdraw;
+  // claim方法
+  // final function = ContractMethod.claim;
 
   // 交易优先费
   final fee_credits = 0;
@@ -33,17 +38,20 @@ Future<void> main() async {
   // // 交易参数 最终需转换为字符串 arguments 处理可以放在服务端。
   // final arguments = [recipient, amount];
   // 调用服务端接口，获取交易参数。
-  final arguments = await getArguments(program_id, function, {
+  final response = await getArgumentsAndFunction(program_id, function, {
     'address': address,
     'amount': amount,
   });
+
+  final arguments = response['args'];
+  final function_name = response['function'];
 
   // 以下是固定流程
   final authorizationJson = await rustLib.contractExecution(
     private_key,
     program_id,
-    function,
-    arguments,
+    function_name!,
+    arguments!,
     nodeUrl,
   );
 
@@ -76,7 +84,7 @@ Future<void> main() async {
 }
 
 /// 调用服务端接口，获取交易参数。
-Future<String> getArguments(
+Future<Map<String, String>> getArgumentsAndFunction(
     String programId, String function, Map<String, String> arguments) async {
   final dio = Dio(BaseOptions());
   final uri = '/arguments';
@@ -89,11 +97,20 @@ Future<String> getArguments(
     });
 
     if (response.statusCode == 200) {
-      return response.data['args'];
+      return {
+        'args': response.data["data"]["args"],
+        'function': response.data["data"]["function"]
+      };
     }
-    return '';
+    return {
+      'args': '',
+      'function': '',
+    };
   } catch (e) {
     print(e);
-    return '';
+    return {
+      'args': '',
+      'function': '',
+    };
   }
 }
