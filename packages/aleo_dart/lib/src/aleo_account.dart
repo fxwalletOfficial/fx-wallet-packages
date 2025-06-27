@@ -87,4 +87,11 @@ class AleoAccount {
     return accountRustFFI.isValidSignature(
         address, signature, message, messageRaw.length);
   }
+
+  String getTokenOwnerHash(String addressRaw, String tokenIdRaw) {
+    final address = dartStrToC(addressRaw);
+    final tokenId = dartStrToC(tokenIdRaw);
+    final tokenOwnerHash = accountRustFFI.getTokenOwnerHash(address, tokenId);
+    return cStrToDart(tokenOwnerHash);
+  }
 }

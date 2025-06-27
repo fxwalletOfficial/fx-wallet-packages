@@ -136,6 +136,7 @@ use std::slice;
 use snarkvm::circuit::prelude::PrimeField;
 use snarkvm_console::prelude::Environment;
 use snarkvm_console::prelude::FromBytes;
+use snarkvm_console::prelude::ToBits;
 
 #[no_mangle]
 pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
@@ -1163,4 +1164,84 @@ pub extern "C" fn contract_fee_execution(
     }
     let c_string = CString::new(authorization).unwrap();
     c_string.into_raw()
+}
+
+/// FFI函数：根据地址字符串和token_id字符串创建TokenOwner并计算哈希
+#[no_mangle]
+pub extern "C" fn get_token_owner_hash(
+    address_raw: *const c_char,
+    token_id_raw: *const c_char,
+) -> *const c_char {
+    let result = std::panic::catch_unwind(|| {
+        // 解析地址
+        let address_cstr = unsafe { CStr::from_ptr(address_raw) };
+        let address_str = address_cstr.to_str().unwrap();
+        let address = Address::<CurrentNetwork>::from_str(address_str).unwrap();
+
+        // 解析token_id
+        let token_id_cstr = unsafe { CStr::from_ptr(token_id_raw) };
+        let token_id_str = token_id_cstr.to_str().unwrap();
+        let token_id = Field::<CurrentNetwork>::from_str(token_id_str).unwrap();
+
+        let token_owner_plaintext = Plaintext::<CurrentNetwork>::Struct(
+            indexmap::IndexMap::from_iter(vec![
+                (
+                    Identifier::from_str("account").unwrap(),
+                    Plaintext::<CurrentNetwork>::from(Literal::Address(address)),
+                ),
+                (
+                    Identifier::from_str("token_id").unwrap(),
+                    Plaintext::<CurrentNetwork>::from(Literal::Field(token_id)),
+                ),
+            ]),
+            OnceCell::new(),
+        );
+
+        // 使用BHP256哈希函数 - 这是正确的Leo兼容实现
+        let hash_result = CurrentNetwork::hash_bhp256(&token_owner_plaintext.to_bits_le()).unwrap();
+
+        Ok::<String, &str>(hash_result.to_string())
+    });
+
+    match result {
+        Ok(Ok(hash_string)) => {
+            let c_string =
+                CString::new(hash_string).unwrap_or_else(|_| CString::new("error").unwrap());
+            c_string.into_raw()
+        }
+        _ => {
+            let c_string = CString::new("error").unwrap();
+            c_string.into_raw()
+        }
+    }
+}
+
+/// 辅助函数：使用网络哈希函数哈希任意数据到Field
+#[no_mangle]
+pub extern "C" fn psd2_hash_to_field(data_raw: *const c_char) -> *const c_char {
+    let result = std::panic::catch_unwind(|| {
+        let data_cstr = unsafe { CStr::from_ptr(data_raw) };
+        let data_str = data_cstr.to_str().map_err(|_| "Invalid UTF-8")?;
+
+        // 将输入字符串转换为Field
+        let input_field = Field::<CurrentNetwork>::new_domain_separator(data_str);
+
+        // 使用PSD2哈希
+        let hash_result =
+            CurrentNetwork::hash_psd2(&[input_field]).map_err(|_| "Failed to hash data")?;
+
+        Ok::<String, &str>(hash_result.to_string())
+    });
+
+    match result {
+        Ok(Ok(hash_string)) => {
+            let c_string =
+                CString::new(hash_string).unwrap_or_else(|_| CString::new("error").unwrap());
+            c_string.into_raw()
+        }
+        _ => {
+            let c_string = CString::new("error").unwrap();
+            c_string.into_raw()
+        }
+    }
 }

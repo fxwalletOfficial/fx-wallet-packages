@@ -456,6 +456,177 @@
           "proof": "proof1qyqsqqqqqqqqqqqpqqqqqqqqqqqgpkerptenyqwu0z9kga6kvcmrftc6a9kh5ks02fkwmae63c44p7ewghhurpncpxgsk7z7exm9p2upq95y7qt4a90k96gp8cgh4uaey2p2p0gewemdte8vfat65l4uv9krwj5hv7zux7n2fekwme56p77flqdju68qs4qyn9hksyqnws52desld46e6w75tjejlp4sdwcj5h2hs74avfpl2e2ulezw6rttmry8jxq45az3d49tflpjfkn0wyj9dtpfe73whn34k8ycd0002n5cspyhmgzkmj3f2nvv9scxv0c6z77tzuvpxj589tgma2w27hy04c72h2ckcyelsaghp5sdpnzfjgww0xlxajvfuhen25pwnp6884zc06jx74fqzx5jjy4qy5zd77ghnepxjaynlwcvqnujm56d40txt53ay6fmq8th7qdelw4j58p4kcvt6we9fey6s9vl45eanh4tq3ajtrnef9equ4k952ll8zu06yy0m7wgatg37gtgnzzjccw5n4e4h6y3ruxuys0ueq9us3n9yg9l9n246e4ku8tzctvm90nvta6a3xdtc65f2wxemawzld4z508g5yv9g07x46zvpj7kn5qss7gfe3eu2vk8uxexul2gywxsw0pnuhn8fyccwjtj6k3ka35g9mh6dm5h8yzhxpueguras8ckaa5qwvutkntw7fjwumgglmq3wkx2j4fnxkqg8ty4cngh0u6pwwcd0vxfykae092exrrnu6tcpyyfa33kxsecmzusgjz3r3dz50kw27clurc2j5zyzdnypw92tdqdl6d45haldqpvvpjdq8yh2pzxl93wuz3rpxmj2ssteez4rnp5v87nf82dm23yqhqxdn6vzvrfmmmupuwpzz4p92wyh9fuplsah3umx0rmxnr383nmyw8ppnvqfjcrymd65vsjpds07rcrtzzw6u6su4rwtu6vxzsafrytc9rk9jfds9crjyq8xmcqnu98jks9ws6ymzj2nl8wpd26as7m6fnhq5ls2qnt4afdw27yfwhnxzew8kzk79htud2e02wywwt60z55fs0pwm8yvwrsmcuu0q28qcazq7cfgc6p52z9lwfvecqmjfxxlqttsqfd9gvx585jc94kpt3pan7qnsvvkxklucuwawdtx3aaqx709xaxl6mh0hh03mymha5akc9t49q9qvqqqqqqqqqqqqfclat6xcdrey8stq646kd5le2aa0ssv57v76g0lxvmw38xz8fy52z033g442tvqm6l3e2lk6vrsyqgrcpqdax57j62h08vwlavmhdj7a4gp5q9mdzqz3rv5gcfy80xexuy8k52tt7j8wgf52ly62vqg5vqqx20w3zt6yjdf83jhzpa28qx9h74fa5wknfmscnrgh9ymhmgepys0stzv39txxcp54f6qjascrfgpe88emxjcp7mrfdxmxh9cqlqa0m703udq6574umpywyhnky9rjntsyqqz9lt9c"
         }
       }
+    },
+    {
+      "status": "accepted",
+      "type": "execute",
+      "index": 0,
+      "transaction": {
+        "type": "execute",
+        "id": "at1u0kescv5fjwjhygfqjlhg2sfqxfeg5p9ey2gqt59tcac2776zuxqh4uf9n",
+        "execution": {
+          "transitions": [
+            {
+              "id": "au1gmpfxr3tsw69k8tpmjr5xysvsanfrwrel0ncfysrznutxhc065qqv6elev",
+              "program": "credits.aleo",
+              "function": "transfer_public_as_signer",
+              "inputs": [
+                {
+                  "type": "public",
+                  "id": "4658080283584431106481632509703754311958277473082422024855894108557346067226field",
+                  "value": "aleo1pclqcgqnxc3dqj07sl9sdv6zkr4vy86saqsx0tfty3sfe5w22vpq493vlh"
+                },
+                {
+                  "type": "public",
+                  "id": "4571073055346255886353942270954416553716005774370850916088732622980008315789field",
+                  "value": "197335396u64"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "future",
+                  "id": "7055084086036457120094743495464859911885868376179693243105427998913318704987field",
+                  "value": "{\n  program_id: credits.aleo,\n  function_name: transfer_public_as_signer,\n  arguments: [\n    aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss,\n    aleo1pclqcgqnxc3dqj07sl9sdv6zkr4vy86saqsx0tfty3sfe5w22vpq493vlh,\n    197335396u64\n  ]\n}"
+                }
+              ],
+              "tpk": "4494655648688050851081732403976970431014798274771434021032213525881616067280group",
+              "tcm": "1791564346921123500827169133574088980324802929221612415808781033143865558771field",
+              "scm": "1465153972097319892133814026854309946353314073284654254309109008101110743596field"
+            },
+            {
+              "id": "au1cyf9hu8d6798lmg2ep5le2cd0tlh7nm74erdvrql52ft4qmm6uqqqkw68w",
+              "program": "betastaking.aleo",
+              "function": "stake_public",
+              "inputs": [
+                {
+                  "type": "public",
+                  "id": "3502156613903760959549195112159617280353940287694254340466865993038219575510field",
+                  "value": "197335396u64"
+                },
+                {
+                  "type": "public",
+                  "id": "284555751964355334471973778450423573261033280873074133048603194859401977742field",
+                  "value": "aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "future",
+                  "id": "1796329619564046897959656963785024564314961750746969240117520723807208029573field",
+                  "value": "{\n  program_id: betastaking.aleo,\n  function_name: stake_public,\n  arguments: [\n    197335396u64,\n    aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss,\n    {\n      program_id: credits.aleo,\n      function_name: transfer_public_as_signer,\n      arguments: [\n        aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss,\n        aleo1pclqcgqnxc3dqj07sl9sdv6zkr4vy86saqsx0tfty3sfe5w22vpq493vlh,\n        197335396u64\n      ]\n    }\n  \n  ]\n}"
+                }
+              ],
+              "tpk": "7816808082771830524873744740096371408569115295816699153616185268836170897228group",
+              "tcm": "2974442942322472336127132427520078197246652702335575459716338742816170697223field",
+              "scm": "1465153972097319892133814026854309946353314073284654254309109008101110743596field"
+            },
+            {
+              "id": "au132gmyrxcal4a8dq8yv9q6nyfy4qmdwq07efscf9p3cpq8q36kczshdvh2a",
+              "program": "betastaking_ext.aleo",
+              "function": "stake",
+              "inputs": [
+                {
+                  "type": "public",
+                  "id": "5808212836729293720448879798399459655313650988270395201290556876994550446497field",
+                  "value": "197335396u64"
+                },
+                {
+                  "type": "public",
+                  "id": "2041019588741396817583552813815858113310868785000720801223495665083737489493field",
+                  "value": "aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss"
+                },
+                {
+                  "type": "public",
+                  "id": "3687278888481454226650512651976871770600291752939158627617965393344831695718field",
+                  "value": "9733855559u64"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "future",
+                  "id": "5576872858123749479263025645986152673593344836148059554803038999345230521777field",
+                  "value": "{\n  program_id: betastaking_ext.aleo,\n  function_name: stake,\n  arguments: [\n    aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss,\n    9733855559u64,\n    {\n      program_id: betastaking.aleo,\n      function_name: stake_public,\n      arguments: [\n        197335396u64,\n        aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss,\n        {\n          program_id: credits.aleo,\n          function_name: transfer_public_as_signer,\n          arguments: [\n            aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss,\n            aleo1pclqcgqnxc3dqj07sl9sdv6zkr4vy86saqsx0tfty3sfe5w22vpq493vlh,\n            197335396u64\n          ]\n        }\n      \n      ]\n    }\n  \n  ]\n}"
+                }
+              ],
+              "tpk": "8315805635961698883453797033052746201051000090609086406912860804547815090227group",
+              "tcm": "3265757002075636743727358155256429981413325080740458788625844989979747153024field",
+              "scm": "1465153972097319892133814026854309946353314073284654254309109008101110743596field"
+            }
+          ],
+          "global_state_root": "sr1twu8eftxga534kpvzkdzku0pnxhyyzydxa9xl83jdnr5cpwe8yqqwzesac",
+          "proof": "proof1qypsqqqqqqqqqqqpqqqqqqqqqqqqzqqqqqqqqqqqqyqqqqqqqqqqql3qy7t2dphvvgjadm263jw5ufvwa8f8egl8lxkt3zp5m0j6pjjghpleeygus93sgpumhz5xzmaesr8jtvyjtlhjadvfsdv2v0wwgn8q6svalpqm8uv3vf7wlh4fwgxy2hwyyeee3xzj99f7eq8g3h35hqqcf33fgnkef0fcjl9daplufrkznuwfhl305gsjqxaumc0mq20uj2fcemkvgugqenvzg2yr23wcy6qqrd762arxh23880qpf5zvs8dx5wyfnygwenrjdnhlmcx7lahfjwd0xfl0hvn9yvzpg6tmzf9qjef8sp3f0q4wyzrf446lxfcq2megx9llk5feh6k9999ye4xyf5j69m6t695ytax8xd7rzvlpetspue3ueqrm253zqpty8nndpay93fd2rmpu9f9ftyqv4sl0d5xqslhlykly6xswq9cw35ugnwg3je9w2sjzsvqs37he8hj0yrkj58f0pu9yteavy893f7hxcalyvp55x3anxm0cw672wthlvxj4qsrgesu20kpyul5pjfy2q3jh59vjmjekxf85wxe85ju4cj6vd7xvtsd6z9y8r6wqpgsw239rm5dw0gatwpn5m9efdxjsp94a2m7n758qqgv94y4xdsc3et3unw6g3dysenh2e9mt570kyasq70ygt6xdyzcv3sdy87xqvvrmsxltc3radrr9rxme9q8qz7p3ggnflsalxkfl86w860dwhdua7x27zj62j3lsveuup065m3hwhcmnwqyh75vunfff5c8thgyp9gju977kjpuc5ajrl4mvep02p0zth7ar2xkvrgzgd4hsdyqtn9yuvcer5gqvrlskhq9gy8rdph8lclmtuukd3qkadrtmwa9kjdaw8cajnhgn0elvv5aaq84g49cg427x2ya733qq0u2sluajzgcjtv374gsxzl0cvgnjqysjwkg9nd32hhzrcq47r9l4ea8n7ul09ppqhs2tykjgyy7gqypk0zx42jrvasq3zlkf4amg4kvsdhy9pcafgfkav5wyphah257wause2dutq0e8mv960nlqvdq4qz6psvlxh3henl9dq097h6g96sfeenf02anwresads2ck5us5a2rvuj96d8fuw5002rj5nlg932flqgl53w6ts8nsgrwv0jdt0slmmezmstx60q76a0w7paxm0j3npxqm2mjtanpv3kwrsgqunsewd04lcq92j4hnkha3hhuu4y78l4nud6f4ns8k0gdv9yst7hss38kqm7tphxse85ldxvd38kpt5vl5hjw82gpk4v49age0qxzn8ewj88xr3dnv7ua0k8z54uzvnzzv9uecgcdvgy8jsnpaed2fmwrhfptzu4xwpe3qk780kppuhqca62rmahnt2jujrv5pgd5r9nczsqzk6897xqv8axjswwsyz9xt75jspxlnxmpt9uzprz3u6zvs3gcjh2kg6twesu2qs9hzdw4avflfku4gwftswtlvwysx3k5jjz5hgp0xkyru02e03ryhly7sdntrqg8xna2c3jhnkaaw4c9zrjvxyn7pfl2ev38tzmx98whlm8cnl0pdll50ea3n0perp4vrg88fds8ss6wya3cajlnzd6mnkwadryu47ppn69vq479f3tqkxf8vp3xgsfltfnarwm6dww4m96ggvltcruz4p2fwlvy5vcj8uw3ucr3pl0err6fkz7jwxkwusmuemk9k7rmh3sj40g37taxxu2qm5r6nw8sq7l03grgsazndvh0lldz4zqna6zqnkd2k04l8kaj3ka63j7h0msylrk6a57yjv8xdazmdndr8nh9f3vjskayas3xttpf8cx0zhhw35rpeyxd4jwn9q4zp5rhtankymk3jelhc7clzj2unvgdf0dw355fkzkyvvmgcqp395g827raq8zl9y7vxws3aazzpw62nkv6sdczmesuqgxu86wn0eqzgs6rarp8p88d34sntnk4ecwvrrt2am8vy6dg2xlspwv0mg73r27cndf0m8eyauwreefevjw2ar92rmv4uu2ry8kjzrgvn2gxnysdkqcapvj3uy343wr7fqud8dm2vp6cuj84epm29345sc8ez4re75echk775hfmc50at333e36gt4urvuz847huqy8gtkhxqq2s5gyukpxumk8va0jrvthh0gmrvd3ujur39jcq8tncat02jr52p0f8rpavg0x5xhmr57fs2sexepy7lskzz9j8xd20d4ynru8ec0hsz04g462u2aresayp6kqs5fkgml0pt5drxvdl8j5p8rh5uemqx4qd0f33a6cpxvuwa48q8cl6jvdf2vvl0gnpyh0qmj38gkdu3wtm8c8fek32uwcmrfypzkfhnuktha003vuvvnnz7fq66u6hxplwlqjw6py0hhr9pf8vjqestsnwlpnrlsc3d5ythc5q8ppqrnrxfplvujawpupjjgwf9rv5cg5lcfjh537h9qgtzx3qa66qcctnvvzah3f00suqlhe6cw5mvd3a8009xfqffe9qw6uxupa30cx808upav2r8s3zmnsrxa6kkrrjya6n682qfrx9n7mjfpxen695zvcxqk2kld773k9j3cqxjue29zrwu79fp2mfxkyx3pvcfpmszqvj0zcfgw36hz80x3en6q4zfzwrgkuaxcdkc6nwhwrkml4lpxcdt03a8wyw38p3fpdlrul6pcpsqqqqqqqqqqyd9gya0hfy0ndgeurzmwxfzjfkf05z49hv55pce5ykdly775dsujmr22u9k2vh4tulhhd6lr0h2jqqpl3uvtlva4a6xyc7q2ls642t9g78t7lpqjp0sy7d4grz4hvlnm7fncvp58n67rejj60p9n3lcz6nqyqmnu04y47t8h0lv0y6h59hja7lyngyuxk4qpw6pa2487a0rj6kvyth62f9rjkj7y45ejxv9y4ae53kgq84tz3k4qy3km2nuxcdn3hn3h356y4v7cmwrz6ztcu0p73z25qsq5zcctp"
+        },
+        "fee": {
+          "transition": {
+            "id": "au1w29h3gjadtzeuhhy3qjamvqwjwxttpc7qwzph0e6ce4vplv3cgpqc4cs23",
+            "program": "credits.aleo",
+            "function": "fee_public",
+            "inputs": [
+              {
+                "type": "public",
+                "id": "6937264205652617295405892187027158393499186796420406955039743197769434475956field",
+                "value": "127102u64"
+              },
+              {
+                "type": "public",
+                "id": "1987627190734542937118928837067656054604500923643333171174326295832695962138field",
+                "value": "500u64"
+              },
+              {
+                "type": "public",
+                "id": "3728772390765147839648685462992499359788861431638719186385485063545752528380field",
+                "value": "148518763495750406597316467099934307046857548952608544771152205135184787983field"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "future",
+                "id": "3980917723629792082535952281092199370874080943076706866173946579821901712945field",
+                "value": "{\n  program_id: credits.aleo,\n  function_name: fee_public,\n  arguments: [\n    aleo16dej8n09nxp8eclpmv3nyw9a45hstkwufjwhr8j3mywhu7sk5c9qd9tpss,\n    127602u64\n  ]\n}"
+              }
+            ],
+            "tpk": "6118728932087418368636664300047226014993087911089043390132856404557967215448group",
+            "tcm": "2782870047868638538780868833632526436225800129774802335620392183485921816051field",
+            "scm": "3732421483678123238638692167627236956446990312129113174675497009389229731667field"
+          },
+          "global_state_root": "sr1e4nsj2e779vcpajhs6wnzklng29y5puhj3wnuaxwmcg5ve8zmuqq7rvd34",
+          "proof": "proof1qyqsqqqqqqqqqqqpqqqqqqqqqqq0w7mcnvaqy64r8e6egyer4mgu456mvnpwvdp0fs27de4zh5jzh6l4le50uu2pgm3cmrrr670lcnupq9hzujxmy9n8l07gdssmfd3ndh58rtk9360lx40m7uspm4uspus48nxwyja878d4laatdpm5hr9xaqrlzan4fq2ewu88cplpzr2fazx3lxghu2d9ycc6rzcj3pu2ftyxzlw4uhy4qdy3rwasvmudm8ucmgqdrzk0gc2tdcuzlcy4h3egu65hc77emuecrnypg39tdks6yztuk5sedesx3g7k5ur0gks29aynjqyq487yzk08uykww5dl44gmxpdgnau32mr84649qhajcrxquywlzj98e4pw5weths0l7s4wmqzf5apspq3m4jhu770jupsh3prpadhd6td5x6ewnepdgdq9fy8fqpp26mtcfsdhjjf8n36kyy35yu6ny6uhqq8wh6j7kezdp5v6f75tu8jk74ahwwhlxj4g7arpapea5l7qmcy9wwqh3taqy299vx80430mqshffqrk7qp673f46ra3z8ns36kawzm3cc5anqd25snly46k8aga42a7jh3z3sl8ykfg09wnelcmzdj4l2q9afgrhz7nd2qm489ezggkky3wr2m7tsfgcvkyplfhxces7704sjkjh2ce0dd5fhxgyf75t9x0ulvqyvyqya5mfsupeyafjqq2m4ejdl0yczfp39zcst4rz7ct6ya5gyr73adrch63xrpqxn3e90u9s422j7rxr5xhlewcdd3ggtqcmmr5vqzv47cd5ugqwxp8x0jnqadnrwq4jdh40vt58daxnrf8yvdadeelzga57z2f7ujj8wcma9ezgsulges4l4c6xeshv6lzra4hqhkltu03psxsw2tk2wpqrkjutcj8n7z0cghwtun942009fdhqy6f5a6th3c044gkgt7uyhy82h7mxhwexgjn2zuwpur6mj6a6gndz3ekzjxma5qmah7msvzxuechjk5naxg6sugdugvsurgk0ldlq88793en53g7qrakd0k659hxhwje795efjuq7npxvwghatq3d4w2elaqufc8xupqqzgn0n6yzhlvuf6ksfk4mrgtwcfk7fdwsjs78pgcsadjultwmp6qqh686acer7jcjs4n5vnc058l3tx5h6q0ea59wec8el5vrmt44kczqvqqqqqqqqqqqz7waxnrkua8e26n25w4r9qp45m4y8s3f5ts6dfz62cavtg8rcdevphjwjr56qpsteznkr5rtlxwqqqwkkl4gw8rls9rq43d28ulr3te5c7cupwr7d377y36fam6n5ls4ht85lu9wc2zkcrkmy4uqsuvv8cpq8dzxspawf32chck0t5xzvucs0rhlx3gesmw96tp4vzgfazplkls5azj8ylmv29ghh8vt4xqvdznyxfhl0nuul27zgurxutg69jwy039c539jhhvym76kk8eh7ddp4swqyqqc4a8uv"
+        }
+      },
+      "finalize": [
+        {
+          "type": "update_key_value",
+          "mapping_id": "2855157744830843716005407030207142101853521493742120919939436395872133863104field",
+          "key_id": "6434614903357871189198328901580873161748902013036604018385029873582835081241field",
+          "value_id": "5394816397836816774372951464011983831524788802886647537224870946895502860014field"
+        },
+        {
+          "type": "update_key_value",
+          "mapping_id": "2855157744830843716005407030207142101853521493742120919939436395872133863104field",
+          "key_id": "6651537462373795961243981638953874349829749096238483475524053809494099133720field",
+          "value_id": "4249371049820897514487009987449804429826866090482473610107749777300996211641field"
+        },
+        {
+          "type": "update_key_value",
+          "mapping_id": "7522496120236587003978649741556679735258637321823231308843237287871965382341field",
+          "key_id": "7955237031685784708811452265234597060130022569934787035866969468736743709150field",
+          "value_id": "6890863257079449385495114874775777688320437101855979847631454200694122435100field"
+        },
+        {
+          "type": "update_key_value",
+          "mapping_id": "3141880800711936469099539710714908893131516248502601395120117193471672432252field",
+          "key_id": "4162116776244997514440657063490967326882047346137133662721673390610543926950field",
+          "value_id": "6812493688406583022211746543236365898624243525527330443279421115921243061943field"
+        },
+        {
+          "type": "update_key_value",
+          "mapping_id": "2855157744830843716005407030207142101853521493742120919939436395872133863104field",
+          "key_id": "6434614903357871189198328901580873161748902013036604018385029873582835081241field",
+          "value_id": "6828114733222699733252119295392330016442092172978363683098227450760684658421field"
+        }
+      ],
+      "height": 6030941,
+      "timestamp": 1743401574
     }
   ],
   "records": []

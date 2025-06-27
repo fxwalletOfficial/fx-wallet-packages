@@ -87,6 +87,14 @@ void main() {
     assert(rust.isValidSignature(address, signature, message));
   });
 
+  test('getTokenOwnerHash', () {
+    final tokenOwnerHash = rust.getTokenOwnerHash(
+        "aleo1j5s754demr84a9mnkwtwxts4z8e6nvsx0f5m9yaw7803cxqgauyqg5vz5u",
+        '1751493913335802797273486270793650302076377624243810059080883537084141842600field');
+    expect(tokenOwnerHash,
+        '768369662790838340899814872592863133882218911906065436640936478881722458364field');
+  });
+
   group('test error', () {
     test('test invalid private key', () {
       final invalidPrivateKey =

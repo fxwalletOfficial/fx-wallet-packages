@@ -19,6 +19,11 @@ typedef TypeVerifyInRust = ffi.Int32 Function(
 typedef TypeVerifyInDart = int Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<ffi.Uint8>, int);
 
+typedef TypeGetTokenOwnerHashInRust = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+typedef TypeGetTokenOwnerHashInDart = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
 class AccountRustFFI {
   final ffi.DynamicLibrary dyLib;
   final network;
@@ -79,5 +84,13 @@ class AccountRustFFI {
         this.dyLib.lookupFunction<TypeVerifyInRust, TypeVerifyInDart>('verify');
     final result = verify(address, signature, message, length);
     return result != 0;
+  }
+
+  ffi.Pointer<Utf8> getTokenOwnerHash(
+      ffi.Pointer<Utf8> address, ffi.Pointer<Utf8> tokenId) {
+    final getTokenOwnerHash = this.dyLib.lookupFunction<
+        TypeGetTokenOwnerHashInRust,
+        TypeGetTokenOwnerHashInDart>('get_token_owner_hash');
+    return getTokenOwnerHash(address, tokenId);
   }
 }
