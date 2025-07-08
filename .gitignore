@@ -1,0 +1,13 @@
+# Dart & Flutter
+.dart_tool/
+.packages
+.pub-cache/
+build/
+.idea/
+.vscode/
+*.iml
+
+# Flutter specific
+.flutter-plugins
+.flutter-plugins-dependencies
+.melos_tool/
