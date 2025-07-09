@@ -1,0 +1,28 @@
+{
+  "transaction_kaspa": {
+    "version": 0,
+    "inputs": [
+      {
+        "previousOutpoint": {
+          "transactionId": "6e12b8400b723e0a3683f284e36cf73ff061beb01bee4c07f8f30086e5e0a3a9",
+          "index": 0
+        },
+        "signatureScript": "482c20282c616fc1e088a3346d4b7d719657c134b9e954577853286c005826b8",
+        "sequence": "0",
+        "sigOpCount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "scriptPublicKey": {
+          "version": 0,
+          "scriptPublicKey": "200395c7c9703e0ff81596043f0a5e00684f860a1ab0f24c5a94931d1e0d94c4beac"
+        },
+        "amount": 990000
+      }
+    ],
+    "lockTime": "0",
+    "subnetworkId": "0000000000000000000000000000000000000000"
+  },
+  "allowOrphan": false
+}

@@ -1,0 +1,176 @@
+import 'dart:typed_data';
+import 'dart:math';
+
+import 'package:convert/convert.dart';
+import 'package:crypto_wallet_util/utils.dart';
+
+import './utils.dart';
+
+// Copy and pasted from the rlp nodejs library, translated to dart on a best-effort basis.
+Uint8List encode(dynamic input) {
+  if (input is List && input is! Uint8List) {
+    final output = <Uint8List>[];
+    for (var data in input) {
+      output.add(encode(data));
+    }
+
+    final data = _concat(output);
+    return _concat([encodeLength(data.length, 192), data]);
+  }
+
+  final data = _toBuffer(input);
+  if (data.length == 1 && data[0] < 128) return data;
+
+  return _concat([encodeLength(data.length, 128), data]);
+}
+
+Uint8List encodeLength(int length, int offset) {
+  if (length < 56) return Uint8List.fromList([length + offset]);
+
+  final hexLen = _intToHex(length);
+  final lLength = hexLen.length ~/ 2;
+
+  return _concat([
+    Uint8List.fromList([offset + 55 + lLength]),
+    Uint8List.fromList(hex.decode(hexLen))
+  ]);
+}
+
+int safeParseInt(String v, [int base = 10]) {
+  if (v.startsWith('00')) throw FormatException('invalid RLP: extra zeros');
+
+  return int.parse(v, radix: base);
+}
+
+class Decoded {
+  dynamic data;
+  Uint8List remainder;
+  Decoded(this.data, this.remainder);
+}
+
+dynamic decode(Uint8List input, [bool stream = false]) {
+  if (input.length == 0) return <dynamic>[];
+
+  Uint8List inputBuffer = _toBuffer(input);
+  Decoded decoded = _decode(inputBuffer);
+
+  if (stream) return decoded;
+  if (decoded.remainder.length != 0) throw FormatException('invalid remainder');
+
+  return decoded.data;
+}
+
+Decoded _decode(Uint8List input) {
+  int firstByte = input[0];
+
+  // a single byte whose value is in the [0x00, 0x7f] range, that byte is its own RLP encoding.
+  if (firstByte <= 0x7f) return Decoded(input.sublist(0, 1), input.sublist(1));
+
+  if (firstByte <= 0xb7) {
+    // string is 0-55 bytes long. A single byte with value 0x80 plus the length of the string followed by the string The range of the first byte is [0x80, 0xb7]
+    int length = firstByte - 0x7f;
+
+    // set 0x80 null to 0
+    Uint8List data =
+        firstByte == 0x80 ? Uint8List(0) : input.sublist(1, length);
+
+    if (length == 2 && data[0] < 0x80)
+      throw FormatException('invalid rlp encoding: byte must be less 0x80');
+
+    return Decoded(data, input.sublist(length));
+  }
+
+  if (firstByte <= 0xbf) {
+    int llength = firstByte - 0xb6;
+    int length = safeParseInt(hex.encode(input.sublist(1, llength)), 16);
+    Uint8List data = input.sublist(llength, length + llength);
+    if (data.length < length) throw FormatException('invalid RLP');
+
+    return Decoded(data, input.sublist(length + llength));
+  }
+
+  if (firstByte <= 0xf7) {
+    // a list between  0-55 bytes long
+    List<dynamic> decoded = <dynamic>[];
+    int length = firstByte - 0xbf;
+    Uint8List innerRemainder = input.sublist(1, length);
+    while (innerRemainder.length > 0) {
+      Decoded d = _decode(innerRemainder);
+      decoded.add(d.data);
+      innerRemainder = d.remainder;
+    }
+
+    return Decoded(decoded, input.sublist(length));
+  }
+  // a list  over 55 bytes long
+  List<dynamic> decoded = <dynamic>[];
+  int llength = firstByte - 0xf6;
+  int length = safeParseInt(hex.encode(input.sublist(1, llength)), 16);
+  int totalLength = llength + length;
+  if (totalLength > input.length) {
+    throw FormatException('invalid rlp: total length is larger than the data');
+  }
+
+  Uint8List innerRemainder = input.sublist(llength, totalLength);
+  if (innerRemainder.length == 0)
+    throw FormatException('invalid rlp, List has a invalid length');
+
+  while (innerRemainder.length > 0) {
+    Decoded d = _decode(innerRemainder);
+    decoded.add(d.data);
+    innerRemainder = d.remainder;
+  }
+  return Decoded(decoded, input.sublist(totalLength));
+}
+
+Uint8List _concat(List<Uint8List> lists) {
+  final list = <int>[];
+
+  lists.forEach(list.addAll);
+
+  return Uint8List.fromList(list);
+}
+
+String _intToHex(int a) {
+  return hex.encode(_toBuffer(a));
+}
+
+Uint8List _toBuffer(dynamic data) {
+  if (data is Uint8List) return data;
+
+  if (data is String) {
+    return dynamicToUint8List(data);
+  }
+
+  if (data is int) {
+    if (data == 0) return Uint8List(0);
+
+    return Uint8List.fromList(intToBuffer(data));
+  }
+
+  if (data is BigInt) {
+    if (data == BigInt.zero) return Uint8List(0);
+    final BigInt byteMask = BigInt.from(0xff);
+    int length = 0;
+    // return Uint8List.fromList(encodeBigInt(data));
+
+    int byteLength = (data.bitLength + 7) >> 3;
+    int reqLength = length > 0 ? length : max(1, byteLength);
+    assert(byteLength <= reqLength, 'byte array longer than desired length');
+    assert(reqLength > 0, 'Requested array length <= 0');
+
+    var res = Uint8List(reqLength);
+    res.fillRange(0, reqLength - byteLength, 0);
+
+    var q = data;
+    for (int i = 0; i < byteLength; i++) {
+      res[reqLength - i - 1] = (q & byteMask).toInt();
+      q = q >> 8;
+    }
+    return res;
+  }
+
+  if (data is List<int>) return Uint8List.fromList(data);
+
+  throw TypeError();
+}

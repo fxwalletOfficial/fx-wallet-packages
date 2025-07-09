@@ -1,0 +1,104 @@
+import 'package:test/test.dart';
+
+import 'package:crypto_wallet_util/crypto_utils.dart';
+import 'package:crypto_wallet_util/src/utils/utils.dart';
+
+import './config.dart';
+
+void main() async {
+  final wallet = await EthCoin.fromPrivateKey(TEST_PRIVATE_KEY);
+  final sponsoredWallet =
+      await EthCoin.fromPrivateKey(TEST_SPONSOR_PRIVATE_KEY);
+
+  final authorization = Eip7702Authorization(
+    chainId: 11155111,
+    address: TEST_DELEGATION_ADDRESS,
+    gasPayerAddress: wallet.address,
+    signerAddress: wallet
+        .address, // gas payer can be different from signer. nonce will be increased by 1 or not.
+    signerNonce: 150,
+  );
+
+  final txData = EthTxDataRaw(
+      nonce: 150,
+      gasLimit: 90000,
+      value: BigInt.from(0),
+      maxPriorityFeePerGas: 100000000,
+      maxFeePerGas: 1500000000,
+      to: wallet.address);
+
+  final txNetwork = TxNetwork(chainId: 11155111);
+  final eip7702transaction = Eip7702TxData(
+      data: txData,
+      network: txNetwork,
+      authorization: authorization.sign(wallet.privateKey.toStr()));
+
+  final signer = EthTxSigner(wallet, eip7702transaction);
+  final signedTxData = signer.sign();
+
+  final signedData = signedTxData.serialize().toStr();
+  final deserializedTxData = Eip7702TxData.deserialize(signedData);
+
+  test('test deserialize', () {
+    expect(deserializedTxData.authorization.chainId,
+        eip7702transaction.authorization.chainId);
+    expect(deserializedTxData.authorization.address.toLowerCase(),
+        eip7702transaction.authorization.address.toLowerCase());
+    expect(deserializedTxData.authorization.signerNonce,
+        eip7702transaction.authorization.signerNonce);
+
+    expect(
+        deserializedTxData.authorization.s, eip7702transaction.authorization.s);
+    expect(
+        deserializedTxData.authorization.r, eip7702transaction.authorization.r);
+    expect(
+        deserializedTxData.authorization.v, eip7702transaction.authorization.v);
+  });
+
+  test('gas sponsor demo', () {
+    final calls = [
+      {
+        'target': '0x0000000000000000000000000000000000000001', // to
+        'value': BigInt.from(10000000000000), // eth value
+        'data': '0x'.toUint8List() // data
+      },
+    ];
+    final sponsorAddress = sponsoredWallet.address;
+    // from api.
+    final message = getSponsorMessageToSign(calls, sponsorAddress);
+    // sign by sponsor.
+    final sponsorSignature = sponsoredWallet.signForSponsor(message);
+    // from api.
+    final txData = getSponsorData(calls, sponsorSignature);
+
+    // operate by gas payer.
+    final sponsorTxDataRaw = EthTxDataRaw(
+        nonce: 1,
+        gasLimit: 90000,
+        value: BigInt.from(0),
+        maxPriorityFeePerGas: 100000000,
+        maxFeePerGas: 1500000000,
+        to: sponsorAddress, // call sponsor address
+        data: txData);
+
+    final eip1559TxData = Eip1559TxData(
+      data: sponsorTxDataRaw,
+      network: TxNetwork(chainId: 11155111),
+    );
+
+    final gasPayer = EthTxSigner(wallet, eip1559TxData);
+    final signedTxData = gasPayer.sign();
+    print(signedTxData.serialize().toStr());
+  });
+}
+
+// get by api.
+String getSponsorMessageToSign(
+    List<Map<String, dynamic>> calls, String sponsorAddress) {
+  return '0xed1c35ae916c40bc6d1bd62225adc59f00cb68d5ff60d61f1fd20893c78280c3';
+}
+
+// get data.
+String getSponsorData(List<Map<String, dynamic>> calls, String signature) {
+  return '0xfcfbd33a0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000023ab32843d51fd619464d5d4216d27f2b37e9110000000000000000000000000000000000000000000000000000009184e72a0000000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000413dc190a7f3ab7e868b9cd88d365f2f6c4d3f296d7bec3fb73c451edcfc3cb7835135f76951381c133e89f56f67201d6ef211e2252f1b34bd3533cfe3516732761b00000000000000000000000000000000000000000000000000000000000000';
+}

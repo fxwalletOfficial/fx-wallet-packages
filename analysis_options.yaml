@@ -1,0 +1,70 @@
+linter:
+  rules:
+    - annotate_overrides
+    - avoid_function_literals_in_foreach_calls
+    - avoid_init_to_null
+    - avoid_print
+    - avoid_renaming_method_parameters
+    - avoid_return_types_on_setters
+    - avoid_returning_null_for_void
+    - avoid_single_cascade_in_expression_statements
+    - avoid_unnecessary_containers
+    - avoid_web_libraries_in_flutter
+    - control_flow_in_finally
+    - empty_constructor_bodies
+    - empty_statements
+    - exhaustive_cases
+    - implementation_imports
+    - library_prefixes
+    - library_private_types_in_public_api
+    - no_leading_underscores_for_library_prefixes
+    - no_leading_underscores_for_local_identifiers
+    - no_logic_in_create_state
+    - null_closures
+    # - overridden_fields
+    - package_names
+    - prefer_adjacent_string_concatenation
+    - prefer_collection_literals
+    - prefer_conditional_assignment
+    - prefer_const_constructors_in_immutables
+    - prefer_contains
+    - prefer_final_fields
+    - prefer_for_elements_to_map_fromIterable
+    - prefer_function_declarations_over_variables
+    - prefer_if_null_operators
+    - prefer_initializing_formals
+    - prefer_inlined_adds
+    - prefer_interpolation_to_compose_strings
+    - prefer_is_not_operator
+    - prefer_null_aware_operators
+    - prefer_spread_collections
+    - recursive_getters
+    - sized_box_for_whitespace
+    - slash_for_doc_comments
+    - sort_child_properties_last
+    - type_init_formals
+    - unnecessary_brace_in_string_interps
+    - unnecessary_const
+    - unnecessary_constructor_name
+    - unnecessary_getters_setters
+    - unnecessary_late
+    - unnecessary_library_name
+    - unnecessary_new
+    - unnecessary_null_aware_assignments
+    - unnecessary_null_in_if_null_operators
+    - unnecessary_nullable_for_final_variable_declarations
+    - unnecessary_string_escapes
+    - unnecessary_string_interpolations
+    - unnecessary_this
+    - unnecessary_to_list_in_spreads
+    - use_build_context_synchronously
+    - use_full_hex_values_for_flutter_colors
+    - use_function_type_syntax_for_parameters
+    - use_key_in_widget_constructors
+    - use_rethrow_when_possible
+    - use_super_parameters
+
+analyzer:
+  exclude:
+    - lib/src/forked_lib/bitcoin_flutter
+    - lib/src/forked_lib/cosmos_dart
