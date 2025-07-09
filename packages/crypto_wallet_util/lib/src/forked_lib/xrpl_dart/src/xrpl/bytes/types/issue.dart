@@ -1,7 +1,7 @@
 part of 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/bytes/serializer.dart';
 
 class Issue extends SerializedType {
-  Issue([List<int>? buffer]) : super(buffer);
+  Issue([super.buffer]);
 
   @override
   factory Issue.fromValue(Map value) {

@@ -28,11 +28,11 @@ class XChainModifyBridgeFlagInterface {
 }
 
 class XChainModifyBridge extends XRPTransaction {
-  XChainModifyBridge.fromJson(Map<String, dynamic> json)
+  XChainModifyBridge.fromJson(super.json)
       : xchainBridge = XChainBridge.fromJson(json["xchain_bridge"]),
         signatureReward = parseBigInt(json["signature_reward"]),
         minAccountCreateAmount = parseBigInt(json["min_account_create_amount"]),
-        super.json(json);
+        super.json();
 
   /// Represents a XChainModifyBridge transaction.
   /// The XChainModifyBridge transaction allows bridge managers to modify the
@@ -51,29 +51,18 @@ class XChainModifyBridge extends XRPTransaction {
       {required this.xchainBridge,
       this.signatureReward,
       this.minAccountCreateAmount,
-      required String account,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      required super.account,
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-          account: account,
-          fee: fee,
-          lastLedgerSequence: lastLedgerSequence,
-          memos: memos,
-          sequence: sequence,
-          signers: signers,
-          sourceTag: sourceTag,
-          flags: flags,
-          ticketSequance: ticketSequance,
-          signingPubKey: signingPubKey,
-          multiSigSigners: multiSigSigners,
           transactionType: XRPLTransactionType.xChainModifyBridge,
         );
 

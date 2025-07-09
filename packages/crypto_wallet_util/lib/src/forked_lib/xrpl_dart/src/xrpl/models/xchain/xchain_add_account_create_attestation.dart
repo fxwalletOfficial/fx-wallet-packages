@@ -6,7 +6,7 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/models/xrp_
 /// from a witness server that a XChainAccountCreateCommit transaction occurred
 /// on the other chain.
 class XChainAddAccountCreateAttestation extends XRPTransaction {
-  XChainAddAccountCreateAttestation.fromJson(Map<String, dynamic> json)
+  XChainAddAccountCreateAttestation.fromJson(super.json)
       : xchainBridge = XChainBridge.fromJson(json["xchain_bridge"]),
         amount = parseBigInt(json["amount"])!,
         destination = json["destination"],
@@ -19,7 +19,7 @@ class XChainAddAccountCreateAttestation extends XRPTransaction {
             json["was_locking_chain_send"] == 0 ? false : true,
         xChainAccountCreateCount = json["xchain_account_create_count"],
         signatureReward = parseBigInt(json["signature_reward"])!,
-        super.json(json);
+        super.json();
 
   /// The bridge associated with the attestation. This field is required.
   final XChainBridge xchainBridge;
@@ -65,7 +65,7 @@ class XChainAddAccountCreateAttestation extends XRPTransaction {
   final BigInt signatureReward;
 
   XChainAddAccountCreateAttestation(
-      {required String account,
+      {required super.account,
       required this.xchainBridge,
       required this.destination,
       required this.signature,
@@ -77,28 +77,17 @@ class XChainAddAccountCreateAttestation extends XRPTransaction {
       required this.amount,
       required this.signatureReward,
       required this.xChainAccountCreateCount,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType:
                 XRPLTransactionType.xChainAddAccountCreateAttestation);
 

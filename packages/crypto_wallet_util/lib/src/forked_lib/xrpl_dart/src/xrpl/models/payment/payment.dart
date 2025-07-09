@@ -71,37 +71,26 @@ class Payment extends XRPTransaction {
   Payment(
       {required this.amount,
       required this.destination,
-      required String account,
+      required super.account,
       this.destinationTag,
       this.invoiceId,
       this.paths,
       this.sendMax,
       this.deliverMin,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.payment);
 
-  Payment.fromJson(Map<String, dynamic> json)
+  Payment.fromJson(super.json)
       : amount = CurrencyAmount.fromJson(json["amount"]),
         destination = json["destination"],
         paths = (json["paths"] as List?)
@@ -111,7 +100,7 @@ class Payment extends XRPTransaction {
         sendMax = json["send_max"],
         deliverMin = json["deliver_min"],
         destinationTag = json["destination_tag"],
-        super.json(json);
+        super.json();
 
   /// Converts the object to a JSON representation.
   @override

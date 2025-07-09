@@ -19,29 +19,18 @@ class NFTokenCancelOffer extends XRPTransaction {
   /// does not exist. This field is required.
   NFTokenCancelOffer(
       {required this.nftokenOffers,
-      required String account,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      required super.account,
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.nftokenCancelOffer);
 
   @override
@@ -58,7 +47,7 @@ class NFTokenCancelOffer extends XRPTransaction {
     return {"nftoken_offers": nftokenOffers, ...super.toJson()};
   }
 
-  NFTokenCancelOffer.fromJson(Map<String, dynamic> json)
+  NFTokenCancelOffer.fromJson(super.json)
       : nftokenOffers = (json["nftoken_offers"] as List).cast(),
-        super.json(json);
+        super.json();
 }

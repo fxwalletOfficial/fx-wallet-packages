@@ -2,32 +2,21 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/models/xrp_
 
 /// Represents a DIDDelete transaction.
 class DIDDelete extends XRPTransaction {
-  DIDDelete.fromJson(Map<String, dynamic> json) : super.json(json);
+  DIDDelete.fromJson(super.json) : super.json();
 
   DIDDelete(
-      {required String account,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      {required super.account,
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.didDelete);
 
   @override

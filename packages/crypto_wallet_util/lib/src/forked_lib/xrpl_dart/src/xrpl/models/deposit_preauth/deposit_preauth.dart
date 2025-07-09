@@ -14,31 +14,20 @@ class DepositPreauth extends XRPTransaction {
   final String? unauthorize;
 
   DepositPreauth(
-      {required String account,
+      {required super.account,
       this.authorize,
       this.unauthorize,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.depositPreauth);
 
   /// Converts the object to a JSON representation.
@@ -51,10 +40,10 @@ class DepositPreauth extends XRPTransaction {
     };
   }
 
-  DepositPreauth.fromJson(Map<String, dynamic> json)
+  DepositPreauth.fromJson(super.json)
       : authorize = json["authorize"],
         unauthorize = json["unauthorize"],
-        super.json(json);
+        super.json();
   @override
   String? get validate {
     if (authorize != null && unauthorize != null) {

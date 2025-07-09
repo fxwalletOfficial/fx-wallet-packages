@@ -18,31 +18,20 @@ class NFTokenBurn extends XRPTransaction {
   final String? owner;
 
   NFTokenBurn({
-    required String account,
+    required super.account,
     required this.nfTokenId,
     this.owner,
-    List<XRPLMemo>? memos = const [],
-    String signingPubKey = "",
-    int? ticketSequance,
-    BigInt? fee,
-    int? lastLedgerSequence,
-    int? sequence,
-    List<XRPLSigners>? signers,
-    dynamic flags,
-    int? sourceTag,
-    List<String> multiSigSigners = const [],
+    super.memos,
+    super.signingPubKey,
+    super.ticketSequance,
+    super.fee,
+    super.lastLedgerSequence,
+    super.sequence,
+    super.signers,
+    super.flags = null,
+    super.sourceTag,
+    super.multiSigSigners,
   }) : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.nftokenBurn);
 
   /// Converts the object to a JSON representation.
@@ -51,8 +40,8 @@ class NFTokenBurn extends XRPTransaction {
     return {"nftoken_id": nfTokenId, "owner": owner, ...super.toJson()};
   }
 
-  NFTokenBurn.fromJson(Map<String, dynamic> json)
+  NFTokenBurn.fromJson(super.json)
       : nfTokenId = json["nftoken_id"],
         owner = json["owner"],
-        super.json(json);
+        super.json();
 }

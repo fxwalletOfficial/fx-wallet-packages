@@ -1,7 +1,7 @@
 part of 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/bytes/serializer.dart';
 
 abstract class Hash extends SerializedType {
-  Hash([List<int>? buffer]) : super(buffer) {
+  Hash([super.buffer]) {
     if (_buffer.length != getLength()) {
       throw XRPLBinaryCodecException(
           "Invalid hash length ${_buffer.length}. ${getLength()}");

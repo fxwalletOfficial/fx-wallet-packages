@@ -24,8 +24,8 @@ class RPCNoRippleCheck extends XRPLedgerRequest<Map<String, dynamic>> {
   RPCNoRippleCheck({
     required this.account,
     required this.role,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.noRippleCheck;
 

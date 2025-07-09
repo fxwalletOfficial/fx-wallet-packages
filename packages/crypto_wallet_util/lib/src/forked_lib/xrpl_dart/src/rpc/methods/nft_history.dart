@@ -13,8 +13,8 @@ class RPCNFTHistory extends XRPLedgerRequest<Map<String, dynamic>> {
     this.ledgerIndexMin,
     this.binary = false,
     this.forward = false,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.nftHistory;
 

@@ -2,11 +2,11 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/number/number_pa
 import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/models/xrp_transactions.dart';
 
 class XChainCreateClaimId extends XRPTransaction {
-  XChainCreateClaimId.fromJson(Map<String, dynamic> json)
+  XChainCreateClaimId.fromJson(super.json)
       : xchainBridge = XChainBridge.fromJson(json["xchain_bridge"]),
         signatureReward = parseBigInt(json["signature_reward"])!,
         otherChainSource = json["other_chain_source"],
-        super.json(json);
+        super.json();
 
   /// Represents a XChainCreateClaimID transaction.
   /// The XChainCreateClaimID transaction creates a new cross-chain claim ID that
@@ -23,32 +23,21 @@ class XChainCreateClaimId extends XRPTransaction {
   final String otherChainSource;
 
   XChainCreateClaimId(
-      {required String account,
+      {required super.account,
       required this.xchainBridge,
       required this.signatureReward,
       required this.otherChainSource,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.xChainCreateClaimId);
 
   @override

@@ -27,34 +27,23 @@ class CheckCreate extends XRPTransaction {
   final String? invoiceId;
 
   CheckCreate(
-      {required String account,
+      {required super.account,
       required this.destination,
       required this.sendMax,
       this.destinationTag,
       DateTime? expirationTime,
       this.invoiceId,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.checkCreate) {
     if (expirationTime != null) {
       expiration = XRPHelper.datetimeToRippleTime(expirationTime);
@@ -76,11 +65,11 @@ class CheckCreate extends XRPTransaction {
     };
   }
 
-  CheckCreate.fromJson(Map<String, dynamic> json)
+  CheckCreate.fromJson(super.json)
       : destination = json["destination"],
         destinationTag = json["destination_tag"],
         sendMax = CurrencyAmount.fromJson(json["send_max"]),
         expiration = json["expiration"],
         invoiceId = json["invoice_id"],
-        super.json(json);
+        super.json();
 }

@@ -11,31 +11,20 @@ class EscrowCancel extends XRPTransaction {
   final int offerSequence;
 
   EscrowCancel(
-      {required String account,
+      {required super.account,
       required this.owner,
       required this.offerSequence,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.escrowCancel);
 
   /// Converts the object to a JSON representation.
@@ -44,8 +33,8 @@ class EscrowCancel extends XRPTransaction {
     return {"owner": owner, "offer_sequence": offerSequence, ...super.toJson()};
   }
 
-  EscrowCancel.fromJson(Map<String, dynamic> json)
+  EscrowCancel.fromJson(super.json)
       : owner = json["owner"],
         offerSequence = json["offer_sequence"],
-        super.json(json);
+        super.json();
 }

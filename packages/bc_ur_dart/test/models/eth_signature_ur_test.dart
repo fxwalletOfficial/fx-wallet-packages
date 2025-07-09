@@ -1,6 +1,5 @@
 import 'package:bc_ur_dart/src/models/eth/eth_signature.dart';
 import 'package:bc_ur_dart/src/models/eth/eth_sign_request.dart';
-import 'package:bc_ur_dart/src/ur.dart';
 import 'package:test/test.dart';
 
 void main() {

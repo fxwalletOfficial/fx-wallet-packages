@@ -7,8 +7,8 @@ import '../core/methods_impl.dart';
 class RPCNFTSellOffers extends XRPLedgerRequest<Map<String, dynamic>> {
   RPCNFTSellOffers({
     required this.nftId,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.nftSellOffers;
 

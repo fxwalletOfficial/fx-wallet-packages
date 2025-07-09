@@ -15,36 +15,25 @@ class AccountDelete extends XRPTransaction {
   final String? destinationTag;
 
   AccountDelete(
-      {required String account,
+      {required super.account,
       required this.destination,
       this.destinationTag,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            multiSigSigners: multiSigSigners,
-            signers: signers,
-            flags: flags,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            sequence: sequence,
-            sourceTag: sourceTag,
             transactionType: XRPLTransactionType.accountDelete);
-  AccountDelete.fromJson(Map<String, dynamic> json)
+  AccountDelete.fromJson(super.json)
       : destination = json["destination"],
         destinationTag = json["destination_tag"],
-        super.json(json);
+        super.json();
 
   /// Converts the object to a JSON representation.
   @override

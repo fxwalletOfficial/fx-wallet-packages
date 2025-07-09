@@ -11,29 +11,18 @@ class SetRegularKey extends XRPTransaction {
 
   SetRegularKey(
       {this.regularKey,
-      required String account,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      required super.account,
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.setRegularKey);
 
   /// Converts the object to a JSON representation.
@@ -45,7 +34,7 @@ class SetRegularKey extends XRPTransaction {
     };
   }
 
-  SetRegularKey.fromJson(Map<String, dynamic> json)
+  SetRegularKey.fromJson(super.json)
       : regularKey = json["regular_key"],
-        super.json(json);
+        super.json();
 }

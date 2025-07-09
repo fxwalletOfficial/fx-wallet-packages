@@ -12,8 +12,7 @@ class RPCLedger extends XRPLedgerRequest<LedgerData> {
       this.binary = false,
       this.queue = false,
       this.type,
-      XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated})
-      : super(ledgerIndex: ledgerIndex);
+      super.ledgerIndex = XRPLLedgerIndex.validated});
   @override
   String get method => XRPRequestMethod.ledger;
 

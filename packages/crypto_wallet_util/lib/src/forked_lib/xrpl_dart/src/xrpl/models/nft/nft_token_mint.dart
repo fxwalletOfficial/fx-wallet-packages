@@ -90,32 +90,21 @@ class NFTokenMint extends XRPTransaction {
   final String? uri;
   NFTokenMint(
       {required this.nftokenTaxon,
-      required String account,
+      required super.account,
       this.issuer,
       this.transferFee,
       this.uri,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.nftokenMint);
 
   @override
@@ -144,10 +133,10 @@ class NFTokenMint extends XRPTransaction {
     };
   }
 
-  NFTokenMint.fromJson(Map<String, dynamic> json)
+  NFTokenMint.fromJson(super.json)
       : nftokenTaxon = json["nftoken_taxon"],
         issuer = json["issuer"],
         transferFee = json["transfer_fee"],
         uri = json["uri"],
-        super.json(json);
+        super.json();
 }

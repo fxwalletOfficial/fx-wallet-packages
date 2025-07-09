@@ -5,13 +5,13 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/models/xrp_
 /// It allows a user to claim the value on the destination chain - the
 /// equivalent of the value locked on the source chain.
 class XChainClaim extends XRPTransaction {
-  XChainClaim.fromJson(Map<String, dynamic> json)
+  XChainClaim.fromJson(super.json)
       : xchainBridge = XChainBridge.fromJson(json["xchain_bridge"]),
         xchainClaimId = json["xchain_claim_id"],
         amount = CurrencyAmount.fromJson(json["amount"]),
         destination = json["destination"],
         destinationTag = json["destination_tag"],
-        super.json(json);
+        super.json();
 
   /// The bridge to use for the transfer. This field is required.
   final XChainBridge xchainBridge;
@@ -36,34 +36,23 @@ class XChainClaim extends XRPTransaction {
   final CurrencyAmount amount;
 
   XChainClaim(
-      {required String account,
+      {required super.account,
       required this.xchainBridge,
       required this.xchainClaimId,
       required this.destination,
       this.destinationTag,
       required this.amount,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.xChainClaim);
 
   @override

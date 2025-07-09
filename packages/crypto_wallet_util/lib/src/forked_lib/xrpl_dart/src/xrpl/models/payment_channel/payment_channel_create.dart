@@ -30,35 +30,24 @@ class PaymentChannelCreate extends XRPTransaction {
   final int? destinationTag;
 
   PaymentChannelCreate(
-      {required String account,
+      {required super.account,
       required this.amount,
       required this.destination,
       required this.settleDelay,
       required this.publicKey,
       DateTime? cancelAfterTime,
       this.destinationTag,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.paymentChannelCreate) {
     if (cancelAfterTime != null) {
       cancelAfter = XRPHelper.datetimeToRippleTime(cancelAfterTime);
@@ -81,12 +70,12 @@ class PaymentChannelCreate extends XRPTransaction {
     };
   }
 
-  PaymentChannelCreate.fromJson(Map<String, dynamic> json)
+  PaymentChannelCreate.fromJson(super.json)
       : amount = parseBigInt(json["amount"])!,
         cancelAfter = json["cancel_after"],
         destination = json["destination"],
         destinationTag = json["destination_tag"],
         publicKey = json["public_key"],
         settleDelay = json["settle_delay"],
-        super.json(json);
+        super.json();
 }

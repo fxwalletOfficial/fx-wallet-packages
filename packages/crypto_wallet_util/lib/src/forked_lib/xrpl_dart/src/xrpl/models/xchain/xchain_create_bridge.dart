@@ -7,11 +7,11 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/models/xrp_
 /// is submitted on. It includes information about door accounts and assets for
 /// the bridge.
 class XChainCreateBridge extends XRPTransaction {
-  XChainCreateBridge.fromJson(Map<String, dynamic> json)
+  XChainCreateBridge.fromJson(super.json)
       : xchainBridge = XChainBridge.fromJson(json["xchain_bridge"]),
         signatureReward = parseBigInt(json["signature_reward"])!,
         minAccountCreateAmount = parseBigInt(json["minAccountCreateAmount"]),
-        super.json(json);
+        super.json();
 
   /// The bridge (door accounts and assets) to create. This field is required.
   final XChainBridge xchainBridge;
@@ -26,32 +26,21 @@ class XChainCreateBridge extends XRPTransaction {
   final BigInt? minAccountCreateAmount;
 
   XChainCreateBridge(
-      {required String account,
+      {required super.account,
       required this.xchainBridge,
       required this.signatureReward,
       this.minAccountCreateAmount,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.xChainCreateBridge);
 
   @override

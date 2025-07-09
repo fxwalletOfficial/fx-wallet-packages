@@ -11,30 +11,19 @@ class OfferCancel extends XRPTransaction {
   final int offerSequence;
 
   OfferCancel(
-      {required String account,
+      {required super.account,
       required this.offerSequence,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.offerCancel);
 
   /// Converts the object to a JSON representation.
@@ -43,7 +32,7 @@ class OfferCancel extends XRPTransaction {
     return {"offer_sequence": offerSequence, ...super.toJson()};
   }
 
-  OfferCancel.fromJson(Map<String, dynamic> json)
+  OfferCancel.fromJson(super.json)
       : offerSequence = json["offer_sequence"],
-        super.json(json);
+        super.json();
 }

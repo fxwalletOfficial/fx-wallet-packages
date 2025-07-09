@@ -193,7 +193,7 @@ class AccountSet extends XRPTransaction {
   final String? nftTokenMinter;
 
   AccountSet(
-      {required String account,
+      {required super.account,
       this.clearFlag,
       this.domain,
       this.emailHash,
@@ -202,30 +202,19 @@ class AccountSet extends XRPTransaction {
       this.transferRate,
       this.tickSize,
       this.nftTokenMinter,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.accountSet);
-  AccountSet.fromJson(Map<String, dynamic> json)
+  AccountSet.fromJson(super.json)
       : domain = json["domain"],
         emailHash = json["email_hash"],
         messageKey = json["message_key"],
@@ -234,7 +223,7 @@ class AccountSet extends XRPTransaction {
         nftTokenMinter = json["nftoken_minter"],
         clearFlag = AccountSetAsfFlag.fromValue(json["clear_flag"]),
         setFlag = AccountSetAsfFlag.fromValue(json["set_flag"]),
-        super.json(json);
+        super.json();
 
   /// Converts the object to a JSON representation.
   @override

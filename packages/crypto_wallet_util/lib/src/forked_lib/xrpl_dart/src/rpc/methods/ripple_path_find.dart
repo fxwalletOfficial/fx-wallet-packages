@@ -19,8 +19,7 @@ class RPCRipplePathFind extends XRPLedgerRequest<RipplePathFound> {
       required this.destinationAmount,
       this.sendMax,
       this.sourceCurrencies,
-      XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated})
-      : super(ledgerIndex: ledgerIndex);
+      super.ledgerIndex = XRPLLedgerIndex.validated});
   @override
   String get method => XRPRequestMethod.ripplePathFind;
   final String sourceAccount;

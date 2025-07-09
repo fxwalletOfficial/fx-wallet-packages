@@ -1,7 +1,7 @@
 part of 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/bytes/serializer.dart';
 
 class Blob extends SerializedType {
-  Blob([List<int>? buffer]) : super(buffer);
+  Blob([super.buffer]);
 
   @override
   factory Blob.fromParser(BinaryParser parser, [int? lengthHint]) {

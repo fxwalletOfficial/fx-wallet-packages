@@ -18,33 +18,22 @@ class EscrowFinish extends XRPTransaction {
   final String? fulfillment;
 
   EscrowFinish(
-      {required String account,
+      {required super.account,
       required this.owner,
       required this.offerSequence,
       this.condition,
       this.fulfillment,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.escrowFinish);
 
   @override
@@ -68,10 +57,10 @@ class EscrowFinish extends XRPTransaction {
     };
   }
 
-  EscrowFinish.fromJson(Map<String, dynamic> json)
+  EscrowFinish.fromJson(super.json)
       : owner = json["owner"],
         offerSequence = json["offer_sequence"],
         condition = json["condition"],
         fulfillment = json["fulfillment"],
-        super.json(json);
+        super.json();
 }

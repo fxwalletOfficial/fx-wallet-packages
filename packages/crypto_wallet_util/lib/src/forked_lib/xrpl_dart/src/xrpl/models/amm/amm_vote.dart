@@ -18,39 +18,28 @@ class AMMVote extends XRPTransaction {
   final int tradingFee;
 
   AMMVote(
-      {required String account,
+      {required super.account,
       required this.tradingFee,
       required this.asset,
       required this.asset2,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.ammVote);
 
-  AMMVote.fromJson(Map<String, dynamic> json)
+  AMMVote.fromJson(super.json)
       : asset = XRPCurrencies.fromJson(json["asset"]),
         asset2 = XRPCurrencies.fromJson(json["asset2"]),
         tradingFee = json["trading_fee"],
-        super.json(json);
+        super.json();
 
   @override
   String? get validate {

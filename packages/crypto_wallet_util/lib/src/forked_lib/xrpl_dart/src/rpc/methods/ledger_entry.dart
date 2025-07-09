@@ -24,8 +24,7 @@ class RPCLedgerEntry extends XRPLedgerRequest<Map<String, dynamic>> {
       this.nftPage,
       this.binary = false,
       this.rippleState,
-      XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated})
-      : super(ledgerIndex: ledgerIndex);
+      super.ledgerIndex = XRPLLedgerIndex.validated});
   @override
   String get method => XRPRequestMethod.ledgerEntry;
 

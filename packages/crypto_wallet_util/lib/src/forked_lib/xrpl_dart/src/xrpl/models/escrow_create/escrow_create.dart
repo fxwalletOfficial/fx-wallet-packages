@@ -42,45 +42,34 @@ class EscrowCreate extends XRPTransaction {
     };
   }
 
-  EscrowCreate.fromJson(Map<String, dynamic> json)
+  EscrowCreate.fromJson(super.json)
       : amount = parseBigInt(json["amount"])!,
         destination = json["destination"],
         destinationTag = json["destination_tag"],
         cancelAfter = json["cancel_after"],
         finishAfter = json["finish_after"],
         condition = json["condition"],
-        super.json(json);
+        super.json();
 
   EscrowCreate(
-      {required String account,
+      {required super.account,
       required this.amount,
       required this.destination,
       DateTime? cancelAfterTime,
       DateTime? finishAfterTime,
       this.condition,
       this.destinationTag,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.escrowCreate) {
     if (cancelAfterTime != null) {
       cancelAfter = XRPHelper.datetimeToRippleTime(cancelAfterTime);

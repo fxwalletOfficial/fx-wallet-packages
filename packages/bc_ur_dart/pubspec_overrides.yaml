@@ -1,0 +1,4 @@
+# melos_managed_dependency_overrides: crypto_wallet_util
+dependency_overrides:
+  crypto_wallet_util:
+    path: ../crypto_wallet_util

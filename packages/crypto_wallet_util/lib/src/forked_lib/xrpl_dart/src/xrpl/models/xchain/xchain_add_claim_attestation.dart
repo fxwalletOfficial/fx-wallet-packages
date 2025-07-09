@@ -5,7 +5,7 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/models/xrp_
 /// The XChainAddClaimAttestation transaction provides proof from a witness
 /// server, attesting to an XChainCommit transaction.
 class XChainAddClaimAttestation extends XRPTransaction {
-  XChainAddClaimAttestation.fromJson(Map<String, dynamic> json)
+  XChainAddClaimAttestation.fromJson(super.json)
       : xchainBridge = XChainBridge.fromJson(json["xchain_bridge"]),
         xchainClaimId = json["xchain_claim_id"],
         amount = parseBigInt(json["amount"])!,
@@ -17,7 +17,7 @@ class XChainAddClaimAttestation extends XRPTransaction {
         attestationSignerAccount = json["attestation_reward_account"],
         wasLockingChainSend =
             json["was_locking_chain_send"] == 0 ? false : true,
-        super.json(json);
+        super.json();
 
   /// The bridge to use to transfer funds. This field is required.
   final XChainBridge xchainBridge;
@@ -59,7 +59,7 @@ class XChainAddClaimAttestation extends XRPTransaction {
   final String? destination;
 
   XChainAddClaimAttestation(
-      {required String account,
+      {required super.account,
       required this.xchainBridge,
       required this.xchainClaimId,
       required this.destination,
@@ -70,28 +70,17 @@ class XChainAddClaimAttestation extends XRPTransaction {
       required this.attestationRewardAccount,
       required this.attestationSignerAccount,
       required this.amount,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.xChainAddClaimAttestation);
 
   @override

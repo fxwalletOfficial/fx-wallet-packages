@@ -9,8 +9,8 @@ class RPCAccountNFTs extends XRPLedgerRequest<Map<String, dynamic>> {
     required this.account,
     this.limit,
     this.marker,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.accountNfts;
 

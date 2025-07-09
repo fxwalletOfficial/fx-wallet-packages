@@ -10,8 +10,8 @@ class RPCGatewayBalances extends XRPLedgerRequest<Map<String, dynamic>> {
     required this.account,
     this.hotWallet,
     this.strict = false,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.gatewayBalances;
 

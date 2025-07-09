@@ -68,38 +68,27 @@ class AMMDeposit extends XRPTransaction {
   final IssuedCurrencyAmount? lpTokenOut;
 
   AMMDeposit(
-      {required String account,
+      {required super.account,
       required this.asset,
       required this.asset2,
       this.amount,
       this.amount2,
       this.ePrice,
       this.lpTokenOut,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.ammDeposit);
 
-  AMMDeposit.fromJson(Map<String, dynamic> json)
+  AMMDeposit.fromJson(super.json)
       : asset = XRPCurrencies.fromJson(json["asset"]),
         asset2 = XRPCurrencies.fromJson(json["asset2"]),
         amount = json["amount"] == null
@@ -114,7 +103,7 @@ class AMMDeposit extends XRPTransaction {
         lpTokenOut = json["lp_token_out"] == null
             ? null
             : IssuedCurrencyAmount.fromJson(json["lp_token_out"]),
-        super.json(json);
+        super.json();
 
   /// Converts the object to a JSON representation.
   @override

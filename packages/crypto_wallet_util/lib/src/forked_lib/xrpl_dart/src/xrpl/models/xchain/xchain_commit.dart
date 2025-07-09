@@ -7,12 +7,12 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/models/xrp_
 /// be wrapped on the issuing chain, or burns wrapped assets on the issuing
 /// chain so that they can be returned on the locking chain.
 class XChainCommit extends XRPTransaction {
-  XChainCommit.fromJson(Map<String, dynamic> json)
+  XChainCommit.fromJson(super.json)
       : xchainBridge = XChainBridge.fromJson(json["xchain_bridge"]),
         xchainClaimId = json["xchain_claim_id"],
         amount = parseBigInt(json["amount"])!,
         otherChainDestination = json["other_chain_destination"],
-        super.json(json);
+        super.json();
 
   /// The bridge to use to transfer funds. This field is required.
   final XChainBridge xchainBridge;
@@ -35,33 +35,22 @@ class XChainCommit extends XRPTransaction {
   final String? otherChainDestination;
 
   XChainCommit(
-      {required String account,
+      {required super.account,
       required this.xchainBridge,
       required this.xchainClaimId,
       this.otherChainDestination,
       required this.amount,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.xChainCommit);
 
   @override

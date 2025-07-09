@@ -11,8 +11,8 @@ class RPCAccountOffer extends XRPLedgerRequest<Map<String, dynamic>> {
     this.strict = false,
     this.limit,
     this.marker,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.accountOffers;
 

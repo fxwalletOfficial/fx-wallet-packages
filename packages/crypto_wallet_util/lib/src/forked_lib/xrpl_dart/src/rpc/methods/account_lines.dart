@@ -12,8 +12,8 @@ class RPCAccountLines extends XRPLedgerRequest<Map<String, dynamic>> {
     this.peer,
     this.limit,
     this.marker,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.accountLines;
 

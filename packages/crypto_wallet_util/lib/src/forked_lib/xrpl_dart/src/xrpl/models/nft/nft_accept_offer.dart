@@ -47,32 +47,21 @@ class NFTokenAcceptOffer extends XRPTransaction {
   /// both must be for the same NFToken.
   final CurrencyAmount? nfTokenBrokerFee;
   NFTokenAcceptOffer(
-      {required String account,
+      {required super.account,
       this.nfTokenBrokerFee,
       this.nfTokenBuyOffer,
       this.nfTokenSellOffer,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.nftokenAcceptOffer);
 
   @override
@@ -107,9 +96,9 @@ class NFTokenAcceptOffer extends XRPTransaction {
     };
   }
 
-  NFTokenAcceptOffer.fromJson(Map<String, dynamic> json)
+  NFTokenAcceptOffer.fromJson(super.json)
       : nfTokenBrokerFee = json["nftoken_broker_fee"],
         nfTokenBuyOffer = json["nftoken_buy_offer"],
         nfTokenSellOffer = json["nftoken_sell_offer"],
-        super.json(json);
+        super.json();
 }

@@ -75,8 +75,7 @@ class IssuedCurrencyAmount extends IssuedCurrency {
   ///
   /// The [value] parameter represents the numeric value of the amount.
   IssuedCurrencyAmount._(
-      {required String currency, required String issuer, required this.value})
-      : super(currency: currency, issuer: issuer);
+      {required super.currency, required super.issuer, required this.value});
 
   /// The numeric value of the amount.
   final String value;
@@ -91,9 +90,9 @@ class IssuedCurrencyAmount extends IssuedCurrency {
   bool get isZero => rational.isZero;
 
   /// Creates an instance of [IssuedCurrencyAmount] from JSON data.
-  IssuedCurrencyAmount.fromJson(Map<String, dynamic> json)
+  IssuedCurrencyAmount.fromJson(super.json)
       : value = json["value"],
-        super.fromJson(json);
+        super.fromJson();
 
   /// Factory method to create an instance of [IssuedCurrencyAmount].
   ///

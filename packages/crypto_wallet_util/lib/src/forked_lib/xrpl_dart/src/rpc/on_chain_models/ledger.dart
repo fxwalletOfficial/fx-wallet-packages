@@ -82,16 +82,11 @@ class LedgerTicket {
 
 class LedgerXChainClaimID extends XChainBridge {
   LedgerXChainClaimID(
-      {required String issuingChainDoor,
-      required XRPCurrencies issuingChainIssue,
-      required String lockingChainDoor,
-      required XRPCurrencies lockingChainIssue,
-      required this.xChainClaimId})
-      : super(
-            issuingChainDoor: issuingChainDoor,
-            issuingChainIssue: issuingChainIssue,
-            lockingChainDoor: lockingChainDoor,
-            lockingChainIssue: lockingChainIssue);
+      {required super.issuingChainDoor,
+      required super.issuingChainIssue,
+      required super.lockingChainDoor,
+      required super.lockingChainIssue,
+      required this.xChainClaimId});
   final int xChainClaimId;
 
   @override
@@ -105,16 +100,11 @@ class LedgerXChainClaimID extends XChainBridge {
 
 class LedgerXChainCreateAccountClaimID extends XChainBridge {
   LedgerXChainCreateAccountClaimID(
-      {required String issuingChainDoor,
-      required XRPCurrencies issuingChainIssue,
-      required String lockingChainDoor,
-      required XRPCurrencies lockingChainIssue,
-      required this.xChainCreateAccountClaimId})
-      : super(
-            issuingChainDoor: issuingChainDoor,
-            issuingChainIssue: issuingChainIssue,
-            lockingChainDoor: lockingChainDoor,
-            lockingChainIssue: lockingChainIssue);
+      {required super.issuingChainDoor,
+      required super.issuingChainIssue,
+      required super.lockingChainDoor,
+      required super.lockingChainIssue,
+      required this.xChainCreateAccountClaimId});
   final int xChainCreateAccountClaimId;
 
   @override

@@ -62,33 +62,22 @@ class OfferCreate extends XRPTransaction {
   final int? offerSequence;
 
   OfferCreate(
-      {required String account,
+      {required super.account,
       required this.takerGets,
       required this.takerPays,
       this.expiration,
       this.offerSequence,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.offerCreate);
 
   /// Converts the object to a JSON representation.
@@ -103,10 +92,10 @@ class OfferCreate extends XRPTransaction {
     };
   }
 
-  OfferCreate.fromJson(Map<String, dynamic> json)
+  OfferCreate.fromJson(super.json)
       : takerGets = CurrencyAmount.fromJson(json["taker_gets"]),
         takerPays = CurrencyAmount.fromJson(json["taker_pays"]),
         expiration = json["expiration"],
         offerSequence = json["offer_sequence"],
-        super.json(json);
+        super.json();
 }

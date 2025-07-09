@@ -59,34 +59,23 @@ class PaymentChannelClaim extends XRPTransaction {
   final String? publicKey;
 
   PaymentChannelClaim(
-      {required String account,
+      {required super.account,
       required this.channel,
       this.balance,
       this.amount,
       this.signature,
       this.publicKey,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.paymentChannelClaim);
 
   /// Converts the object to a JSON representation.
@@ -102,13 +91,13 @@ class PaymentChannelClaim extends XRPTransaction {
     };
   }
 
-  PaymentChannelClaim.fromJson(Map<String, dynamic> json)
+  PaymentChannelClaim.fromJson(super.json)
       : amount = parseBigInt(json["amount"]),
         balance = parseBigInt(json["balance"]),
         channel = json["channel"],
         publicKey = json["public_key"],
         signature = json["signature"],
-        super.json(json);
+        super.json();
 
   String signForClaim() {
     List<int> prefix = BytesUtils.fromHexString("434C4D00");

@@ -21,32 +21,21 @@ class PaymentChannelFund extends XRPTransaction {
   late final int? expiration;
 
   PaymentChannelFund(
-      {required String account,
+      {required super.account,
       required this.channel,
       required this.amount,
       DateTime? expirationTime,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.paymentChannelFund) {
     if (expirationTime != null) {
       expiration = XRPHelper.datetimeToRippleTime(expirationTime);
@@ -66,9 +55,9 @@ class PaymentChannelFund extends XRPTransaction {
     };
   }
 
-  PaymentChannelFund.fromJson(Map<String, dynamic> json)
+  PaymentChannelFund.fromJson(super.json)
       : channel = json["channel"],
         amount = parseBigInt(json["amount"])!,
         expiration = json["expiration"],
-        super.json(json);
+        super.json();
 }

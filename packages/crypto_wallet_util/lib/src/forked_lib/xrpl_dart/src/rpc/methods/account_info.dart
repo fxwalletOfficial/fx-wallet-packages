@@ -11,8 +11,8 @@ class RPCAccountInfo extends XRPLedgerRequest<AccountInfo> {
     this.queue = false,
     this.signerList = false,
     this.strict = false,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.accountInfo;
 

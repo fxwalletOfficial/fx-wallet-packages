@@ -2,7 +2,7 @@ part of 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/bytes/seri
 
 class Vector256 extends SerializedType {
   static const int lengthInBytes = 32;
-  Vector256([List<int>? buffer]) : super(buffer);
+  Vector256([super.buffer]);
 
   @override
   factory Vector256.fromValue(List value) {

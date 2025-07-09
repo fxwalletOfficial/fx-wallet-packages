@@ -7,8 +7,8 @@ import '../core/methods_impl.dart';
 class RPCNFTInfo extends XRPLedgerRequest<Map<String, dynamic>> {
   RPCNFTInfo({
     required this.nftId,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.nftInfo;
 

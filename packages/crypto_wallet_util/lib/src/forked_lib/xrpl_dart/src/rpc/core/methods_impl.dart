@@ -58,8 +58,7 @@ abstract class XRPLedgerRequest<T> extends LookupByLedgerRequest
   /// Creates an instance of [XRPLedgerRequest].
   ///
   /// The [ledgerIndex] parameter specifies the ledger index for the request.
-  XRPLedgerRequest({XRPLLedgerIndex? ledgerIndex})
-      : super(ledgerIndex: ledgerIndex);
+  XRPLedgerRequest({super.ledgerIndex = null});
 
   /// Gets the validation status for the request (default is null == params is valid).
   String? get validate => null;

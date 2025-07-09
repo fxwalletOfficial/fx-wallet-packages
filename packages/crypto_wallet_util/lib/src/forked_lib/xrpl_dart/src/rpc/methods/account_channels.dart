@@ -9,9 +9,8 @@ class RPCAccountChannel extends XRPLedgerRequest<Map<String, dynamic>> {
   RPCAccountChannel(
       {required this.account,
       required this.destinationAccount,
-      XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-      this.limit = 200})
-      : super(ledgerIndex: ledgerIndex);
+      super.ledgerIndex = XRPLLedgerIndex.validated,
+      this.limit = 200});
   @override
   String get method => XRPRequestMethod.accountChannels;
 

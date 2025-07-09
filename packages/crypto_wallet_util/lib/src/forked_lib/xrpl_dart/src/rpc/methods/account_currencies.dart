@@ -8,8 +8,8 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/rpc/rpc.dart';
 class RPCAccountCurrencies extends XRPLedgerRequest<Map<String, dynamic>> {
   RPCAccountCurrencies({
     required this.account,
-    XRPLLedgerIndex? ledgerIndex = XRPLLedgerIndex.validated,
-  }) : super(ledgerIndex: ledgerIndex);
+    super.ledgerIndex = XRPLLedgerIndex.validated,
+  });
   @override
   String get method => XRPRequestMethod.accountCurrencies;
 

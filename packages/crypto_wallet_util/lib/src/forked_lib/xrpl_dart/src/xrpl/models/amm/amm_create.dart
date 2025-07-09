@@ -32,38 +32,27 @@ class AMMCreate extends XRPTransaction {
   final int tradingFee;
 
   AMMCreate(
-      {required String account,
+      {required super.account,
       required this.amount,
       required this.amount2,
       required this.tradingFee,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.ammCreate);
-  AMMCreate.fromJson(Map<String, dynamic> json)
+  AMMCreate.fromJson(super.json)
       : amount = CurrencyAmount.fromJson(json["amount"]),
         amount2 = CurrencyAmount.fromJson(json["amount2"]),
         tradingFee = json["trading_fee"],
-        super.json(json);
+        super.json();
   @override
   String? get validate {
     if (tradingFee < 0 || tradingFee > ammMaxTradingFee) {

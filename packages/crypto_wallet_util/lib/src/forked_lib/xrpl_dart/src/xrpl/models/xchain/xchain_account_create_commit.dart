@@ -6,12 +6,12 @@ import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/xrpl/models/xrp_
 /// the chains a bridge connects, which serves as the bridge entrance for that
 /// chain.
 class XChainAccountCreateCommit extends XRPTransaction {
-  XChainAccountCreateCommit.fromJson(Map<String, dynamic> json)
+  XChainAccountCreateCommit.fromJson(super.json)
       : xchainBridge = XChainBridge.fromJson(json["xchain_bridge"]),
         amount = parseBigInt(json["amount"])!,
         destination = json["destination"],
         signatureReward = parseBigInt(json["signature_reward"])!,
-        super.json(json);
+        super.json();
 
   /// The bridge to create accounts for. This field is required.
   final XChainBridge xchainBridge;
@@ -30,33 +30,22 @@ class XChainAccountCreateCommit extends XRPTransaction {
   final BigInt signatureReward;
 
   XChainAccountCreateCommit(
-      {required String account,
+      {required super.account,
       required this.xchainBridge,
       required this.destination,
       required this.amount,
       required this.signatureReward,
-      List<XRPLMemo>? memos = const [],
-      String signingPubKey = "",
-      int? ticketSequance,
-      BigInt? fee,
-      int? lastLedgerSequence,
-      int? sequence,
-      List<XRPLSigners>? signers,
-      dynamic flags,
-      int? sourceTag,
-      List<String> multiSigSigners = const []})
+      super.memos,
+      super.signingPubKey,
+      super.ticketSequance,
+      super.fee,
+      super.lastLedgerSequence,
+      super.sequence,
+      super.signers,
+      super.flags = null,
+      super.sourceTag,
+      super.multiSigSigners})
       : super(
-            account: account,
-            fee: fee,
-            lastLedgerSequence: lastLedgerSequence,
-            memos: memos,
-            sequence: sequence,
-            signers: signers,
-            sourceTag: sourceTag,
-            flags: flags,
-            ticketSequance: ticketSequance,
-            signingPubKey: signingPubKey,
-            multiSigSigners: multiSigSigners,
             transactionType: XRPLTransactionType.xChainAccountCreateCommit);
 
   @override
