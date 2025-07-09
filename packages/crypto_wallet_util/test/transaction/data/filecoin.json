@@ -1,0 +1,14 @@
+{
+  "transaction": {
+    "To": "f24yeyklfsjvav6onmm4k2lbkfi6chnke5ivt5wbq",
+    "From": "f12nb7q2uhwym4f6pblgsgywlmwdoyt5fpofxxuqa",
+    "Value": "100000000",
+    "Method": 0,
+    "Params": "",
+    "Nonce": 1,
+    "GasLimit": 1521453,
+    "GasFeeCap": "8523237",
+    "GasPremium": "8521319"
+  },
+  "to_sign": "df964ca679fb2c11a58cc87e65ef962690d6f27f7de086c348bb60080a7b4555"
+}

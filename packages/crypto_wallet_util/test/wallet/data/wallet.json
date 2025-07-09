@@ -1,0 +1,188 @@
+{
+  "example": [
+    {
+      "name": "dot",
+      "mnemonic": "caution juice atom organ advance problem want pledge someone senior holiday very",
+      "private_key": "c8fa03532fb22ee1f7f6908b9c02b4e72483f0dbd66e4cd456b8f34c6230b849",
+      "public_key": "d6a3105d6768e956e9e5d41050ac29843f98561410d3a47f9dd5b3b227ab8746",
+      "address": "15rRgsWxz4H5LTnNGcCFsszfXD8oeAFd8QRsR6MbQE2f6XFF",
+      "message": "0500009ea0acfa4a4b5a19c512df75afc9b1d5a9e1a1acf872018f956c8526e11efa00028907003500140041420f001800000091b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3bd44f5a7b303737a78347cc54297aec16442b91f9db5f074027d152ac4d80c68"
+    },
+    {
+      "name": "sui",
+      "mnemonic": "cost leave absorb violin blur crack attack pig rice glide orient employ",
+      "private_key": "729215013d83ae9ee5058ea8c9e263dd6dc62df13272cddc2082b63187fcb966",
+      "public_key": "7451af2db26caea024d19bf4d73e3f5d55f4f6e361336100398d29eb1c692d06",
+      "address": "0x4fc033d8edde03af8ec50746b437ffd6292c13f5334bbdbc4c87f8d6d691a70b",
+      "message": "ef80aa12944ed4ddfbd701afc5117865784de618afb64d2f29ecaeb95e6ebe43"
+    },
+    {
+      "name": "xrp",
+      "mnemonic": "cost leave absorb violin blur crack attack pig rice glide orient employ",
+      "private_key": "0c03e300c0ba5ad905fcd3cc9c6157e6742c61c3c5686c884a40566f8ecb66f2",
+      "public_key": "02e2663a879c90d1b86e1e12472f32c6a8bf67dcd9a6958e264a723ce3228aa68d",
+      "address": "rQKyeCSpcJDo3xRet49rFzTpAwtzmzTVtt",
+      "message": "53545800120000220000000024029ACFF9201B02A0D1626140000000000F424068400000000000000C732102B67FE19A8C25244991B07964FDAE91708394EE24ADA4AFAEE1655558888B663B8114BDF5A5C2D126BC5877EC4042F702F4EBBCD439B88314A88051B37916F3829DEAE7FF869CDBEB48332EA4"
+    },
+    {
+      "name": "sc",
+      "mnemonic": "what ordinary shop frame olympic dove economy define extra unable oyster emerge",
+      "private_key": "4a7822907347e4353238d418cbfe84332d43610e7107c39f011900e6edd70b8a",
+      "public_key": "98e216d25ab3984063d19daedd6bb65925753b70bc486e8bdd127544a74614fa",
+      "address": "c299740ac5c6177c280eebe1b77d9009438cbc75dae6f405ecbc262d31cffb4d77061bf783f1",
+      "message": "4122984cda164a97d0e2ad8e7e52aeed95becd36baa454f94f88c767bc203a76"
+    },
+    {
+      "name": "ckb",
+      "mnemonic": "fly lecture gasp juice hover ice business census bless weapon polar upgrade",
+      "private_key": "ae236ca02ca5169bc8e1f865e6bc59be636d830f23a6a28cbbb2d1202202552f",
+      "public_key": "02638e921e4332b3cba64d1eb51d54c481945e9ba51f08aef37b875be3057e59a7",
+      "address": "ckb1qyqq54yhj5y3fmtfu6tw6jpapp222gs94zfsns98e7",
+      "message": "0xce809623a0acdfb3461654723e7c1360dbe51352ee9aea849e0e6ddaf57b09c3"
+    },
+    {
+      "name": "hns",
+      "mnemonic": "fly lecture gasp juice hover ice business census bless weapon polar upgrade",
+      "private_key": "cc4cca6de2aecc8b039b3a0faf7ab98a3e71d948a834a1ac6df0ca72f8221587",
+      "public_key": "02f8e8c6a9270784c054cad5da9113a1dac92a29e70524312a1d6000621b350a0f",
+      "address": "hs1qmwh46utk9ahywn5plqccuwyd9kytma7kpw8m42",
+      "message": "1c12c78c2c9d3b37fbe8955eeb805f6855456c89d98d50ea69e270c3e351c402"
+    },
+    {
+      "name": "alph",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "14c9be0fc16ba5cbf0ac730a9419a2ec1541f7fbea1fc28b5ec429322bb564ce",
+      "public_key": "03924ffa00114be641f4ee20bd43bcee300c457751812683eda8e09f2e1a7321c2",
+      "address": "17egFYs4PNAp1FLpFqpSsttjhoddTkfEeL2wufbnzsvLa",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "atom",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "40ce5d782d3b5875f32097552d15f6e1a6e5356cdad0d17435c1d25b53fd010c",
+      "public_key": "02401e895d0f906df12c6d129640edef165e7d92346f07613605a29cd8d4887a55",
+      "address": "cosmos1qdr230h75w6clmqvzwagsu3s5e6mlsynhh200x",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "sei",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "40ce5d782d3b5875f32097552d15f6e1a6e5356cdad0d17435c1d25b53fd010c",
+      "public_key": "02401e895d0f906df12c6d129640edef165e7d92346f07613605a29cd8d4887a55",
+      "address": "sei1qdr230h75w6clmqvzwagsu3s5e6mlsyn6mmef8",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "kava",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "8a4b6367f86497dec1ce9f2b5ead22b55378c9bf24bd9f81bf237155aad5bcf5",
+      "public_key": "02b48b09343cb11d7023af5c6786a2d83cd388d7f8f3e8b52dc62d8af3d99b675b",
+      "address": "kava16cmj4yxnqllcx2e480j2tgw43tvd753x7l9tfk",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "kaspa",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "0938002d7fb3daa1b7e5feef42f720a43cd5f2f5527b8ffcc99bb374602b4131",
+      "public_key": "0289df1dcd89983bcb09eec7194b39a4fc98727ddff322a35431becb82b5521381",
+      "address": "kaspa:qzya78wd3xvrhjcfamr3jjee5n7fsunamlej9g65xxlvhq442gfcz9m8lh3fc",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "karlsen",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "10bf8068bd22de104a8b23d17b0793404e26720b3c4d0be947d8f85456396085",
+      "public_key": "26a74349621ba9a1312b441087365ef75553dfcd43297c02dd2f3405f05ac7c7",
+      "address": "karlsen:qqn2ws6fvgd6ngf39dzpppektmm4257le4pjjlqzm5hngp0sttruwn8ae5jen",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "sol",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "2e257df07c6f9edf67b8f6a7b9edd6658f4f7d6adbb1245886658f02b3831aff",
+      "public_key": "bf396c69b11ac04451651de39832ee965963e4a0dda68d85b410b66499a6d37c",
+      "address": "DsTf3SBztF1B5gXX5uSYWNsAYzukNbk1Q3TQDYUEPDko",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "near",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "18a5014d7d911cc6e9453a7d51319d7670f60f30ba7f74ee40988cf4df7f1f75",
+      "public_key": "465c03acb2ce8245ff0a08cb529cdf4e8cae862bd2ac2b1db4b821ae1b9aaf28",
+      "address": "465c03acb2ce8245ff0a08cb529cdf4e8cae862bd2ac2b1db4b821ae1b9aaf28",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "aptos",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "3472a81877f51271995d5e846995ce08ed3b2cc03a3b0ee8e3a172f5fc8ee141",
+      "public_key": "58ab814bbe44d41433e761bc0a20b8ec5420c19842ef04e6fb30c6f983ed6a17",
+      "address": "0x463418c23b339a3dd2a7650426a16c9241448230e15917c3164a80f5d1f9f361",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "fil",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "d3672e88de8a1341536b42e6394b2549271ff80f84d02ce2b3c4e9a76c2781a4",
+      "public_key": "04403be74ce0e92a9ed506b9fe244f7a0324dac2f9ac31eea3977085e21e6407bf5257e051d5792ac475a0b67603df865d343fb80a2e59a70279ee05dcbf800d85",
+      "address": "f16sy2zmxgry3qksg6vsieyr4eztv2wsb6yxy6gua",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "scp",
+      "mnemonic": "vapidly pause vexed ghost hounded romance gained anxiety number semifinal tonic return roomy symptoms sizes pencil gifts civilian opened opposite pastry sugar vapidly smidgen ledge baffles thorn rhino abducts",
+      "private_key": "9aa1d6b69c0d0ea0fd808a0c543e108f7c452b2d883a432fb3be6dfa59057aaf",
+      "public_key": "ab376061f63c5be59e7f578f790c684326ec636bd4b5f34fa687faf171dcfaaa",
+      "address": "77f5755bb388a7cf05770228cbc0b93800d68bc4d0cb50e9f2c64707915702549bf88b2448ce",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "eth",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "85d7e7a29d83ed589e0b0feba5018b789b580456281be5a01abebd72e232e251",
+      "public_key": "02149e0a7a65c64bea2199131a2a5574542c30b366ce7e8280d75f29b24326edb3",
+      "address": "0x8124074853b5002df639316d86b5af9d138d5d89",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "icp",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "06b889f014a2fa8c771c5f49af3a98bb22a423f4543c81f566e1b15bbc447ddb",
+      "public_key": "044e99fc73e5ef1ca1c65c64e5e75df5f469d5cfc02702a0875d11b6867b60983a715343ad9b5c81083f3802859c7849dadfe6366d0046c6d3f1cea033a8c42ed7",
+      "address": "4e4576d77e5efb79ec1d7a86cc6c01eb2541730ade57454b454234063d509152",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "algo",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "6c775f134cb6a9c08ded7a4dafdbde17a7a8745aecc4387057353694034a37e6",
+      "public_key": "8d5a64450fddee613d72fe03714dab398e88771fe0dcc07d8e93bda03ce93b8b",
+      "address": "RVNGIRIP3XXGCPLS7YBXCTNLHGHIQ5Y74DOMA7MOSO62APHJHOFX2ZQOCQ",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "trx",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "4bf034dc5d4738f0a2f169206d0812d531147d0c40a9d3f06f785ddd60470623",
+      "public_key": "04eb6beb618f6cc3715bdbd91574515e4306276950cb2fe1f86fd4fb98b80e14120ef4e92f69af780cc59c6de426346614ca1ba111f4ecd1e87460586579d1f681",
+      "address": "TCc4o6nKjb9fKPunNKrNBbW2o5k4wS9qTG",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "btc",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "07931376a18a7024cb3a101e069375c9c43771c4b66b2ec3b279ff2879b961a1",
+      "public_key": "03cc6ccbd1b2567f511451e3d7cbcf7506796ac9495bf2f1d88a23595e9f5f983f",
+      "address": "146z1qGX664tyEaYu57d7wdPidSq6tcXDq",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    },
+    {
+      "name": "taproot",
+      "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+      "private_key": "39f7157a5f27517186be5b07be48a591f16fc38efa25fd441b1db5c76247eb13",
+      "public_key": "029ddfa27bd4a6acfac25d125236869ccc6a70e1bde0af8dbd1ebceed4342c56f7",
+      "address": "bc1pyxuwkvmyvevr2kyyyjv4hmq92a85lafpkrvwzragj67ha9k02lss8j8wfz",
+      "message": "38e5964a21983da4361f4cffc0e73b94c9e3bc7d8d582f12eec64a38e0b1b4dc"
+    }
+  ]
+}

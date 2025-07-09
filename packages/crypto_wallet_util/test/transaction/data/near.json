@@ -1,0 +1,47 @@
+{
+  "transfer": {
+    "transaction": {
+      "signerId": "9dc348f2c297afa9f87c361dc0979678c4a54773deec83298f14053b27dbd248",
+      "publicKey": {
+        "keyType": 0,
+        "data": "9dc348f2c297afa9f87c361dc0979678c4a54773deec83298f14053b27dbd248"
+      },
+      "nonce": "118565742000006",
+      "receiverId": "kiux.near",
+      "actions": [
+        {
+          "transfer": {
+            "deposit": "100000000000000000000000"
+          },
+          "enum": "transfer"
+        }
+      ],
+      "blockHash": "9dc01d228e72f99dbfa488f9d1b5f48b9c8c7dccd524c834dc0241d4489092f9"
+    },
+    "hash": "1f21feb3df7457d22e35b0c468ccc77b48157167344d30df9c3b31746a954514"
+  },
+  "functionCall": {
+    "transaction": {
+      "signerId": "9dc348f2c297afa9f87c361dc0979678c4a54773deec83298f14053b27dbd248",
+      "publicKey": {
+        "keyType": 0,
+        "data": "9dc348f2c297afa9f87c361dc0979678c4a54773deec83298f14053b27dbd248"
+      },
+      "nonce": "118565742000015",
+      "receiverId": "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near",
+      "actions": [
+        {
+          "functionCall": {
+            "methodName": "ft_transfer_call",
+            "args": "7b2272656365697665725f6964223a226b6975782e6e656172222c22616d6f756e74223a22313030303030227d",
+            "gas": 300000000000000,
+            "deposit": "10000"
+          },
+          "enum": "functionCall"
+        }
+      ],
+      "blockHash": "ed16bae5a0af975083f06c6ad6642db686bd2d64473abc2fa063eb5cf7ce419d"
+    },
+    "hash": "173ae60bd45081d1c5aae754ca7fffeda52a99bb710f50d376b7e7a57a4feffc"
+  }
+}
