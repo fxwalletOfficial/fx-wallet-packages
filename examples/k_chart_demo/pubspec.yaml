@@ -1,5 +1,5 @@
-name: example
-description: A new Flutter project.
+name: k_chart_demo
+description: Demo app for k_chart_flutter package.
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
@@ -14,7 +14,7 @@ dependencies:
   cupertino_icons: ^1.0.2
   http: ^0.13.3
   k_chart_flutter:
-    path: ../
+    path: ../../packages/k_chart_flutter
 
 dev_dependencies:
   flutter_test:

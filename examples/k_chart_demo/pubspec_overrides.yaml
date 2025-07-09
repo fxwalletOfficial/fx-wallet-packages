@@ -1,0 +1,4 @@
+# melos_managed_dependency_overrides: k_chart_flutter
+dependency_overrides:
+  k_chart_flutter:
+    path: ../../packages/k_chart_flutter

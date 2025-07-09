@@ -1,24 +1,27 @@
 # k_chart_flutter
-K chart widget in Flutter.
 
-- Support gesture **drag**, **scale**, **long press**, **fling**.
-- Support **MA**, **BOLL** for main chart.
-- Support **MACD**, **KDJ**, **RSI**, **WR**, **CCI** for secondary chart.
+A high-performance, interactive candlestick (K-line) and line chart widget for Flutter, designed for crypto and financial data visualization.
 
-## Getting Started
-### Install
-```
+- Gesture support: drag, scale, long press, fling
+- Main chart indicators: MA, BOLL
+- Secondary indicators: MACD, KDJ, RSI, WR, CCI
+- Customizable style and internationalization
+- Suitable for crypto, stock, and other financial charts
+
+## Installation
+
+```yaml
 dependencies:
   k_chart_flutter: ^1.0.0
 ```
 
-### Usage
+## Quick Start
 
 ```dart
-// Init data.
-DataUtil.calculate(data);
+// Initialize data
+data = DataUtil.calculate(data);
 
-// Use k chart widget:
+// Use the KChartWidget
 KChartWidget(
   data: data,
   style: ChartStyle(),
@@ -29,15 +32,15 @@ KChartWidget(
   secondaryState: SecondaryState.MACD,
   timeFormat: TimeFormat.YEAR_MONTH_DAY,
   translations: {
-    'zh_CN': ChartTranslations(
-      date: '时间',
-      open: '开',
-      high: '高',
-      low: '低',
-      close: '收',
-      changeAmount: '涨跌额',
-      change: '涨跌幅',
-      amount: '成交额',
+    'en': ChartTranslations(
+      date: 'Date',
+      open: 'Open',
+      high: 'High',
+      low: 'Low',
+      close: 'Close',
+      changeAmount: 'Change',
+      change: 'Change %',
+      amount: 'Volume',
     )
   },
   showNowPrice: true,
@@ -47,3 +50,15 @@ KChartWidget(
   dataFormat: (value) => value.toStringAsFixed(2)
 )
 ```
+
+## Example
+
+A full demo app is available at `examples/k_chart_demo` in this repository. You can run and debug it locally.
+
+## Contributing
+
+Issues and PRs are welcome!
+
+## License
+
+MIT

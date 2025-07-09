@@ -1,0 +1,4 @@
+# melos_managed_dependency_overrides: flutter_web3_webview
+dependency_overrides:
+  flutter_web3_webview:
+    path: ../../packages/flutter_web3_webview

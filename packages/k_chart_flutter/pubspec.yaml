@@ -1,7 +1,7 @@
 name: k_chart_flutter
 description: A k chart in FLutter. Support gesture drag, scale, long press, fling. Support MA, BOLL, MACD, KDJ, RSI, WR, CCI.
 version: 0.1.2
-homepage: https://github.com/fxwalletOfficial/k_chart_flutter
+homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packages/k_chart_flutter
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
