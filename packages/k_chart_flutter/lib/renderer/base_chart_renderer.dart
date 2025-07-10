@@ -62,5 +62,5 @@ abstract class BaseChartRenderer<T> {
     canvas.drawLine(Offset(lastX, lastY), Offset(curX, curY), chartPaint..color = color);
   }
 
-  TextStyle getTextStyle(Color color) => TextStyle(fontSize: style.fontSize, color: color);
+  TextStyle getTextStyle(Color color) => TextStyle(fontSize: style.fontSize, color: color, fontFamily: DEFAULT_FONT_FAMILY);
 }

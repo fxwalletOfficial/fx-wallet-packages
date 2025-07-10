@@ -59,7 +59,9 @@ class KChartWidget extends StatefulWidget {
     this.flingCurve = Curves.decelerate,
     this.isOnDrag,
     this.dataFormat
-  });
+  }) {
+    DEFAULT_FONT_FAMILY = style.fontFamily;
+  }
 
   @override
   _KChartWidgetState createState() => _KChartWidgetState();
@@ -274,8 +276,8 @@ class _KChartWidgetState extends State<KChartWidget> with TickerProviderStateMix
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(child: Text(infoName, style: TextStyle(color: _style.select.colors.text, fontSize: _style.select.fontSize))),
-          Text(info, style: TextStyle(color: _getItemColor(info), fontSize: _style.select.fontSize))
+          Expanded(child: Text(infoName, style: TextStyle(color: _style.select.colors.text, fontSize: _style.select.fontSize, fontFamily: _style.fontFamily))),
+          Text(info, style: TextStyle(color: _getItemColor(info), fontSize: _style.select.fontSize, fontFamily: _style.fontFamily))
         ]
       )
     );
