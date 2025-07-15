@@ -13,8 +13,8 @@ import 'package:test/test.dart';
 //   view_key: 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp',
 //   private_key: 'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v',
 // };
-final String libPosition = 'aleo_rust/target/release/libaleo_rust.so';
-final dyLib = DyLib.getDyLibByPosition(libPosition);
+// final String libPosition = 'aleo_rust/target/release/libaleo_rust.so';
+final dyLib = DyLib.getDyLibFromCargo();
 // final dyLib = DyLib.getDyLibFromCargo();
 final rust = AleoProgram(dyLib);
 

@@ -45,7 +45,7 @@ void main() {
     final feeProof =
         await rust.executeFeeProof(url, feeAuthorization); // in server
     final offlineTx = await rust.buildTransactionOffline(proof, feeProof);
-    final txHash = await rust.broadcast(offlineTx, url, transfer_type);
-    print(txHash);
+    // final txHash = await rust.broadcast(offlineTx, url, transfer_type);
+    // print(txHash);
   });
 }

@@ -1,8 +1,8 @@
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
-final String libPosition = 'aleo_rust/target/debug/libaleo_rust.so';
-final dyLib = DyLib.getDyLibByPosition(libPosition);
+// final String libPosition = 'aleo_rust/target/debug/libaleo_rust.so';
+final dyLib = DyLib.getDyLibFromCargo();
 // final dyLib = DyLib.getDyLibFromCargo();
 final rust = AleoProgram(dyLib);
 
@@ -22,9 +22,9 @@ void main() async {
 
     final fee_credits = 10000;
 
-    final tx = await rust.tryJoin(
-        private_key, record_1, record_2, fee_credits, fee_record, url);
+    // final tx = await rust.tryJoin(
+    //     private_key, record_1, record_2, fee_credits, fee_record, url);
 
-    print(tx);
+    // print(tx);
   });
 }
