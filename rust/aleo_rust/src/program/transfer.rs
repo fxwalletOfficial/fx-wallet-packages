@@ -45,7 +45,7 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
+        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
 
         // Retrieve the private key.
         let private_key = self.get_private_key(password)?;
@@ -107,7 +107,7 @@ impl<N: Network> ProgramManager<N> {
                 inputs.iter(),
                 fee_record,
                 fee,
-                Some(query),
+                Some(&query),
                 rng,
             )?
         };
@@ -142,7 +142,7 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
+        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
 
         // Retrieve the private key.
         let private_key = self.get_private_key(password)?;
@@ -204,7 +204,7 @@ impl<N: Network> ProgramManager<N> {
                 inputs.iter(),
                 fee_record,
                 fee,
-                Some(query),
+                Some(&query),
                 rng,
             )?
         };
@@ -376,15 +376,13 @@ impl<N: Network> ProgramManager<N> {
     }
 
     pub fn execute_proof(&self, authorization: Authorization<N>) -> Result<String> {
-        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
-        let some_query = Some(query.clone());
+        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         let rng = &mut rand::thread_rng();
         // Compute the execution.
-        let (execution, _response) =
-            vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
+        let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
         Ok(format!("{:?}", execution))
     }
 
@@ -394,8 +392,7 @@ impl<N: Network> ProgramManager<N> {
         program_id: String,
         api_client: &AleoAPIClient<N>,
     ) -> Result<String> {
-        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
-        let some_query = Some(query.clone());
+        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
@@ -411,7 +408,7 @@ impl<N: Network> ProgramManager<N> {
             .try_for_each(|(_, import)| {
                 if import.id() != &credits_id && !vm.process().read().contains_program(import.id())
                 {
-                    vm.process().write().add_program(import)?
+                    vm.process().write().add_program(import)?;
                 }
                 Ok::<_, Error>(())
             })?;
@@ -423,20 +420,18 @@ impl<N: Network> ProgramManager<N> {
         }
         let rng = &mut rand::thread_rng();
         // Compute the execution.
-        let (execution, _response) =
-            vm.execute_authorization_raw(authorization, some_query.clone(), rng)?;
+        let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
         Ok(format!("{:?}", execution))
     }
 
     pub fn execute_fee_proof(&self, authorization: Authorization<N>) -> Result<String> {
-        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
-        let some_query = Some(query.clone());
+        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         let rng = &mut rand::thread_rng();
         // Compute the execution.
-        let execution = vm.execute_fee_authorization_raw(authorization, some_query, rng)?;
+        let execution = vm.execute_fee_authorization_raw(authorization, &query, rng)?;
         Ok(execution.to_string())
     }
 
@@ -498,7 +493,7 @@ impl<N: Network> ProgramManager<N> {
                     if import.id() != &credits_id
                         && !vm.process().read().contains_program(import.id())
                     {
-                        vm.process().write().add_program(import)?
+                        vm.process().write().add_program(import)?;
                     }
                     Ok::<_, Error>(())
                 })?;
@@ -546,7 +541,7 @@ impl<N: Network> ProgramManager<N> {
             .try_for_each(|(_, import)| {
                 if import.id() != &credits_id && !vm.process().read().contains_program(import.id())
                 {
-                    vm.process().write().add_program(import)?
+                    vm.process().write().add_program(import)?;
                 }
                 Ok::<_, Error>(())
             })?;

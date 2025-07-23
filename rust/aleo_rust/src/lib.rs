@@ -96,6 +96,7 @@ pub mod snarkvm_types {
         snark::{Proof, ProvingKey, VerifyingKey},
         Process, Program, Trace, VM,
     };
+    pub use snarkvm_synthesizer_process::InclusionVersion;
 }
 
 pub use snarkvm_types::*;
@@ -832,8 +833,11 @@ pub extern "C" fn serial_number_string(
     let record_name: &str = record_name_cstr.to_str().unwrap();
     let parsed_program_id = ProgramID::<CurrentNetwork>::from_str(program_id).unwrap();
     let record_identifier = Identifier::<CurrentNetwork>::from_str(record_name).unwrap();
+    // 将输入字符串转换为Field
+    let view_key_str = view_key.to_string();
+    let view_key_field = Field::<CurrentNetwork>::new_domain_separator(&view_key_str);
     let commitment = record_plaintext
-        .to_commitment(&parsed_program_id, &record_identifier)
+        .to_commitment(&parsed_program_id, &record_identifier, &view_key_field)
         .unwrap();
     let serial_number =
         Record::<CurrentNetwork, Plaintext<CurrentNetwork>>::serial_number(private_key, commitment)

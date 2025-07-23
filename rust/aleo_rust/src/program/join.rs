@@ -36,7 +36,7 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        let query = Query::from(self.api_client.as_ref().unwrap().base_url());
+        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
 
         // Retrieve the private key.
         let private_key = self.get_private_key(None)?;
@@ -60,7 +60,7 @@ impl<N: Network> ProgramManager<N> {
                 .iter(),
                 fee_record,
                 fee,
-                Some(query),
+                Some(&query),
                 rng,
             )?
         };

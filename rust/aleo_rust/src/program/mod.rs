@@ -108,7 +108,7 @@ impl<N: Network> ProgramManager<N> {
             .iter()
             .try_for_each(|(_, import)| {
                 if import.id() != &credits_id {
-                    vm.process().write().add_program(import)?
+                    vm.process().write().add_program(import)?;
                 }
                 Ok::<_, Error>(())
             })?;

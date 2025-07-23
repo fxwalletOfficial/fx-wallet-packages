@@ -59,7 +59,7 @@ impl<N: Network> ProgramManager<N> {
         let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
         imports.iter().try_for_each(|program| {
             if &credits_id != program.id() {
-                vm.process().write().add_program(program)?
+                vm.process().write().add_program(program)?;
             }
             Ok::<(), Error>(())
         })?;
@@ -71,7 +71,7 @@ impl<N: Network> ProgramManager<N> {
         // Compute the trace
         let locator = Locator::new(*program_id, function_name);
         let (response, mut trace) = vm.process().write().execute::<A, _>(authorization, rng)?;
-        trace.prepare(query)?;
+        trace.prepare(&query)?;
         let execution = trace.prove_execution::<A, _>(
             &locator.to_string(),
             VarunaVersion::V2,
@@ -187,7 +187,7 @@ impl<N: Network> ProgramManager<N> {
     ) -> Result<Transaction<N>> {
         // Initialize an RNG and query object for the transaction
         let rng = &mut rand::thread_rng();
-        let query = Query::from(node_url);
+        let query = Query::<N, BlockMemory<N>>::from(node_url);
 
         // Check that the function exists in the program
         let function_name = function
@@ -210,7 +210,7 @@ impl<N: Network> ProgramManager<N> {
                     if import.id() != &credits_id
                         && !vm.process().read().contains_program(import.id())
                     {
-                        vm.process().write().add_program(import)?
+                        vm.process().write().add_program(import)?;
                     }
                     Ok::<_, Error>(())
                 })?;
@@ -226,7 +226,7 @@ impl<N: Network> ProgramManager<N> {
                 inputs,
                 fee_record,
                 priority_fee,
-                Some(query),
+                Some(&query),
                 rng,
             )
         } else {
@@ -237,7 +237,7 @@ impl<N: Network> ProgramManager<N> {
                 inputs,
                 fee_record,
                 priority_fee,
-                Some(query),
+                Some(&query),
                 rng,
             )
         }
@@ -283,7 +283,7 @@ impl<N: Network> ProgramManager<N> {
 
         let locator = Locator::new(*program_id, function_name);
         let (_, mut trace) = vm.process().write().execute::<A, _>(authorization, rng)?;
-        trace.prepare(query)?;
+        trace.prepare(&query)?;
         let execution = trace.prove_execution::<A, _>(
             &locator.to_string(),
             VarunaVersion::V2,
