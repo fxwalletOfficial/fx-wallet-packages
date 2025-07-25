@@ -54,3 +54,13 @@ ConfChain getChainConfig(String name) {
   }
   return DefaultChain();
 }
+
+/// get chain configuration by bip44Path
+ConfChain getChainConfigByBip44Path(String bip44Path) {
+  for (final chainConfig in chainConfigs) {
+    if (chainConfig.mainnet.bip44Path == bip44Path) {
+      return chainConfig;
+    }
+  }
+  return DefaultChain();
+}

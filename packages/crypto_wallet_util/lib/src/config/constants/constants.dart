@@ -55,6 +55,9 @@ const DOGE_PATH = "m/44'/3'/0'/0/0";
 /// LTC_PATH: "m/44'/2'/0'/0/0";
 const LTC_PATH = "m/44'/2'/0'/0/0";
 
+/// LTC_TAPROOT_PATH: "m/86'/2'/0'/0/0";
+const LTC_TAPROOT_PATH = "m/86'/2'/0'/0/0";
+
 /// TRX_PATH: "m/44'/195'/0'/0/0";
 const TRX_PATH = "m/44'/195'/0'/0/0";
 

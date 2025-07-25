@@ -27,6 +27,9 @@ enum Wallet {
   ALGO,
   TRX,
   BTC,
+  DOGE,
+  LTC,
+  BCH,
   TAPROOT,
   NONE
 }
@@ -79,6 +82,12 @@ Future<WalletType> getMnemonicWallet(String coin, String mnemonic) async {
       return TrxCoin.fromMnemonic(mnemonic, setting);
     case Wallet.BTC:
       return BtcCoin.fromMnemonic(mnemonic, setting);
+    case Wallet.DOGE:
+      return DogeCoin.fromMnemonic(mnemonic, setting);
+    case Wallet.LTC:
+      return LtcCoin.fromMnemonic(mnemonic, setting);
+    case Wallet.BCH:
+      return BchCoin.fromMnemonic(mnemonic, setting);
     case Wallet.TAPROOT:
       return BtcCoin.fromMnemonic(mnemonic, null, true);
   }
@@ -132,6 +141,12 @@ WalletType getPrivateKeyWallet(String coin, String privateKey) {
       return TrxCoin.fromPrivateKey(privateKey, setting);
     case Wallet.BTC:
       return BtcCoin.fromPrivateKey(privateKey, setting);
+    case Wallet.DOGE:
+      return DogeCoin.fromPrivateKey(privateKey, setting);
+    case Wallet.LTC:
+      return LtcCoin.fromPrivateKey(privateKey, setting);
+    case Wallet.BCH:
+      return BchCoin.fromPrivateKey(privateKey, setting);
     case Wallet.TAPROOT:
       return BtcCoin.fromPrivateKey(privateKey, null, true);
   }
