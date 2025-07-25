@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 import 'package:bc_ur_dart/src/models/btc/gspl_tx_data.dart';
-import 'package:bc_ur_dart/src/models/btc/psbt_sign_request.dart';
 import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:cbor/cbor.dart';
 
 import 'package:bc_ur_dart/src/ur.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
+import 'package:crypto_wallet_util/transaction.dart' show GsplTxData, GsplItem, BtcSignDataType;
 
 const String BTC_SIGN_REQUEST = 'BTC-SIGN-REQUEST';
 
@@ -54,7 +54,7 @@ class GsplSignRequestUR extends UR {
     final data = ur.decodeCBOR() as CborMap;
 
     final uuid = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
-    final gsplTxData = GsplTxData.fromCbor(data: data[CborSmallInt(2)] as CborMap);
+    final gsplTxData = getGsplTxDataFromCbor(data: data[CborSmallInt(2)] as CborMap);
     final components = (data[CborSmallInt(3)] as CborMap)[CborSmallInt(1)] as CborList;
 
     String path = 'm';
