@@ -1,18 +1,21 @@
 # crypto_utils
 
-Crypto &amp; Blockchain Toolkit 
+Crypto &amp; Blockchain Toolkit
 
-This package is a convenient and powerful cryptographic toolkit, written in pure "Dart", designed to offer user-friendly multi-chain address generation and  transaction assembly tools for developers, enterprises, and blockchain  enthusiasts. The toolkit provides encoding and decoding for various data formats and cryptographic algorithms, enabling swift and seamless  support for additional cryptocurrencies beyond those initially  supported. 
+This package is a convenient and powerful cryptographic toolkit, written in pure "Dart", designed to offer user-friendly multi-chain address generation and  transaction assembly tools for developers, enterprises, and blockchain  enthusiasts. The toolkit provides encoding and decoding for various data formats and cryptographic algorithms, enabling swift and seamless  support for additional cryptocurrencies beyond those initially  supported.
 
 ## Features
 
-### **Support wallet:** 
+### **Support wallet:**
 
 - ALGO
 - ALPH
 - APTOS
+- BCH
+- BTC
 - CKB
-- COSMOS  
+- COSMOS
+- DOGE
 - DOT
   - ED25519
   - SR25519
@@ -25,6 +28,7 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
   - KAS
   - KLS
 
+- LTC
 - NEAR
 - SC (sia coin)
   - SCP
@@ -40,8 +44,9 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
 - APTOS
 - BTC
   - PSBT
+  - GSPL
 - CKB
-- COSMOS  
+- COSMOS
 - ETH
   - EIP1559
   - LEGACY
@@ -67,7 +72,7 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
   - BCH
   - BELL
 - BECH32
-  - COSMOS 
+  - COSMOS
     - ATOM
     - KAVA
     - SEI
@@ -90,7 +95,7 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
   - TRX
   - XRP
 
-### **Sign and Verification:** 
+### **Sign and Verification:**
 
 - Ed25519
 - Sr25519
@@ -101,11 +106,10 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
 
 - Base32 Encoding/Decoding
 - SS58 Encoding/Decoding
-- Base58Check Encoding/Decoding 
+- Base58Check Encoding/Decoding
 - Bech32 Encoding/Decoding
 - Hex Encoding/Decoding
-- BigInt Encoding/Decoding 
-
+- BigInt Encoding/Decoding
 
 ## Feature requests and bugs ##
 

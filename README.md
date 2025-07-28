@@ -1,6 +1,6 @@
 # fx-wallet-packages
 
-A collection of open source Dart/Flutter packages used in the [FX Wallet](https://example.com) app.
+A collection of open source Dart/Flutter packages used in the [FxWallet](https://www.fxwallet.com) app.
 These packages are modular, independently maintained, and can be reused in any Web3 Flutter application.
 
 > 📦 All packages in this repo are published individually on [pub.dev](https://pub.dev/), and actively maintained.

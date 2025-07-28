@@ -164,3 +164,11 @@
 ### Update
 
 - fix psbt signer error.
+
+## [1.1.8] - 2025-01-XX
+### Update
+
+- Add gspl signer.
+- Add doge wallet
+- Add ltc wallet
+- Add bch wallet

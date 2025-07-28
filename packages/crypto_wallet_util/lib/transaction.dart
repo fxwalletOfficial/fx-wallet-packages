@@ -46,3 +46,9 @@ export 'src/transaction/btc/psbt.dart';
 export 'src/transaction/btc/psbt_tx_data.dart';
 export 'src/transaction/btc/psbt_tx_signer.dart';
 export 'src/forked_lib/psbt/model/transfer_info.dart';
+
+/// export btc gspl
+export 'src/transaction/btc/gspl_tx_signer.dart';
+export 'src/transaction/btc/gspl_tx_data.dart';
+
+export 'src/transaction/btc/sign_data.dart';
