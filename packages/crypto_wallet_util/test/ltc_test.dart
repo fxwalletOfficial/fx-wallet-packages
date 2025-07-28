@@ -152,7 +152,7 @@ void main() async {
         inputs: [
           GsplItem(
             path: "m/44'/2'/0'/0/0",
-            amount: 62926,
+            amount: null,
             signHashType: 1,
           )
         ],
