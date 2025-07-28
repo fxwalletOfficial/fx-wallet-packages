@@ -60,7 +60,7 @@ class XrpCoin extends WalletType {
   XRPPrivateKey privateKeyToWallet(Uint8List privateKey) {
     var key = dynamicToString(privateKey);
     final keyPrefix = key.substring(0, 2);
-    if (keyPrefix != '00') key = '00$key'; // 处理私钥
+    if (keyPrefix != '00') key = '00$key'; // Handle private key
     return XRPPrivateKey.fromHex(key);
   }
 }

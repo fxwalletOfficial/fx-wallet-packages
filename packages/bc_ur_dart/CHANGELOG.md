@@ -61,3 +61,8 @@
 ## 0.1.16
 
 - Fix: Fixed CryptoMultiAccountsUR XRP get from wallet.
+
+## 0.1.17
+
+- Fix: Fixed address and signHashType parse error of GsplItem.
+- Fix: Refactor some code about gspl

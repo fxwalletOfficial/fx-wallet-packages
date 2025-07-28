@@ -176,7 +176,7 @@ Uint8List encodeInt(int number, int length) {
 /// Function for retrieve a random hexadecimal string.
 String generateRandomString() {
   Random random = Random();
-  const chars = '0123456789abcdef'; // 可以根据需要修改字符集合
+  const chars = '0123456789abcdef'; // Character set can be modified as needed
   String result = '';
   for (int i = 0; i < 32; i++) {
     result += chars[random.nextInt(chars.length)];
@@ -241,7 +241,7 @@ bool isHexPrefixed(String str) {
 }
 
 List<int> asciiStringToByteArray(String text) {
-  return text.codeUnits; // 将字符串转换为 ASCII 字符的字节数组
+  return text.codeUnits; // Convert string to ASCII character byte array
 }
 
 Uint8List fromHex(String data) {
