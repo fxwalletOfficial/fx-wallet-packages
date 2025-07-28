@@ -165,7 +165,7 @@
 
 - fix psbt signer error.
 
-## [1.1.8] - 2025-01-XX
+## [1.1.8] - 2025-07-28
 ### Update
 
 - Add gspl signer.
