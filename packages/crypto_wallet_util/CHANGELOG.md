@@ -172,3 +172,8 @@
 - Add doge wallet
 - Add ltc wallet
 - Add bch wallet
+
+## [1.1.9] - 2025-07-28
+## Update
+
+- Update gitignore file.
