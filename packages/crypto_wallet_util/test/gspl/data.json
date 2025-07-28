@@ -1,0 +1,74 @@
+[
+  {
+    "type": "doge",
+    "description": "DOGE GSPL transaction test",
+    "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+    "data": {
+      "inputs": [
+        {
+          "path": "m/44'/3'/0'/0/0",
+          "amount": 100000000
+        }
+      ],
+      "hex": "020000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff0210270000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac94310000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac00000000",
+      "change": {
+        "path": "m/44'/3'/0'/1/0",
+        "amount": 99990000
+      },
+      "dataType": "TRANSACTION"
+    },
+    "expected": {
+      "paymentAddress": "DSNQxBkwaaSVKZXh9nuvU8qYzV6t31t6Dg",
+      "amount": 10000,
+      "fee": 0
+    }
+  },
+  {
+    "type": "ltc_legacy",
+    "description": "LTC Legacy GSPL transaction test",
+    "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+    "data": {
+      "inputs": [
+        {
+          "path": "m/44'/2'/0'/0/0",
+          "amount": 50000000
+        }
+      ],
+      "hex": "020000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff0210270000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac94310000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac00000000",
+      "change": {
+        "path": "m/44'/2'/0'/1/0",
+        "amount": 49990000
+      },
+      "dataType": "TRANSACTION"
+    },
+    "expected": {
+      "paymentAddress": "LgTGg988MpnG3N3FbLufCPjiKZjrqYque7",
+      "amount": 10000,
+      "fee": 0
+    }
+  },
+  {
+    "type": "bch",
+    "description": "BCH GSPL transaction test",
+    "mnemonic": "few tag video grain jealous light tired vapor shed festival shine tag",
+    "data": {
+      "inputs": [
+        {
+          "path": "m/44'/145'/0'/0/0",
+          "amount": 200000000
+        }
+      ],
+      "hex": "020000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff0210270000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac94310000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac00000000",
+      "change": {
+        "path": "m/44'/145'/0'/1/0",
+        "amount": 199990000
+      },
+      "dataType": "TRANSACTION"
+    },
+    "expected": {
+      "paymentAddress": "1NEKQvpJHAYCnZM6RCvMvNfx7MNahijDrs",
+      "amount": 10000,
+      "fee": 0
+    }
+  }
+]

@@ -6,14 +6,14 @@ import 'package:crypto_wallet_util/src/type/type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 class GsplTxData extends TxData {
-  final List<GsplItem> inputs;
+  List<GsplItem> inputs;
   final GsplItem? change;
-  final String hex;
+  String hex;
   final BtcSignDataType dataType;
 
   GsplTxData({required this.inputs, required this.hex, this.change, required this.dataType});
 
-  // 解析地址
+  // Parse address
   String _generateAddress(Uint8List pubKeyHashHex) {
     final paths = inputs.map((input) => input.path).toList();
     if (paths.isEmpty) {
@@ -29,21 +29,21 @@ class GsplTxData extends TxData {
     }
     final prefixHex = networkType.pubKeyHash;
 
-    // 拼接 version + pubkeyHash
+    // Concatenate version + pubkeyHash
     final Uint8List payload = Uint8List(pubKeyHashHex.length + 1);
     payload[0] = prefixHex;
     payload.setRange(1, payload.length, pubKeyHashHex);
 
-    // 双重 SHA256
+    // Double SHA256
     final sha256Hash = getSHA256Digest(getSHA256Digest(payload));
 
-    // 取前4字节为校验码
+    // Take first 4 bytes as checksum
     Uint8List checksum = Uint8List.fromList(sha256Hash.sublist(0, 4));
 
-    // 拼接 payload + checksum
+    // Concatenate payload + checksum
     Uint8List fullData = Uint8List.fromList([...payload, ...checksum]);
 
-    // Base58 编码
+    // Base58 encoding
     return base58.encode(fullData);
   }
 

@@ -40,14 +40,14 @@ class BchCoin extends WalletType {
 
   @override
   String publicKeyToAddress(Uint8List publicKey) {
-    // 首先生成 Legacy 格式的地址
+    // First generate Legacy format address
     final addressBytes = sha160fromByte(publicKey);
     Uint8List versionedHash = Uint8List(21);
     versionedHash[0] = setting.networkType!.pubKeyHash;
     versionedHash.setRange(1, 21, addressBytes);
     final legacyAddress = getBase58Address(versionedHash);
     
-    // 使用 legacyToBch 方法转换为 BCH CashAddr 格式
+    // Use legacyToBch method to convert to BCH CashAddr format
     return btc.Address.legacyToBch(
       address: legacyAddress, 
       prefix: setting.prefix
@@ -56,6 +56,7 @@ class BchCoin extends WalletType {
 
   @override
   String sign(String message) {
+    print('gspl bch sign message: $message');
     final ecPrivateKey = ECPrivate.fromBytes(privateKey);
     return ecPrivateKey.signInput(message.toUint8List(), sigHash: sighashType).toHex();
   }

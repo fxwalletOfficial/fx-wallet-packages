@@ -42,7 +42,7 @@ class LtcCoin extends WalletType {
   @override
   String publicKeyToAddress(Uint8List publicKey) {
     if (isTaproot) {
-      // Taproot P2TR 地址，bech32m 编码，ltc1p 开头
+      // Taproot P2TR address, bech32m encoded, starts with ltc1p
       return P2PKH.getTaprootAddress(publicKey, 'ltc');
     } else {
       final addressBytes = sha160fromByte(publicKey);
@@ -57,7 +57,7 @@ class LtcCoin extends WalletType {
   String sign(String message) {
     final ecPrivateKey = ECPrivate.fromBytes(privateKey);
     if (isTaproot) {
-      // Schnorr签名
+      // Schnorr signature
       return ecPrivateKey.signTapRoot(message.toUint8List()).toHex();
     } else {
       return ecPrivateKey.signInput(message.toUint8List()).toHex();

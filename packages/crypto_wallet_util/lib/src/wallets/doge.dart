@@ -4,7 +4,7 @@ import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 /// Create a **doge** wallet using mnemonic or private key,
-/// with a signature algorithm of [EcdaSignature] and an address type of [btc]
+/// with a signature algorithm of [EcdaSignature] and an address type of [doge]
 
 class DogeCoin extends WalletType {
   final _defaultWalletSetting = DOGEChain().mainnet;
