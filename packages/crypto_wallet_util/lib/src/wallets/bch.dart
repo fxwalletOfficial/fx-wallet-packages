@@ -56,7 +56,6 @@ class BchCoin extends WalletType {
 
   @override
   String sign(String message) {
-    print('gspl bch sign message: $message');
     final ecPrivateKey = ECPrivate.fromBytes(privateKey);
     return ecPrivateKey.signInput(message.toUint8List(), sigHash: sighashType).toHex();
   }

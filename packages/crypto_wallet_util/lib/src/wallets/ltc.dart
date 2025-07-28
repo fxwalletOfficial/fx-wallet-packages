@@ -31,7 +31,7 @@ class LtcCoin extends WalletType {
 
   @override
   Future<Uint8List> mnemonicToPrivateKey(String mnemonic) async {
-    return HDWallet.bip32DerivePath(mnemonic, setting!.bip44Path);
+    return HDWallet.bip32DerivePath(mnemonic, setting.bip44Path);
   }
 
   @override
