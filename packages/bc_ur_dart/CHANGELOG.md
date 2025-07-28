@@ -66,3 +66,7 @@
 
 - Fix: Fixed address and signHashType parse error of GsplItem.
 - Fix: Refactor some code about gspl
+
+## 0.1.18
+
+- Update: Update crypto_wallet_util pubspec version.
