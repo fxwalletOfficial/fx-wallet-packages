@@ -2,7 +2,6 @@ name: fx_wallet_packages
 
 packages:
   - packages/**
-  - examples/**
 
 scripts:
   analyze:
@@ -14,5 +13,5 @@ scripts:
     description: Format all Dart files
 
   test:
-    run: flutter test
+    run: melos exec -- "flutter test"
     description: Run all Flutter tests
