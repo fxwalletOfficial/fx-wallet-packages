@@ -9,3 +9,7 @@
 ## [0.1.2]
 
 * NEW: Remove ListView extents for detail dialog to adjust different screen size.
+
+## [0.1.3]
+
+- FEAT: Support FontFamily settings.

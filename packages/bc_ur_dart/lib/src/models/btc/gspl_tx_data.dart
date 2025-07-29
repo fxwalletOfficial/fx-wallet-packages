@@ -1,16 +1,11 @@
 import 'dart:typed_data';
 
-import 'package:bc_ur_dart/bc_ur_dart.dart';
-import 'package:web3dart/crypto.dart';
+import 'package:bc_ur_dart/src/utils/utils.dart' show getPath, fromHex, cborPathToString;
+import 'package:cbor/cbor.dart';
+import 'package:crypto_wallet_util/transaction.dart' show GsplTxData, GsplItem, BtcSignDataType;
+import 'package:web3dart/crypto.dart' show bytesToHex;
 
-class GsplTxData {
-  final List<GsplItem> inputs;
-  final GsplItem? change;
-  final String hex;
-  final BtcSignDataType dataType;
-
-  GsplTxData({required this.inputs, required this.hex, this.change, required this.dataType});
-
+extension GsplTxDataWithCbor on GsplTxData {
   CborMap toCbor() {
     final cborData = CborMap({
       CborSmallInt(1): CborBytes(fromHex(hex)),
@@ -21,24 +16,9 @@ class GsplTxData {
 
     return cborData;
   }
-
-  factory GsplTxData.fromCbor({required CborMap data}) {
-    final hex = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
-    List<GsplItem>? inputs = (data[CborSmallInt(3)] as CborList).map((e) => GsplItem.fromCbor(data: e as CborMap)).toList();
-    GsplItem? change = data[CborSmallInt(4)] == null ? null : GsplItem.fromCbor(data: data[CborSmallInt(4)] as CborMap);
-
-    return GsplTxData(inputs: inputs, hex: bytesToHex(hex), dataType: BtcSignDataType.TRANSACTION, change: change);
-  }
 }
 
-class GsplItem {
-  final String? path;
-  final String? address;
-  final int? amount;
-  final int? signHashType;
-  final Uint8List? signature;
-  GsplItem({this.path, this.amount, this.signature, this.address, this.signHashType});
-
+extension GsplItemWithCbor on GsplItem {
   CborValue toCbor({bool change = false}) {
     final cborData = CborMap({}, tags: [6110]);
     if (path != null) cborData[CborSmallInt(1)] = CborList(getPath(path!));
@@ -48,23 +28,34 @@ class GsplItem {
 
     return cborData;
   }
+}
 
-  factory GsplItem.fromCbor({required CborMap data}) {
-    final amount = (data[CborSmallInt(2)] as CborInt).toInt();
-    final signature = data[CborSmallInt(3)] != null ? Uint8List.fromList((data[CborSmallInt(3)] as CborBytes).bytes) : null;
-    final signHashType = data[CborSmallInt(4)] != null ? (data[CborSmallInt(4)] as CborInt).toInt() : null;
-    final address = data[CborSmallInt(5)] != null ? (data[CborSmallInt(5)] as CborString).toString() : null;
+GsplTxData getGsplTxDataFromCbor({required CborMap data}) {
+  final hex = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
+  List<GsplItem>? inputs = (data[CborSmallInt(3)] as CborList).map((e) => getGsplItemFromCbor(data: e as CborMap)).toList();
+  GsplItem? change = data[CborSmallInt(4)] == null ? null : getGsplItemFromCbor(data: data[CborSmallInt(4)] as CborMap);
 
-    return GsplItem(
-      address: address,
-      amount: amount,
-      signHashType: signHashType,
-      signature: signature
-    );
+  return GsplTxData(inputs: inputs, hex: bytesToHex(hex), dataType: BtcSignDataType.TRANSACTION, change: change);
+}
+
+GsplItem getGsplItemFromCbor({required CborMap data}) {
+  final pathList = data[CborSmallInt(1)] != null ? (data[CborSmallInt(1)] as CborList) : null;
+  final path = cborPathToString(pathList);
+  final amount = (data[CborSmallInt(2)] as CborInt).toInt();
+  final signature = data[CborSmallInt(3)] != null ? Uint8List.fromList((data[CborSmallInt(3)] as CborBytes).bytes) : null;
+  final address = data[CborSmallInt(4)] != null ? (data[CborSmallInt(4)] as CborString).toString() : null;
+  int? signHashType;
+  try {
+    signHashType = data[CborSmallInt(5)] != null ? int.parse((data[CborSmallInt(5)] as CborString).toString()) : null;
+  } catch (_) {
+    signHashType = null;
   }
 
-  Map<String, dynamic> toJson() => {
-    'amount': amount.toString(),
-    'address': address
-  };
+  return GsplItem(
+    path: path,
+    address: address,
+    amount: amount,
+    signHashType: signHashType,
+    signature: signature
+  );
 }

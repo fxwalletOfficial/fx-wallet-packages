@@ -337,7 +337,7 @@ abstract class BaseChartPainter extends CustomPainter {
   ///translateX转化为view中的x
   double translateXtoX(double translateX) => (translateX + mTranslateX) * scaleX;
 
-  TextStyle getTextStyle(Color color) => TextStyle(fontSize: style.dataFontSize, color: color);
+  TextStyle getTextStyle(Color color) => TextStyle(fontSize: style.dataFontSize, color: color, fontFamily: style.fontFamily);
 
   @override
   bool shouldRepaint(BaseChartPainter oldDelegate) => true;

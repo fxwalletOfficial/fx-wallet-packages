@@ -5,7 +5,8 @@ import 'package:cbor/cbor.dart';
 
 import 'package:bc_ur_dart/src/ur.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
-import 'package:crypto_wallet_util/utils.dart' show hexUint8List;
+import 'package:crypto_wallet_util/transaction.dart' show BtcSignDataType;
+import 'package:crypto_wallet_util/utils.dart' hide fromHex;
 
 const String PSBT_SIGN_REQUEST = 'PSBT-SIGN-REQUEST';
 
@@ -67,10 +68,4 @@ class PsbtSignRequestUR extends UR {
     final item = PsbtSignRequestUR(ur: ur, uuid: uuid, path: path, psbt: psbt.toHex(), dataType: BtcSignDataType.TRANSACTION, xfp: xfp);
     return item;
   }
-}
-
-enum BtcSignDataType {
-  ZERO,
-  TRANSACTION,
-  MESSAGE
 }

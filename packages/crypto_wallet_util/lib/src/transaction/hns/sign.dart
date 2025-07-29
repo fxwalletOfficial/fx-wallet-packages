@@ -11,14 +11,14 @@ class FxHnsSign {
   String sign() {
     final tx = dynamicToUint8List(mtx.hex);
 
-    // 版本号(4)+输入数量(1)+输入数量*(交易哈希(32)+输出索引(4)+sequence(4))+输出数量(1)
+    // Version(4) + input count(1) + input count * (transaction hash(32) + output index(4) + sequence(4)) + output count(1)
     int index = 6 + mtx.inputs.length * 40;
 
-    // 获取签名需要的outputs
+    // Get outputs needed for signing
     final outputsHash = <int>[];
     for (var i = 0; i < mtx.outputs.length; i++) {
       var start = index;
-      index += 11 + tx[start + 9]; //输出币数，输出地址长度，输出地址，输出协议类型
+      index += 11 + tx[start + 9]; // Output coin amount, output address length, output address, output protocol type
       var covenantCount = tx[index];
       index += 1;
       for (var j = 0; j < covenantCount; j++) {

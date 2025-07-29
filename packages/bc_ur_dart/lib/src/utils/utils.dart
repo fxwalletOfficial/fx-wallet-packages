@@ -146,3 +146,14 @@ BigInt toXfpCode(String xfp, {bool bigEndian = true}) {
   return BigInt.parse(hex.encode(reverse), radix: 16);
 }
 
+/// Convert a CborList to a BIP32 path string
+String cborPathToString(CborList? pathList) {
+  if (pathList == null) return '';
+  String path = 'm';
+  for (int i = 0; i < pathList.length; i += 2) {
+    final index = pathList[i] as CborSmallInt;
+    final hardened = (i + 1 < pathList.length) && (pathList[i + 1] is CborBool) && (pathList[i + 1] as CborBool).value;
+    path += '/${index.value}${hardened ? "'" : ""}';
+  }
+  return path;
+}

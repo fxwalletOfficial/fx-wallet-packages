@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart' show BorderRadius, Color, EdgeInsets;
 
+String? DEFAULT_FONT_FAMILY = null;
+
 class ChartColors {
   final List<Color> background;
   final Color defaultText;
@@ -65,6 +67,8 @@ class ChartStyle {
   /// Chart number data text font size.
   final double dataFontSize;
 
+  final String? fontFamily;
+
   int gridRows;
 
   int gridColumns;
@@ -95,7 +99,8 @@ class ChartStyle {
     this.volume = const VolumeRendererStyle(),
     this.select = const ChartSelectStyle(),
     this.depth = const DepthColors(),
-    this.colors = const ChartColors()
+    this.colors = const ChartColors(),
+    this.fontFamily
   });
 }
 
