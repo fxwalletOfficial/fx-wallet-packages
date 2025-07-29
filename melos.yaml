@@ -14,5 +14,5 @@ scripts:
     description: Format all Dart files
 
   test:
-    run: flutter test
+    run: flutter test .
     description: Run all Flutter tests
