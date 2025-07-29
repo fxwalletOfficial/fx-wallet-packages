@@ -3,12 +3,15 @@ import 'package:test/test.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
-import './config.dart';
-
 void main() async {
-  final wallet = await EthCoin.fromPrivateKey(TEST_PRIVATE_KEY);
-  final sponsoredWallet =
-      await EthCoin.fromPrivateKey(TEST_SPONSOR_PRIVATE_KEY);
+  const String TEST_DELEGATION_ADDRESS =
+      '0x80296FF8D1ED46f8e3C7992664D13B833504c2Bb';
+  String mnemonic =
+      'number vapor draft title message quarter hour other hotel leave shrug donor';
+  String sponsorMnemonic =
+      'few tag video grain jealous light tired vapor shed festival shine tag';
+  final wallet = await EthCoin.fromMnemonic(mnemonic);
+  final sponsoredWallet = await EthCoin.fromMnemonic(sponsorMnemonic);
 
   final authorization = Eip7702Authorization(
     chainId: 11155111,

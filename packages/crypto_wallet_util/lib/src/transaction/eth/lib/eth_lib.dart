@@ -4,9 +4,11 @@ export 'txNetwork.dart';
 export './utils.dart';
 export './rlp.dart';
 export './txData.dart';
+export './eth_data_decoder.dart';
 
 /// export signed type data module
 export './typed_data/abi.dart';
+export './typed_data/abi_decoder.dart';
 export './typed_data/constants.dart';
 export './typed_data/models.dart';
 export './typed_data/typed_data.dart';
