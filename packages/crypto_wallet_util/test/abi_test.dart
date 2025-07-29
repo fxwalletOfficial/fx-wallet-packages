@@ -51,81 +51,11 @@ void main() {
         fail('Decoding failed: ${result['error']}');
       }
 
-      expect(result['parameters'], isA<List>());
-
       final parameters = result['parameters'] as List;
-      expect(parameters.length, 5);
+      final formattedParams = EthDataDecoder.formatParameters(parameters);
 
-      // Validate executor parameter
-      expect(parameters[0]['name'], 'executor');
-      expect(parameters[0]['type'], 'address');
-      expect(parameters[0]['value'], isA<String>());
-      expect((parameters[0]['value'] as String).startsWith('0x'), true);
-      expect(parameters[0]['value'], expectedValues['executor']);
-
-      // Validate swapData tuple parameter
-      expect(parameters[1]['name'], 'swapData');
-      expect(parameters[1]['type'], 'tuple');
-      expect(parameters[1]['value'], isA<List>());
-
-      final tupleData = parameters[1]['value'] as List;
-      expect(tupleData.length, 7);
-      final expectedSwapData =
-          expectedValues['swapData'] as Map<String, dynamic>;
-
-      // Validate tuple fields contain type and name information
-      expect(tupleData[0]['name'], 'srcToken');
-      expect(tupleData[0]['type'], 'address');
-      expect(tupleData[0]['value'], isA<String>());
-      expect(tupleData[0]['value'], expectedSwapData['srcToken']);
-
-      expect(tupleData[1]['name'], 'destToken');
-      expect(tupleData[1]['type'], 'address');
-      expect(tupleData[1]['value'], isA<String>());
-      expect(tupleData[1]['value'], expectedSwapData['destToken']);
-
-      expect(tupleData[2]['name'], 'fromAmount');
-      expect(tupleData[2]['type'], 'uint256');
-      expect(tupleData[2]['value'], isA<BigInt>());
-      expect(tupleData[2]['value'], expectedSwapData['fromAmount']);
-
-      expect(tupleData[3]['name'], 'toAmount');
-      expect(tupleData[3]['type'], 'uint256');
-      expect(tupleData[3]['value'], isA<BigInt>());
-      expect(tupleData[3]['value'], expectedSwapData['toAmount']);
-
-      expect(tupleData[4]['name'], 'quotedAmount');
-      expect(tupleData[4]['type'], 'uint256');
-      expect(tupleData[4]['value'], isA<BigInt>());
-      expect(tupleData[4]['value'], expectedSwapData['quotedAmount']);
-
-      expect(tupleData[5]['name'], 'metadata');
-      expect(tupleData[5]['type'], 'bytes32');
-      expect(tupleData[5]['value'], isA<String>());
-      expect(tupleData[5]['value'], expectedSwapData['metadata']);
-
-      expect(tupleData[6]['name'], 'beneficiary');
-      expect(tupleData[6]['type'], 'address');
-      expect(tupleData[6]['value'], isA<String>());
-      expect(tupleData[6]['value'], expectedSwapData['beneficiary']);
-
-      // Validate partnerAndFee parameter
-      expect(parameters[2]['name'], 'partnerAndFee');
-      expect(parameters[2]['type'], 'uint256');
-      expect(parameters[2]['value'], isA<BigInt>());
-      expect(parameters[2]['value'], expectedValues['partnerAndFee']);
-
-      // Validate permit parameter
-      expect(parameters[3]['name'], 'permit');
-      expect(parameters[3]['type'], 'bytes');
-      expect(parameters[3]['value'], isA<String>());
-      expect(parameters[3]['value'], expectedValues['permit']);
-
-      // Validate executorData parameter
-      expect(parameters[4]['name'], 'executorData');
-      expect(parameters[4]['type'], 'bytes');
-      expect(parameters[4]['value'], isA<String>());
-      expect(parameters[4]['value'], expectedValues['executorData']);
+      // Verify that the formatted parameter structure matches the expected values
+      expect(formattedParams, equals(expectedValues));
     });
   });
 }

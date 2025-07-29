@@ -28,6 +28,3 @@ doc/api/
 .vscode/
 .test/pem/
 coverage 
-
-# config
-config.dart
