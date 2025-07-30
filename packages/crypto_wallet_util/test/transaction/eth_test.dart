@@ -28,8 +28,15 @@ void main() {
     test('sign', () {
       expect(signedTxData.signature.toUint8List(), signature);
       expect(signature.toUint8List(), targetSignature.toUint8List());
-
       assert(signer.verify());
+
+      final broadcastData = signedTxData.toBroadcast();
+      expect(broadcastData['signature'], signature.toStr());
+      final jsonData = signedTxData.toJson();
+      expect(jsonData['data'], signedTxData.data.data);
+
+      final hdData = eip1559transaction.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
+      assert(hdData.toStr().isNotEmpty);
     });
 
     test('deserialize', () {
@@ -59,6 +66,14 @@ void main() {
       expect(signedTxData.signature.toUint8List(), signature);
       expect(signature.toUint8List(), targetSignature.toUint8List());
       assert(signer.verify());
+
+      final broadcastData = signedTxData.toBroadcast();
+      expect(broadcastData['signature'], signature.toStr());
+      final jsonData = signedTxData.toJson();
+      expect(jsonData['data'], signedTxData.data.data);
+
+      final hdData = legacyTransaction.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
+      assert(hdData.toStr().isNotEmpty);
     });
 
     test('deserialize', () {

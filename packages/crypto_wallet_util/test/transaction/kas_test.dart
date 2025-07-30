@@ -11,14 +11,15 @@ void main() async {
       'fly lecture gasp juice hover ice business census bless weapon polar upgrade';
   final kas = await KasCoin.fromMnemonic(mnemonic);
   test('test sign', () async {
-    final transactionJson = json.decode(
-        File('./test/transaction/data/kas.json')
-            .readAsStringSync(encoding: utf8));
+    final transactionJson = json.decode(File('./test/transaction/data/kas.json')
+        .readAsStringSync(encoding: utf8));
     final txData = KasTxData.fromJson(transactionJson);
     final signer = KasTxSigner(kas, txData);
     final signedTxData = signer.sign();
-    // ignore: avoid_print
-    print(signedTxData.toBroadcast());
     assert(signer.verify());
+    final jsonData = signedTxData.toJson();
+    final broadcastData = signedTxData.toBroadcast();
+    assert(jsonData.isNotEmpty);
+    assert(broadcastData.isNotEmpty);
   });
 }

@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 
-import 'package:crypto_wallet_util/src/transaction/eth/lib/eth_lib.dart';
+import 'package:crypto_wallet_util/crypto_utils.dart';
 
 void main() {
   final expectedFunctionName = 'swapExactAmountIn';

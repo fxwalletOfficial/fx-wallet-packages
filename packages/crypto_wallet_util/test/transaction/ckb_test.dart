@@ -21,9 +21,8 @@ void main() async {
         'ckb1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqg22jte2zg5a457d9hdfq7ss499ygz63ycxv2rt3');
   });
   test('test sign', () async {
-    final transactionJson = json.decode(
-        File('./test/transaction/data/ckb.json')
-            .readAsStringSync(encoding: utf8));
+    final transactionJson = json.decode(File('./test/transaction/data/ckb.json')
+        .readAsStringSync(encoding: utf8));
     final txData = CkbTxData.fromJson(transactionJson);
     final txSigner = CkbTxSigner(ckb, txData);
     final signedTxData = txSigner.sign();
@@ -32,5 +31,9 @@ void main() async {
       '0x5500000010000000550000005500000041000000f434e961907533ad999daa7cd6de1aead0232a72be562bd5fa043f64f260fd337d8963799cd802502c178008b99222b265116e137c74359cf678c014361cf1f400',
       '0x'
     ]);
+
+    final broadcastData = signedTxData.toBroadcast();
+    final jsonData = signedTxData.toJson();
+    expect(jsonData['hash'], broadcastData['hash']);
   });
 }

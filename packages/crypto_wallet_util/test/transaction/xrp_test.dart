@@ -12,19 +12,19 @@ void main() async {
   final xrp = await XrpCoin.fromMnemonic(mnemonic);
 
   group('test xrp signature', () {
-    final transactionJson = json.decode(
-        File('./test/transaction/data/xrp.json')
-            .readAsStringSync(encoding: utf8));
+    final transactionJson = json.decode(File('./test/transaction/data/xrp.json')
+        .readAsStringSync(encoding: utf8));
     test('transaction', () async {
       final txJson = transactionJson['payment_xrp'];
       final txResult = txJson['txSignature'];
       final txData = XrpTxData.fromJson(txJson);
       final signer = XrpTxSigner(xrp, txData);
       final XrpTxData tx = signer.sign();
-      // ignore: avoid_print
-      print(tx.txHash);
       expect(tx.signedBlob, txResult);
       assert(signer.verify());
+
+      final broadcastData = tx.toBroadcast();
+      assert(broadcastData.isNotEmpty);
     });
 
     test('token transaction', () async {
