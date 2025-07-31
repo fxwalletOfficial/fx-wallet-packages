@@ -52,7 +52,5 @@ void main() {
         results.add(result);
       }
     }
-    // ignore: avoid_print
-    print(jsonEncode(results));
   });
 }
