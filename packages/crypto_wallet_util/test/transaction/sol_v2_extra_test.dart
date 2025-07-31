@@ -14,6 +14,9 @@ import 'package:crypto_wallet_util/src/transaction/sol/v2/messages/message_instr
 import 'package:crypto_wallet_util/src/transaction/sol/v2/programs/address_lookup_table/state.dart';
 import 'package:crypto_wallet_util/src/transaction/sol/v2/solana.dart';
 import 'package:crypto_wallet_util/src/transaction/sol/v2/programs/program.dart';
+import 'package:crypto_wallet_util/src/transaction/sol/v2/transactions/transaction.dart';
+import 'package:crypto_wallet_util/src/transaction/sol/v2/transactions/transaction_instruction.dart';
+import 'package:crypto_wallet_util/src/transaction/sol/v2/transactions/account_meta.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:convert/convert.dart' show hex;
 import 'dart:convert' show utf8;
@@ -3125,6 +3128,453 @@ void main() {
       final almostMaxAccount =
           AddressLookupTableAccount(key: tableKey, state: almostMaxState);
       expect(almostMaxAccount.isActive, isFalse);
+    });
+  });
+
+  group('SolanaTransaction comprehensive tests', () {
+    // Test data setup
+    final testPayer = Pubkey.fromBase58('J6XAG36WMVKVpyAknbRE5h3trsNi2mDjZUy2v2pvT1Jk');
+    final testReceiver = Pubkey.fromBase58('22222222222222222222222222222222');
+    final testProgramId = Pubkey.fromBase58('11111111111111111111111111111111');
+    const testBlockhash = 'EETubP5AKHgjPAhzPAFcb8BAY1hMH639CWCFTqi3hq1k';
+    final testKeypair = nacl.sign.keypair.sync();
+
+    test('SolanaTransaction constructor with signatures', () {
+      final signatures = List.generate(2, (_) => Uint8List(nacl.signatureLength));
+      final header = MessageHeader(
+        numRequiredSignatures: 2,
+        numReadonlySignedAccounts: 0,
+        numReadonlyUnsignedAccounts: 1,
+      );
+      final message = Message(
+        version: null,
+        header: header,
+        accountKeys: [testPayer, testReceiver, testProgramId],
+        recentBlockhash: testBlockhash,
+        instructions: [],
+        addressTableLookups: [],
+      );
+
+      final transaction = SolanaTransaction(
+        signatures: signatures,
+        message: message,
+      );
+
+      expect(transaction.signatures.length, 2);
+      expect(transaction.message, message);
+      expect(transaction.signature, signatures.first);
+      expect(transaction.version, isNull);
+      expect(transaction.blockhash, testBlockhash);
+    });
+
+    test('SolanaTransaction constructor without signatures', () {
+      final header = MessageHeader(
+        numRequiredSignatures: 1,
+        numReadonlySignedAccounts: 0,
+        numReadonlyUnsignedAccounts: 1,
+      );
+      final message = Message(
+        version: null,
+        header: header,
+        accountKeys: [testPayer, testReceiver, testProgramId],
+        recentBlockhash: testBlockhash,
+        instructions: [],
+        addressTableLookups: [],
+      );
+
+      final transaction = SolanaTransaction(message: message);
+
+      expect(transaction.signatures.length, 1);
+      expect(transaction.signatures.first.length, nacl.signatureLength);
+      expect(transaction.message, message);
+    });
+
+    test('SolanaTransaction constructor signature mismatch', () {
+      final signatures = [Uint8List(nacl.signatureLength)]; // Only 1 signature
+      final header = MessageHeader(
+        numRequiredSignatures: 2, // But requires 2
+        numReadonlySignedAccounts: 0,
+        numReadonlyUnsignedAccounts: 1,
+      );
+      final message = Message(
+        version: null,
+        header: header,
+        accountKeys: [testPayer, testReceiver, testProgramId],
+        recentBlockhash: testBlockhash,
+        instructions: [],
+        addressTableLookups: [],
+      );
+
+      expect(() => SolanaTransaction(signatures: signatures, message: message),
+          throwsA(isA<Exception>()));
+    });
+
+    test('SolanaTransaction.legacy factory', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([1, 2, 3, 4]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      expect(transaction.version, isNull);
+      expect(transaction.blockhash, testBlockhash);
+      expect(transaction.message.accountKeys.first, testPayer);
+      expect(transaction.message.instructions.length, 1);
+      expect(transaction.message.addressTableLookups, isEmpty);
+      expect(transaction.message.header.numRequiredSignatures, greaterThan(0));
+    });
+
+    test('SolanaTransaction.v0 factory', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([5, 6, 7, 8]),
+      );
+
+      final lookupTableAccount = AddressLookupTableAccount(
+        key: Pubkey.fromBase58('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'),
+        state: AddressLookupTableState(
+          deactivationSlot: BigInt.parse('FFFFFFFFFFFFFFFF', radix: 16),
+          lastExtendedSlot: BigInt.from(1000),
+          lastExtendedSlotStartIndex: 0,
+          authority: testPayer,
+          addresses: [testReceiver],
+        ),
+      );
+
+      final transaction = SolanaTransaction.v0(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+        addressLookupTableAccounts: [lookupTableAccount],
+      );
+
+      expect(transaction.version, 0);
+      expect(transaction.blockhash, testBlockhash);
+      expect(transaction.message.accountKeys.first, testPayer);
+      expect(transaction.message.instructions.length, 1);
+      expect(transaction.message.addressTableLookups.length, 1);
+    });
+
+    test('SolanaTransaction serialize and deserialize', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([9, 10, 11, 12]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      // Serialize
+      final serialized = transaction.serialize();
+      expect(serialized.length, greaterThan(0));
+
+      // Deserialize
+      final deserialized = SolanaTransaction.deserialize(serialized.asUint8List());
+      expect(deserialized.message.accountKeys, transaction.message.accountKeys);
+      expect(deserialized.message.recentBlockhash, transaction.message.recentBlockhash);
+      expect(deserialized.message.instructions.length, transaction.message.instructions.length);
+      expect(deserialized.signatures.length, transaction.signatures.length);
+    });
+
+    test('SolanaTransaction fromBase58 and fromBase64', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([13, 14, 15, 16]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      final serialized = transaction.serialize();
+      final base58Encoded = base58.encode(serialized.asUint8List());
+      final base64Encoded = base64.encode(serialized.asUint8List());
+
+      // Test fromBase58
+      final fromBase58 = SolanaTransaction.fromBase58(base58Encoded);
+      expect(fromBase58.message.accountKeys, transaction.message.accountKeys);
+      expect(fromBase58.message.recentBlockhash, transaction.message.recentBlockhash);
+
+      // Test fromBase64
+      final fromBase64 = SolanaTransaction.fromBase64(base64Encoded);
+      expect(fromBase64.message.accountKeys, transaction.message.accountKeys);
+      expect(fromBase64.message.recentBlockhash, transaction.message.recentBlockhash);
+    });
+
+    test('SolanaTransaction sign method', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([17, 18, 19, 20]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      // Create a signer that matches the payer
+      final payerKeypair = Ed25519Keypair(
+        pubkey: testPayer.toBytes(),
+        seckey: testKeypair.seckey,
+      );
+      final signer = Keypair(payerKeypair);
+
+      // Sign the transaction
+      transaction.sign([signer]);
+
+      // Verify signature was added
+      expect(transaction.signatures.first.length, nacl.signatureLength);
+      expect(transaction.signatures.first, isNot(Uint8List(nacl.signatureLength)));
+    });
+
+    test('SolanaTransaction sign with unknown signer', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([21, 22, 23, 24]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      // Create a signer with different pubkey
+      final unknownKeypair = Ed25519Keypair(
+        pubkey: testReceiver.toBytes(),
+        seckey: testKeypair.seckey,
+      );
+      final unknownSigner = Keypair(unknownKeypair);
+
+      expect(() => transaction.sign([unknownSigner]), throwsA(isA<Exception>()));
+    });
+
+    test('SolanaTransaction addSignature method', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([25, 26, 27, 28]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      final signature = Uint8List(nacl.signatureLength);
+      signature.fillRange(0, signature.length, 42); // Fill with test data
+
+      transaction.addSignature(testPayer, signature);
+
+      expect(transaction.signatures.first, signature);
+    });
+
+    test('SolanaTransaction addSignature with invalid length', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([29, 30, 31, 32]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      final invalidSignature = Uint8List(10); // Wrong length
+
+      expect(() => transaction.addSignature(testPayer, invalidSignature),
+          throwsA(isA<Exception>()));
+    });
+
+    test('SolanaTransaction addSignature with unknown pubkey', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([33, 34, 35, 36]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      final signature = Uint8List(nacl.signatureLength);
+      final unknownPubkey = Pubkey.fromBase58('33333333333333333333333333333333');
+
+      expect(() => transaction.addSignature(unknownPubkey, signature),
+          throwsA(isA<Exception>()));
+    });
+
+    test('SolanaTransaction serializeMessage', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([37, 38, 39, 40]),
+      );
+
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      final serializedMessage = transaction.serializeMessage();
+      expect(serializedMessage.length, greaterThan(0));
+
+      // Verify it's the same as message.serialize()
+      final expectedMessage = transaction.message.serialize();
+      expect(serializedMessage.asUint8List(), expectedMessage.asUint8List());
+    });
+
+    test('SolanaTransaction with multiple signatures', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.signerAndWritable(testReceiver),
+          AccountMeta.writable(Pubkey.fromBase58('44444444444444444444444444444444')),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([41, 42, 43, 44]),
+      );
+
+      final header = MessageHeader(
+        numRequiredSignatures: 2,
+        numReadonlySignedAccounts: 0,
+        numReadonlyUnsignedAccounts: 1,
+      );
+      final message = Message(
+        version: null,
+        header: header,
+        accountKeys: [testPayer, testReceiver, testProgramId],
+        recentBlockhash: testBlockhash,
+        instructions: [instruction.toMessageInstruction([testPayer, testReceiver, testProgramId])],
+        addressTableLookups: [],
+      );
+
+      final signatures = List.generate(2, (_) => Uint8List(nacl.signatureLength));
+      final transaction = SolanaTransaction(signatures: signatures, message: message);
+
+      expect(transaction.signatures.length, 2);
+      expect(transaction.signature, signatures.first);
+    });
+
+    test('SolanaTransaction with v0 message', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([45, 46, 47, 48]),
+      );
+
+      final transaction = SolanaTransaction.v0(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      );
+
+      expect(transaction.version, 0);
+      expect(transaction.message.version, 0);
+      expect(transaction.blockhash, testBlockhash);
+    });
+
+    test('SolanaTransaction edge cases', () {
+      // Test with empty instructions
+      final transaction = SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [],
+        recentBlockhash: testBlockhash,
+      );
+
+      expect(transaction.message.instructions, isEmpty);
+      expect(transaction.message.accountKeys.length, 1); // Only payer
+
+      // Test with null version (legacy)
+      expect(transaction.version, isNull);
+      expect(transaction.message.version, isNull);
+    });
+
+    test('SolanaTransaction performance and consistency', () {
+      final instruction = TransactionInstruction(
+        keys: [
+          AccountMeta.signerAndWritable(testPayer),
+          AccountMeta.writable(testReceiver),
+        ],
+        programId: testProgramId,
+        data: Uint8List.fromList([49, 50, 51, 52]),
+      );
+
+      // Create multiple transactions
+      final transactions = List.generate(5, (_) => SolanaTransaction.legacy(
+        payer: testPayer,
+        instructions: [instruction],
+        recentBlockhash: testBlockhash,
+      ));
+
+      // Verify they are consistent
+      for (int i = 1; i < transactions.length; i++) {
+        expect(transactions[i].message.accountKeys, transactions[0].message.accountKeys);
+        expect(transactions[i].message.recentBlockhash, transactions[0].message.recentBlockhash);
+        expect(transactions[i].signatures.length, transactions[0].signatures.length);
+      }
+
+      // Test serialization consistency
+      final serialized = transactions.map((t) => t.serialize()).toList();
+      for (int i = 1; i < serialized.length; i++) {
+        expect(serialized[i].asUint8List(), serialized[0].asUint8List());
+      }
     });
   });
 }
