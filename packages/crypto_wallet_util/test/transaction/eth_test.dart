@@ -16,6 +16,9 @@ void main() {
     value: BigInt.from(10),
     to: '0x1234567890abcdef',
   );
+
+  final JsonData = txData.toJson();
+  final txDataRaw = EthTxDataRaw.fromJson(JsonData);
   group('EIP1559 transition', () {
     Eip1559TxData eip1559transaction =
         Eip1559TxData(data: txData, network: txNetwork);
@@ -25,7 +28,9 @@ void main() {
     Uint8List signature;
     final signedTxData = signer.sign();
     signature = signedTxData.serialize();
+
     test('sign', () {
+      expect(JsonData, txDataRaw.toJson());
       expect(signedTxData.signature.toUint8List(), signature);
       expect(signature.toUint8List(), targetSignature.toUint8List());
       assert(signer.verify());
@@ -35,7 +40,8 @@ void main() {
       final jsonData = signedTxData.toJson();
       expect(jsonData['data'], signedTxData.data.data);
 
-      final hdData = eip1559transaction.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
+      final hdData = eip1559transaction.txsMsg(
+          jsonData['v'], jsonData['r'], jsonData['s']);
       assert(hdData.toStr().isNotEmpty);
     });
 
@@ -72,7 +78,8 @@ void main() {
       final jsonData = signedTxData.toJson();
       expect(jsonData['data'], signedTxData.data.data);
 
-      final hdData = legacyTransaction.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
+      final hdData =
+          legacyTransaction.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
       assert(hdData.toStr().isNotEmpty);
     });
 

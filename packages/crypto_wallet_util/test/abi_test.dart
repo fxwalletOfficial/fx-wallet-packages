@@ -58,4 +58,25 @@ void main() {
       expect(formattedParams, equals(expectedValues));
     });
   });
+
+  test('should decode function parameters', () {
+    const abi = [
+      {
+        "inputs": [
+          {"internalType": "address", "name": "spender", "type": "address"},
+          {"internalType": "uint256", "name": "amount", "type": "uint256"}
+        ],
+        "name": "approve",
+        "outputs": [
+          {"internalType": "bool", "name": "", "type": "bool"}
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+    const data =
+        '0x095ea7b300000000000000000000000068d6b739d2020067d1e2f713b999da97e4d548120000000000000000000000000000000000000000000000000000000005f5e100';
+    final result = EthDataDecoder.decodeByAbi(abi, data);
+    expect(result['function'], "approve");
+  });
 }
