@@ -49,7 +49,8 @@ void main() async {
         expect(psbtTxData.fee, expectedFee);
 
         // test transfer amount
-        print(psbtTxData.toJson());
+        final jsonData = psbtTxData.toJson();
+        assert(jsonData.isNotEmpty);
       });
     }
   });

@@ -11,14 +11,15 @@ void main() async {
       'few tag video grain jealous light tired vapor shed festival shine tag';
   final icp = await IcpCoin.fromMnemonic(mnemonic);
   test('test sign', () async {
-    final transactionJson = json.decode(
-        File('./test/transaction/data/icp.json')
-            .readAsStringSync(encoding: utf8));
+    final transactionJson = json.decode(File('./test/transaction/data/icp.json')
+        .readAsStringSync(encoding: utf8));
     final txData = IcpTxData.fromJson(transactionJson);
     final signer = IcpTxSigner(icp, txData);
     final signedTxData = signer.sign();
-    // ignore: avoid_print
-    print(signedTxData.toBroadcast());
     assert(signer.verify());
+    final jsonData = signedTxData.toJson();
+    final broadcastData = signedTxData.toBroadcast();
+    assert(jsonData["transaction"].isNotEmpty);
+    assert(broadcastData["transaction"].isNotEmpty);
   });
 }

@@ -17,8 +17,10 @@ void main() async {
     final txData = FilTxData.fromJson(transactionJson);
     final signer = FilTxSigner(wallet, txData);
     final signedTxData = signer.sign();
-    // ignore: avoid_print
-    print(signedTxData.toBroadcast());
     assert(signer.verify());
+    final jsonData = signedTxData.toJson();
+    final broadcastData = signedTxData.toBroadcast();
+    assert(jsonData["transaction"].isNotEmpty);
+    assert(broadcastData["transaction"].isNotEmpty);
   });
 }

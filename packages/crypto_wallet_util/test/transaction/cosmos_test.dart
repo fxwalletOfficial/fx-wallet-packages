@@ -2,7 +2,8 @@ import 'dart:math';
 
 import 'package:test/test.dart';
 
-import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/bank/v1beta1/export.dart' as bank;
+import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/bank/v1beta1/export.dart'
+    as bank;
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/types/export.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart';
 
@@ -44,11 +45,18 @@ void main() {
         ..amount = '2750'
         ..denom = 'ukava',
     );
+
     final mnemonic =
         'number vapor draft title message quarter hour other hotel leave shrug donor';
     final wallet = await getMnemonicWallet('kava', mnemonic);
     final CosmosTxData txData =
         CosmosTxData(msgs: [message], data: signerData, fee: fee);
+
+    final jsonData = txData.toJson();
+    expect(jsonData, isEmpty);
+    final broadcastData = txData.toBroadcast();
+    expect(broadcastData, isEmpty);
+
     final CosmosTxSigner signer = CosmosTxSigner(wallet, txData);
     signer.sign();
     expect(signer.sign(),

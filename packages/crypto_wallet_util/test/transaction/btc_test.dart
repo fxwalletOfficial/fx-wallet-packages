@@ -27,12 +27,13 @@ void main() async {
 
       // Sign the transaction
       final signedTxData = signer.sign();
+      final jsonData = signedTxData.toJson();
+      final broadcastData = signedTxData.toBroadcast();
+      assert(jsonData.isNotEmpty);
+      assert(broadcastData.isNotEmpty);
 
       // Verify signatures were added
       expect(signer.verify(), isTrue);
-
-      print('Signed PSBT: ${signedTxData.psbt.serialize()}');
-      print('Signed Tx Hex: ${signedTxData.getSignedTxHex()}');
     });
 
     test('taproot signature generation', () {
@@ -43,12 +44,14 @@ void main() async {
 
       // Sign the transaction
       final signedTxData = signer.sign();
+      final jsonData = signedTxData.toJson();
+      final broadcastData = signedTxData.toBroadcast();
+      assert(jsonData.isNotEmpty);
+      assert(broadcastData.isNotEmpty);
 
       // Verify signatures were added
       expect(signer.verify(), isTrue);
-
-      print('Signed PSBT: ${signedTxData.psbt.serialize()}');
-      print('Signed Tx Hex: ${signedTxData.getSignedTxHex()}');
+      expect(signer.safeVerify(), isTrue);
     });
   });
 
