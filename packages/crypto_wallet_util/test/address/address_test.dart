@@ -53,4 +53,21 @@ void main() {
       }
     }
   });
+
+  test('checkBase58', () {
+    const address = 'DR75LKecs7pjC944zskRkDUw5dKDoHz6ph';
+    final isValid = checkBase58(address);
+    expect(isValid, true);
+  });
+
+  test('toEthChecksumAddress', () {
+    const address = '0x742d35Cc6634C0532925A3B8D4C9dB96C4B4d8B6';
+    final checksumAddress = toEthChecksumAddress(address);
+    expect(checksumAddress, '0x742d35Cc6634C0532925A3B8D4C9dB96C4B4d8B6');
+  });
+
+  test('getAddressType', () {
+    final addressType = getAddressType('bech32');
+    expect(addressType, AddressType.BECH32);
+  });
 }

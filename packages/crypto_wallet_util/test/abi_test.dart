@@ -18,6 +18,14 @@ void main() {
       final functionSignature =
           EthDataDecoder.paraSwap.getFunctionSignature(exampleData);
       expect(functionSignature, expectedFunctionSignature);
+
+      final functions = EthDataDecoder.paraSwap.functions;
+      final signature = EthDataDecoder.paraSwap.signatures;
+      expect(functions, isNotEmpty);
+      expect(signature, isNotEmpty);
+      assert(EthDataDecoder.paraSwap.hasFunction(exampleData.substring(0, 10)));
+      final selector = AbiDecoder.compute4BytesSignature(functionSignature!);
+      expect(selector, exampleData.substring(0, 10));
     });
 
     test('should decode function parameters', () {

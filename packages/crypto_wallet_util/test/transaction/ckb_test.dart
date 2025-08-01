@@ -1,9 +1,11 @@
 import 'dart:io';
 
-import 'package:crypto_wallet_util/src/transaction/ckb/tx_data.dart';
-import 'package:crypto_wallet_util/src/transaction/ckb/tx_signer.dart';
 import 'package:test/test.dart';
 
+import 'package:crypto_wallet_util/src/transaction/ckb/tx_data.dart';
+import 'package:crypto_wallet_util/src/transaction/ckb/tx_signer.dart';
+import 'package:crypto_wallet_util/src/transaction/ckb/lib/ckb_lib.dart'
+    as ckb_lib;
 import 'package:crypto_wallet_util/src/wallets/ckb.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
@@ -35,5 +37,34 @@ void main() async {
     final broadcastData = signedTxData.toBroadcast();
     final jsonData = signedTxData.toJson();
     expect(jsonData['hash'], broadcastData['hash']);
+  });
+
+  test('ckb data', () async {
+    const mnemonic =
+        'few tag video grain jealous light tired vapor shed festival shine tag';
+    final wallet = await CkbCoin.fromMnemonic(mnemonic);
+    final longAddress = wallet.toLongAddress();
+    final script =
+        ckb_lib.Script.fromAddress(longAddress, ckb_lib.AddressType.LONG);
+    expect(script.hashType, 'type');
+    expect(ckb_lib.hashTypeToCode('data1'), 2);
+    expect(() => ckb_lib.hashTypeToCode('error'), throwsArgumentError);
+
+    expect(ckb_lib.codeToHashType(0), 'data');
+    expect(ckb_lib.codeToHashType(1), 'type');
+    expect(ckb_lib.codeToHashType(2), 'data1');
+    expect(() => ckb_lib.codeToHashType(3), throwsArgumentError);
+
+    final uInt32 = ckb_lib.UInt32.fromBytes(Uint8List.fromList([1,2,3,4]));
+    final uInt64 = ckb_lib.UInt64.fromBytes(Uint8List.fromList([1,2,3,4,5,6,7,8]));
+    final byte32 = ckb_lib.Byte32.fromHex('0x12');
+    expect(uInt32.getValue(),67305985);
+    expect(uInt64.getValue(),BigInt.from(578437695752307201));
+    expect(byte32.getValue().toStr(),'1200000000000000000000000000000000000000000000000000000000000000');
+
+    final emptySerializeType = ckb_lib.EmptySerializeType();
+    expect(emptySerializeType.getLength(), 0);
+    emptySerializeType.getValue();
+    expect(emptySerializeType.toBytes(), []);
   });
 }
