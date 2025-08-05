@@ -59,14 +59,13 @@ class GsplTxData extends TxData {
     return _generateAddress(script.sublist(3, 23));
   }
 
-  int _getFee(int? paymentAmount) {
-    if (paymentAmount == null) {
+  int _getFee(int? amount) {
+    if (amount == null) {
       throw Exception('Payment amount is null');
     }
     try {
       final inputAmount = inputs.map((input) => input.amount).whereType<int>().reduce((a, b) => a + b);
-      final changeAmount = change?.amount ?? 0;
-      return inputAmount - paymentAmount - changeAmount;
+      return inputAmount - amount;
     } catch (e) {
       throw Exception('Failed to get fee: $e');
     }
@@ -75,16 +74,17 @@ class GsplTxData extends TxData {
   @override
   Map<String, dynamic> toJson() {
     final transaction = btc.Transaction.fromHex(hex);
-    final payment = transaction.outs.first;
-    final paymentAddress = _extractP2PKHAddress(payment.script);
-    final paymentAmount = payment.value;
-    final fee = _getFee(paymentAmount);
+
+    final outputs = transaction.outs;
+    final payments = outputs.map((output) => { 'address': _extractP2PKHAddress(output.script), 'amount': output.value }).toList();
+    final amount = outputs.map((output) => output.value).toList().whereType<int>().fold<int>(0, (sum, amount) => sum + amount);
+    final fee = _getFee(amount);
 
     return {
       'inputs': inputs,
       'change': change,
-      'amount': paymentAmount,
-      'paymentAddress': paymentAddress,
+      'amount': amount,
+      'payments': payments,
       'dataType': dataType.name,
       'fee': fee,
     };
