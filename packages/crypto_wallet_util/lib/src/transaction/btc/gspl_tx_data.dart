@@ -79,6 +79,7 @@ class GsplTxData extends TxData {
     final changeAmount = change?.amount;
     final allPayments = outputs.map((output) => { 'address': _extractP2PKHAddress(output.script), 'amount': output.value }).toList();
     final payments = changeAmount != null && allPayments.isNotEmpty && allPayments.last['amount'] == changeAmount ? allPayments.sublist(0, allPayments.length - 1) : allPayments;
+    final payAmount = payments.map((payment) => payment['amount']).toList().whereType<int>().fold<int>(0, (sum, amount) => sum + amount);
     final amount = outputs.map((output) => output.value).toList().whereType<int>().fold<int>(0, (sum, amount) => sum + amount);
     final fee = _getFee(amount);
 
@@ -86,6 +87,7 @@ class GsplTxData extends TxData {
       'inputs': inputs,
       'change': change,
       'amount': amount,
+      'payAmount': payAmount,
       'payments': payments,
       'dataType': dataType.name,
       'fee': fee,
