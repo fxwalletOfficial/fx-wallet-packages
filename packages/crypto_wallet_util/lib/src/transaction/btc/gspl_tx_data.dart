@@ -76,7 +76,9 @@ class GsplTxData extends TxData {
     final transaction = btc.Transaction.fromHex(hex);
 
     final outputs = transaction.outs;
-    final payments = outputs.map((output) => { 'address': _extractP2PKHAddress(output.script), 'amount': output.value }).toList();
+    final changeAmount = change?.amount;
+    final allPayments = outputs.map((output) => { 'address': _extractP2PKHAddress(output.script), 'amount': output.value }).toList();
+    final payments = changeAmount != null && allPayments.isNotEmpty && allPayments.last['amount'] == changeAmount ? allPayments.sublist(0, allPayments.length - 1) : allPayments;
     final amount = outputs.map((output) => output.value).toList().whereType<int>().fold<int>(0, (sum, amount) => sum + amount);
     final fee = _getFee(amount);
 
