@@ -62,10 +62,34 @@ void main() async {
 
         // Test transaction data parsing
         final jsonData = txData.toJson();
+        print('jsonData: $jsonData');
         expect(jsonData['amount'], expected['amount']);
         expect(jsonData['fee'], expected['fee']);
-        expect(jsonData['paymentAddress'], expected['paymentAddress']);
-
+        
+        // Check payments array structure
+        expect(jsonData['payments'], isA<List>());
+        final payments = jsonData['payments'] as List;
+        expect(payments.isNotEmpty, true);
+        
+        // Check payments match expected structure
+        final expectedPayments = expected['payments'] as List;
+        expect(payments.length, expectedPayments.length);
+        
+        for (int i = 0; i < payments.length; i++) {
+          final payment = payments[i] as Map<String, dynamic>;
+          final expectedPayment = expectedPayments[i] as Map<String, dynamic>;
+          expect(payment['address'], expectedPayment['address']);
+          expect(payment['amount'], expectedPayment['amount']);
+        }
+        
+        // Verify payments structure
+        for (final payment in payments) {
+          expect(payment, isA<Map<String, dynamic>>());
+          final paymentMap = payment as Map<String, dynamic>;
+          expect(paymentMap['address'], isNotNull);
+          expect(paymentMap['amount'], isNotNull);
+        }
+        
         // Test signing
         final signer = GsplTxSigner(wallet, txData);
         final signedTxData = signer.sign();
@@ -156,6 +180,84 @@ void main() async {
         () => signer.sign(),
         throwsA(isA<Exception>()),
       );
+    });
+  });
+
+  group('GSPL Updated Data Structure Tests', () {
+    test('should return payments array instead of single paymentAddress', () async {
+      final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
+      final wallet = await DogeCoin.fromMnemonic(mnemonic);
+      
+      final txData = GsplTxData(
+        inputs: [
+          GsplItem(
+            path: "m/44'/3'/0'/0/0",
+            amount: 100000000,
+            signHashType: 1,
+          )
+        ],
+        hex: '020000000162c938f33daedcdef74ffe74ab94433825feace0b31cc7cd426a65968674c58c0100000000ffffffff0210270000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac94310000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac00000000',
+        change: GsplItem(
+          path: "m/44'/3'/0'/1/0",
+          amount: 99990000,
+          signHashType: 1,
+        ),
+        dataType: BtcSignDataType.TRANSACTION,
+      );
+
+      final jsonData = txData.toJson();
+      
+      // Verify new structure
+      expect(jsonData['payments'], isA<List>());
+      expect(jsonData['payments'].length, greaterThan(0));
+      
+      // Verify payments array structure
+      final payments = jsonData['payments'] as List;
+      for (final payment in payments) {
+        expect(payment, isA<Map<String, dynamic>>());
+        final paymentMap = payment as Map<String, dynamic>;
+        expect(paymentMap['address'], isNotNull);
+        expect(paymentMap['amount'], isNotNull);
+      }
+      
+      // Verify other fields still exist
+      expect(jsonData['amount'], isNotNull);
+      expect(jsonData['fee'], isNotNull);
+      expect(jsonData['inputs'], isNotNull);
+      expect(jsonData['change'], isNotNull);
+      expect(jsonData['dataType'], isNotNull);
+    });
+
+    test('should filter out change output from payments array', () async {
+      final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
+      final wallet = await DogeCoin.fromMnemonic(mnemonic);
+      
+      final txData = GsplTxData(
+        inputs: [
+          GsplItem(
+            path: "m/44'/3'/0'/0/0",
+            amount: 100000000,
+            signHashType: 1,
+          )
+        ],
+        hex: '020000000162c938f33daedcdef74ffe74ab94433825feace0b31cc7cd426a65968674c58c0100000000ffffffff0210270000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac94310000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac00000000',
+        change: GsplItem(
+          path: "m/44'/3'/0'/1/0",
+          amount: 99990000,
+          signHashType: 1,
+        ),
+        dataType: BtcSignDataType.TRANSACTION,
+      );
+
+      final jsonData = txData.toJson();
+      final payments = jsonData['payments'] as List;
+      
+      // Verify that change output is filtered out
+      // The last payment should not have the change amount
+      if (payments.isNotEmpty) {
+        final lastPayment = payments.last as Map<String, dynamic>;
+        expect(lastPayment['amount'], isNot(equals(99990000)));
+      }
     });
   });
 

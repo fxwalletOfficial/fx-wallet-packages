@@ -1,3 +1,5 @@
+import 'package:crypto_wallet_util/src/utils/number.dart';
+
 class Origin {
   final String status;
   final int code;
@@ -27,7 +29,7 @@ class Origin {
     return Origin(
       status: json['status'],
       code: json['code'],
-      fee: json['fee'],
+      fee: NumberUtil.toDouble(json['fee']),
       rate: json['rate'],
       mtime: json['mtime'],
       version: json['version'],
@@ -133,7 +135,7 @@ class Coin {
     return Coin(
       version: json['version'],
       height: json['height'],
-      value: json['value'],
+      value: NumberUtil.toDouble(json['value']),
       address: json['address'],
       coinbase: json['coinbase'],
     );
@@ -193,7 +195,7 @@ class OriginOutput {
   factory OriginOutput.fromJson(Map<String, dynamic> json) {
     return OriginOutput(
         address: json['address'],
-        amount: json['amount'],
+        amount: json['amount'] != null ? NumberUtil.toDouble(json['amount']) : null,
         path: json['path'],
         value: json['value']);
   }

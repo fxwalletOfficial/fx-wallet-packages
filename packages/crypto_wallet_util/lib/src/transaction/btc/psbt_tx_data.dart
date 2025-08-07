@@ -27,6 +27,14 @@ class PsbtTxData extends TxData {
     return psbt.unsignedTransaction!.outputs[0].getAddress();
   }
 
+  List<Map<String, dynamic>> get payments {
+    final payments = psbt.unsignedTransaction!.outputs.map((e) => {
+      'address': e.getAddress(),
+      'amount': e.amount
+    }).toList();
+    return payments.where((output) => !psbt.inputAddresses.contains(output['address'])).toList();
+  }
+
   Origin get origin => getOrigin(unsignedPsbt);
 
   static PsbtTxData fromHash(String hash, {bool isTaproot = false}) {
@@ -42,9 +50,34 @@ class PsbtTxData extends TxData {
     for (int i = 0; i < psbt.inputs.length; i++) {
       final psbtInput = psbt.inputs[i];
       final txInput = unsignedTx.inputs[i];
-      final amount = psbtInput.witnessUtxo!.amount;
-      final value = amount / 100000000;
-      final address = psbtInput.witnessUtxo!.scriptPubKey.getAddress();
+      
+      // Handle cases where witnessUtxo might be null
+      double value = 0.0;
+      String address = '';
+
+      if (psbtInput.witnessUtxo != null) {
+        value = psbtInput.witnessUtxo!.amount / 100000000;
+        address = psbtInput.witnessUtxo!.scriptPubKey.getAddress();
+      } else if (psbtInput.previousTransaction != null) {
+        // Fallback to previous transaction if available
+        final prevTx = psbtInput.previousTransaction!;
+        final outputIndex = txInput.index;
+        if (outputIndex < prevTx.outputs.length) {
+          final output = prevTx.outputs[outputIndex];
+          value = output.amount / 100000000;
+          address = output.scriptPubKey.getAddress();
+        } else {
+          print('Warning: PSBT input $i has invalid output index');
+          value = 0.0;
+          address = 'unknown';
+        }
+      } else {
+        // If neither witnessUtxo nor previousTransaction is available,
+        // we can't determine the exact amount and address
+        print('Warning: PSBT input $i has no witnessUtxo or previousTransaction');
+        value = 0.0;
+        address = 'unknown';
+      }
 
       inputs.add(OriginInput(
         prevout: Prevout(
@@ -158,7 +191,8 @@ class PsbtTxData extends TxData {
     return {
       'fee': fee,
       'transferAmount': transferAmount,
-      'transferAddress': transferAddress
+      'transferAddress': transferAddress,
+      'payments': payments
     };
   }
 }

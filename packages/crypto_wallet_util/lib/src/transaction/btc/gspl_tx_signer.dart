@@ -45,9 +45,9 @@ class GsplTxSigner extends TxSigner {
     // Deserialize and identify transaction information, get readable transaction structure
     final transaction = btc.Transaction.fromHex(txData.hex);
     final inputAddress = wallet.publicKeyToAddress(wallet.publicKey);
-    final paymentAddress = txData.toJson()['paymentAddress'];
-    if (paymentAddress == null) {
-      throw Exception('No valid output address found in transaction outputs');
+    final payments = txData.toJson()['payments'];
+    if (payments == null || payments.isEmpty) {
+      throw Exception('No valid output found in transaction outputs');
     }
 
     // Iterate through inputs, use wallet.sign to sign sigHash

@@ -177,3 +177,8 @@
 ## Update
 
 - Update gitignore file.
+
+## [1.1.10] - 2025-08-06
+## Update
+
+- fix batch transfer error of psbt and gspl.
