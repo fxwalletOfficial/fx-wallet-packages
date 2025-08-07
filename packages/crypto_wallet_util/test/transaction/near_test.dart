@@ -17,9 +17,11 @@ void main() async {
     final txData = NearTxData.fromJson(transactionJson['transfer']);
     final signer = NearTxSigner(alph, txData);
     final signedTxData = signer.sign();
-    // ignore: avoid_print
-    print(signedTxData.toBroadcast());
     assert(signer.verify());
+    final jsonData = signedTxData.toJson();
+    final broadcastData = signedTxData.toBroadcast();
+    assert(jsonData.isNotEmpty);
+    assert(broadcastData.isNotEmpty);
   });
 
   test('test token transfer', () async {
@@ -29,8 +31,8 @@ void main() async {
     final txData = NearTxData.fromJson(transactionJson['functionCall']);
     final signer = NearTxSigner(alph, txData);
     final signedTxData = signer.sign();
-    // ignore: avoid_print
-    print(signedTxData.toBroadcast());
     assert(signer.verify());
+    final broadcastData = signedTxData.toBroadcast();
+    assert(broadcastData.isNotEmpty);
   });
 }

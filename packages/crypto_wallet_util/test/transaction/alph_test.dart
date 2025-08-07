@@ -17,8 +17,9 @@ void main() async {
     final txData = AlphTxData.fromJson(transactionJson);
     final signer = AlphTxSigner(alph, txData);
     final signedTxData = signer.sign();
-    // ignore: avoid_print
-    print(signedTxData.toBroadcast());
+    final broadcastData = signedTxData.toBroadcast();
+    final jsonData = signedTxData.toJson();
+    expect(broadcastData['signature'], jsonData['signature']);
     assert(signer.verify());
   });
 }

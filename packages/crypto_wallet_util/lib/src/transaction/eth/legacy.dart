@@ -67,7 +67,7 @@ class LegacyTxData extends EthTxData {
 
   @override
   Map<String, dynamic> toBroadcast() {
-    return {signature: signature};
+    return {'signature': signature};
   }
 
   @override

@@ -67,7 +67,6 @@ void main() async {
         expect(input.signature!.isNotEmpty, true);
       }
 
-      print('BCH GSPL signed transaction: ${signedTxData.message}');
     });
 
     test('bch gspl transaction with change output', () async {

@@ -17,8 +17,9 @@ void main() async {
     final txData = AptosTxData.fromJson(transactionJson);
     final signer = AptosTxSigner(wallet, txData);
     final signedTxData = signer.sign();
-    // ignore: avoid_print
-    print(jsonEncode(signedTxData.toBroadcast()));
+    final broadcastData = signedTxData.toBroadcast();
+    final jsonData = signedTxData.toJson();
+    expect(broadcastData['rawPublicKey'], jsonData['rawPublicKey']);
     assert(signer.verify());
   });
 }

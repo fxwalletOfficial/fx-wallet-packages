@@ -56,6 +56,15 @@ void main() async {
         deserializedTxData.authorization.r, eip7702transaction.authorization.r);
     expect(
         deserializedTxData.authorization.v, eip7702transaction.authorization.v);
+
+    final broadcastData = signedTxData.toBroadcast();
+    expect(broadcastData['signature'], signedTxData.signature);
+    final jsonData = signedTxData.toJson();
+    expect(jsonData['data'], signedTxData.data.data);
+
+    final hdData =
+        deserializedTxData.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
+    assert(hdData.toStr().isNotEmpty);
   });
 
   test('gas sponsor demo', () {
@@ -91,7 +100,23 @@ void main() async {
 
     final gasPayer = EthTxSigner(wallet, eip1559TxData);
     final signedTxData = gasPayer.sign();
-    print(signedTxData.serialize().toStr());
+
+    final broadcastData = signedTxData.toBroadcast();
+    expect(broadcastData['signature'], signedTxData.signature);
+    final jsonData = signedTxData.toJson();
+    expect(jsonData['data'], signedTxData.data.data);
+
+    final hdData =
+        deserializedTxData.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
+    assert(hdData.toStr().isNotEmpty);
+  });
+
+  test('signIng', () {
+    final String signature =
+        eip7702transaction.signIng(wallet.privateKey.toStr());
+    final String target =
+        "0&5293d5f8d78a624a168b2ed73dbdab3c268981ccdbaee6e986a58de3ece38e58&12657b00bae3e21898bfc5226f42d1ba8d63ef2a4a3bc2b02b8e5ce185063026";
+    expect(signature, target);
   });
 }
 

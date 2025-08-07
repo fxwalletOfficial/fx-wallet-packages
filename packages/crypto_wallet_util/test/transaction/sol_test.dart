@@ -28,6 +28,8 @@ void main() async {
         final signature = broadcastData['messageToSign']['initTokenAddress'];
         expect(signature, expectedToken);
       }
+      final jsonData = signedTxData.toJson();
+      assert(jsonData.isNotEmpty);
     }
   });
 }

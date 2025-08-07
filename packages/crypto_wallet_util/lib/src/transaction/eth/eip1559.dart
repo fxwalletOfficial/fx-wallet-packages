@@ -70,7 +70,7 @@ class Eip1559TxData extends EthTxData {
 
   @override
   Map<String, dynamic> toBroadcast() {
-    return {signature: signature};
+    return {'signature': signature};
   }
 
   @override

@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 
-import 'package:crypto_wallet_util/src/transaction/eth/lib/eth_lib.dart';
+import 'package:crypto_wallet_util/crypto_utils.dart';
 
 void main() {
   final expectedFunctionName = 'swapExactAmountIn';
@@ -18,6 +18,14 @@ void main() {
       final functionSignature =
           EthDataDecoder.paraSwap.getFunctionSignature(exampleData);
       expect(functionSignature, expectedFunctionSignature);
+
+      final functions = EthDataDecoder.paraSwap.functions;
+      final signature = EthDataDecoder.paraSwap.signatures;
+      expect(functions, isNotEmpty);
+      expect(signature, isNotEmpty);
+      assert(EthDataDecoder.paraSwap.hasFunction(exampleData.substring(0, 10)));
+      final selector = AbiDecoder.compute4BytesSignature(functionSignature!);
+      expect(selector, exampleData.substring(0, 10));
     });
 
     test('should decode function parameters', () {
@@ -57,5 +65,26 @@ void main() {
       // Verify that the formatted parameter structure matches the expected values
       expect(formattedParams, equals(expectedValues));
     });
+  });
+
+  test('should decode function parameters', () {
+    const abi = [
+      {
+        "inputs": [
+          {"internalType": "address", "name": "spender", "type": "address"},
+          {"internalType": "uint256", "name": "amount", "type": "uint256"}
+        ],
+        "name": "approve",
+        "outputs": [
+          {"internalType": "bool", "name": "", "type": "bool"}
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+    const data =
+        '0x095ea7b300000000000000000000000068d6b739d2020067d1e2f713b999da97e4d548120000000000000000000000000000000000000000000000000000000005f5e100';
+    final result = EthDataDecoder.decodeByAbi(abi, data);
+    expect(result['function'], "approve");
   });
 }
