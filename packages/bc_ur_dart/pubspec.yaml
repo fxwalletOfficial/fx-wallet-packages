@@ -11,10 +11,16 @@ dependencies:
   cbor: ^6.3.3
   convert: ^3.1.1
   crypto: ^3.0.3
-  crypto_wallet_util: ^1.1.8
+  # crypto_wallet_util: ^1.1.8
   uuid: ^4.4.0
   web3dart: ^2.7.3
   xrandom: ^0.7.2
+
+  crypto_wallet_util:
+    git:
+      url: https://github.com/fxwalletOfficial/fx-wallet-packages.git
+      ref: test/offline-btc-likely
+      path: packages/crypto_wallet_util
 
 dev_dependencies:
   lints: ^3.0.0
