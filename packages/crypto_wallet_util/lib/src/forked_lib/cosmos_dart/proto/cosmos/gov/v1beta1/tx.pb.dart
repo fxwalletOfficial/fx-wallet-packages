@@ -19,7 +19,7 @@ import 'gov.pbenum.dart' as $6;
 class MsgSubmitProposal extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'MsgSubmitProposal', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.gov.v1beta1'), createEmptyInstance: create)
     ..aOM<$3.Any>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'content', subBuilder: $3.Any.create)
-    ..pc<$2.Coin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'initialDeposit', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'initialDeposit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'proposer')
     ..hasRequiredFields = false
   ;
@@ -27,7 +27,7 @@ class MsgSubmitProposal extends $pb.GeneratedMessage {
   MsgSubmitProposal._() : super();
   factory MsgSubmitProposal({
     $3.Any? content,
-    $core.Iterable<$2.Coin>? initialDeposit,
+    $core.Iterable<$2.CosmosCoin>? initialDeposit,
     $core.String? proposer,
   }) {
     final _result = create();
@@ -75,7 +75,7 @@ class MsgSubmitProposal extends $pb.GeneratedMessage {
   $3.Any ensureContent() => $_ensure(0);
 
   @$pb.TagNumber(2)
-  $core.List<$2.Coin> get initialDeposit => $_getList(1);
+  $core.List<$2.CosmosCoin> get initialDeposit => $_getList(1);
 
   @$pb.TagNumber(3)
   $core.String get proposer => $_getSZ(2);
@@ -340,7 +340,7 @@ class MsgDeposit extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'MsgDeposit', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.gov.v1beta1'), createEmptyInstance: create)
     ..a<$fixnum.Int64>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'proposalId', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'depositor')
-    ..pc<$2.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -348,7 +348,7 @@ class MsgDeposit extends $pb.GeneratedMessage {
   factory MsgDeposit({
     $fixnum.Int64? proposalId,
     $core.String? depositor,
-    $core.Iterable<$2.Coin>? amount,
+    $core.Iterable<$2.CosmosCoin>? amount,
   }) {
     final _result = create();
     if (proposalId != null) {
@@ -402,7 +402,7 @@ class MsgDeposit extends $pb.GeneratedMessage {
   void clearDepositor() => clearField(2);
 
   @$pb.TagNumber(3)
-  $core.List<$2.Coin> get amount => $_getList(2);
+  $core.List<$2.CosmosCoin> get amount => $_getList(2);
 }
 
 class MsgDepositResponse extends $pb.GeneratedMessage {

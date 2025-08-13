@@ -435,7 +435,7 @@ class CommunityPoolSpendProposal extends $pb.GeneratedMessage {
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'title')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'description')
     ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'recipient')
-    ..pc<$2.Coin>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -444,7 +444,7 @@ class CommunityPoolSpendProposal extends $pb.GeneratedMessage {
     $core.String? title,
     $core.String? description,
     $core.String? recipient,
-    $core.Iterable<$2.Coin>? amount,
+    $core.Iterable<$2.CosmosCoin>? amount,
   }) {
     final _result = create();
     if (title != null) {
@@ -510,7 +510,7 @@ class CommunityPoolSpendProposal extends $pb.GeneratedMessage {
   void clearRecipient() => clearField(3);
 
   @$pb.TagNumber(4)
-  $core.List<$2.Coin> get amount => $_getList(3);
+  $core.List<$2.CosmosCoin> get amount => $_getList(3);
 }
 
 class DelegatorStartingInfo extends $pb.GeneratedMessage {

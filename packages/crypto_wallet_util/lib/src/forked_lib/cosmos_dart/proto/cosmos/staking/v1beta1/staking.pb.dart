@@ -1291,14 +1291,14 @@ class Params extends $pb.GeneratedMessage {
 class DelegationResponse extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'DelegationResponse', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
     ..aOM<Delegation>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegation', subBuilder: Delegation.create)
-    ..aOM<$6.Coin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balance', subBuilder: $6.Coin.create)
+    ..aOM<$6.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balance', subBuilder: $6.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   DelegationResponse._() : super();
   factory DelegationResponse({
     Delegation? delegation,
-    $6.Coin? balance,
+    $6.CosmosCoin? balance,
   }) {
     final _result = create();
     if (delegation != null) {
@@ -1342,15 +1342,15 @@ class DelegationResponse extends $pb.GeneratedMessage {
   Delegation ensureDelegation() => $_ensure(0);
 
   @$pb.TagNumber(2)
-  $6.Coin get balance => $_getN(1);
+  $6.CosmosCoin get balance => $_getN(1);
   @$pb.TagNumber(2)
-  set balance($6.Coin v) { setField(2, v); }
+  set balance($6.CosmosCoin v) { setField(2, v); }
   @$pb.TagNumber(2)
   $core.bool hasBalance() => $_has(1);
   @$pb.TagNumber(2)
   void clearBalance() => clearField(2);
   @$pb.TagNumber(2)
-  $6.Coin ensureBalance() => $_ensure(1);
+  $6.CosmosCoin ensureBalance() => $_ensure(1);
 }
 
 class RedelegationEntryResponse extends $pb.GeneratedMessage {

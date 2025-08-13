@@ -94,7 +94,7 @@ class TxBuilder {
   }
 
   /// Sets the given [coins] as the transaction fees.
-  void setFeeAmount(List<Coin>? coins) {
+  void setFeeAmount(List<CosmosCoin>? coins) {
     // Do not include default values as per ADR-027
     if (coins == null || coins.isEmpty) {
       return;

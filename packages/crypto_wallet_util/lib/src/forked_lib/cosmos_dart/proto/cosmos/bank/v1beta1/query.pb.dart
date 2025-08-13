@@ -76,13 +76,13 @@ class QueryBalanceRequest extends $pb.GeneratedMessage {
 
 class QueryBalanceResponse extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'QueryBalanceResponse', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
-    ..aOM<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balance', subBuilder: $2.Coin.create)
+    ..aOM<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balance', subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   QueryBalanceResponse._() : super();
   factory QueryBalanceResponse({
-    $2.Coin? balance,
+    $2.CosmosCoin? balance,
   }) {
     final _result = create();
     if (balance != null) {
@@ -112,15 +112,15 @@ class QueryBalanceResponse extends $pb.GeneratedMessage {
   static QueryBalanceResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $2.Coin get balance => $_getN(0);
+  $2.CosmosCoin get balance => $_getN(0);
   @$pb.TagNumber(1)
-  set balance($2.Coin v) { setField(1, v); }
+  set balance($2.CosmosCoin v) { setField(1, v); }
   @$pb.TagNumber(1)
   $core.bool hasBalance() => $_has(0);
   @$pb.TagNumber(1)
   void clearBalance() => clearField(1);
   @$pb.TagNumber(1)
-  $2.Coin ensureBalance() => $_ensure(0);
+  $2.CosmosCoin ensureBalance() => $_ensure(0);
 }
 
 class QueryAllBalancesRequest extends $pb.GeneratedMessage {
@@ -188,14 +188,14 @@ class QueryAllBalancesRequest extends $pb.GeneratedMessage {
 
 class QueryAllBalancesResponse extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'QueryAllBalancesResponse', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
-    ..pc<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balances', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balances', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOM<$4.PageResponse>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'pagination', subBuilder: $4.PageResponse.create)
     ..hasRequiredFields = false
   ;
 
   QueryAllBalancesResponse._() : super();
   factory QueryAllBalancesResponse({
-    $core.Iterable<$2.Coin>? balances,
+    $core.Iterable<$2.CosmosCoin>? balances,
     $4.PageResponse? pagination,
   }) {
     final _result = create();
@@ -229,7 +229,7 @@ class QueryAllBalancesResponse extends $pb.GeneratedMessage {
   static QueryAllBalancesResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$2.Coin> get balances => $_getList(0);
+  $core.List<$2.CosmosCoin> get balances => $_getList(0);
 
   @$pb.TagNumber(2)
   $4.PageResponse get pagination => $_getN(1);
@@ -308,14 +308,14 @@ class QuerySpendableBalancesRequest extends $pb.GeneratedMessage {
 
 class QuerySpendableBalancesResponse extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'QuerySpendableBalancesResponse', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
-    ..pc<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balances', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balances', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOM<$4.PageResponse>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'pagination', subBuilder: $4.PageResponse.create)
     ..hasRequiredFields = false
   ;
 
   QuerySpendableBalancesResponse._() : super();
   factory QuerySpendableBalancesResponse({
-    $core.Iterable<$2.Coin>? balances,
+    $core.Iterable<$2.CosmosCoin>? balances,
     $4.PageResponse? pagination,
   }) {
     final _result = create();
@@ -349,7 +349,7 @@ class QuerySpendableBalancesResponse extends $pb.GeneratedMessage {
   static QuerySpendableBalancesResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$2.Coin> get balances => $_getList(0);
+  $core.List<$2.CosmosCoin> get balances => $_getList(0);
 
   @$pb.TagNumber(2)
   $4.PageResponse get pagination => $_getN(1);
@@ -414,14 +414,14 @@ class QueryTotalSupplyRequest extends $pb.GeneratedMessage {
 
 class QueryTotalSupplyResponse extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'QueryTotalSupplyResponse', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
-    ..pc<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'supply', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'supply', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOM<$4.PageResponse>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'pagination', subBuilder: $4.PageResponse.create)
     ..hasRequiredFields = false
   ;
 
   QueryTotalSupplyResponse._() : super();
   factory QueryTotalSupplyResponse({
-    $core.Iterable<$2.Coin>? supply,
+    $core.Iterable<$2.CosmosCoin>? supply,
     $4.PageResponse? pagination,
   }) {
     final _result = create();
@@ -455,7 +455,7 @@ class QueryTotalSupplyResponse extends $pb.GeneratedMessage {
   static QueryTotalSupplyResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$2.Coin> get supply => $_getList(0);
+  $core.List<$2.CosmosCoin> get supply => $_getList(0);
 
   @$pb.TagNumber(2)
   $4.PageResponse get pagination => $_getN(1);
@@ -518,13 +518,13 @@ class QuerySupplyOfRequest extends $pb.GeneratedMessage {
 
 class QuerySupplyOfResponse extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'QuerySupplyOfResponse', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
-    ..aOM<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', subBuilder: $2.Coin.create)
+    ..aOM<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   QuerySupplyOfResponse._() : super();
   factory QuerySupplyOfResponse({
-    $2.Coin? amount,
+    $2.CosmosCoin? amount,
   }) {
     final _result = create();
     if (amount != null) {
@@ -554,15 +554,15 @@ class QuerySupplyOfResponse extends $pb.GeneratedMessage {
   static QuerySupplyOfResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $2.Coin get amount => $_getN(0);
+  $2.CosmosCoin get amount => $_getN(0);
   @$pb.TagNumber(1)
-  set amount($2.Coin v) { setField(1, v); }
+  set amount($2.CosmosCoin v) { setField(1, v); }
   @$pb.TagNumber(1)
   $core.bool hasAmount() => $_has(0);
   @$pb.TagNumber(1)
   void clearAmount() => clearField(1);
   @$pb.TagNumber(1)
-  $2.Coin ensureAmount() => $_ensure(0);
+  $2.CosmosCoin ensureAmount() => $_ensure(0);
 }
 
 class QueryParamsRequest extends $pb.GeneratedMessage {

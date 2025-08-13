@@ -22,7 +22,7 @@ class MsgCreateValidator extends $pb.GeneratedMessage {
     ..aOS(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatorAddress')
     ..aOS(5, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
     ..aOM<$4.Any>(6, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'pubkey', subBuilder: $4.Any.create)
-    ..aOM<$6.Coin>(7, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'value', subBuilder: $6.Coin.create)
+    ..aOM<$6.CosmosCoin>(7, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'value', subBuilder: $6.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -34,7 +34,7 @@ class MsgCreateValidator extends $pb.GeneratedMessage {
     $core.String? delegatorAddress,
     $core.String? validatorAddress,
     $4.Any? pubkey,
-    $6.Coin? value,
+    $6.CosmosCoin? value,
   }) {
     final _result = create();
     if (description != null) {
@@ -142,15 +142,15 @@ class MsgCreateValidator extends $pb.GeneratedMessage {
   $4.Any ensurePubkey() => $_ensure(5);
 
   @$pb.TagNumber(7)
-  $6.Coin get value => $_getN(6);
+  $6.CosmosCoin get value => $_getN(6);
   @$pb.TagNumber(7)
-  set value($6.Coin v) { setField(7, v); }
+  set value($6.CosmosCoin v) { setField(7, v); }
   @$pb.TagNumber(7)
   $core.bool hasValue() => $_has(6);
   @$pb.TagNumber(7)
   void clearValue() => clearField(7);
   @$pb.TagNumber(7)
-  $6.Coin ensureValue() => $_ensure(6);
+  $6.CosmosCoin ensureValue() => $_ensure(6);
 }
 
 class MsgCreateValidatorResponse extends $pb.GeneratedMessage {
@@ -306,7 +306,7 @@ class MsgDelegate extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'MsgDelegate', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatorAddress')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
-    ..aOM<$6.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', subBuilder: $6.Coin.create)
+    ..aOM<$6.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', subBuilder: $6.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -314,7 +314,7 @@ class MsgDelegate extends $pb.GeneratedMessage {
   factory MsgDelegate({
     $core.String? delegatorAddress,
     $core.String? validatorAddress,
-    $6.Coin? amount,
+    $6.CosmosCoin? amount,
   }) {
     final _result = create();
     if (delegatorAddress != null) {
@@ -368,15 +368,15 @@ class MsgDelegate extends $pb.GeneratedMessage {
   void clearValidatorAddress() => clearField(2);
 
   @$pb.TagNumber(3)
-  $6.Coin get amount => $_getN(2);
+  $6.CosmosCoin get amount => $_getN(2);
   @$pb.TagNumber(3)
-  set amount($6.Coin v) { setField(3, v); }
+  set amount($6.CosmosCoin v) { setField(3, v); }
   @$pb.TagNumber(3)
   $core.bool hasAmount() => $_has(2);
   @$pb.TagNumber(3)
   void clearAmount() => clearField(3);
   @$pb.TagNumber(3)
-  $6.Coin ensureAmount() => $_ensure(2);
+  $6.CosmosCoin ensureAmount() => $_ensure(2);
 }
 
 class MsgDelegateResponse extends $pb.GeneratedMessage {
@@ -413,7 +413,7 @@ class MsgBeginRedelegate extends $pb.GeneratedMessage {
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatorAddress')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorSrcAddress')
     ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorDstAddress')
-    ..aOM<$6.Coin>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', subBuilder: $6.Coin.create)
+    ..aOM<$6.CosmosCoin>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', subBuilder: $6.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -422,7 +422,7 @@ class MsgBeginRedelegate extends $pb.GeneratedMessage {
     $core.String? delegatorAddress,
     $core.String? validatorSrcAddress,
     $core.String? validatorDstAddress,
-    $6.Coin? amount,
+    $6.CosmosCoin? amount,
   }) {
     final _result = create();
     if (delegatorAddress != null) {
@@ -488,15 +488,15 @@ class MsgBeginRedelegate extends $pb.GeneratedMessage {
   void clearValidatorDstAddress() => clearField(3);
 
   @$pb.TagNumber(4)
-  $6.Coin get amount => $_getN(3);
+  $6.CosmosCoin get amount => $_getN(3);
   @$pb.TagNumber(4)
-  set amount($6.Coin v) { setField(4, v); }
+  set amount($6.CosmosCoin v) { setField(4, v); }
   @$pb.TagNumber(4)
   $core.bool hasAmount() => $_has(3);
   @$pb.TagNumber(4)
   void clearAmount() => clearField(4);
   @$pb.TagNumber(4)
-  $6.Coin ensureAmount() => $_ensure(3);
+  $6.CosmosCoin ensureAmount() => $_ensure(3);
 }
 
 class MsgBeginRedelegateResponse extends $pb.GeneratedMessage {
@@ -552,7 +552,7 @@ class MsgUndelegate extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'MsgUndelegate', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatorAddress')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
-    ..aOM<$6.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', subBuilder: $6.Coin.create)
+    ..aOM<$6.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', subBuilder: $6.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -560,7 +560,7 @@ class MsgUndelegate extends $pb.GeneratedMessage {
   factory MsgUndelegate({
     $core.String? delegatorAddress,
     $core.String? validatorAddress,
-    $6.Coin? amount,
+    $6.CosmosCoin? amount,
   }) {
     final _result = create();
     if (delegatorAddress != null) {
@@ -614,15 +614,15 @@ class MsgUndelegate extends $pb.GeneratedMessage {
   void clearValidatorAddress() => clearField(2);
 
   @$pb.TagNumber(3)
-  $6.Coin get amount => $_getN(2);
+  $6.CosmosCoin get amount => $_getN(2);
   @$pb.TagNumber(3)
-  set amount($6.Coin v) { setField(3, v); }
+  set amount($6.CosmosCoin v) { setField(3, v); }
   @$pb.TagNumber(3)
   $core.bool hasAmount() => $_has(2);
   @$pb.TagNumber(3)
   void clearAmount() => clearField(3);
   @$pb.TagNumber(3)
-  $6.Coin ensureAmount() => $_ensure(2);
+  $6.CosmosCoin ensureAmount() => $_ensure(2);
 }
 
 class MsgUndelegateResponse extends $pb.GeneratedMessage {

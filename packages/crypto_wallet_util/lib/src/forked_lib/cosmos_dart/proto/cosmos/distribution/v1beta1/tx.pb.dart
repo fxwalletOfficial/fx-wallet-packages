@@ -269,14 +269,14 @@ class MsgWithdrawValidatorCommissionResponse extends $pb.GeneratedMessage {
 
 class MsgFundCommunityPool extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'MsgFundCommunityPool', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
-    ..pc<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'depositor')
     ..hasRequiredFields = false
   ;
 
   MsgFundCommunityPool._() : super();
   factory MsgFundCommunityPool({
-    $core.Iterable<$2.Coin>? amount,
+    $core.Iterable<$2.CosmosCoin>? amount,
     $core.String? depositor,
   }) {
     final _result = create();
@@ -310,7 +310,7 @@ class MsgFundCommunityPool extends $pb.GeneratedMessage {
   static MsgFundCommunityPool? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$2.Coin> get amount => $_getList(0);
+  $core.List<$2.CosmosCoin> get amount => $_getList(0);
 
   @$pb.TagNumber(2)
   $core.String get depositor => $_getSZ(1);

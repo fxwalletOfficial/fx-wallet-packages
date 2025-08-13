@@ -16,7 +16,7 @@ class MsgSend extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'MsgSend', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'fromAddress')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'toAddress')
-    ..pc<$2.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -24,7 +24,7 @@ class MsgSend extends $pb.GeneratedMessage {
   factory MsgSend({
     $core.String? fromAddress,
     $core.String? toAddress,
-    $core.Iterable<$2.Coin>? amount,
+    $core.Iterable<$2.CosmosCoin>? amount,
   }) {
     final _result = create();
     if (fromAddress != null) {
@@ -78,7 +78,7 @@ class MsgSend extends $pb.GeneratedMessage {
   void clearToAddress() => clearField(2);
 
   @$pb.TagNumber(3)
-  $core.List<$2.Coin> get amount => $_getList(2);
+  $core.List<$2.CosmosCoin> get amount => $_getList(2);
 }
 
 class MsgSendResponse extends $pb.GeneratedMessage {
