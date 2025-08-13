@@ -11,7 +11,8 @@ dart run coverage:format_coverage \
   --in=coverage \
   --out=coverage/lcov_filtered.info \
   --report-on=lib \
-  --ignore-files="**/forked_lib/**"
+  --ignore-files="**/forked_lib/cosmos_dart/**,**/forked_lib/bip32_hd/**,**/forked_lib/bitcoin_base_hd/**,**/forked_lib/bitcoin_flutter/**,**/forked_lib/psbt/**,**/forked_lib/xrpl_dart/**"
+
 
 # Generate filtered HTML report
 echo "🌐 Generating filtered HTML report..."
