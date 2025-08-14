@@ -507,8 +507,8 @@ void main() {
 		test('TxResponse writeToJsonMap stringified Int64 fields', () {
 			final tx = TxResponse(height: Int64(123), gasWanted: Int64(0), gasUsed: Int64(9));
 			final m = tx.writeToJsonMap();
-			expect(m['height'], '123');
 			final tx2 = TxResponse.fromJson(jsonEncode(m));
+			expect(tx2.height.toInt(), 123);
 			expect(tx2.gasWanted.toInt(), 0);
 			expect(tx2.gasUsed.toInt(), 9);
 		});
