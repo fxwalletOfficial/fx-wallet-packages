@@ -12,8 +12,7 @@ void main() {
 			expect(a.spendLimit.first.denom, 'uatom');
 			a.spendLimit.add(CosmosCoin(denom: 'uiris', amount: '2'));
 			expect(a.spendLimit.length, 2);
-			final copied = a.copyWith((aa) => aa.spendLimit.add(CosmosCoin(denom: 'uosmo', amount: '3')));
-			expect(copied.spendLimit.length, 3);
+
 			final bz = a.writeToBuffer();
 			final a2 = SendAuthorization.fromBuffer(bz);
 			expect(a2.spendLimit.first.amount, '1');
@@ -24,6 +23,10 @@ void main() {
 			expect(SendAuthorization.getDefault(), isA<SendAuthorization>());
 			expect(SendAuthorization().createEmptyInstance(), isA<SendAuthorization>());
 			expect(SendAuthorization.createRepeated(), isA<pb.PbList<SendAuthorization>>());
+
+      a.freeze();
+			final copied = a.rebuild((aa) => aa.spendLimit.add(CosmosCoin(denom: 'uosmo', amount: '3')));
+			expect(copied.spendLimit.length, 3);
 		});
 	});
-} 
+}

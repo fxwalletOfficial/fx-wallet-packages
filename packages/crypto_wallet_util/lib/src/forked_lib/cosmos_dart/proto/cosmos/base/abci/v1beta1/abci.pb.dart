@@ -1,4 +1,6 @@
 ///
+// ignore_for_file: library_prefixes
+
 import 'dart:core' as $core;
 
 import 'package:fixnum/fixnum.dart' as $fixnum;
@@ -41,47 +43,47 @@ class TxResponse extends $pb.GeneratedMessage {
     $core.String? timestamp,
     $core.Iterable<$0.Event>? events,
   }) {
-    final _result = create();
+    final result = create();
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
     if (txhash != null) {
-      _result.txhash = txhash;
+      result.txhash = txhash;
     }
     if (codespace != null) {
-      _result.codespace = codespace;
+      result.codespace = codespace;
     }
     if (code != null) {
-      _result.code = code;
+      result.code = code;
     }
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
     if (rawLog != null) {
-      _result.rawLog = rawLog;
+      result.rawLog = rawLog;
     }
     if (logs != null) {
-      _result.logs.addAll(logs);
+      result.logs.addAll(logs);
     }
     if (info != null) {
-      _result.info = info;
+      result.info = info;
     }
     if (gasWanted != null) {
-      _result.gasWanted = gasWanted;
+      result.gasWanted = gasWanted;
     }
     if (gasUsed != null) {
-      _result.gasUsed = gasUsed;
+      result.gasUsed = gasUsed;
     }
     if (tx != null) {
-      _result.tx = tx;
+      result.tx = tx;
     }
     if (timestamp != null) {
-      _result.timestamp = timestamp;
+      result.timestamp = timestamp;
     }
     if (events != null) {
-      _result.events.addAll(events);
+      result.events.addAll(events);
     }
-    return _result;
+    return result;
   }
   factory TxResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory TxResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -230,17 +232,17 @@ class ABCIMessageLog extends $pb.GeneratedMessage {
     $core.String? log,
     $core.Iterable<StringEvent>? events,
   }) {
-    final _result = create();
+    final result = create();
     if (msgIndex != null) {
-      _result.msgIndex = msgIndex;
+      result.msgIndex = msgIndex;
     }
     if (log != null) {
-      _result.log = log;
+      result.log = log;
     }
     if (events != null) {
-      _result.events.addAll(events);
+      result.events.addAll(events);
     }
-    return _result;
+    return result;
   }
   factory ABCIMessageLog.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ABCIMessageLog.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -301,14 +303,14 @@ class StringEvent extends $pb.GeneratedMessage {
     $core.String? type,
     $core.Iterable<Attribute>? attributes,
   }) {
-    final _result = create();
+    final result = create();
     if (type != null) {
-      _result.type = type;
+      result.type = type;
     }
     if (attributes != null) {
-      _result.attributes.addAll(attributes);
+      result.attributes.addAll(attributes);
     }
-    return _result;
+    return result;
   }
   factory StringEvent.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory StringEvent.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -360,14 +362,14 @@ class Attribute extends $pb.GeneratedMessage {
     $core.String? key,
     $core.String? value,
   }) {
-    final _result = create();
+    final result = create();
     if (key != null) {
-      _result.key = key;
+      result.key = key;
     }
     if (value != null) {
-      _result.value = value;
+      result.value = value;
     }
-    return _result;
+    return result;
   }
   factory Attribute.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Attribute.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -425,14 +427,14 @@ class GasInfo extends $pb.GeneratedMessage {
     $fixnum.Int64? gasWanted,
     $fixnum.Int64? gasUsed,
   }) {
-    final _result = create();
+    final result = create();
     if (gasWanted != null) {
-      _result.gasWanted = gasWanted;
+      result.gasWanted = gasWanted;
     }
     if (gasUsed != null) {
-      _result.gasUsed = gasUsed;
+      result.gasUsed = gasUsed;
     }
-    return _result;
+    return result;
   }
   factory GasInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GasInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -492,17 +494,17 @@ class Result extends $pb.GeneratedMessage {
     $core.String? log,
     $core.Iterable<$0.Event>? events,
   }) {
-    final _result = create();
+    final result = create();
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
     if (log != null) {
-      _result.log = log;
+      result.log = log;
     }
     if (events != null) {
-      _result.events.addAll(events);
+      result.events.addAll(events);
     }
-    return _result;
+    return result;
   }
   factory Result.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Result.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -561,16 +563,16 @@ class SimulationResponse extends $pb.GeneratedMessage {
   SimulationResponse._() : super();
   factory SimulationResponse({
     GasInfo? gasInfo,
-    Result? result,
+    Result? res,
   }) {
-    final _result = create();
+    final result = create();
     if (gasInfo != null) {
-      _result.gasInfo = gasInfo;
+      result.gasInfo = gasInfo;
     }
-    if (result != null) {
-      _result.result = result;
+    if (res != null) {
+      result.result = res;
     }
-    return _result;
+    return result;
   }
   factory SimulationResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SimulationResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -632,14 +634,14 @@ class MsgData extends $pb.GeneratedMessage {
     $core.String? msgType,
     $core.List<$core.int>? data,
   }) {
-    final _result = create();
+    final result = create();
     if (msgType != null) {
-      _result.msgType = msgType;
+      result.msgType = msgType;
     }
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
-    return _result;
+    return result;
   }
   factory MsgData.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgData.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -695,11 +697,11 @@ class TxMsgData extends $pb.GeneratedMessage {
   factory TxMsgData({
     $core.Iterable<MsgData>? data,
   }) {
-    final _result = create();
+    final result = create();
     if (data != null) {
-      _result.data.addAll(data);
+      result.data.addAll(data);
     }
-    return _result;
+    return result;
   }
   factory TxMsgData.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory TxMsgData.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -750,26 +752,26 @@ class SearchTxsResult extends $pb.GeneratedMessage {
     $fixnum.Int64? limit,
     $core.Iterable<TxResponse>? txs,
   }) {
-    final _result = create();
+    final result = create();
     if (totalCount != null) {
-      _result.totalCount = totalCount;
+      result.totalCount = totalCount;
     }
     if (count != null) {
-      _result.count = count;
+      result.count = count;
     }
     if (pageNumber != null) {
-      _result.pageNumber = pageNumber;
+      result.pageNumber = pageNumber;
     }
     if (pageTotal != null) {
-      _result.pageTotal = pageTotal;
+      result.pageTotal = pageTotal;
     }
     if (limit != null) {
-      _result.limit = limit;
+      result.limit = limit;
     }
     if (txs != null) {
-      _result.txs.addAll(txs);
+      result.txs.addAll(txs);
     }
-    return _result;
+    return result;
   }
   factory SearchTxsResult.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SearchTxsResult.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

@@ -10,7 +10,7 @@ void main() {
 	group('proto cosmos.bank.v1beta1 genesis', () {
 		test('GenesisState list ops/ensure/clone/copyWith/json/errors/defaults', () {
 			final gs = GenesisState(
-				params: bankpb.Params(defaultSendEnabled: true),
+				params: bankpb.BankParams(defaultSendEnabled: true),
 				balances: [Balance(address: 'a', coins: [CosmosCoin(denom: 'uatom', amount: '1')])],
 				supply: [CosmosCoin(denom: 'uatom', amount: '100')],
 				denomMetadata: [bankpb.Metadata(base: 'uatom')],
@@ -21,11 +21,10 @@ void main() {
 			gs.balances.add(Balance(address: 'b'));
 			expect(gs.balances.length, 2);
 			final ensured = gs.ensureParams();
-			expect(ensured, isA<bankpb.Params>());
-			final clone = gs.clone();
+			expect(ensured, isA<bankpb.BankParams>());
+			final clone = gs.deepCopy();
 			expect(clone.denomMetadata.first.base, 'uatom');
-			final copy = gs.copyWith((g) => g.supply.add(CosmosCoin(denom: 'uiris', amount: '2')));
-			expect(copy.supply.length, 2);
+
 			final bz = gs.writeToBuffer();
 			final gs2 = GenesisState.fromBuffer(bz);
 			expect(gs2.params.defaultSendEnabled, isTrue);
@@ -36,27 +35,26 @@ void main() {
 			expect(GenesisState.getDefault(), isA<GenesisState>());
 			expect(GenesisState().createEmptyInstance(), isA<GenesisState>());
 			expect(GenesisState.createRepeated(), isA<pb.PbList<GenesisState>>());
+
+      gs.freeze();
+			final copy = gs.rebuild((g) => g.supply.add(CosmosCoin(denom: 'uiris', amount: '2')));
+			expect(copy.supply.length, 2);
 		});
 	});
 
 	group('proto cosmos.bank.v1beta1 genesis more', () {
 		test('GenesisState ensure/clone/copyWith/json/buffer/defaults/info_/errors', () {
 			final gs = GenesisState(
-				params: bankpb.Params(defaultSendEnabled: true),
+				params: bankpb.BankParams(defaultSendEnabled: true),
 				balances: [Balance(address: 'a', coins: [CosmosCoin(denom: 'x', amount: '1')])],
 				supply: [CosmosCoin(denom: 'x', amount: '10')],
 				denomMetadata: [bankpb.Metadata(base: 'x')],
 			);
 			expect(gs.hasParams(), isTrue);
-			expect(gs.ensureParams(), isA<bankpb.Params>());
-			final clone = gs.clone();
+			expect(gs.ensureParams(), isA<bankpb.BankParams>());
+			final clone = gs.deepCopy();
 			expect(clone.denomMetadata.first.base, 'x');
-			final copied = gs.copyWith((g) {
-				g.supply.add(CosmosCoin(denom: 'y', amount: '2'));
-				g.balances.add(Balance(address: 'b'));
-			});
-			expect(copied.supply.length, 2);
-			expect(copied.balances.length, 2);
+
 			final jsonStr = jsonEncode(gs.writeToJsonMap());
 			expect(jsonStr.isNotEmpty, isTrue);
 			final bz = gs.writeToBuffer();
@@ -65,6 +63,14 @@ void main() {
 			expect(GenesisState.getDefault().info_.messageName, contains('GenesisState'));
 			expect(() => GenesisState.fromJson('bad'), throwsA(isA<FormatException>()));
 			expect(() => GenesisState.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
+
+      gs.freeze();
+			final copied = gs.rebuild((g) {
+				g.supply.add(CosmosCoin(denom: 'y', amount: '2'));
+				g.balances.add(Balance(address: 'b'));
+			});
+			expect(copied.supply.length, 2);
+			expect(copied.balances.length, 2);
 		});
 
 		test('Balance has/clear/list ops/json/errors/defaults', () {
@@ -83,4 +89,4 @@ void main() {
 			expect(Balance.createRepeated(), isA<pb.PbList<Balance>>());
 		});
 	});
-} 
+}

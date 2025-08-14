@@ -1,4 +1,6 @@
 ///
+// ignore_for_file: library_prefixes
+
 import 'dart:core' as $core;
 
 import 'package:fixnum/fixnum.dart' as $fixnum;

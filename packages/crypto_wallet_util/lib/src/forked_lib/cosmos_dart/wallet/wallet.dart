@@ -11,16 +11,16 @@ import 'package:crypto_wallet_util/src/utils/utils.dart';
 /// be used.
 /// The associated [networkInfo] will be used when computing the [bech32Address]
 /// associated with the wallet.
-class Wallet extends Equatable {
+class CosmosWallet extends Equatable {
   static const derivationPath = "m/44'/118'/0'/0/0";
 
   final Uint8List address;
   final Uint8List privateKey;
   final Uint8List publicKey;
 
-  final NetworkInfo networkInfo;
+  final CosmosNetworkInfo networkInfo;
 
-  Wallet({
+  const CosmosWallet({
     required this.networkInfo,
     required this.address,
     required this.privateKey,
@@ -29,15 +29,13 @@ class Wallet extends Equatable {
 
   /// Derives the private key from the given [mnemonic] using the specified
   /// [networkInfo].
-  factory Wallet.derive(
+  factory CosmosWallet.derive(
     List<String> mnemonic,
-    NetworkInfo networkInfo, {
+    CosmosNetworkInfo networkInfo, {
     String derivationPath = derivationPath,
   }) {
     // Validate the mnemonic
-    if (!Bip39.validateMnemonic(mnemonic)) {
-      throw Exception('Invalid mnemonic');
-    }
+    if (!Bip39.validateMnemonic(mnemonic)) throw Exception('Invalid mnemonic');
 
     // Convert the mnemonic to a BIP32 instance
     final seed = Bip39.mnemonicToSeed(mnemonic);
@@ -62,7 +60,7 @@ class Wallet extends Equatable {
     final address = RIPEMD160Digest().process(sha256Digest);
 
     // Return the key bytes
-    return Wallet(
+    return CosmosWallet(
       address: address,
       publicKey: publicKeyBytes,
       privateKey: derivedNode.privateKey!,
@@ -70,26 +68,26 @@ class Wallet extends Equatable {
     );
   }
 
-  /// Generated a new random [Wallet] using the specified [networkInfo]
+  /// Generated a new random [CosmosWallet] using the specified [networkInfo]
   /// and the optional [derivationPath].
-  factory Wallet.random(
-    NetworkInfo networkInfo, {
+  factory CosmosWallet.random(
+    CosmosNetworkInfo networkInfo, {
     String derivationPath = derivationPath,
   }) {
-    return Wallet.derive(
+    return CosmosWallet.derive(
       Bip39.generateMnemonic(strength: 256),
       networkInfo,
       derivationPath: derivationPath,
     );
   }
 
-  /// Creates a new [Wallet] instance based on the existent [wallet] for
+  /// Creates a new [CosmosWallet] instance based on the existent [wallet] for
   /// the given [networkInfo].
-  factory Wallet.convert(
-    Wallet wallet,
-    NetworkInfo networkInfo,
+  factory CosmosWallet.convert(
+    CosmosWallet wallet,
+    CosmosNetworkInfo networkInfo,
   ) {
-    return Wallet(
+    return CosmosWallet(
       networkInfo: networkInfo,
       address: wallet.address,
       privateKey: wallet.privateKey,
@@ -98,23 +96,23 @@ class Wallet extends Equatable {
   }
 
   /// Creates a new [Wallet] instance from the given [json] and [privateKey].
-  factory Wallet.fromJson(
+  factory CosmosWallet.fromJson(
     Map<String, dynamic> json,
     Uint8List privateKey,
   ) {
-    return Wallet(
+    return CosmosWallet(
       address: Uint8List.fromList(HEX.decode(json['hex_address'] as String)),
       publicKey: Uint8List.fromList(HEX.decode(json['public_key'] as String)),
       privateKey: privateKey,
-      networkInfo: NetworkInfo.fromJson(
+      networkInfo: CosmosNetworkInfo.fromJson(
         json['network_info'] as Map<String, dynamic>,
       ),
     );
   }
 
   /// Creates a new [Wallet] instance from [privateKey].
-  factory Wallet.import(
-    NetworkInfo networkInfo,
+  factory CosmosWallet.import(
+    CosmosNetworkInfo networkInfo,
     Uint8List privateKey,
   ) {
     final secp256k1 = ECCurve_secp256k1();
@@ -130,7 +128,7 @@ class Wallet extends Equatable {
     final sha256Digest = SHA256Digest().process(publicKeyBytes);
     final address = RIPEMD160Digest().process(sha256Digest);
 
-    return Wallet(
+    return CosmosWallet(
       address: address,
       publicKey: publicKeyBytes,
       privateKey: privateKey,

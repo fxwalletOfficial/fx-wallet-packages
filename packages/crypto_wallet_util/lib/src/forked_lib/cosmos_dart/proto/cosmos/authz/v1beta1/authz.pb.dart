@@ -1,4 +1,6 @@
 ///
+// ignore_for_file: library_prefixes
+
 import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
@@ -16,27 +18,31 @@ class GenericAuthorization extends $pb.GeneratedMessage {
   factory GenericAuthorization({
     $core.String? msg,
   }) {
-    final _result = create();
+    final result = create();
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
-    return _result;
+    return result;
   }
   factory GenericAuthorization.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenericAuthorization.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   GenericAuthorization clone() => GenericAuthorization()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   GenericAuthorization copyWith(void Function(GenericAuthorization) updates) => super.copyWith((message) => updates(message as GenericAuthorization)) as GenericAuthorization; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static GenericAuthorization create() => GenericAuthorization._();
+  @$core.override
   GenericAuthorization createEmptyInstance() => create();
   static $pb.PbList<GenericAuthorization> createRepeated() => $pb.PbList<GenericAuthorization>();
   @$core.pragma('dart2js:noInline')
@@ -76,19 +82,23 @@ class Grant extends $pb.GeneratedMessage {
   }
   factory Grant.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Grant.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   Grant clone() => Grant()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   Grant copyWith(void Function(Grant) updates) => super.copyWith((message) => updates(message as Grant)) as Grant; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Grant create() => Grant._();
+  @$core.override
   Grant createEmptyInstance() => create();
   static $pb.PbList<Grant> createRepeated() => $pb.PbList<Grant>();
   @$core.pragma('dart2js:noInline')
@@ -134,36 +144,40 @@ class GrantAuthorization extends $pb.GeneratedMessage {
     $3.Any? authorization,
     $4.Timestamp? expiration,
   }) {
-    final _result = create();
+    final result = create();
     if (granter != null) {
-      _result.granter = granter;
+      result.granter = granter;
     }
     if (grantee != null) {
-      _result.grantee = grantee;
+      result.grantee = grantee;
     }
     if (authorization != null) {
-      _result.authorization = authorization;
+      result.authorization = authorization;
     }
     if (expiration != null) {
-      _result.expiration = expiration;
+      result.expiration = expiration;
     }
-    return _result;
+    return result;
   }
   factory GrantAuthorization.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GrantAuthorization.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   GrantAuthorization clone() => GrantAuthorization()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   GrantAuthorization copyWith(void Function(GrantAuthorization) updates) => super.copyWith((message) => updates(message as GrantAuthorization)) as GrantAuthorization; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static GrantAuthorization create() => GrantAuthorization._();
+  @$core.override
   GrantAuthorization createEmptyInstance() => create();
   static $pb.PbList<GrantAuthorization> createRepeated() => $pb.PbList<GrantAuthorization>();
   @$core.pragma('dart2js:noInline')

@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/cosmos_dart.dart';
-import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/crypto/secp256k1/keys.pb.dart';
 import 'package:fixnum/fixnum.dart' as fixnum;
 
 void main() {
@@ -24,7 +23,7 @@ void main() {
 			builder.setTimeoutHeight(123);
 
 			// mock a signature
-			final pubKeyAny = Any.pack(PubKey(key: []), typeUrlPrefix: 'cosmos.crypto.secp256k1');
+			final pubKeyAny = Any.pack(CosmosPubKey(key: []), typeUrlPrefix: 'cosmos.crypto.secp256k1');
 			final sig = SignatureV2(
 				pubKey: pubKeyAny,
 				sequence: fixnum.Int64(1),
@@ -58,4 +57,4 @@ void main() {
 			expect(encoded, isNotEmpty);
 		});
 	});
-} 
+}

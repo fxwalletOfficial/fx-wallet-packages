@@ -23,11 +23,11 @@ class QueryAccountsRequest extends $pb.GeneratedMessage {
   factory QueryAccountsRequest({
     $3.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryAccountsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryAccountsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -74,14 +74,14 @@ class QueryAccountsResponse extends $pb.GeneratedMessage {
     $core.Iterable<$1.Any>? accounts,
     $3.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (accounts != null) {
-      _result.accounts.addAll(accounts);
+      result.accounts.addAll(accounts);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryAccountsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryAccountsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -129,11 +129,11 @@ class QueryAccountRequest extends $pb.GeneratedMessage {
   factory QueryAccountRequest({
     $core.String? address,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
-    return _result;
+    return result;
   }
   factory QueryAccountRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryAccountRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -176,11 +176,11 @@ class QueryAccountResponse extends $pb.GeneratedMessage {
   factory QueryAccountResponse({
     $1.Any? account,
   }) {
-    final _result = create();
+    final result = create();
     if (account != null) {
-      _result.account = account;
+      result.account = account;
     }
-    return _result;
+    return result;
   }
   factory QueryAccountResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryAccountResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -254,11 +254,11 @@ class QueryParamsResponse extends $pb.GeneratedMessage {
   factory QueryParamsResponse({
     $2.Params? params,
   }) {
-    final _result = create();
+    final result = create();
     if (params != null) {
-      _result.params = params;
+      result.params = params;
     }
-    return _result;
+    return result;
   }
   factory QueryParamsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryParamsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

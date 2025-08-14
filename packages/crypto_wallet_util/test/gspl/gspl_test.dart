@@ -62,26 +62,25 @@ void main() async {
 
         // Test transaction data parsing
         final jsonData = txData.toJson();
-        print('jsonData: $jsonData');
         expect(jsonData['amount'], expected['amount']);
         expect(jsonData['fee'], expected['fee']);
-        
+
         // Check payments array structure
         expect(jsonData['payments'], isA<List>());
         final payments = jsonData['payments'] as List;
         expect(payments.isNotEmpty, true);
-        
+
         // Check payments match expected structure
         final expectedPayments = expected['payments'] as List;
         expect(payments.length, expectedPayments.length);
-        
+
         for (int i = 0; i < payments.length; i++) {
           final payment = payments[i] as Map<String, dynamic>;
           final expectedPayment = expectedPayments[i] as Map<String, dynamic>;
           expect(payment['address'], expectedPayment['address']);
           expect(payment['amount'], expectedPayment['amount']);
         }
-        
+
         // Verify payments structure
         for (final payment in payments) {
           expect(payment, isA<Map<String, dynamic>>());
@@ -89,7 +88,7 @@ void main() async {
           expect(paymentMap['address'], isNotNull);
           expect(paymentMap['amount'], isNotNull);
         }
-        
+
         // Test signing
         final signer = GsplTxSigner(wallet, txData);
         final signedTxData = signer.sign();
@@ -111,10 +110,10 @@ void main() async {
   group('GSPL Error Handling Tests', () {
     test('should throw exception for unsupported wallet type', () async {
       final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
-      
+
       // Create a mock wallet that's not supported by GSPL
       final unsupportedWallet = await AptosCoin.fromMnemonic(mnemonic);
-      
+
       final txData = GsplTxData(
         inputs: [
           GsplItem(
@@ -137,7 +136,7 @@ void main() async {
     test('should throw exception for null input path', () async {
       final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
       final wallet = await DogeCoin.fromMnemonic(mnemonic);
-      
+
       final txData = GsplTxData(
         inputs: [
           GsplItem(
@@ -161,7 +160,7 @@ void main() async {
     test('should throw exception for null input amount', () async {
       final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
       final wallet = await DogeCoin.fromMnemonic(mnemonic);
-      
+
       final txData = GsplTxData(
         inputs: [
           GsplItem(
@@ -187,7 +186,7 @@ void main() async {
     test('should return payments array instead of single paymentAddress', () async {
       // final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
       // final wallet = await DogeCoin.fromMnemonic(mnemonic);
-      
+
       final txData = GsplTxData(
         inputs: [
           GsplItem(
@@ -206,11 +205,11 @@ void main() async {
       );
 
       final jsonData = txData.toJson();
-      
+
       // Verify new structure
       expect(jsonData['payments'], isA<List>());
       expect(jsonData['payments'].length, greaterThan(0));
-      
+
       // Verify payments array structure
       final payments = jsonData['payments'] as List;
       for (final payment in payments) {
@@ -219,7 +218,7 @@ void main() async {
         expect(paymentMap['address'], isNotNull);
         expect(paymentMap['amount'], isNotNull);
       }
-      
+
       // Verify other fields still exist
       expect(jsonData['amount'], isNotNull);
       expect(jsonData['fee'], isNotNull);
@@ -231,7 +230,7 @@ void main() async {
     test('should filter out change output from payments array', () async {
       // final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
       // final wallet = await DogeCoin.fromMnemonic(mnemonic);
-      
+
       final txData = GsplTxData(
         inputs: [
           GsplItem(
@@ -251,7 +250,7 @@ void main() async {
 
       final jsonData = txData.toJson();
       final payments = jsonData['payments'] as List;
-      
+
       // Verify that change output is filtered out
       // The last payment should not have the change amount
       if (payments.isNotEmpty) {
@@ -265,7 +264,7 @@ void main() async {
     test('BCH should use BIP143 signature hash', () async {
       final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
       final wallet = await BchCoin.fromMnemonic(mnemonic);
-      
+
       final txData = GsplTxData(
         inputs: [
           GsplItem(
@@ -281,7 +280,7 @@ void main() async {
 
       final signer = GsplTxSigner(wallet, txData);
       final signedTxData = signer.sign();
-      
+
       expect(signer.verify(), true);
       expect(signedTxData.isSigned, true);
     });
@@ -289,7 +288,7 @@ void main() async {
     test('DOGE should use legacy signature hash', () async {
       final mnemonic = 'number vapor draft title message quarter hour other hotel leave shrug donor';
       final wallet = await DogeCoin.fromMnemonic(mnemonic);
-      
+
       final txData = GsplTxData(
         inputs: [
           GsplItem(
@@ -305,7 +304,7 @@ void main() async {
 
       final signer = GsplTxSigner(wallet, txData);
       final signedTxData = signer.sign();
-      
+
       expect(signer.verify(), true);
       expect(signedTxData.isSigned, true);
     });

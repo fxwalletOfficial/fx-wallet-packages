@@ -14,11 +14,10 @@ class Capability extends $pb.GeneratedMessage {
   factory Capability({
     $fixnum.Int64? index,
   }) {
-    final _result = create();
-    if (index != null) {
-      _result.index = index;
-    }
-    return _result;
+    final result = create();
+    if (index != null) result.index = index;
+
+    return result;
   }
   factory Capability.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Capability.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -67,14 +66,14 @@ class Owner extends $pb.GeneratedMessage {
     $core.String? module,
     $core.String? name,
   }) {
-    final _result = create();
+    final result = create();
     if (module != null) {
-      _result.module = module;
+      result.module = module;
     }
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
-    return _result;
+    return result;
   }
   factory Owner.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Owner.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -130,11 +129,11 @@ class CapabilityOwners extends $pb.GeneratedMessage {
   factory CapabilityOwners({
     $core.Iterable<Owner>? owners,
   }) {
-    final _result = create();
+    final result = create();
     if (owners != null) {
-      _result.owners.addAll(owners);
+      result.owners.addAll(owners);
     }
-    return _result;
+    return result;
   }
   factory CapabilityOwners.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CapabilityOwners.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

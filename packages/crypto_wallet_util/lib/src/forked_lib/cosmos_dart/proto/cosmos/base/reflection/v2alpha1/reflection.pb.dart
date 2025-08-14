@@ -29,26 +29,26 @@ class AppDescriptor extends $pb.GeneratedMessage {
     QueryServicesDescriptor? queryServices,
     TxDescriptor? tx,
   }) {
-    final _result = create();
+    final result = create();
     if (authn != null) {
-      _result.authn = authn;
+      result.authn = authn;
     }
     if (chain != null) {
-      _result.chain = chain;
+      result.chain = chain;
     }
     if (codec != null) {
-      _result.codec = codec;
+      result.codec = codec;
     }
     if (configuration != null) {
-      _result.configuration = configuration;
+      result.configuration = configuration;
     }
     if (queryServices != null) {
-      _result.queryServices = queryServices;
+      result.queryServices = queryServices;
     }
     if (tx != null) {
-      _result.tx = tx;
+      result.tx = tx;
     }
-    return _result;
+    return result;
   }
   factory AppDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory AppDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -150,14 +150,14 @@ class TxDescriptor extends $pb.GeneratedMessage {
     $core.String? fullname,
     $core.Iterable<MsgDescriptor>? msgs,
   }) {
-    final _result = create();
+    final result = create();
     if (fullname != null) {
-      _result.fullname = fullname;
+      result.fullname = fullname;
     }
     if (msgs != null) {
-      _result.msgs.addAll(msgs);
+      result.msgs.addAll(msgs);
     }
-    return _result;
+    return result;
   }
   factory TxDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory TxDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -203,11 +203,11 @@ class AuthnDescriptor extends $pb.GeneratedMessage {
   factory AuthnDescriptor({
     $core.Iterable<SigningModeDescriptor>? signModes,
   }) {
-    final _result = create();
+    final result = create();
     if (signModes != null) {
-      _result.signModes.addAll(signModes);
+      result.signModes.addAll(signModes);
     }
-    return _result;
+    return result;
   }
   factory AuthnDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory AuthnDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -248,17 +248,17 @@ class SigningModeDescriptor extends $pb.GeneratedMessage {
     $core.int? number,
     $core.String? authnInfoProviderMethodFullname,
   }) {
-    final _result = create();
+    final result = create();
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
     if (number != null) {
-      _result.number = number;
+      result.number = number;
     }
     if (authnInfoProviderMethodFullname != null) {
-      _result.authnInfoProviderMethodFullname = authnInfoProviderMethodFullname;
+      result.authnInfoProviderMethodFullname = authnInfoProviderMethodFullname;
     }
-    return _result;
+    return result;
   }
   factory SigningModeDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SigningModeDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -319,11 +319,11 @@ class ChainDescriptor extends $pb.GeneratedMessage {
   factory ChainDescriptor({
     $core.String? id,
   }) {
-    final _result = create();
+    final result = create();
     if (id != null) {
-      _result.id = id;
+      result.id = id;
     }
-    return _result;
+    return result;
   }
   factory ChainDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ChainDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -366,11 +366,11 @@ class CodecDescriptor extends $pb.GeneratedMessage {
   factory CodecDescriptor({
     $core.Iterable<InterfaceDescriptor>? interfaces,
   }) {
-    final _result = create();
+    final result = create();
     if (interfaces != null) {
-      _result.interfaces.addAll(interfaces);
+      result.interfaces.addAll(interfaces);
     }
-    return _result;
+    return result;
   }
   factory CodecDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CodecDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -411,17 +411,17 @@ class InterfaceDescriptor extends $pb.GeneratedMessage {
     $core.Iterable<InterfaceAcceptingMessageDescriptor>? interfaceAcceptingMessages,
     $core.Iterable<InterfaceImplementerDescriptor>? interfaceImplementers,
   }) {
-    final _result = create();
+    final result = create();
     if (fullname != null) {
-      _result.fullname = fullname;
+      result.fullname = fullname;
     }
     if (interfaceAcceptingMessages != null) {
-      _result.interfaceAcceptingMessages.addAll(interfaceAcceptingMessages);
+      result.interfaceAcceptingMessages.addAll(interfaceAcceptingMessages);
     }
     if (interfaceImplementers != null) {
-      _result.interfaceImplementers.addAll(interfaceImplementers);
+      result.interfaceImplementers.addAll(interfaceImplementers);
     }
-    return _result;
+    return result;
   }
   factory InterfaceDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory InterfaceDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -472,14 +472,14 @@ class InterfaceImplementerDescriptor extends $pb.GeneratedMessage {
     $core.String? fullname,
     $core.String? typeUrl,
   }) {
-    final _result = create();
+    final result = create();
     if (fullname != null) {
-      _result.fullname = fullname;
+      result.fullname = fullname;
     }
     if (typeUrl != null) {
-      _result.typeUrl = typeUrl;
+      result.typeUrl = typeUrl;
     }
-    return _result;
+    return result;
   }
   factory InterfaceImplementerDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory InterfaceImplementerDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -533,14 +533,14 @@ class InterfaceAcceptingMessageDescriptor extends $pb.GeneratedMessage {
     $core.String? fullname,
     $core.Iterable<$core.String>? fieldDescriptorNames,
   }) {
-    final _result = create();
+    final result = create();
     if (fullname != null) {
-      _result.fullname = fullname;
+      result.fullname = fullname;
     }
     if (fieldDescriptorNames != null) {
-      _result.fieldDescriptorNames.addAll(fieldDescriptorNames);
+      result.fieldDescriptorNames.addAll(fieldDescriptorNames);
     }
-    return _result;
+    return result;
   }
   factory InterfaceAcceptingMessageDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory InterfaceAcceptingMessageDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -586,11 +586,11 @@ class ConfigurationDescriptor extends $pb.GeneratedMessage {
   factory ConfigurationDescriptor({
     $core.String? bech32AccountAddressPrefix,
   }) {
-    final _result = create();
+    final result = create();
     if (bech32AccountAddressPrefix != null) {
-      _result.bech32AccountAddressPrefix = bech32AccountAddressPrefix;
+      result.bech32AccountAddressPrefix = bech32AccountAddressPrefix;
     }
-    return _result;
+    return result;
   }
   factory ConfigurationDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ConfigurationDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -633,11 +633,11 @@ class MsgDescriptor extends $pb.GeneratedMessage {
   factory MsgDescriptor({
     $core.String? msgTypeUrl,
   }) {
-    final _result = create();
+    final result = create();
     if (msgTypeUrl != null) {
-      _result.msgTypeUrl = msgTypeUrl;
+      result.msgTypeUrl = msgTypeUrl;
     }
-    return _result;
+    return result;
   }
   factory MsgDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -709,11 +709,11 @@ class GetAuthnDescriptorResponse extends $pb.GeneratedMessage {
   factory GetAuthnDescriptorResponse({
     AuthnDescriptor? authn,
   }) {
-    final _result = create();
+    final result = create();
     if (authn != null) {
-      _result.authn = authn;
+      result.authn = authn;
     }
-    return _result;
+    return result;
   }
   factory GetAuthnDescriptorResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GetAuthnDescriptorResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -787,11 +787,11 @@ class GetChainDescriptorResponse extends $pb.GeneratedMessage {
   factory GetChainDescriptorResponse({
     ChainDescriptor? chain,
   }) {
-    final _result = create();
+    final result = create();
     if (chain != null) {
-      _result.chain = chain;
+      result.chain = chain;
     }
-    return _result;
+    return result;
   }
   factory GetChainDescriptorResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GetChainDescriptorResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -865,11 +865,11 @@ class GetCodecDescriptorResponse extends $pb.GeneratedMessage {
   factory GetCodecDescriptorResponse({
     CodecDescriptor? codec,
   }) {
-    final _result = create();
+    final result = create();
     if (codec != null) {
-      _result.codec = codec;
+      result.codec = codec;
     }
-    return _result;
+    return result;
   }
   factory GetCodecDescriptorResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GetCodecDescriptorResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -943,11 +943,11 @@ class GetConfigurationDescriptorResponse extends $pb.GeneratedMessage {
   factory GetConfigurationDescriptorResponse({
     ConfigurationDescriptor? config,
   }) {
-    final _result = create();
+    final result = create();
     if (config != null) {
-      _result.config = config;
+      result.config = config;
     }
-    return _result;
+    return result;
   }
   factory GetConfigurationDescriptorResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GetConfigurationDescriptorResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1021,11 +1021,11 @@ class GetQueryServicesDescriptorResponse extends $pb.GeneratedMessage {
   factory GetQueryServicesDescriptorResponse({
     QueryServicesDescriptor? queries,
   }) {
-    final _result = create();
+    final result = create();
     if (queries != null) {
-      _result.queries = queries;
+      result.queries = queries;
     }
-    return _result;
+    return result;
   }
   factory GetQueryServicesDescriptorResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GetQueryServicesDescriptorResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1099,11 +1099,11 @@ class GetTxDescriptorResponse extends $pb.GeneratedMessage {
   factory GetTxDescriptorResponse({
     TxDescriptor? tx,
   }) {
-    final _result = create();
+    final result = create();
     if (tx != null) {
-      _result.tx = tx;
+      result.tx = tx;
     }
-    return _result;
+    return result;
   }
   factory GetTxDescriptorResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GetTxDescriptorResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1148,11 +1148,11 @@ class QueryServicesDescriptor extends $pb.GeneratedMessage {
   factory QueryServicesDescriptor({
     $core.Iterable<QueryServiceDescriptor>? queryServices,
   }) {
-    final _result = create();
+    final result = create();
     if (queryServices != null) {
-      _result.queryServices.addAll(queryServices);
+      result.queryServices.addAll(queryServices);
     }
-    return _result;
+    return result;
   }
   factory QueryServicesDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryServicesDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1193,17 +1193,17 @@ class QueryServiceDescriptor extends $pb.GeneratedMessage {
     $core.bool? isModule,
     $core.Iterable<QueryMethodDescriptor>? methods,
   }) {
-    final _result = create();
+    final result = create();
     if (fullname != null) {
-      _result.fullname = fullname;
+      result.fullname = fullname;
     }
     if (isModule != null) {
-      _result.isModule = isModule;
+      result.isModule = isModule;
     }
     if (methods != null) {
-      _result.methods.addAll(methods);
+      result.methods.addAll(methods);
     }
-    return _result;
+    return result;
   }
   factory QueryServiceDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryServiceDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1260,14 +1260,14 @@ class QueryMethodDescriptor extends $pb.GeneratedMessage {
     $core.String? name,
     $core.String? fullQueryPath,
   }) {
-    final _result = create();
+    final result = create();
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
     if (fullQueryPath != null) {
-      _result.fullQueryPath = fullQueryPath;
+      result.fullQueryPath = fullQueryPath;
     }
-    return _result;
+    return result;
   }
   factory QueryMethodDescriptor.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryMethodDescriptor.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

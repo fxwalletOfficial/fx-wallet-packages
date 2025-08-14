@@ -10,12 +10,14 @@ void main() {
 	group('proto cosmos.bank.v1beta1 bank', () {
 		test('Params and SendEnabled list: has/clear/copyWith/json', () {
 			final se = SendEnabled(denom: 'uatom', enabled: true);
-			final p = Params(sendEnabled: [se], defaultSendEnabled: false);
+			final p = BankParams(sendEnabled: [se], defaultSendEnabled: false);
 			expect(p.sendEnabled.length, 1);
 			expect(p.defaultSendEnabled, isFalse);
 			p.clearDefaultSendEnabled();
 			expect(p.hasDefaultSendEnabled(), isFalse);
-			final copied = p.copyWith((m) => m.defaultSendEnabled = true);
+
+      p.freeze();
+			final copied = p.rebuild((m) => m.defaultSendEnabled = true);
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.contains('true'), isTrue);
 		});
@@ -57,7 +59,7 @@ void main() {
 		});
 
 		test('should throw on invalid buffer', () {
-			expect(() => Params.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
+			expect(() => BankParams.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
 			expect(() => SendEnabled.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
 			expect(() => Input.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
 			expect(() => Output.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
@@ -67,9 +69,9 @@ void main() {
 		});
 
 		test('Params getDefault/createEmptyInstance/createRepeated and SendEnabled defaults', () {
-			expect(Params.getDefault(), isA<Params>());
-			expect(Params().createEmptyInstance(), isA<Params>());
-			expect(Params.createRepeated(), isA<pb.PbList<Params>>());
+			expect(BankParams.getDefault(), isA<BankParams>());
+			expect(BankParams().createEmptyInstance(), isA<BankParams>());
+			expect(BankParams.createRepeated(), isA<pb.PbList<BankParams>>());
 			final se = SendEnabled();
 			expect(se.hasDenom(), isFalse);
 			expect(se.hasEnabled(), isFalse);
@@ -79,4 +81,4 @@ void main() {
 			expect(SendEnabled.fromBuffer(bz).enabled, isTrue);
 		});
 	});
-} 
+}

@@ -33,8 +33,10 @@ void main() {
 			expect(req.hasAddress(), isFalse);
 			final reqCloned = req.deepCopy();
 			expect(reqCloned.hasAddress(), isFalse);
-			final reqCopied = req.rebuild((m) => m.address = 'a');
-			expect(reqCopied.address, 'a');
+			// Freeze the message before using rebuild
+			final frozenReq = req.freeze();
+			final reqCopied = frozenReq.rebuild((m) => (m as QueryAccountRequest).address = 'a');
+			expect((reqCopied as QueryAccountRequest).address, 'a');
 			final reqJson = jsonEncode(reqCopied.writeToJsonMap());
 			expect(reqJson.contains('cosmos1') || reqJson.contains('"a"'), isTrue);
 			expect(() => QueryAccountRequest.fromJson('not-json'), throwsA(isA<FormatException>()));
@@ -46,7 +48,9 @@ void main() {
 			expect(resp.hasAccount(), isFalse);
 			final ensured = resp.ensureAccount();
 			expect(ensured, isA<Any>());
-			final respCopied = resp.copyWith((m) => m.account = Any(typeUrl: 't2'));
+			// Freeze the message before using rebuild
+			final frozenResp = resp.freeze();
+			final respCopied = frozenResp.rebuild((m) => (m as QueryAccountResponse).account = Any(typeUrl: 't2'));
 			final respJson = jsonEncode(respCopied.writeToJsonMap());
 			expect(respJson.contains('t2'), isTrue);
 			expect(() => QueryAccountResponse.fromJson('not-json'), throwsA(isA<FormatException>()));
@@ -92,10 +96,12 @@ void main() {
 			expect(req.hasPagination(), isFalse);
 			final ensuredReq = req.ensurePagination();
 			expect(ensuredReq, isA<PageRequest>());
-			final clonedReq = req.clone();
+			final clonedReq = req.deepCopy();
 			expect(clonedReq.hasPagination(), isTrue);
-			final copiedReq = req.copyWith((r) => r.pagination = PageRequest(limit: Int64(9)));
-			expect(copiedReq.pagination.limit.toInt(), 9);
+			// Freeze the message before using rebuild
+			final frozenReq = req.freeze();
+			final copiedReq = frozenReq.rebuild((r) => (r as QueryAccountsRequest).pagination = PageRequest(limit: Int64(9)));
+			expect((copiedReq as QueryAccountsRequest).pagination.limit.toInt(), 9);
 			final reqDef = QueryAccountsRequest.getDefault();
 			expect(reqDef, isA<QueryAccountsRequest>());
 			final reqEmpty = QueryAccountsRequest().createEmptyInstance();
@@ -112,14 +118,16 @@ void main() {
 			expect(resp.accounts.length, 2);
 			resp.accounts.clear();
 			expect(resp.accounts.isEmpty, isTrue);
-			final copiedRespBoth = resp.copyWith((rr) {
-				rr.accounts.add(Any(typeUrl: 'c'));
-				rr.pagination = PageResponse(total: Int64(3));
+			// Freeze the message before using rebuild
+			final frozenResp = resp.freeze();
+			final copiedRespBoth = frozenResp.rebuild((rr) {
+				(rr as QueryAccountsResponse).accounts.add(Any(typeUrl: 'c'));
+				(rr).pagination = PageResponse(total: Int64(3));
 			});
-			expect(copiedRespBoth.accounts.first.typeUrl, 'c');
-			expect(copiedRespBoth.pagination.total.toInt(), 3);
+			expect((copiedRespBoth as QueryAccountsResponse).accounts.first.typeUrl, 'c');
+			expect((copiedRespBoth).pagination.total.toInt(), 3);
 			// add has/clear/ensure for pagination on a mutable clone
-			final mutableResp = copiedRespBoth.clone();
+			final mutableResp = copiedRespBoth.deepCopy();
 			expect(mutableResp.hasPagination(), isTrue);
 			mutableResp.clearPagination();
 			expect(mutableResp.hasPagination(), isFalse);

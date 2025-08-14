@@ -2715,7 +2715,7 @@ class ResponseApplySnapshotChunk extends $pb.GeneratedMessage {
     if (rejectSenders != null) {
       result.rejectSenders.addAll(rejectSenders);
     }
-    return res;
+    return result;
   }
   factory ResponseApplySnapshotChunk.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ResponseApplySnapshotChunk.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

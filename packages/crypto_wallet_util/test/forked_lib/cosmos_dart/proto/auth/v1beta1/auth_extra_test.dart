@@ -32,10 +32,12 @@ void main() {
 			final ensuredPk = b.ensurePubKey();
 			expect(ensuredPk, isA<Any>());
 
-			final copied = b.rebuild((m) {
-				m.address = 'cosmos1abc';
+			// Freeze the message before using rebuild
+			final frozenB = b.freeze();
+			final copied = frozenB.rebuild((m) {
+				(m as BaseAccount).address = 'cosmos1abc';
 				m.accountNumber = Int64(8);
-				m.sequence = Int64(9);
+				(m).sequence = Int64(9);
 			});
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.contains('cosmos1abc'), isTrue);

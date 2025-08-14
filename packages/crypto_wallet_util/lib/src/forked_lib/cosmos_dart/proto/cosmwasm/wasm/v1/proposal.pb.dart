@@ -31,23 +31,23 @@ class StoreCodeProposal extends $pb.GeneratedMessage {
     $core.List<$core.int>? wasmByteCode,
     $3.AccessConfig? instantiatePermission,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (runAs != null) {
-      _result.runAs = runAs;
+      result.runAs = runAs;
     }
     if (wasmByteCode != null) {
-      _result.wasmByteCode = wasmByteCode;
+      result.wasmByteCode = wasmByteCode;
     }
     if (instantiatePermission != null) {
-      _result.instantiatePermission = instantiatePermission;
+      result.instantiatePermission = instantiatePermission;
     }
-    return _result;
+    return result;
   }
   factory StoreCodeProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory StoreCodeProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -142,32 +142,32 @@ class InstantiateContractProposal extends $pb.GeneratedMessage {
     $core.List<$core.int>? msg,
     $core.Iterable<$4.CosmosCoin>? funds,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (runAs != null) {
-      _result.runAs = runAs;
+      result.runAs = runAs;
     }
     if (admin != null) {
-      _result.admin = admin;
+      result.admin = admin;
     }
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (label != null) {
-      _result.label = label;
+      result.label = label;
     }
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
     if (funds != null) {
-      _result.funds.addAll(funds);
+      result.funds.addAll(funds);
     }
-    return _result;
+    return result;
   }
   factory InstantiateContractProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory InstantiateContractProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -275,23 +275,23 @@ class MigrateContractProposal extends $pb.GeneratedMessage {
     $fixnum.Int64? codeId,
     $core.List<$core.int>? msg,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
-    return _result;
+    return result;
   }
   factory MigrateContractProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MigrateContractProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -376,20 +376,20 @@ class SudoContractProposal extends $pb.GeneratedMessage {
     $core.String? contract,
     $core.List<$core.int>? msg,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
-    return _result;
+    return result;
   }
   factory SudoContractProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SudoContractProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -469,26 +469,26 @@ class ExecuteContractProposal extends $pb.GeneratedMessage {
     $core.List<$core.int>? msg,
     $core.Iterable<$4.CosmosCoin>? funds,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (runAs != null) {
-      _result.runAs = runAs;
+      result.runAs = runAs;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
     if (funds != null) {
-      _result.funds.addAll(funds);
+      result.funds.addAll(funds);
     }
-    return _result;
+    return result;
   }
   factory ExecuteContractProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ExecuteContractProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -576,20 +576,20 @@ class UpdateAdminProposal extends $pb.GeneratedMessage {
     $core.String? newAdmin,
     $core.String? contract,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (newAdmin != null) {
-      _result.newAdmin = newAdmin;
+      result.newAdmin = newAdmin;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
-    return _result;
+    return result;
   }
   factory UpdateAdminProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory UpdateAdminProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -663,17 +663,17 @@ class ClearAdminProposal extends $pb.GeneratedMessage {
     $core.String? description,
     $core.String? contract,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
-    return _result;
+    return result;
   }
   factory ClearAdminProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ClearAdminProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -738,17 +738,17 @@ class PinCodesProposal extends $pb.GeneratedMessage {
     $core.String? description,
     $core.Iterable<$fixnum.Int64>? codeIds,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (codeIds != null) {
-      _result.codeIds.addAll(codeIds);
+      result.codeIds.addAll(codeIds);
     }
-    return _result;
+    return result;
   }
   factory PinCodesProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory PinCodesProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -807,17 +807,17 @@ class UnpinCodesProposal extends $pb.GeneratedMessage {
     $core.String? description,
     $core.Iterable<$fixnum.Int64>? codeIds,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (codeIds != null) {
-      _result.codeIds.addAll(codeIds);
+      result.codeIds.addAll(codeIds);
     }
-    return _result;
+    return result;
   }
   factory UnpinCodesProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory UnpinCodesProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -874,14 +874,14 @@ class AccessConfigUpdate extends $pb.GeneratedMessage {
     $fixnum.Int64? codeId,
     $3.AccessConfig? instantiatePermission,
   }) {
-    final _result = create();
+    final result = create();
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (instantiatePermission != null) {
-      _result.instantiatePermission = instantiatePermission;
+      result.instantiatePermission = instantiatePermission;
     }
-    return _result;
+    return result;
   }
   factory AccessConfigUpdate.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory AccessConfigUpdate.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -939,17 +939,17 @@ class UpdateInstantiateConfigProposal extends $pb.GeneratedMessage {
     $core.String? description,
     $core.Iterable<AccessConfigUpdate>? accessConfigUpdates,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (accessConfigUpdates != null) {
-      _result.accessConfigUpdates.addAll(accessConfigUpdates);
+      result.accessConfigUpdates.addAll(accessConfigUpdates);
     }
-    return _result;
+    return result;
   }
   factory UpdateInstantiateConfigProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory UpdateInstantiateConfigProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

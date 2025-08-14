@@ -1,4 +1,6 @@
 ///
+// ignore_for_file: library_prefixes
+
 import 'dart:core' as $core;
 
 import 'package:fixnum/fixnum.dart' as $fixnum;
@@ -7,7 +9,7 @@ import 'package:protobuf/protobuf.dart' as $pb;
 import 'capability.pb.dart' as $0;
 
 class GenesisOwners extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisOwners', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.capability.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisOwners', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.capability.v1beta1'), createEmptyInstance: create)
     ..a<$fixnum.Int64>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'index', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..aOM<$0.CapabilityOwners>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'indexOwners', subBuilder: $0.CapabilityOwners.create)
     ..hasRequiredFields = false
@@ -18,14 +20,14 @@ class GenesisOwners extends $pb.GeneratedMessage {
     $fixnum.Int64? index,
     $0.CapabilityOwners? indexOwners,
   }) {
-    final _result = create();
+    final result = create();
     if (index != null) {
-      _result.index = index;
+      result.index = index;
     }
     if (indexOwners != null) {
-      _result.indexOwners = indexOwners;
+      result.indexOwners = indexOwners;
     }
-    return _result;
+    return result;
   }
   factory GenesisOwners.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisOwners.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -74,7 +76,7 @@ class GenesisOwners extends $pb.GeneratedMessage {
 }
 
 class GenesisState extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.capability.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.capability.v1beta1'), createEmptyInstance: create)
     ..a<$fixnum.Int64>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'index', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..pc<GenesisOwners>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'owners', $pb.PbFieldType.PM, subBuilder: GenesisOwners.create)
     ..hasRequiredFields = false
@@ -85,14 +87,14 @@ class GenesisState extends $pb.GeneratedMessage {
     $fixnum.Int64? index,
     $core.Iterable<GenesisOwners>? owners,
   }) {
-    final _result = create();
+    final result = create();
     if (index != null) {
-      _result.index = index;
+      result.index = index;
     }
     if (owners != null) {
-      _result.owners.addAll(owners);
+      result.owners.addAll(owners);
     }
-    return _result;
+    return result;
   }
   factory GenesisState.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisState.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

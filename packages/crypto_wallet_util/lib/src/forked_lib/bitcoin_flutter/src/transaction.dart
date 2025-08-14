@@ -452,8 +452,8 @@ class Transaction {
     return bcrypto.hash256(buffer);
   }
 
-  int _byteLength(_ALLOW_WITNESS) {
-    final hasWitness = _ALLOW_WITNESS && hasWitnesses();
+  int _byteLength(ALLOW_WITNESS) {
+    final hasWitness = ALLOW_WITNESS && hasWitnesses();
     return (hasWitness ? 10 : 8) +
         varuint.encodingLength(ins.length) +
         varuint.encodingLength(outs.length) +
@@ -529,32 +529,32 @@ class Transaction {
   }
 
   Uint8List _toBuffer(
-      [Uint8List? buffer, initialOffset, bool _ALLOW_WITNESS = false]) {
+      [Uint8List? buffer, initialOffset, bool ALLOW_WITNESS = false]) {
     final buf = Buffer.fromUint8List(
         data: buffer,
         initialOffset: initialOffset,
-        length: _byteLength(_ALLOW_WITNESS));
+        length: _byteLength(ALLOW_WITNESS));
 
     // Start writeBuffer
     buf.writeInt32(version);
 
-    if (_ALLOW_WITNESS && hasWitnesses()) {
+    if (ALLOW_WITNESS && hasWitnesses()) {
       buf.writeUInt8(ADVANCED_TRANSACTION_MARKER);
       buf.writeUInt8(ADVANCED_TRANSACTION_FLAG);
     }
 
     buf.writeVarInt(ins.length);
 
-    ins.forEach((txIn) {
+    for (var txIn in ins) {
       buf.writeSlice(txIn.hash);
       buf.writeUInt32(txIn.index);
       buf.writeVarSlice(txIn.script);
       buf.writeUInt32(txIn.sequence);
-    });
+    }
 
     buf.writeVarInt(outs.length);
 
-    outs.forEach((txOut) {
+    for (var txOut in outs) {
       if (txOut.valueBuffer == null) {
         buf.writeUInt64(txOut.value);
       } else {
@@ -562,16 +562,16 @@ class Transaction {
       }
       buf.writeVarSlice(txOut.script);
       if (version! > MIN_VERSION_NO_TOKENS) buf.writeVarInt(txOut.tokenId);
-    });
+    }
 
-    if (_ALLOW_WITNESS && hasWitnesses()) {
-      ins.forEach((txInt) {
+    if (ALLOW_WITNESS && hasWitnesses()) {
+      for (var txInt in ins) {
         if (txInt.witness == null) {
           buf.writeVarInt(0);
         } else {
           buf.writeVector(txInt.witness);
         }
-      });
+      }
     }
 
     buf.writeUInt32(locktime);
@@ -584,17 +584,17 @@ class Transaction {
     return buf.tBuffer;
   }
 
-  factory Transaction.clone(Transaction _tx) {
-    var tx = Transaction();
-    tx.version = _tx.version;
-    tx.locktime = _tx.locktime;
-    tx.ins = _tx.ins.map((input) {
+  factory Transaction.clone(Transaction tx) {
+    final transaction = Transaction();
+    transaction.version = tx.version;
+    transaction.locktime = tx.locktime;
+    transaction.ins = tx.ins.map((input) {
       return Input.clone(input);
     }).toList();
-    tx.outs = _tx.outs.map((output) {
+    transaction.outs = tx.outs.map((output) {
       return OutputBase.clone(output);
     }).toList();
-    return tx;
+    return transaction;
   }
 
   factory Transaction.fromBuffer(Uint8List buffer, {bool noStrict = false}) {
@@ -703,12 +703,12 @@ class Transaction {
   @override
   String toString() {
     final s = [];
-    ins.forEach((txInput) {
+    for (var txInput in ins) {
       s.add(txInput.toString());
-    });
-    outs.forEach((txOutput) {
+    }
+    for (var txOutput in outs) {
       s.add(txOutput.toString());
-    });
+    }
     return s.join('\n');
   }
 }
@@ -900,7 +900,7 @@ class OutputBase {
       this.signatures,
       this.valueBuffer,
       this.maxSignatures,
-      this.tokenId = 0}) {}
+      this.tokenId = 0});
 
   factory OutputBase.expandOutput(Uint8List? script, [Uint8List? ourPubKey]) {
     if (ourPubKey == null) return OutputBase();
@@ -964,21 +964,15 @@ class OutputBase {
 
 class Output extends OutputBase {
   Output(
-      {String? type,
-      Uint8List? script,
+      {super.type,
+      super.script,
       int? value,
-      Uint8List? valueBuffer,
-      List<Uint8List>? pubkeys,
-      List<Uint8List>? signatures,
-      int? maxSignatures})
+      super.valueBuffer,
+      List<Uint8List>? super.pubkeys,
+      List<Uint8List>? super.signatures,
+      super.maxSignatures})
       : super(
-            type: type,
-            script: script,
-            value: value,
-            valueBuffer: valueBuffer,
-            pubkeys: pubkeys,
-            signatures: signatures,
-            maxSignatures: maxSignatures) {
+            value: value) {
     if (value != null && !isShatoshi(value))
       throw ArgumentError('Invalid output value');
   }

@@ -6,17 +6,17 @@ part of 'network_info.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-NetworkInfo _$NetworkInfoFromJson(Map<String, dynamic> json) {
+CosmosNetworkInfo _$NetworkInfoFromJson(Map<String, dynamic> json) {
   $checkKeys(
     json,
     requiredKeys: const ['bech32_hrp'],
   );
-  return NetworkInfo(
+  return CosmosNetworkInfo(
     bech32Hrp: json['bech32_hrp'] as String,
   );
 }
 
-Map<String, dynamic> _$NetworkInfoToJson(NetworkInfo instance) =>
+Map<String, dynamic> _$NetworkInfoToJson(CosmosNetworkInfo instance) =>
     <String, dynamic>{
       'bech32_hrp': instance.bech32Hrp,
     };

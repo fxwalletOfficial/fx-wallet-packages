@@ -18,7 +18,9 @@ void main() {
 			expect(decoded.outputs.first.address, 'to');
 			msg.inputs.add(bankpb.Input(address: 'from2'));
 			expect(msg.inputs.length, 2);
-			final copied = msg.copyWith((m) => m.outputs.add(bankpb.Output(address: 'to2')));
+
+      msg.freeze();
+			final copied = msg.rebuild((m) => m.outputs.add(bankpb.Output(address: 'to2')));
 			expect(copied.outputs.length, 2);
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.isNotEmpty, isTrue);
@@ -32,4 +34,4 @@ void main() {
 			expect(r2, isA<MsgMultiSendResponse>());
 		});
 	});
-} 
+}

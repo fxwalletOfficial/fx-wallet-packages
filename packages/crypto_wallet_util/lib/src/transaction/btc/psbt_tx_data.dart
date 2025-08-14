@@ -67,6 +67,7 @@ class PsbtTxData extends TxData {
           value = output.amount / 100000000;
           address = output.scriptPubKey.getAddress();
         } else {
+          // ignore: avoid_print
           print('Warning: PSBT input $i has invalid output index');
           value = 0.0;
           address = 'unknown';
@@ -74,6 +75,7 @@ class PsbtTxData extends TxData {
       } else {
         // If neither witnessUtxo nor previousTransaction is available,
         // we can't determine the exact amount and address
+        // ignore: avoid_print
         print('Warning: PSBT input $i has no witnessUtxo or previousTransaction');
         value = 0.0;
         address = 'unknown';

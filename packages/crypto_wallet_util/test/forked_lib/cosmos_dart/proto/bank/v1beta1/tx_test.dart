@@ -28,9 +28,11 @@ void main() {
 			expect(msg.hasToAddress(), isTrue);
 			msg.amount.addAll([CosmosCoin(denom: 'x', amount: '0'), CosmosCoin(denom: 'y', amount: '2')]);
 			expect(msg.amount.length, 2);
-			final clone = msg.clone();
+			final clone = msg.deepCopy();
 			expect(clone.fromAddress, 'a');
-			final copied = msg.copyWith((m) {
+
+      msg.freeze();
+			final copied = msg.rebuild((m) {
 				m.fromAddress = 'c';
 				m.toAddress = 'd';
 			});
@@ -58,9 +60,11 @@ void main() {
 			expect(m.hasToAddress(), isFalse);
 			m.amount.add(CosmosCoin(denom: 'uiris', amount: '2'));
 			expect(m.amount.length, 2);
-			final clone = m.clone();
+			final clone = m.deepCopy();
 			expect(clone.amount.length, 2);
-			final copied = m.copyWith((x) {
+
+      m.freeze();
+			final copied = m.rebuild((x) {
 				x.fromAddress = 'from2';
 				x.toAddress = 'to2';
 			});
@@ -80,7 +84,7 @@ void main() {
 			expect(MsgSendResponse.getDefault(), isA<MsgSendResponse>());
 			expect(MsgSendResponse.getDefault().createEmptyInstance(), isA<MsgSendResponse>());
 			expect(MsgSendResponse.createRepeated(), isA<pb.PbList<MsgSendResponse>>());
-			final clone = MsgSendResponse().clone();
+			final clone = MsgSendResponse().deepCopy();
 			expect(clone, isA<MsgSendResponse>());
 		});
 
@@ -94,14 +98,9 @@ void main() {
 			m.outputs.add(bankpb.Output(address: 'd'));
 			expect(m.inputs.length, 2);
 			expect(m.outputs.length, 2);
-			final clone = m.clone();
+			final clone = m.deepCopy();
 			expect(clone.inputs.length, 2);
-			final copied = m.copyWith((x) {
-				x.inputs.clear();
-				x.outputs.clear();
-			});
-			expect(copied.inputs, isEmpty);
-			expect(copied.outputs, isEmpty);
+
 			final jsonStr = jsonEncode(m.writeToJsonMap());
 			expect(jsonStr.isNotEmpty, isTrue);
 			final bz = m.writeToBuffer();
@@ -110,13 +109,21 @@ void main() {
 			expect(MsgMultiSend.getDefault().info_.messageName, contains('MsgMultiSend'));
 			expect(() => MsgMultiSend.fromJson('bad'), throwsA(isA<FormatException>()));
 			expect(() => MsgMultiSend.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
+
+      m.freeze();
+			final copied = m.rebuild((x) {
+				x.inputs.clear();
+				x.outputs.clear();
+			});
+			expect(copied.inputs, isEmpty);
+			expect(copied.outputs, isEmpty);
 		});
 
 		test('MsgMultiSendResponse defaults/createEmptyInstance/createRepeated/clone', () {
 			expect(MsgMultiSendResponse.getDefault(), isA<MsgMultiSendResponse>());
 			expect(MsgMultiSendResponse.getDefault().createEmptyInstance(), isA<MsgMultiSendResponse>());
 			expect(MsgMultiSendResponse.createRepeated(), isA<pb.PbList<MsgMultiSendResponse>>());
-			final clone = MsgMultiSendResponse().clone();
+			final clone = MsgMultiSendResponse().deepCopy();
 			expect(clone, isA<MsgMultiSendResponse>());
 		});
 	});
@@ -150,4 +157,4 @@ void main() {
 			expect(MsgMultiSendResponse.fromJson(jsonStr), isA<MsgMultiSendResponse>());
 		});
 	});
-} 
+}

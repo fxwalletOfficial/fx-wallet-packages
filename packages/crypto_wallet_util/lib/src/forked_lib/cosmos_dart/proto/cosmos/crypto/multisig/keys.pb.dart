@@ -23,14 +23,14 @@ class LegacyAminoPubKey extends $pb.GeneratedMessage {
     $core.int? threshold,
     $core.Iterable<$0.Any>? publicKeys,
   }) {
-    final _result = create();
+    final result = create();
     if (threshold != null) {
-      _result.threshold = threshold;
+      result.threshold = threshold;
     }
     if (publicKeys != null) {
-      _result.publicKeys.addAll(publicKeys);
+      result.publicKeys.addAll(publicKeys);
     }
-    return _result;
+    return result;
   }
   factory LegacyAminoPubKey.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory LegacyAminoPubKey.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

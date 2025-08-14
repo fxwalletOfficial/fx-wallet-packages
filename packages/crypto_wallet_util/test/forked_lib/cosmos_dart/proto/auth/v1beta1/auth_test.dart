@@ -62,11 +62,13 @@ void main() {
 			final ensured = b.ensurePubKey();
 			expect(ensured, isA<Any>());
 
-			final copied = b.rebuild((m) {
-				m.address = '';
-				m.accountNumber = Int64(9223372036854775807);
-				m.sequence = Int64(0);
-				m.pubKey = Any(typeUrl: 'p');
+			// Freeze the message before using rebuild
+			final frozenB = b.freeze();
+			final copied = frozenB.rebuild((m) {
+				(m as BaseAccount).address = '';
+				(m).accountNumber = Int64(9223372036854775807);
+				(m).sequence = Int64(0);
+				(m).pubKey = Any(typeUrl: 'p');
 			});
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.isNotEmpty, isTrue);
@@ -105,12 +107,14 @@ void main() {
 			expect(p.hasTxSizeCostPerByte(), isTrue);
 			expect(p.hasSigVerifyCostEd25519(), isTrue);
 			expect(p.hasSigVerifyCostSecp256k1(), isTrue);
-			final p2 = p.rebuild((pp) {
-				pp.maxMemoCharacters = Int64(1);
-				pp.txSigLimit = Int64(2);
-				pp.txSizeCostPerByte = Int64(3);
-				pp.sigVerifyCostEd25519 = Int64(4);
-				pp.sigVerifyCostSecp256k1 = Int64(5);
+			// Freeze the message before using rebuild
+			final frozenP = p.freeze();
+			final p2 = frozenP.rebuild((pp) {
+				(pp as authpb.Params).maxMemoCharacters = Int64(1);
+				(pp).txSigLimit = Int64(2);
+				(pp).txSizeCostPerByte = Int64(3);
+				(pp).sigVerifyCostEd25519 = Int64(4);
+				(pp).sigVerifyCostSecp256k1 = Int64(5);
 			});
 			final jsonStr = jsonEncode(p2.writeToJsonMap());
 			expect(jsonStr.contains('1'), isTrue);
@@ -120,16 +124,24 @@ void main() {
 			expect(parsed.txSizeCostPerByte.toInt(), 3);
 			expect(parsed.sigVerifyCostEd25519.toInt(), 4);
 			expect(parsed.sigVerifyCostSecp256k1.toInt(), 5);
-			p.clearMaxMemoCharacters();
-			p.clearTxSigLimit();
-			p.clearTxSizeCostPerByte();
-			p.clearSigVerifyCostEd25519();
-			p.clearSigVerifyCostSecp256k1();
-			expect(p.hasMaxMemoCharacters(), isFalse);
-			expect(p.hasTxSigLimit(), isFalse);
-			expect(p.hasTxSizeCostPerByte(), isFalse);
-			expect(p.hasSigVerifyCostEd25519(), isFalse);
-			expect(p.hasSigVerifyCostSecp256k1(), isFalse);
+			// Create a new instance for clear operations since p is now frozen
+			final pForClear = authpb.Params(
+				maxMemoCharacters: Int64(256),
+				txSigLimit: Int64(7),
+				txSizeCostPerByte: Int64(5),
+				sigVerifyCostEd25519: Int64(999),
+				sigVerifyCostSecp256k1: Int64(888),
+			);
+			pForClear.clearMaxMemoCharacters();
+			pForClear.clearTxSigLimit();
+			pForClear.clearTxSizeCostPerByte();
+			pForClear.clearSigVerifyCostEd25519();
+			pForClear.clearSigVerifyCostSecp256k1();
+			expect(pForClear.hasMaxMemoCharacters(), isFalse);
+			expect(pForClear.hasTxSigLimit(), isFalse);
+			expect(pForClear.hasTxSizeCostPerByte(), isFalse);
+			expect(pForClear.hasSigVerifyCostEd25519(), isFalse);
+			expect(pForClear.hasSigVerifyCostSecp256k1(), isFalse);
 		});
 
 		test('Params defaults/creators/errors', () {
@@ -165,8 +177,10 @@ void main() {
 			expect(empty, isA<GenesisState>());
 			final list = GenesisState.createRepeated();
 			expect(list, isA<pb.PbList<GenesisState>>());
-			final copied = g.rebuild((gg) => gg.params = authpb.Params(txSigLimit: Int64(10)));
-			expect(copied.params.txSigLimit.toInt(), 10);
+			// Freeze the message before using rebuild
+			final frozenG = g.freeze();
+			final copied = frozenG.rebuild((gg) => (gg as GenesisState).params = authpb.Params(txSigLimit: Int64(10)));
+			expect((copied as GenesisState).params.txSigLimit.toInt(), 10);
 		});
 
 		test('ModuleAccount has/clear/permissions list/json/clone/copyWith/defaults/errors', () {
@@ -190,9 +204,11 @@ void main() {
 			expect(m.hasBaseAccount(), isTrue);
 			final cloned = m.deepCopy();
 			expect(cloned, isA<ModuleAccount>());
-			final copied = m.rebuild((mm) {
-				mm.name = 'n2';
-				mm.baseAccount = BaseAccount(address: 'b');
+			// Freeze the message before using rebuild
+			final frozenM = m.freeze();
+			final copied = frozenM.rebuild((mm) {
+				(mm as ModuleAccount).name = 'n2';
+				(mm).baseAccount = BaseAccount(address: 'b');
 			});
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.contains('n2'), isTrue);

@@ -12,13 +12,15 @@ void main() {
 		test('QuerySpendableBalancesRequest has/clear/ensure/clone/copyWith', () {
 			final req = QuerySpendableBalancesRequest(address: 'cosmos1x', pagination: PageRequest(limit: Int64(5)));
 			expect(req.hasPagination(), isTrue);
-			final clone = req.clone();
+			final clone = req.deepCopy();
 			expect(clone.pagination.limit.toInt(), 5);
 			clone.clearPagination();
 			expect(clone.hasPagination(), isFalse);
 			final ensured = clone.ensurePagination();
 			expect(ensured, isA<PageRequest>());
-			final copied = req.copyWith((r) => r.pagination = PageRequest(limit: Int64(9)));
+
+      req.freeze();
+			final copied = req.rebuild((r) => r.pagination = PageRequest(limit: Int64(9)));
 			expect(copied.pagination.limit.toInt(), 9);
 		});
 
@@ -35,4 +37,4 @@ void main() {
 			expect(QuerySpendableBalancesResponse.getDefault(), isA<QuerySpendableBalancesResponse>());
 		});
 	});
-} 
+}

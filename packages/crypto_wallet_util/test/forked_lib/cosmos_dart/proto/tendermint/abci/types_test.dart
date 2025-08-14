@@ -14,7 +14,7 @@ void main() {
 			expect(req.hasEcho(), isFalse);
 			req.ensureFlush();
 			expect(req.hasFlush(), isTrue);
-			final clone = req.clone();
+			final clone = req.deepCopy();
 			expect(clone.hasFlush(), isTrue);
 		});
 
@@ -31,7 +31,8 @@ void main() {
 			expect(e.attributes.first.index, isTrue);
 			final bz = e.writeToBuffer();
 			expect(Event.fromBuffer(bz).type, 't');
-			final copied = e.copyWith((x) => x.attributes.add(EventAttribute(key: [0x6b, 0x32])));
+      e.freeze();
+			final copied = e.rebuild((x) => x.attributes.add(EventAttribute(key: [0x6b, 0x32])));
 			expect(copied.attributes.length, 2);
 		});
 
@@ -44,4 +45,4 @@ void main() {
 			expect(jsonDecode(j), isA<Map>());
 		});
 	});
-} 
+}

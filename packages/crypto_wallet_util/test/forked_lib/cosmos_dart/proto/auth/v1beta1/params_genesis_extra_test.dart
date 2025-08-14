@@ -15,9 +15,11 @@ void main() {
 			p.clearMaxMemoCharacters();
 			expect(p.hasMaxMemoCharacters(), isFalse);
 
-			final copied = p.rebuild((m) {
-				m.maxMemoCharacters = Int64(2);
-				m.txSigLimit = Int64(3);
+			// Freeze the message before using rebuild
+			final frozenP = p.freeze();
+			final copied = frozenP.rebuild((m) {
+				(m as authpb.Params).maxMemoCharacters = Int64(2);
+				(m).txSigLimit = Int64(3);
 			});
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.contains('2'), isTrue);

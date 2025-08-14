@@ -187,3 +187,8 @@
 ## Update
 
 - Update tweetnacl-dart.
+
+## [1.1.12] - 2025-08-14
+## Update
+
+- Update cosmos_dart export.

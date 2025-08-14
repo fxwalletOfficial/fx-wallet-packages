@@ -1,19 +1,21 @@
 ///
+// ignore_for_file: library_prefixes
+
 import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
 
 import '../../base/v1beta1/coin.pb.dart' as $2;
 
-class Params extends $pb.GeneratedMessage {
+class BankParams extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Params', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..pc<SendEnabled>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'sendEnabled', $pb.PbFieldType.PM, subBuilder: SendEnabled.create)
     ..aOB(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'defaultSendEnabled')
     ..hasRequiredFields = false
   ;
 
-  Params._() : super();
-  factory Params({
+  BankParams._() : super();
+  factory BankParams({
     $core.Iterable<SendEnabled>? sendEnabled,
     $core.bool? defaultSendEnabled,
   }) {
@@ -26,26 +28,30 @@ class Params extends $pb.GeneratedMessage {
     }
     return result;
   }
-  factory Params.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
-  factory Params.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  factory BankParams.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory BankParams.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
-  Params clone() => Params()..mergeFromMessage(this);
+  BankParams clone() => BankParams()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
-  Params copyWith(void Function(Params) updates) => super.copyWith((message) => updates(message as Params)) as Params; // ignore: deprecated_member_use
+  BankParams copyWith(void Function(BankParams) updates) => super.copyWith((message) => updates(message as BankParams)) as BankParams; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
-  static Params create() => Params._();
-  Params createEmptyInstance() => create();
-  static $pb.PbList<Params> createRepeated() => $pb.PbList<Params>();
+  static BankParams create() => BankParams._();
+  @$core.override
+  BankParams createEmptyInstance() => create();
+  static $pb.PbList<BankParams> createRepeated() => $pb.PbList<BankParams>();
   @$core.pragma('dart2js:noInline')
-  static Params getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Params>(create);
-  static Params? _defaultInstance;
+  static BankParams getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<BankParams>(create);
+  static BankParams? _defaultInstance;
 
   @$pb.TagNumber(1)
   $core.List<SendEnabled> get sendEnabled => $_getList(0);
@@ -83,19 +89,23 @@ class SendEnabled extends $pb.GeneratedMessage {
   }
   factory SendEnabled.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SendEnabled.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   SendEnabled clone() => SendEnabled()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   SendEnabled copyWith(void Function(SendEnabled) updates) => super.copyWith((message) => updates(message as SendEnabled)) as SendEnabled; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static SendEnabled create() => SendEnabled._();
+  @$core.override
   SendEnabled createEmptyInstance() => create();
   static $pb.PbList<SendEnabled> createRepeated() => $pb.PbList<SendEnabled>();
   @$core.pragma('dart2js:noInline')
@@ -144,19 +154,23 @@ class Input extends $pb.GeneratedMessage {
   }
   factory Input.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Input.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   Input clone() => Input()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   Input copyWith(void Function(Input) updates) => super.copyWith((message) => updates(message as Input)) as Input; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Input create() => Input._();
+  @$core.override
   Input createEmptyInstance() => create();
   static $pb.PbList<Input> createRepeated() => $pb.PbList<Input>();
   @$core.pragma('dart2js:noInline')
@@ -197,19 +211,23 @@ class Output extends $pb.GeneratedMessage {
   }
   factory Output.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Output.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   Output clone() => Output()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   Output copyWith(void Function(Output) updates) => super.copyWith((message) => updates(message as Output)) as Output; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Output create() => Output._();
+  @$core.override
   Output createEmptyInstance() => create();
   static $pb.PbList<Output> createRepeated() => $pb.PbList<Output>();
   @$core.pragma('dart2js:noInline')
@@ -247,19 +265,23 @@ class Supply extends $pb.GeneratedMessage {
   }
   factory Supply.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Supply.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   Supply clone() => Supply()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   Supply copyWith(void Function(Supply) updates) => super.copyWith((message) => updates(message as Supply)) as Supply; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Supply create() => Supply._();
+  @$core.override
   Supply createEmptyInstance() => create();
   static $pb.PbList<Supply> createRepeated() => $pb.PbList<Supply>();
   @$core.pragma('dart2js:noInline')
@@ -298,19 +320,23 @@ class DenomUnit extends $pb.GeneratedMessage {
   }
   factory DenomUnit.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory DenomUnit.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   DenomUnit clone() => DenomUnit()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   DenomUnit copyWith(void Function(DenomUnit) updates) => super.copyWith((message) => updates(message as DenomUnit)) as DenomUnit; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static DenomUnit create() => DenomUnit._();
+  @$core.override
   DenomUnit createEmptyInstance() => create();
   static $pb.PbList<DenomUnit> createRepeated() => $pb.PbList<DenomUnit>();
   @$core.pragma('dart2js:noInline')
@@ -382,19 +408,23 @@ class Metadata extends $pb.GeneratedMessage {
   }
   factory Metadata.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Metadata.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   Metadata clone() => Metadata()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   Metadata copyWith(void Function(Metadata) updates) => super.copyWith((message) => updates(message as Metadata)) as Metadata; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Metadata create() => Metadata._();
+  @$core.override
   Metadata createEmptyInstance() => create();
   static $pb.PbList<Metadata> createRepeated() => $pb.PbList<Metadata>();
   @$core.pragma('dart2js:noInline')

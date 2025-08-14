@@ -27,27 +27,32 @@ void main() {
 
 		test('QueryAllBalancesRequest/Response copyWith/ensure/clear', () {
 			final req = QueryAllBalancesRequest(address: 'addr', pagination: PageRequest(limit: Int64(3)));
-			final copiedReq = req.copyWith((r) {
-				r.address = 'addr2';
-				r.pagination = PageRequest(limit: Int64(5));
-			});
-			expect(copiedReq.address, 'addr2');
-			expect(copiedReq.pagination.limit.toInt(), 5);
-			final reqClone = req.clone();
+
+			final reqClone = req.deepCopy();
 			reqClone.clearPagination();
 			expect(reqClone.hasPagination(), isFalse);
 			expect(reqClone.ensurePagination(), isA<PageRequest>());
 			expect(QueryAllBalancesRequest.getDefault().info_.messageName, contains('QueryAllBalancesRequest'));
 
+      req.freeze();
+			final copiedReq = req.rebuild((r) {
+				r.address = 'addr2';
+				r.pagination = PageRequest(limit: Int64(5));
+			});
+			expect(copiedReq.address, 'addr2');
+			expect(copiedReq.pagination.limit.toInt(), 5);
+
 			final resp = QueryAllBalancesResponse(balances: [CosmosCoin(denom: 'x', amount: '0')], pagination: PageResponse(total: Int64(1)));
-			final respClone = resp.clone();
+			final respClone = resp.deepCopy();
 			respClone.clearPagination();
 			expect(respClone.hasPagination(), isFalse);
 			final ensured = respClone.ensurePagination();
 			expect(ensured, isA<PageResponse>());
 			resp.balances.add(CosmosCoin(denom: 'y', amount: '2'));
 			expect(resp.balances.length, 2);
-			final copiedResp = resp.copyWith((rr) => rr.pagination = PageResponse(total: Int64(3)));
+
+      resp.freeze();
+			final copiedResp = resp.rebuild((rr) => rr.pagination = PageResponse(total: Int64(3)));
 			expect(copiedResp.pagination.total.toInt(), 3);
 			expect(QueryAllBalancesResponse.getDefault().info_.messageName, contains('QueryAllBalancesResponse'));
 		});
@@ -86,7 +91,7 @@ void main() {
 			final req = QueryParamsRequest();
 			final reqJson = jsonEncode(req.writeToJsonMap());
 			expect(QueryParamsRequest.fromJson(reqJson), isA<QueryParamsRequest>());
-			final resp = QueryParamsResponse(params: bankpb.Params(defaultSendEnabled: true));
+			final resp = QueryParamsResponse(params: bankpb.BankParams(defaultSendEnabled: true));
 			final respBz = resp.writeToBuffer();
 			expect(QueryParamsResponse.fromBuffer(respBz).params.defaultSendEnabled, isTrue);
 			expect(QueryParamsRequest.getDefault().info_.messageName, contains('QueryParamsRequest'));
@@ -138,7 +143,8 @@ void main() {
 
 			// QuerySpendableBalancesRequest copyWith to update pagination
 			final qsr = QuerySpendableBalancesRequest(address: 'a', pagination: PageRequest(limit: Int64(1)));
-			final qsr2 = qsr.copyWith((r) => r.pagination = PageRequest(limit: Int64(2)));
+      qsr.freeze();
+			final qsr2 = qsr.rebuild((r) => r.pagination = PageRequest(limit: Int64(2)));
 			expect(qsr2.pagination.limit.toInt(), 2);
 			expect(QuerySpendableBalancesResponse.createRepeated(), isA<pb.PbList<QuerySpendableBalancesResponse>>());
 
@@ -170,4 +176,4 @@ void main() {
 				expect(() => QueryParamsResponse.fromJson(''), throwsA(isA<FormatException>()));
 			});
 	});
-} 
+}

@@ -19,11 +19,10 @@ class Pairs extends $pb.GeneratedMessage {
   factory Pairs({
     $core.Iterable<Pair>? pairs,
   }) {
-    final _result = create();
-    if (pairs != null) {
-      _result.pairs.addAll(pairs);
-    }
-    return _result;
+    final result = create();
+    if (pairs != null) result.pairs.addAll(pairs);
+
+    return result;
   }
   factory Pairs.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Pairs.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -62,14 +61,14 @@ class Pair extends $pb.GeneratedMessage {
     $core.List<$core.int>? key,
     $core.List<$core.int>? value,
   }) {
-    final _result = create();
+    final result = create();
     if (key != null) {
-      _result.key = key;
+      result.key = key;
     }
     if (value != null) {
-      _result.value = value;
+      result.value = value;
     }
-    return _result;
+    return result;
   }
   factory Pair.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Pair.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

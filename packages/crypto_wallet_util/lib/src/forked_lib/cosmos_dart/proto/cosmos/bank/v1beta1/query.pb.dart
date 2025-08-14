@@ -596,13 +596,13 @@ class QueryParamsRequest extends $pb.GeneratedMessage {
 
 class QueryParamsResponse extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'QueryParamsResponse', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
-    ..aOM<$3.Params>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'params', subBuilder: $3.Params.create)
+    ..aOM<$3.BankParams>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'params', subBuilder: $3.BankParams.create)
     ..hasRequiredFields = false
   ;
 
   QueryParamsResponse._() : super();
   factory QueryParamsResponse({
-    $3.Params? params,
+    $3.BankParams? params,
   }) {
     final result = create();
     if (params != null) {
@@ -632,15 +632,15 @@ class QueryParamsResponse extends $pb.GeneratedMessage {
   static QueryParamsResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $3.Params get params => $_getN(0);
+  $3.BankParams get params => $_getN(0);
   @$pb.TagNumber(1)
-  set params($3.Params v) { setField(1, v); }
+  set params($3.BankParams v) { setField(1, v); }
   @$pb.TagNumber(1)
   $core.bool hasParams() => $_has(0);
   @$pb.TagNumber(1)
   void clearParams() => clearField(1);
   @$pb.TagNumber(1)
-  $3.Params ensureParams() => $_ensure(0);
+  $3.BankParams ensureParams() => $_ensure(0);
 }
 
 class QueryDenomsMetadataRequest extends $pb.GeneratedMessage {

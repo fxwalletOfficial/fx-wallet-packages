@@ -17,8 +17,10 @@ void main() {
 			expect(m.coins.length, 2);
 			final clone = m.deepCopy();
 			expect(clone.coins.length, 2);
-			final copied = m.rebuild((x) => x.address = 'addr2');
-			expect(copied.address, 'addr2');
+			// Freeze the message before using rebuild
+			final frozenM = m.freeze();
+			final copied = frozenM.rebuild((x) => (x as Input).address = 'addr2');
+			expect((copied as Input).address, 'addr2');
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.isNotEmpty, isTrue);
 			expect(() => Input.fromJson('bad'), throwsA(isA<FormatException>()));
@@ -35,9 +37,11 @@ void main() {
 			expect(m.hasAddress(), isFalse);
 			m.coins.add(CosmosCoin(denom: 'x', amount: '0'));
 			expect(m.coins.length, 2);
-			final clone = m.clone();
+			final clone = m.deepCopy();
 			expect(clone.coins.length, 2);
-			final copied = m.copyWith((x) => x.address = 'addr2');
+
+      m.freeze();
+			final copied = m.rebuild((x) => x.address = 'addr2');
 			expect(copied.address, 'addr2');
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.isNotEmpty, isTrue);
@@ -46,6 +50,8 @@ void main() {
 			expect(Output.getDefault(), isA<Output>());
 			expect(Output().createEmptyInstance(), isA<Output>());
 			expect(Output.createRepeated(), isA<pb.PbList<Output>>());
+
+
 		});
 
 		test('DenomUnit has/clear/clone/copyWith/json/errors/defaults', () {
@@ -58,9 +64,11 @@ void main() {
 			expect(d.hasDenom(), isFalse);
 			d.clearExponent();
 			expect(d.hasExponent(), isFalse);
-			final clone = d.clone();
+			final clone = d.deepCopy();
 			expect(clone.aliases.length, 3);
-			final copied = d.copyWith((x) {
+
+      d.freeze();
+			final copied = d.rebuild((x) {
 				x.denom = 'uiris';
 				x.exponent = 6;
 			});
@@ -94,9 +102,11 @@ void main() {
 			expect(m.hasSymbol(), isFalse);
 			m.denomUnits.add(DenomUnit(denom: 'uatom', exponent: 0));
 			expect(m.denomUnits.length, 1);
-			final clone = m.clone();
+			final clone = m.deepCopy();
 			expect(clone.denomUnits.length, 1);
-			final copied = m.copyWith((x) {
+
+      m.freeze();
+			final copied = m.rebuild((x) {
 				x.base = 'uiris';
 				x.display = 'IRIS';
 				x.name = 'Iris';

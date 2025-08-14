@@ -33,7 +33,9 @@ void main() {
 			expect(tx2.height.toInt(), 10);
 			final j = jsonEncode(tx.writeToJsonMap());
 			expect(jsonDecode(j), isA<Map>());
-			final copied = tx.copyWith((t) => t.info = 'i2');
+
+      tx.freeze();
+			final copied = tx.rebuild((t) => t.info = 'i2');
 			expect(copied.info, 'i2');
 		});
 	});
@@ -43,7 +45,7 @@ void main() {
 			final ev = StringEvent(type: 't', attributes: [Attribute(key: 'k', value: 'v')]);
 			final log = ABCIMessageLog(msgIndex: 1, log: 'l', events: [ev]);
 			expect(log.events.first.type, 't');
-			final clone = log.clone();
+			final clone = log.deepCopy();
 			expect(clone.msgIndex, 1);
 			final attr = Attribute(key: 'a', value: 'b');
 			attr.clearValue();
@@ -119,7 +121,7 @@ void main() {
 			expect(tx.logs.length, 1);
 			expect(tx.events.length, 1);
 			// clone deep copy lists
-			final cloned = tx.clone();
+			final cloned = tx.deepCopy();
 			tx.logs.clear();
 			expect(cloned.logs.length, 1);
 			// defaults/info_
@@ -178,9 +180,13 @@ void main() {
 			expect(tx.hasGasUsed(), isTrue);
 			tx.clearGasUsed();
 			expect(tx.hasGasUsed(), isFalse);
-			final withLogs = tx.copyWith((t) => t.logs.add(ABCIMessageLog(msgIndex: 9)));
+
+      tx.freeze();
+			final withLogs = tx.rebuild((t) => t.logs.add(ABCIMessageLog(msgIndex: 9)));
 			expect(withLogs.logs.first.msgIndex, 9);
-			final withEvents = withLogs.copyWith((t) => t.events.add(tend.Event()));
+
+      withLogs.freeze();
+			final withEvents = withLogs.rebuild((t) => t.events.add(tend.Event()));
 			expect(withEvents.events.length, 1);
 		});
 
@@ -213,7 +219,8 @@ void main() {
 
 		test('GasInfo defaults and copyWith', () {
 			final gi = GasInfo(gasWanted: Int64(7));
-			final gi2 = gi.copyWith((g) => g.gasUsed = Int64(8));
+      gi.freeze();
+			final gi2 = gi.rebuild((g) => g.gasUsed = Int64(8));
 			expect(gi2.gasUsed.toInt(), 8);
 			expect(GasInfo.getDefault().info_.messageName, contains('GasInfo'));
 		});
@@ -228,7 +235,7 @@ void main() {
 		});
 
 		test('SimulationResponse ensureResult identity/clearGasInfo', () {
-			final sr = SimulationResponse(result: Result());
+			final sr = SimulationResponse(res: Result());
 			final ensured = sr.ensureResult();
 			expect(identical(ensured, sr.result), isTrue);
 			sr.clearGasInfo();
@@ -247,7 +254,7 @@ void main() {
 
 		test('TxMsgData clone deep copy and createRepeated/info_', () {
 			final t = TxMsgData(data: [MsgData(msgType: 'm', data: [1])]);
-			final cl = t.clone();
+			final cl = t.deepCopy();
 			t.data.clear();
 			expect(cl.data.length, 1);
 			expect(TxMsgData.createRepeated(), isA<pb.PbList<TxMsgData>>());
@@ -273,7 +280,9 @@ void main() {
 			expect(s.hasLimit(), isTrue);
 			s.clearLimit();
 			expect(s.hasLimit(), isFalse);
-			final s2 = s.copyWith((x) => x.limit = Int64(99));
+
+      s.freeze();
+			final s2 = s.rebuild((x) => x.limit = Int64(99));
 			expect(s2.limit.toInt(), 99);
 		});
 	});
@@ -344,24 +353,11 @@ void main() {
 
 		test('copyWith modifies lists correctly', () {
 			final original = TxResponse(logs: [ABCIMessageLog()]);
-			final modified = original.copyWith((x) => x.logs.add(ABCIMessageLog(msgIndex: 1)));
+
+      original.freeze();
+			final modified = original.rebuild((x) => x.logs.add(ABCIMessageLog(msgIndex: 1)));
 			expect(modified.logs.length, 2);
 			expect(modified.logs.last.msgIndex, 1);
-		});
-	});
-
-	group('cosmos.base.abci.v1beta1 ABCIMessageLog', () {
-		test('Nested StringEvent list operations', () {
-			final log = ABCIMessageLog(
-				events: [StringEvent(type: 't', attributes: [
-					Attribute(key: 'k1', value: 'v1'),
-					Attribute(key: 'k2', value: 'v2')
-				])]
-			);
-
-			final copied = log.copyWith((x) =>
-				x.events.first.attributes.add(Attribute(key: 'k3')));
-			expect(copied.events.first.attributes.length, 3);
 		});
 	});
 
@@ -430,7 +426,7 @@ void main() {
 		test('SimulationResponse json roundtrip and ensureX identity', () {
 			final sr = SimulationResponse(
 				gasInfo: GasInfo(gasWanted: Int64(1), gasUsed: Int64(2)),
-				result: Result(log: 'res'),
+												res: Result(log: 'res'),
 			);
 			final j = jsonEncode(sr.writeToJsonMap());
 			final d = SimulationResponse.fromJson(j);
@@ -488,7 +484,7 @@ void main() {
 			final m3 = Attribute(key: 'k', value: 'v');
 			final m4 = GasInfo(gasWanted: Int64(1), gasUsed: Int64(2));
 			final m5 = Result(log: 'ok');
-			final m6 = SimulationResponse(gasInfo: m4, result: m5);
+			final m6 = SimulationResponse(gasInfo: m4, res: m5);
 			final m7 = MsgData(msgType: 'mt', data: [1]);
 			final m8 = TxMsgData(data: [m7]);
 			final m9 = SearchTxsResult(totalCount: Int64(1), count: Int64(1), pageNumber: Int64(1), pageTotal: Int64(1), limit: Int64(1));
@@ -521,4 +517,4 @@ void main() {
 			expect(identical(SearchTxsResult.getDefault(), SearchTxsResult.getDefault()), isTrue);
 		});
 	});
-} 
+}

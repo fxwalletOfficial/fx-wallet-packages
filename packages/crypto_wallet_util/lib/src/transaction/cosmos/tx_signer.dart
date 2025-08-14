@@ -1,10 +1,9 @@
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/cosmos_dart.dart';
-import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/crypto/secp256k1/export.dart';
 import 'package:crypto_wallet_util/src/transaction/cosmos/tx_data.dart';
 import 'package:crypto_wallet_util/src/type/type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
-/// Require [CosmosTxData] and wallet. 
+/// Require [CosmosTxData] and wallet.
 class CosmosTxSigner extends TxSigner {
   @override
   final CosmosTxData txData;
@@ -23,7 +22,7 @@ class CosmosTxSigner extends TxSigner {
       throw Exception('Invalid fees: invalid gas amount specified');
 
     // Get the public key from the account, or generate it if the chain does not have it yet
-    final secp256Key = PubKey.create()..key = wallet.publicKey;
+    final secp256Key = CosmosPubKey.create()..key = wallet.publicKey;
     final pubKey = Codec.serialize(secp256Key);
     var sigData = SingleSignatureData(signMode: signMode, signature: null);
 

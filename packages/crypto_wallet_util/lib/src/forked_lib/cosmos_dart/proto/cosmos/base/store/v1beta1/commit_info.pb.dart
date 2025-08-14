@@ -27,19 +27,23 @@ class CommitInfo extends $pb.GeneratedMessage {
   }
   factory CommitInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CommitInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   CommitInfo clone() => CommitInfo()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   CommitInfo copyWith(void Function(CommitInfo) updates) => super.copyWith((message) => updates(message as CommitInfo)) as CommitInfo; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static CommitInfo create() => CommitInfo._();
+  @$core.override
   CommitInfo createEmptyInstance() => create();
   static $pb.PbList<CommitInfo> createRepeated() => $pb.PbList<CommitInfo>();
   @$core.pragma('dart2js:noInline')
@@ -82,19 +86,23 @@ class StoreInfo extends $pb.GeneratedMessage {
   }
   factory StoreInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory StoreInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   StoreInfo clone() => StoreInfo()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   StoreInfo copyWith(void Function(StoreInfo) updates) => super.copyWith((message) => updates(message as StoreInfo)) as StoreInfo; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static StoreInfo create() => StoreInfo._();
+  @$core.override
   StoreInfo createEmptyInstance() => create();
   static $pb.PbList<StoreInfo> createRepeated() => $pb.PbList<StoreInfo>();
   @$core.pragma('dart2js:noInline')
@@ -143,19 +151,23 @@ class CommitID extends $pb.GeneratedMessage {
   }
   factory CommitID.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CommitID.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   CommitID clone() => CommitID()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   CommitID copyWith(void Function(CommitID) updates) => super.copyWith((message) => updates(message as CommitID)) as CommitID; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static CommitID create() => CommitID._();
+  @$core.override
   CommitID createEmptyInstance() => create();
   static $pb.PbList<CommitID> createRepeated() => $pb.PbList<CommitID>();
   @$core.pragma('dart2js:noInline')

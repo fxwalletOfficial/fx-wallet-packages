@@ -6,23 +6,21 @@ part 'network_info.g.dart';
 
 /// Contains the information of a generic Cosmos-based network.
 @JsonSerializable(explicitToJson: true)
-class NetworkInfo extends Equatable {
+class CosmosNetworkInfo extends Equatable {
   /// Bech32 human readable part of the addresses related to this network
   @JsonKey(name: 'bech32_hrp', required: true)
   final String bech32Hrp;
 
-  NetworkInfo({
-    required this.bech32Hrp,
-  });
+  const CosmosNetworkInfo({required this.bech32Hrp});
 
-  factory NetworkInfo.fromSingleHost({
+  factory CosmosNetworkInfo.fromSingleHost({
     required String bech32Hrp,
     required String host,
   }) {
-    return NetworkInfo(bech32Hrp: bech32Hrp);
+    return CosmosNetworkInfo(bech32Hrp: bech32Hrp);
   }
 
-  factory NetworkInfo.fromJson(Map<String, dynamic> json) {
+  factory CosmosNetworkInfo.fromJson(Map<String, dynamic> json) {
     return _$NetworkInfoFromJson(json);
   }
 

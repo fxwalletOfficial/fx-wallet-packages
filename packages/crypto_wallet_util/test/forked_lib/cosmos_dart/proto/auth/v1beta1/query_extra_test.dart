@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:protobuf/protobuf.dart';
 import 'package:test/test.dart';
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/auth/v1beta1/query.pb.dart';
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/auth/v1beta1/auth.pb.dart' as authpb;
@@ -12,10 +13,12 @@ void main() {
 			expect(req.hasAddress(), isTrue);
 			req.clearAddress();
 			expect(req.hasAddress(), isFalse);
-			final reqCloned = req.clone();
+			final reqCloned = req.deepCopy();
 			expect(reqCloned.hasAddress(), isFalse);
-			final reqCopied = req.copyWith((m) => m.address = 'a');
-			expect(reqCopied.address, 'a');
+			// Freeze the message before using rebuild
+			final frozenReq = req.freeze();
+			final reqCopied = frozenReq.rebuild((m) => (m as QueryAccountRequest).address = 'a');
+			expect((reqCopied as QueryAccountRequest).address, 'a');
 			final reqJson = jsonEncode(reqCopied.writeToJsonMap());
 			expect(reqJson.contains('cosmos1') || reqJson.contains('"a"'), isTrue);
 
@@ -26,7 +29,9 @@ void main() {
 			final ensured = resp.ensureAccount();
 			expect(ensured, isA<Any>());
 			// final respCloned = resp.clone();
-			final respCopied = resp.copyWith((m) => m.account = Any(typeUrl: 't2'));
+			// Freeze the message before using rebuild
+			final frozenResp = resp.freeze();
+			final respCopied = frozenResp.rebuild((m) => (m as QueryAccountResponse).account = Any(typeUrl: 't2'));
 			final respJson = jsonEncode(respCopied.writeToJsonMap());
 			expect(respJson.contains('t2'), isTrue);
 		});
@@ -47,4 +52,4 @@ void main() {
 			expect(respJson.isNotEmpty, isTrue);
 		});
 	});
-} 
+}

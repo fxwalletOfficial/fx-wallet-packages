@@ -30,17 +30,17 @@ class MsgSubmitProposal extends $pb.GeneratedMessage {
     $core.Iterable<$2.CosmosCoin>? initialDeposit,
     $core.String? proposer,
   }) {
-    final _result = create();
+    final result = create();
     if (content != null) {
-      _result.content = content;
+      result.content = content;
     }
     if (initialDeposit != null) {
-      _result.initialDeposit.addAll(initialDeposit);
+      result.initialDeposit.addAll(initialDeposit);
     }
     if (proposer != null) {
-      _result.proposer = proposer;
+      result.proposer = proposer;
     }
-    return _result;
+    return result;
   }
   factory MsgSubmitProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgSubmitProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -97,11 +97,11 @@ class MsgSubmitProposalResponse extends $pb.GeneratedMessage {
   factory MsgSubmitProposalResponse({
     $fixnum.Int64? proposalId,
   }) {
-    final _result = create();
+    final result = create();
     if (proposalId != null) {
-      _result.proposalId = proposalId;
+      result.proposalId = proposalId;
     }
-    return _result;
+    return result;
   }
   factory MsgSubmitProposalResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgSubmitProposalResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -148,17 +148,17 @@ class MsgVote extends $pb.GeneratedMessage {
     $core.String? voter,
     $6.VoteOption? option,
   }) {
-    final _result = create();
+    final result = create();
     if (proposalId != null) {
-      _result.proposalId = proposalId;
+      result.proposalId = proposalId;
     }
     if (voter != null) {
-      _result.voter = voter;
+      result.voter = voter;
     }
     if (option != null) {
-      _result.option = option;
+      result.option = option;
     }
-    return _result;
+    return result;
   }
   factory MsgVote.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgVote.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -252,17 +252,17 @@ class MsgVoteWeighted extends $pb.GeneratedMessage {
     $core.String? voter,
     $core.Iterable<$6.WeightedVoteOption>? options,
   }) {
-    final _result = create();
+    final result = create();
     if (proposalId != null) {
-      _result.proposalId = proposalId;
+      result.proposalId = proposalId;
     }
     if (voter != null) {
-      _result.voter = voter;
+      result.voter = voter;
     }
     if (options != null) {
-      _result.options.addAll(options);
+      result.options.addAll(options);
     }
-    return _result;
+    return result;
   }
   factory MsgVoteWeighted.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgVoteWeighted.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -350,17 +350,17 @@ class MsgDeposit extends $pb.GeneratedMessage {
     $core.String? depositor,
     $core.Iterable<$2.CosmosCoin>? amount,
   }) {
-    final _result = create();
+    final result = create();
     if (proposalId != null) {
-      _result.proposalId = proposalId;
+      result.proposalId = proposalId;
     }
     if (depositor != null) {
-      _result.depositor = depositor;
+      result.depositor = depositor;
     }
     if (amount != null) {
-      _result.amount.addAll(amount);
+      result.amount.addAll(amount);
     }
-    return _result;
+    return result;
   }
   factory MsgDeposit.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgDeposit.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

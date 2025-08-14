@@ -26,19 +26,23 @@ class CosmosCoin extends $pb.GeneratedMessage {
   }
   factory CosmosCoin.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CosmosCoin.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   CosmosCoin clone() => CosmosCoin()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   CosmosCoin copyWith(void Function(CosmosCoin) updates) => super.copyWith((message) => updates(message as CosmosCoin)) as CosmosCoin; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static CosmosCoin create() => CosmosCoin._();
+  @$core.override
   CosmosCoin createEmptyInstance() => create();
   static $pb.PbList<CosmosCoin> createRepeated() => $pb.PbList<CosmosCoin>();
   @$core.pragma('dart2js:noInline')
@@ -87,19 +91,23 @@ class DecCoin extends $pb.GeneratedMessage {
   }
   factory DecCoin.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory DecCoin.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   DecCoin clone() => DecCoin()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   DecCoin copyWith(void Function(DecCoin) updates) => super.copyWith((message) => updates(message as DecCoin)) as DecCoin; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static DecCoin create() => DecCoin._();
+  @$core.override
   DecCoin createEmptyInstance() => create();
   static $pb.PbList<DecCoin> createRepeated() => $pb.PbList<DecCoin>();
   @$core.pragma('dart2js:noInline')
@@ -143,19 +151,23 @@ class IntProto extends $pb.GeneratedMessage {
   }
   factory IntProto.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory IntProto.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   IntProto clone() => IntProto()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   IntProto copyWith(void Function(IntProto) updates) => super.copyWith((message) => updates(message as IntProto)) as IntProto; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static IntProto create() => IntProto._();
+  @$core.override
   IntProto createEmptyInstance() => create();
   static $pb.PbList<IntProto> createRepeated() => $pb.PbList<IntProto>();
   @$core.pragma('dart2js:noInline')
@@ -190,19 +202,23 @@ class DecProto extends $pb.GeneratedMessage {
   }
   factory DecProto.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory DecProto.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   DecProto clone() => DecProto()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   DecProto copyWith(void Function(DecProto) updates) => super.copyWith((message) => updates(message as DecProto)) as DecProto; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static DecProto create() => DecProto._();
+  @$core.override
   DecProto createEmptyInstance() => create();
   static $pb.PbList<DecProto> createRepeated() => $pb.PbList<DecProto>();
   @$core.pragma('dart2js:noInline')

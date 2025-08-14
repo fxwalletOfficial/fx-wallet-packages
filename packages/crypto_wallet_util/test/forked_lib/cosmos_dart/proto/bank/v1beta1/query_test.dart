@@ -44,13 +44,15 @@ void main() {
 				pagination: PageRequest(limit: Int64(10)),
 			);
 			expect(req.hasPagination(), isTrue);
-			final reqClone = req.clone();
+			final reqClone = req.deepCopy();
 			expect(reqClone.pagination.limit.toInt(), 10);
 			reqClone.clearPagination();
 			expect(reqClone.hasPagination(), isFalse);
 			final reqEnsured = reqClone.ensurePagination();
 			expect(reqEnsured, isA<PageRequest>());
-			final reqCopy = req.copyWith((r) => r.pagination = PageRequest(limit: Int64(5)));
+
+      req.freeze();
+			final reqCopy = req.rebuild((r) => r.pagination = PageRequest(limit: Int64(5)));
 			expect(reqCopy.pagination.limit.toInt(), 5);
 
 			final resp = QueryAllBalancesResponse(
@@ -58,7 +60,7 @@ void main() {
 				pagination: PageResponse(total: Int64(1)),
 			);
 			expect(resp.hasPagination(), isTrue);
-			final respClone = resp.clone();
+			final respClone = resp.deepCopy();
 			expect(respClone.pagination.total.toInt(), 1);
 			respClone.clearPagination();
 			expect(respClone.hasPagination(), isFalse);
@@ -66,7 +68,9 @@ void main() {
 			expect(ensured, isA<PageResponse>());
 			resp.balances.add(CosmosCoin(denom: 'uiris', amount: '3'));
 			expect(resp.balances.length, 2);
-			final respCopy = resp.copyWith((rr) => rr.pagination = PageResponse(total: Int64(2)));
+
+      resp.freeze();
+			final respCopy = resp.rebuild((rr) => rr.pagination = PageResponse(total: Int64(2)));
 			expect(respCopy.pagination.total.toInt(), 2);
 		});
 
@@ -87,7 +91,7 @@ void main() {
 		});
 
 		test('QueryParamsRequest/Response, QueryDenomsMetadataRequest/Response', () {
-			final resp = QueryParamsResponse(params: bankpb.Params(defaultSendEnabled: true));
+			final resp = QueryParamsResponse(params: bankpb.BankParams(defaultSendEnabled: true));
 			expect(resp.params.defaultSendEnabled, isTrue);
 
 			final md = bankpb.Metadata(base: 'uatom', display: 'ATOM');
@@ -176,15 +180,18 @@ void main() {
 			expect(req.hasPagination(), isFalse);
 			req.ensurePagination().limit = Int64(5);
 			expect(req.pagination.limit.toInt(), 5);
-			final copied = req.copyWith((r) {
+
+			final clone = req.deepCopy();
+			clone.clearPagination();
+			expect(clone.hasPagination(), isFalse);
+
+      req.freeze();
+			final copied = req.rebuild((r) {
 				r.address = 'b';
 				r.pagination = PageRequest(limit: Int64(10));
 			});
 			expect(copied.address, 'b');
 			expect(copied.pagination.limit.toInt(), 10);
-			final clone = req.clone();
-			clone.clearPagination();
-			expect(clone.hasPagination(), isFalse);
 		});
 
 		test('QueryAllBalancesResponse lists/ensure/copyWith', () {
@@ -196,10 +203,13 @@ void main() {
 			expect(resp.balances.length, 2);
 			final ensured = resp.ensurePagination();
 			expect(ensured, isA<PageResponse>());
-			final copied = resp.copyWith((r) => r.pagination = PageResponse(total: Int64(2)));
-			expect(copied.pagination.total.toInt(), 2);
+
 			resp.balances.clear();
 			expect(resp.balances, isEmpty);
+
+      resp.freeze();
+			final copied = resp.rebuild((r) => r.pagination = PageResponse(total: Int64(2)));
+			expect(copied.pagination.total.toInt(), 2);
 		});
 
 		test('QuerySpendableBalancesRequest/Response ensure/info_/errors', () {
@@ -248,7 +258,7 @@ void main() {
 			final resp = QueryParamsResponse();
 			expect(resp.hasParams(), isFalse);
 			final ensured = resp.ensureParams();
-			expect(ensured, isA<bankpb.Params>());
+			expect(ensured, isA<bankpb.BankParams>());
 			expect(QueryParamsResponse.getDefault().info_.messageName, contains('QueryParamsResponse'));
 			expect(() => QueryParamsResponse.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
 		});
@@ -374,13 +384,15 @@ void main() {
 
 		test('clone/copyWith on responses to drive field setters', () {
 			final qbr = QueryBalanceResponse(balance: CosmosCoin(denom: 'x', amount: '1'));
-			final qbrClone = qbr.clone();
-			final qbrCopy = qbrClone.copyWith((m) => m.balance = CosmosCoin(denom: 'y', amount: '2'));
+			final qbrClone = qbr.deepCopy();
+      qbrClone.freeze();
+			final qbrCopy = qbrClone.rebuild((m) => m.balance = CosmosCoin(denom: 'y', amount: '2'));
 			expect(qbrCopy.balance.denom, 'y');
 
 			final qab = QueryAllBalancesResponse(balances: [CosmosCoin(denom: 'x', amount: '1')], pagination: PageResponse());
-			final qabClone = qab.clone();
-			final qabCopy = qabClone.copyWith((m) {
+			final qabClone = qab.deepCopy();
+      qabClone.freeze();
+			final qabCopy = qabClone.rebuild((m) {
 				m.pagination = PageResponse();
 				m.balances.clear();
 				m.balances.add(CosmosCoin(denom: 'z', amount: '3'));
@@ -388,11 +400,13 @@ void main() {
 			expect(qabCopy.balances.first.denom, 'z');
 
 			final qss = QuerySpendableBalancesResponse(balances: [CosmosCoin(denom: 'x', amount: '1')], pagination: PageResponse());
-			final qssCopy = qss.copyWith((m) => m.pagination = PageResponse());
+      qss.freeze();
+			final qssCopy = qss.rebuild((m) => m.pagination = PageResponse());
 			expect(qssCopy.hasPagination(), isTrue);
 
 			final qts = QueryTotalSupplyResponse(supply: [CosmosCoin(denom: 'x', amount: '1')], pagination: PageResponse());
-			final qtsCopy = qts.copyWith((m) => m.pagination = PageResponse());
+      qts.freeze();
+			final qtsCopy = qts.rebuild((m) => m.pagination = PageResponse());
 			expect(qtsCopy.hasPagination(), isTrue);
 		});
 	});
@@ -407,13 +421,14 @@ void main() {
 			expect(identical(ensured, ensured2), isTrue);
 			resp.clearParams();
 			expect(resp.hasParams(), isFalse);
-			final clone = resp.clone();
+			final clone = resp.deepCopy();
 			expect(clone.hasParams(), isFalse);
 		});
 
 		test('QueryBalanceRequest copyWith updates both fields', () {
 			final req = QueryBalanceRequest(address: 'a', denom: 'x');
-			final copied = req.copyWith((r) {
+      req.freeze();
+			final copied = req.rebuild((r) {
 				r.address = 'b';
 				r.denom = 'y';
 			});
@@ -431,7 +446,7 @@ void main() {
 				CosmosCoin(denom: 'c', amount: '3'),
 			]);
 			expect(resp.balances.length, 3);
-			final clone = resp.clone();
+			final clone = resp.deepCopy();
 			resp.balances[0] = CosmosCoin(denom: 'z', amount: '9');
 			expect(clone.balances.first.denom, isNot('z'));
 		});
@@ -475,7 +490,7 @@ void main() {
 				CosmosCoin(denom: 'u1', amount: '1'),
 				CosmosCoin(denom: 'u2', amount: '2'),
 			]);
-			final cloned = resp.clone();
+			final cloned = resp.deepCopy();
 			resp.balances[0] = CosmosCoin(denom: 'zz', amount: '9');
 			expect(cloned.balances.first.denom, isNot('zz'));
 		});

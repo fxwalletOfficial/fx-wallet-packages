@@ -1,4 +1,6 @@
 ///
+// ignore_for_file: library_prefixes
+
 import 'dart:core' as $core;
 
 import 'package:fixnum/fixnum.dart' as $fixnum;
@@ -21,7 +23,7 @@ class GenesisState_GenMsgs extends $pb.GeneratedMessage {
     3 : GenesisState_GenMsgs_Sum.executeContract,
     0 : GenesisState_GenMsgs_Sum.notSet
   };
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState.GenMsgs', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState.GenMsgs', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
     ..oo(0, [1, 2, 3])
     ..aOM<$0.MsgStoreCode>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'storeCode', subBuilder: $0.MsgStoreCode.create)
     ..aOM<$0.MsgInstantiateContract>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'instantiateContract', subBuilder: $0.MsgInstantiateContract.create)
@@ -35,17 +37,17 @@ class GenesisState_GenMsgs extends $pb.GeneratedMessage {
     $0.MsgInstantiateContract? instantiateContract,
     $0.MsgExecuteContract? executeContract,
   }) {
-    final _result = create();
+    final result = create();
     if (storeCode != null) {
-      _result.storeCode = storeCode;
+      result.storeCode = storeCode;
     }
     if (instantiateContract != null) {
-      _result.instantiateContract = instantiateContract;
+      result.instantiateContract = instantiateContract;
     }
     if (executeContract != null) {
-      _result.executeContract = executeContract;
+      result.executeContract = executeContract;
     }
-    return _result;
+    return result;
   }
   factory GenesisState_GenMsgs.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisState_GenMsgs.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -110,7 +112,7 @@ class GenesisState_GenMsgs extends $pb.GeneratedMessage {
 }
 
 class GenesisState extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
     ..aOM<$3.Params>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'params', subBuilder: $3.Params.create)
     ..pc<Code>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'codes', $pb.PbFieldType.PM, subBuilder: Code.create)
     ..pc<Contract>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'contracts', $pb.PbFieldType.PM, subBuilder: Contract.create)
@@ -127,23 +129,23 @@ class GenesisState extends $pb.GeneratedMessage {
     $core.Iterable<Sequence>? sequences,
     $core.Iterable<GenesisState_GenMsgs>? genMsgs,
   }) {
-    final _result = create();
+    final result = create();
     if (params != null) {
-      _result.params = params;
+      result.params = params;
     }
     if (codes != null) {
-      _result.codes.addAll(codes);
+      result.codes.addAll(codes);
     }
     if (contracts != null) {
-      _result.contracts.addAll(contracts);
+      result.contracts.addAll(contracts);
     }
     if (sequences != null) {
-      _result.sequences.addAll(sequences);
+      result.sequences.addAll(sequences);
     }
     if (genMsgs != null) {
-      _result.genMsgs.addAll(genMsgs);
+      result.genMsgs.addAll(genMsgs);
     }
-    return _result;
+    return result;
   }
   factory GenesisState.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisState.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -195,7 +197,7 @@ class GenesisState extends $pb.GeneratedMessage {
 }
 
 class Code extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Code', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Code', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
     ..a<$fixnum.Int64>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'codeId', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..aOM<$3.CodeInfo>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'codeInfo', subBuilder: $3.CodeInfo.create)
     ..a<$core.List<$core.int>>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'codeBytes', $pb.PbFieldType.OY)
@@ -210,20 +212,20 @@ class Code extends $pb.GeneratedMessage {
     $core.List<$core.int>? codeBytes,
     $core.bool? pinned,
   }) {
-    final _result = create();
+    final result = create();
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (codeInfo != null) {
-      _result.codeInfo = codeInfo;
+      result.codeInfo = codeInfo;
     }
     if (codeBytes != null) {
-      _result.codeBytes = codeBytes;
+      result.codeBytes = codeBytes;
     }
     if (pinned != null) {
-      _result.pinned = pinned;
+      result.pinned = pinned;
     }
-    return _result;
+    return result;
   }
   factory Code.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Code.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -290,7 +292,7 @@ class Code extends $pb.GeneratedMessage {
 }
 
 class Contract extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Contract', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Contract', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'contractAddress')
     ..aOM<$3.ContractInfo>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'contractInfo', subBuilder: $3.ContractInfo.create)
     ..pc<$3.Model>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'contractState', $pb.PbFieldType.PM, subBuilder: $3.Model.create)
@@ -303,17 +305,17 @@ class Contract extends $pb.GeneratedMessage {
     $3.ContractInfo? contractInfo,
     $core.Iterable<$3.Model>? contractState,
   }) {
-    final _result = create();
+    final result = create();
     if (contractAddress != null) {
-      _result.contractAddress = contractAddress;
+      result.contractAddress = contractAddress;
     }
     if (contractInfo != null) {
-      _result.contractInfo = contractInfo;
+      result.contractInfo = contractInfo;
     }
     if (contractState != null) {
-      _result.contractState.addAll(contractState);
+      result.contractState.addAll(contractState);
     }
-    return _result;
+    return result;
   }
   factory Contract.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Contract.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -365,7 +367,7 @@ class Contract extends $pb.GeneratedMessage {
 }
 
 class Sequence extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Sequence', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Sequence', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmwasm.wasm.v1'), createEmptyInstance: create)
     ..a<$core.List<$core.int>>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'idKey', $pb.PbFieldType.OY)
     ..a<$fixnum.Int64>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'value', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..hasRequiredFields = false
