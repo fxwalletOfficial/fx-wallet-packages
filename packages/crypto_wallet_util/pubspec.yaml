@@ -1,6 +1,6 @@
 name: crypto_wallet_util
 description: A collection of utility functions for cryptocurrencies.
-version: 1.1.10
+version: 1.1.11
 homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packages/wallet_crypto_util
 
 environment:

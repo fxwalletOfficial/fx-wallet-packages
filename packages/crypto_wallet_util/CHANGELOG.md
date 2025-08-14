@@ -182,3 +182,8 @@
 ## Update
 
 - fix batch transfer error of psbt and gspl.
+
+## [1.1.11] - 2025-08-14
+## Update
+
+- Update tweetnacl-dart.
