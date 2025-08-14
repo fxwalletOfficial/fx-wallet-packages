@@ -26,20 +26,20 @@ class Proof extends $pb.GeneratedMessage {
     $core.List<$core.int>? leafHash,
     $core.Iterable<$core.List<$core.int>>? aunts,
   }) {
-    final _result = create();
+    final result = create();
     if (total != null) {
-      _result.total = total;
+      result.total = total;
     }
     if (index != null) {
-      _result.index = index;
+      result.index = index;
     }
     if (leafHash != null) {
-      _result.leafHash = leafHash;
+      result.leafHash = leafHash;
     }
     if (aunts != null) {
-      _result.aunts.addAll(aunts);
+      result.aunts.addAll(aunts);
     }
-    return _result;
+    return result;
   }
   factory Proof.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Proof.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -105,14 +105,14 @@ class ValueOp extends $pb.GeneratedMessage {
     $core.List<$core.int>? key,
     Proof? proof,
   }) {
-    final _result = create();
+    final result = create();
     if (key != null) {
-      _result.key = key;
+      result.key = key;
     }
     if (proof != null) {
-      _result.proof = proof;
+      result.proof = proof;
     }
-    return _result;
+    return result;
   }
   factory ValueOp.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValueOp.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -170,17 +170,17 @@ class DominoOp extends $pb.GeneratedMessage {
     $core.String? input,
     $core.String? output,
   }) {
-    final _result = create();
+    final result = create();
     if (key != null) {
-      _result.key = key;
+      result.key = key;
     }
     if (input != null) {
-      _result.input = input;
+      result.input = input;
     }
     if (output != null) {
-      _result.output = output;
+      result.output = output;
     }
-    return _result;
+    return result;
   }
   factory DominoOp.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory DominoOp.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -245,17 +245,17 @@ class ProofOp extends $pb.GeneratedMessage {
     $core.List<$core.int>? key,
     $core.List<$core.int>? data,
   }) {
-    final _result = create();
+    final result = create();
     if (type != null) {
-      _result.type = type;
+      result.type = type;
     }
     if (key != null) {
-      _result.key = key;
+      result.key = key;
     }
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
-    return _result;
+    return result;
   }
   factory ProofOp.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ProofOp.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -316,11 +316,11 @@ class ProofOps extends $pb.GeneratedMessage {
   factory ProofOps({
     $core.Iterable<ProofOp>? ops,
   }) {
-    final _result = create();
+    final result = create();
     if (ops != null) {
-      _result.ops.addAll(ops);
+      result.ops.addAll(ops);
     }
-    return _result;
+    return result;
   }
   factory ProofOps.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ProofOps.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

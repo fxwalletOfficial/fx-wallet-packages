@@ -7,7 +7,7 @@ import 'package:protobuf/protobuf.dart' as $pb;
 import 'slashing.pb.dart' as $4;
 
 class GenesisState extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.slashing.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.slashing.v1beta1'), createEmptyInstance: create)
     ..aOM<$4.Params>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'params', subBuilder: $4.Params.create)
     ..pc<SigningInfo>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'signingInfos', $pb.PbFieldType.PM, subBuilder: SigningInfo.create)
     ..pc<ValidatorMissedBlocks>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'missedBlocks', $pb.PbFieldType.PM, subBuilder: ValidatorMissedBlocks.create)
@@ -20,33 +20,37 @@ class GenesisState extends $pb.GeneratedMessage {
     $core.Iterable<SigningInfo>? signingInfos,
     $core.Iterable<ValidatorMissedBlocks>? missedBlocks,
   }) {
-    final _result = create();
+    final result = create();
     if (params != null) {
-      _result.params = params;
+      result.params = params;
     }
     if (signingInfos != null) {
-      _result.signingInfos.addAll(signingInfos);
+      result.signingInfos.addAll(signingInfos);
     }
     if (missedBlocks != null) {
-      _result.missedBlocks.addAll(missedBlocks);
+      result.missedBlocks.addAll(missedBlocks);
     }
-    return _result;
+    return result;
   }
   factory GenesisState.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisState.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   GenesisState clone() => GenesisState()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   GenesisState copyWith(void Function(GenesisState) updates) => super.copyWith((message) => updates(message as GenesisState)) as GenesisState; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static GenesisState create() => GenesisState._();
+  @$core.override
   GenesisState createEmptyInstance() => create();
   static $pb.PbList<GenesisState> createRepeated() => $pb.PbList<GenesisState>();
   @$core.pragma('dart2js:noInline')
@@ -72,7 +76,7 @@ class GenesisState extends $pb.GeneratedMessage {
 }
 
 class SigningInfo extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'SigningInfo', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.slashing.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'SigningInfo', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.slashing.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
     ..aOM<$4.ValidatorSigningInfo>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorSigningInfo', subBuilder: $4.ValidatorSigningInfo.create)
     ..hasRequiredFields = false
@@ -83,30 +87,34 @@ class SigningInfo extends $pb.GeneratedMessage {
     $core.String? address,
     $4.ValidatorSigningInfo? validatorSigningInfo,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (validatorSigningInfo != null) {
-      _result.validatorSigningInfo = validatorSigningInfo;
+      result.validatorSigningInfo = validatorSigningInfo;
     }
-    return _result;
+    return result;
   }
   factory SigningInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SigningInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   SigningInfo clone() => SigningInfo()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   SigningInfo copyWith(void Function(SigningInfo) updates) => super.copyWith((message) => updates(message as SigningInfo)) as SigningInfo; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static SigningInfo create() => SigningInfo._();
+  @$core.override
   SigningInfo createEmptyInstance() => create();
   static $pb.PbList<SigningInfo> createRepeated() => $pb.PbList<SigningInfo>();
   @$core.pragma('dart2js:noInline')
@@ -135,7 +143,7 @@ class SigningInfo extends $pb.GeneratedMessage {
 }
 
 class ValidatorMissedBlocks extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorMissedBlocks', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.slashing.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorMissedBlocks', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.slashing.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
     ..pc<MissedBlock>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'missedBlocks', $pb.PbFieldType.PM, subBuilder: MissedBlock.create)
     ..hasRequiredFields = false
@@ -146,30 +154,34 @@ class ValidatorMissedBlocks extends $pb.GeneratedMessage {
     $core.String? address,
     $core.Iterable<MissedBlock>? missedBlocks,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (missedBlocks != null) {
-      _result.missedBlocks.addAll(missedBlocks);
+      result.missedBlocks.addAll(missedBlocks);
     }
-    return _result;
+    return result;
   }
   factory ValidatorMissedBlocks.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorMissedBlocks.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   ValidatorMissedBlocks clone() => ValidatorMissedBlocks()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   ValidatorMissedBlocks copyWith(void Function(ValidatorMissedBlocks) updates) => super.copyWith((message) => updates(message as ValidatorMissedBlocks)) as ValidatorMissedBlocks; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static ValidatorMissedBlocks create() => ValidatorMissedBlocks._();
+  @$core.override
   ValidatorMissedBlocks createEmptyInstance() => create();
   static $pb.PbList<ValidatorMissedBlocks> createRepeated() => $pb.PbList<ValidatorMissedBlocks>();
   @$core.pragma('dart2js:noInline')
@@ -190,7 +202,7 @@ class ValidatorMissedBlocks extends $pb.GeneratedMessage {
 }
 
 class MissedBlock extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'MissedBlock', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.slashing.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'MissedBlock', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.slashing.v1beta1'), createEmptyInstance: create)
     ..aInt64(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'index')
     ..aOB(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'missed')
     ..hasRequiredFields = false
@@ -201,30 +213,34 @@ class MissedBlock extends $pb.GeneratedMessage {
     $fixnum.Int64? index,
     $core.bool? missed,
   }) {
-    final _result = create();
+    final result = create();
     if (index != null) {
-      _result.index = index;
+      result.index = index;
     }
     if (missed != null) {
-      _result.missed = missed;
+      result.missed = missed;
     }
-    return _result;
+    return result;
   }
   factory MissedBlock.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MissedBlock.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   MissedBlock clone() => MissedBlock()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   MissedBlock copyWith(void Function(MissedBlock) updates) => super.copyWith((message) => updates(message as MissedBlock)) as MissedBlock; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static MissedBlock create() => MissedBlock._();
+  @$core.override
   MissedBlock createEmptyInstance() => create();
   static $pb.PbList<MissedBlock> createRepeated() => $pb.PbList<MissedBlock>();
   @$core.pragma('dart2js:noInline')

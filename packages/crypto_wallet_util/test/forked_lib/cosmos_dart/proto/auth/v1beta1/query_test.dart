@@ -31,9 +31,9 @@ void main() {
 			expect(req.hasAddress(), isTrue);
 			req.clearAddress();
 			expect(req.hasAddress(), isFalse);
-			final reqCloned = req.clone();
+			final reqCloned = req.deepCopy();
 			expect(reqCloned.hasAddress(), isFalse);
-			final reqCopied = req.copyWith((m) => m.address = 'a');
+			final reqCopied = req.rebuild((m) => m.address = 'a');
 			expect(reqCopied.address, 'a');
 			final reqJson = jsonEncode(reqCopied.writeToJsonMap());
 			expect(reqJson.contains('cosmos1') || reqJson.contains('"a"'), isTrue);
@@ -149,4 +149,4 @@ void main() {
 			expect(respList, isA<pb.PbList<QueryAccountResponse>>());
 		});
 	});
-} 
+}

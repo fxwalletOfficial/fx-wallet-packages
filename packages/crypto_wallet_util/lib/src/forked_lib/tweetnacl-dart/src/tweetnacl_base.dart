@@ -41,8 +41,8 @@ class Box {
 
   late int _nonce;
 
-  late Uint8List _theirPublicKey;
-  late Uint8List _mySecretKey;
+  late final Uint8List _theirPublicKey;
+  late final Uint8List _mySecretKey;
   late Uint8List? _sharedKey;
 
   Box(this._theirPublicKey, this._mySecretKey) {
@@ -55,18 +55,18 @@ class Box {
   }
 
   void setNonce(int nonce) {
-    this._nonce = nonce;
+    _nonce = nonce;
   }
 
-  int getNonce() => this._nonce;
+  int getNonce() => _nonce;
 
   int incrNonce() {
-    return ++this._nonce;
+    return ++_nonce;
   }
 
   Uint8List _generateNonce() {
     // generate nonce
-    Int64 nonce = Int64(this._nonce);
+    Int64 nonce = Int64(_nonce);
 
     Uint8List n = Uint8List(nonceLength);
     for (int i = 0; i < nonceLength; i += 8) {
@@ -104,7 +104,7 @@ class Box {
     if (!(message.length >= (moff + mlen))) return null;
 
     // prepare shared key
-    if (this._sharedKey == null) before();
+    if (_sharedKey == null) before();
 
     return after(message, moff, mlen);
   }
@@ -134,7 +134,7 @@ class Box {
         theNonce.length == nonceLength)) return null;
 
     // prepare shared key
-    if (this._sharedKey == null) before();
+    if (_sharedKey == null) before();
 
     return after_len(message, moff, mlen, theNonce);
   }
@@ -147,7 +147,7 @@ class Box {
    * */
   Uint8List? open(Uint8List box) {
     // prepare shared key
-    if (this._sharedKey == null) before();
+    if (_sharedKey == null) before();
 
     return open_after(box, 0, box.length);
   }
@@ -156,7 +156,7 @@ class Box {
     if (!(box.length > boxoff)) return null;
 
     // prepare shared key
-    if (this._sharedKey == null) before();
+    if (_sharedKey == null) before();
 
     return open_after(box, boxoff, box.length - boxoff);
   }
@@ -165,7 +165,7 @@ class Box {
     if (!(box.length >= (boxoff + boxlen))) return null;
 
     // prepare shared key
-    if (this._sharedKey == null) before();
+    if (_sharedKey == null) before();
 
     return open_after(box, boxoff, boxlen);
   }
@@ -180,7 +180,7 @@ class Box {
     if (!(theNonce.length == nonceLength)) return null;
 
     // prepare shared key
-    if (this._sharedKey == null) before();
+    if (_sharedKey == null) before();
 
     return open_after_len(box, 0, box.length, theNonce);
   }
@@ -190,7 +190,7 @@ class Box {
         theNonce.length == nonceLength)) return null;
 
     // prepare shared key
-    if (this._sharedKey == null) before();
+    if (_sharedKey == null) before();
 
     return open_after_len(box, boxoff, box.length - boxoff, theNonce);
   }
@@ -201,19 +201,19 @@ class Box {
         theNonce.length == nonceLength)) return null;
 
     // prepare shared key
-    if (this._sharedKey == null) before();
+    if (_sharedKey == null) before();
 
     return open_after_len(box, boxoff, boxlen, theNonce);
   }
 
   Uint8List before() {
-    if (this._sharedKey == null) {
-      this._sharedKey = Uint8List(sharedKeyLength);
+    if (_sharedKey == null) {
+      _sharedKey = Uint8List(sharedKeyLength);
       TweetNaclFast.crypto_box_beforenm(
-          this._sharedKey!, this._theirPublicKey, this._mySecretKey);
+          _sharedKey!, _theirPublicKey, _mySecretKey);
     }
 
-    return this._sharedKey!;
+    return _sharedKey!;
   }
 
   /*
@@ -293,14 +293,14 @@ class Box {
    *   returns it as an object with publicKey and secretKey members:
    * */
   static KeyPair keyPair() {
-    KeyPair kp = new KeyPair(publicKeyLength, secretKeyLength);
+    KeyPair kp = KeyPair(publicKeyLength, secretKeyLength);
 
     TweetNaclFast.crypto_box_keypair(kp.publicKey, kp.secretKey);
     return kp;
   }
 
   static KeyPair keyPair_fromSecretKey(Uint8List secretKey) {
-    KeyPair kp = new KeyPair(publicKeyLength, secretKeyLength);
+    KeyPair kp = KeyPair(publicKeyLength, secretKeyLength);
     Uint8List sk = kp.secretKey;
     Uint8List pk = kp.publicKey;
 
@@ -329,7 +329,7 @@ class SecretBox {
 
   late int _nonce;
 
-  late Uint8List _key;
+  final Uint8List _key;
 
   SecretBox(this._key) {
     _nonce = 68;
@@ -338,18 +338,18 @@ class SecretBox {
   SecretBox.nonce(this._key, this._nonce);
 
   void setNonce(int nonce) {
-    this._nonce = nonce;
+    _nonce = nonce;
   }
 
-  int getNonce() => this._nonce;
+  int getNonce() => _nonce;
 
   int incrNonce() {
-    return ++this._nonce;
+    return ++_nonce;
   }
 
   Uint8List _generateNonce() {
     // generate nonce
-    Int64 nonce = Int64(this._nonce);
+    Int64 nonce = Int64(_nonce);
 
     Uint8List n = Uint8List(nonceLength);
     for (int i = 0; i < nonceLength; i += 8) {
@@ -565,8 +565,8 @@ class Signature {
   //Length of signature in bytes.
   static final int signatureLength = 64;
 
-  Uint8List? _theirPublicKey;
-  Uint8List? _mySecretKey;
+  final Uint8List? _theirPublicKey;
+  final Uint8List? _mySecretKey;
 
   Signature(this._theirPublicKey, this._mySecretKey);
 
@@ -633,7 +633,7 @@ class Signature {
    *   Signs the message using the secret key and returns a signature.
    * */
   Uint8List detached(Uint8List message) {
-    Uint8List? signedMsg = this.sign(message);
+    Uint8List? signedMsg = sign(message);
     Uint8List sig = Uint8List(signatureLength);
     for (int i = 0; i < sig.length; i++) sig[i] = signedMsg![i];
     return sig;
@@ -658,14 +658,14 @@ class Signature {
    *   Signs the message using the secret key and returns a signed message.
    * */
   static KeyPair keyPair() {
-    KeyPair kp = new KeyPair(publicKeyLength, secretKeyLength);
+    KeyPair kp = KeyPair(publicKeyLength, secretKeyLength);
 
     TweetNaclFast.crypto_sign_keypair(kp.publicKey, kp.secretKey, false);
     return kp;
   }
 
   static KeyPair keyPair_fromSecretKey(Uint8List secretKey) {
-    KeyPair kp = new KeyPair(publicKeyLength, secretKeyLength);
+    KeyPair kp = KeyPair(publicKeyLength, secretKeyLength);
     Uint8List pk = kp.publicKey;
     Uint8List sk = kp.secretKey;
 
@@ -680,7 +680,7 @@ class Signature {
   }
 
   static KeyPair keyPair_fromSeed(Uint8List seed) {
-    KeyPair kp = new KeyPair(publicKeyLength, secretKeyLength);
+    KeyPair kp = KeyPair(publicKeyLength, secretKeyLength);
     Uint8List pk = kp.publicKey;
     Uint8List sk = kp.secretKey;
 
@@ -1387,7 +1387,7 @@ class TweetNaclFast{
 
   static int _crypto_onetimeauth(Uint8List out, final int outpos, Uint8List m,
       final int mpos, int n, Uint8List k) {
-    poly1305 s = new poly1305(k);
+    poly1305 s = poly1305(k);
     s.update(m, mpos, n);
     s.finish(out, outpos);
     return 0;
@@ -3137,62 +3137,62 @@ class poly1305 {
   late int _fin;
 
   poly1305(Uint8List key) {
-    this._buffer = Uint8List(16);
-    this._r = List<Int32>.filled(10,Int32(0));
-    this._h = List<Int32>.filled(10,Int32(0));
-    this._pad = Int32List(8);
-    this._leftover = 0;
-    this._fin = 0;
+    _buffer = Uint8List(16);
+    _r = List<Int32>.filled(10,Int32(0));
+    _h = List<Int32>.filled(10,Int32(0));
+    _pad = Int32List(8);
+    _leftover = 0;
+    _fin = 0;
 
     Int32 t0, t1, t2, t3, t4, t5, t6, t7;
 
-    t0 = Int32(key[ 0] & 0xff | (key[ 1] & 0xff) << 8); this._r[0] = ( t0 ) & 0x1fff;
-    t1 = Int32(key[ 2] & 0xff | (key[ 3] & 0xff) << 8); this._r[1] = ((t0.shiftRightUnsigned(13)) | (t1 <<  3)) & 0x1fff;
-    t2 = Int32(key[ 4] & 0xff | (key[ 5] & 0xff) << 8); this._r[2] = ((t1.shiftRightUnsigned(10)) | (t2 <<  6)) & 0x1f03;
-    t3 = Int32(key[ 6] & 0xff | (key[ 7] & 0xff) << 8); this._r[3] = ((t2.shiftRightUnsigned( 7)) | (t3 <<  9)) & 0x1fff;
-    t4 = Int32(key[ 8] & 0xff | (key[ 9] & 0xff) << 8); this._r[4] = ((t3.shiftRightUnsigned( 4)) | (t4 << 12)) & 0x00ff;
-    this._r[5] = ((t4.shiftRightUnsigned(1))) & 0x1ffe;
-    t5 = Int32(key[10] & 0xff | (key[11] & 0xff) << 8); this._r[6] = ((t4.shiftRightUnsigned(14)) | (t5 <<  2)) & 0x1fff;
-    t6 = Int32(key[12] & 0xff | (key[13] & 0xff) << 8); this._r[7] = ((t5.shiftRightUnsigned(11)) | (t6 <<  5)) & 0x1f81;
-    t7 = Int32(key[14] & 0xff | (key[15] & 0xff) << 8); this._r[8] = ((t6.shiftRightUnsigned( 8)) | (t7 <<  8)) & 0x1fff;
-    this._r[9] = ((t7.shiftRightUnsigned(5))) & 0x007f;
+    t0 = Int32(key[ 0] & 0xff | (key[ 1] & 0xff) << 8); _r[0] = ( t0 ) & 0x1fff;
+    t1 = Int32(key[ 2] & 0xff | (key[ 3] & 0xff) << 8); _r[1] = ((t0.shiftRightUnsigned(13)) | (t1 <<  3)) & 0x1fff;
+    t2 = Int32(key[ 4] & 0xff | (key[ 5] & 0xff) << 8); _r[2] = ((t1.shiftRightUnsigned(10)) | (t2 <<  6)) & 0x1f03;
+    t3 = Int32(key[ 6] & 0xff | (key[ 7] & 0xff) << 8); _r[3] = ((t2.shiftRightUnsigned( 7)) | (t3 <<  9)) & 0x1fff;
+    t4 = Int32(key[ 8] & 0xff | (key[ 9] & 0xff) << 8); _r[4] = ((t3.shiftRightUnsigned( 4)) | (t4 << 12)) & 0x00ff;
+    _r[5] = ((t4.shiftRightUnsigned(1))) & 0x1ffe;
+    t5 = Int32(key[10] & 0xff | (key[11] & 0xff) << 8); _r[6] = ((t4.shiftRightUnsigned(14)) | (t5 <<  2)) & 0x1fff;
+    t6 = Int32(key[12] & 0xff | (key[13] & 0xff) << 8); _r[7] = ((t5.shiftRightUnsigned(11)) | (t6 <<  5)) & 0x1f81;
+    t7 = Int32(key[14] & 0xff | (key[15] & 0xff) << 8); _r[8] = ((t6.shiftRightUnsigned( 8)) | (t7 <<  8)) & 0x1fff;
+    _r[9] = ((t7.shiftRightUnsigned(5))) & 0x007f;
 
-    this._pad[0] = key[16] & 0xff | (key[17] & 0xff) << 8;
-    this._pad[1] = key[18] & 0xff | (key[19] & 0xff) << 8;
-    this._pad[2] = key[20] & 0xff | (key[21] & 0xff) << 8;
-    this._pad[3] = key[22] & 0xff | (key[23] & 0xff) << 8;
-    this._pad[4] = key[24] & 0xff | (key[25] & 0xff) << 8;
-    this._pad[5] = key[26] & 0xff | (key[27] & 0xff) << 8;
-    this._pad[6] = key[28] & 0xff | (key[29] & 0xff) << 8;
-    this._pad[7] = key[30] & 0xff | (key[31] & 0xff) << 8;
+    _pad[0] = key[16] & 0xff | (key[17] & 0xff) << 8;
+    _pad[1] = key[18] & 0xff | (key[19] & 0xff) << 8;
+    _pad[2] = key[20] & 0xff | (key[21] & 0xff) << 8;
+    _pad[3] = key[22] & 0xff | (key[23] & 0xff) << 8;
+    _pad[4] = key[24] & 0xff | (key[25] & 0xff) << 8;
+    _pad[5] = key[26] & 0xff | (key[27] & 0xff) << 8;
+    _pad[6] = key[28] & 0xff | (key[29] & 0xff) << 8;
+    _pad[7] = key[30] & 0xff | (key[31] & 0xff) << 8;
   }
 
   poly1305 blocks(Uint8List m, int mpos, int bytes) {
-    int hibit = this._fin != 0 ? 0 : (1 << 11);
+    int hibit = _fin != 0 ? 0 : (1 << 11);
     Int32 t0, t1, t2, t3, t4, t5, t6, t7, c;
     Int32 d0, d1, d2, d3, d4, d5, d6, d7, d8, d9;
 
-    Int32 h0 = this._h[0],
-        h1 = this._h[1],
-        h2 = this._h[2],
-        h3 = this._h[3],
-        h4 = this._h[4],
-        h5 = this._h[5],
-        h6 = this._h[6],
-        h7 = this._h[7],
-        h8 = this._h[8],
-        h9 = this._h[9];
+    Int32 h0 = _h[0],
+        h1 = _h[1],
+        h2 = _h[2],
+        h3 = _h[3],
+        h4 = _h[4],
+        h5 = _h[5],
+        h6 = _h[6],
+        h7 = _h[7],
+        h8 = _h[8],
+        h9 = _h[9];
 
-    int r0 = this._r[0].toInt(),
-        r1 = this._r[1].toInt(),
-        r2 = this._r[2].toInt(),
-        r3 = this._r[3].toInt(),
-        r4 = this._r[4].toInt(),
-        r5 = this._r[5].toInt(),
-        r6 = this._r[6].toInt(),
-        r7 = this._r[7].toInt(),
-        r8 = this._r[8].toInt(),
-        r9 = this._r[9].toInt();
+    int r0 = _r[0].toInt(),
+        r1 = _r[1].toInt(),
+        r2 = _r[2].toInt(),
+        r3 = _r[3].toInt(),
+        r4 = _r[4].toInt(),
+        r5 = _r[5].toInt(),
+        r6 = _r[6].toInt(),
+        r7 = _r[7].toInt(),
+        r8 = _r[8].toInt(),
+        r9 = _r[9].toInt();
 
     while (bytes >= 16) {
       t0 = Int32(m[mpos+ 0] & 0xff | (m[mpos+ 1] & 0xff) << 8); h0 = Int32(h0.toInt() + (t0.toInt() & 0x1fff));
@@ -3368,16 +3368,16 @@ class poly1305 {
       mpos += 16;
       bytes -= 16;
     }
-    this._h[0] = h0;
-    this._h[1] = h1;
-    this._h[2] = h2;
-    this._h[3] = h3;
-    this._h[4] = h4;
-    this._h[5] = h5;
-    this._h[6] = h6;
-    this._h[7] = h7;
-    this._h[8] = h8;
-    this._h[9] = h9;
+    _h[0] = h0;
+    _h[1] = h1;
+    _h[2] = h2;
+    _h[3] = h3;
+    _h[4] = h4;
+    _h[5] = h5;
+    _h[6] = h6;
+    _h[7] = h7;
+    _h[8] = h8;
+    _h[9] = h9;
 
     return this;
   }
@@ -3387,34 +3387,34 @@ class poly1305 {
     int  i;
     Int32 c, mask, f;
 
-    if (this._leftover != 0) {
-      i = this._leftover;
-      this._buffer[i++] = 1;
-      for (; i < 16; i++) this._buffer[i] = 0;
-      this._fin = 1;
-      this.blocks(this._buffer, 0, 16);
+    if (_leftover != 0) {
+      i = _leftover;
+      _buffer[i++] = 1;
+      for (; i < 16; i++) _buffer[i] = 0;
+      _fin = 1;
+      blocks(_buffer, 0, 16);
     }
 
-    c = this._h[1].shiftRightUnsigned(13);
-    this._h[1] &= 0x1fff;
+    c = _h[1].shiftRightUnsigned(13);
+    _h[1] &= 0x1fff;
     for (i = 2; i < 10; i++) {
-      this._h[i] = Int32(this._h[i].toInt() + c.toInt());
-      c = this._h[i].shiftRightUnsigned(13);
-      this._h[i] &= 0x1fff;
+      _h[i] = Int32(_h[i].toInt() + c.toInt());
+      c = _h[i].shiftRightUnsigned(13);
+      _h[i] &= 0x1fff;
     }
-    this._h[0] = Int32(this._h[0].toInt() + (c.toInt() * 5));
-    c = this._h[0].shiftRightUnsigned(13);
-    this._h[0] &= 0x1fff;
-    this._h[1] = Int32(this._h[1].toInt() + c.toInt());
-    c = this._h[1].shiftRightUnsigned(13);
-    this._h[1] &= 0x1fff;
-    this._h[2] = Int32(this._h[2].toInt() + c.toInt());
+    _h[0] = Int32(_h[0].toInt() + (c.toInt() * 5));
+    c = _h[0].shiftRightUnsigned(13);
+    _h[0] &= 0x1fff;
+    _h[1] = Int32(_h[1].toInt() + c.toInt());
+    c = _h[1].shiftRightUnsigned(13);
+    _h[1] &= 0x1fff;
+    _h[2] = Int32(_h[2].toInt() + c.toInt());
 
-    g[0] = Int32(this._h[0].toInt() + 5);
+    g[0] = Int32(_h[0].toInt() + 5);
     c = g[0].shiftRightUnsigned(13);
     g[0] &= 0x1fff;
     for (i = 1; i < 10; i++) {
-      g[i] = Int32(this._h[i].toInt() + c.toInt());
+      g[i] = Int32(_h[i].toInt() + c.toInt());
       c = g[i].shiftRightUnsigned(13);
       g[i] &= 0x1fff;
     }
@@ -3436,40 +3436,40 @@ class poly1305 {
 
     for (i = 0; i < 10; i++) g[i] &= mask;
     mask = ~mask;
-    for (i = 0; i < 10; i++) this._h[i] = (this._h[i] & mask) | g[i];
+    for (i = 0; i < 10; i++) _h[i] = (_h[i] & mask) | g[i];
 
-    this._h[0] = ((this._h[0]       ) | (this._h[1] << 13)                    ) & 0xffff;
-    this._h[1] = ((this._h[1].shiftRightUnsigned( 3)) | (this._h[2] << 10)                    ) & 0xffff;
-    this._h[2] = ((this._h[2].shiftRightUnsigned( 6)) | (this._h[3] <<  7)                    ) & 0xffff;
-    this._h[3] = ((this._h[3].shiftRightUnsigned( 9)) | (this._h[4] <<  4)                    ) & 0xffff;
-    this._h[4] = ((this._h[4].shiftRightUnsigned(12)) | (this._h[5] <<  1) | (this._h[6] << 14)) & 0xffff;
-    this._h[5] = ((this._h[6].shiftRightUnsigned( 2)) | (this._h[7] << 11)                    ) & 0xffff;
-    this._h[6] = ((this._h[7].shiftRightUnsigned( 5)) | (this._h[8] <<  8)                    ) & 0xffff;
-    this._h[7] = ((this._h[8].shiftRightUnsigned( 8)) | (this._h[9] <<  5)                    ) & 0xffff;
+    _h[0] = ((_h[0]       ) | (_h[1] << 13)                    ) & 0xffff;
+    _h[1] = ((_h[1].shiftRightUnsigned( 3)) | (_h[2] << 10)                    ) & 0xffff;
+    _h[2] = ((_h[2].shiftRightUnsigned( 6)) | (_h[3] <<  7)                    ) & 0xffff;
+    _h[3] = ((_h[3].shiftRightUnsigned( 9)) | (_h[4] <<  4)                    ) & 0xffff;
+    _h[4] = ((_h[4].shiftRightUnsigned(12)) | (_h[5] <<  1) | (_h[6] << 14)) & 0xffff;
+    _h[5] = ((_h[6].shiftRightUnsigned( 2)) | (_h[7] << 11)                    ) & 0xffff;
+    _h[6] = ((_h[7].shiftRightUnsigned( 5)) | (_h[8] <<  8)                    ) & 0xffff;
+    _h[7] = ((_h[8].shiftRightUnsigned( 8)) | (_h[9] <<  5)                    ) & 0xffff;
 
-    f = Int32(this._h[0].toInt() + this._pad[0].toInt());
-    this._h[0] = f & 0xffff;
+    f = Int32(_h[0].toInt() + _pad[0].toInt());
+    _h[0] = f & 0xffff;
     for (i = 1; i < 8; i++) {
-      f = Int32((((this._h[i].toInt() + this._pad[i].toInt()) | 0) + (f.shiftRightUnsigned(16)).toInt()) | 0);
-      this._h[i] = f & 0xffff;
+      f = Int32((((_h[i].toInt() + _pad[i].toInt()) | 0) + (f.shiftRightUnsigned(16)).toInt()) | 0);
+      _h[i] = f & 0xffff;
     }
 
-    mac[macpos+ 0] = ((this._h[0].shiftRightUnsigned(0 )) & 0xff).toInt();
-    mac[macpos+ 1] = ((this._h[0].shiftRightUnsigned(8 )) & 0xff).toInt();
-    mac[macpos+ 2] = ((this._h[1].shiftRightUnsigned(0 )) & 0xff).toInt();
-    mac[macpos+ 3] = ((this._h[1].shiftRightUnsigned(8 )) & 0xff).toInt();
-    mac[macpos+ 4] = ((this._h[2].shiftRightUnsigned(0 )) & 0xff).toInt();
-    mac[macpos+ 5] = ((this._h[2].shiftRightUnsigned(8 )) & 0xff).toInt();
-    mac[macpos+ 6] = ((this._h[3].shiftRightUnsigned(0 )) & 0xff).toInt();
-    mac[macpos+ 7] = ((this._h[3].shiftRightUnsigned(8 )) & 0xff).toInt();
-    mac[macpos+ 8] = ((this._h[4].shiftRightUnsigned(0 )) & 0xff).toInt();
-    mac[macpos+ 9] = ((this._h[4].shiftRightUnsigned(8 )) & 0xff).toInt();
-    mac[macpos+10] = ((this._h[5].shiftRightUnsigned(0 )) & 0xff).toInt();
-    mac[macpos+11] = ((this._h[5].shiftRightUnsigned(8 )) & 0xff).toInt();
-    mac[macpos+12] = ((this._h[6].shiftRightUnsigned(0 )) & 0xff).toInt();
-    mac[macpos+13] = ((this._h[6].shiftRightUnsigned(8 )) & 0xff).toInt();
-    mac[macpos+14] = ((this._h[7].shiftRightUnsigned(0 )) & 0xff).toInt();
-    mac[macpos+15] = ((this._h[7].shiftRightUnsigned(8 )) & 0xff).toInt();
+    mac[macpos+ 0] = ((_h[0].shiftRightUnsigned(0 )) & 0xff).toInt();
+    mac[macpos+ 1] = ((_h[0].shiftRightUnsigned(8 )) & 0xff).toInt();
+    mac[macpos+ 2] = ((_h[1].shiftRightUnsigned(0 )) & 0xff).toInt();
+    mac[macpos+ 3] = ((_h[1].shiftRightUnsigned(8 )) & 0xff).toInt();
+    mac[macpos+ 4] = ((_h[2].shiftRightUnsigned(0 )) & 0xff).toInt();
+    mac[macpos+ 5] = ((_h[2].shiftRightUnsigned(8 )) & 0xff).toInt();
+    mac[macpos+ 6] = ((_h[3].shiftRightUnsigned(0 )) & 0xff).toInt();
+    mac[macpos+ 7] = ((_h[3].shiftRightUnsigned(8 )) & 0xff).toInt();
+    mac[macpos+ 8] = ((_h[4].shiftRightUnsigned(0 )) & 0xff).toInt();
+    mac[macpos+ 9] = ((_h[4].shiftRightUnsigned(8 )) & 0xff).toInt();
+    mac[macpos+10] = ((_h[5].shiftRightUnsigned(0 )) & 0xff).toInt();
+    mac[macpos+11] = ((_h[5].shiftRightUnsigned(8 )) & 0xff).toInt();
+    mac[macpos+12] = ((_h[6].shiftRightUnsigned(0 )) & 0xff).toInt();
+    mac[macpos+13] = ((_h[6].shiftRightUnsigned(8 )) & 0xff).toInt();
+    mac[macpos+14] = ((_h[7].shiftRightUnsigned(0 )) & 0xff).toInt();
+    mac[macpos+15] = ((_h[7].shiftRightUnsigned(8 )) & 0xff).toInt();
 
     return this;
   }
@@ -3477,29 +3477,29 @@ class poly1305 {
   poly1305 update(Uint8List m, int mpos, int bytes) {
     int i, want;
 
-    if (this._leftover != 0) {
-      want = (16 - this._leftover);
+    if (_leftover != 0) {
+      want = (16 - _leftover);
       if (want > bytes) want = bytes;
-      for (i = 0; i < want; i++) this._buffer[this._leftover + i] = m[mpos + i];
+      for (i = 0; i < want; i++) _buffer[_leftover + i] = m[mpos + i];
       bytes -= want;
       mpos += want;
-      this._leftover += want;
-      if (this._leftover < 16) return this;
-      this.blocks(_buffer, 0, 16);
-      this._leftover = 0;
+      _leftover += want;
+      if (_leftover < 16) return this;
+      blocks(_buffer, 0, 16);
+      _leftover = 0;
     }
 
     if (bytes >= 16) {
       want = bytes - (bytes % 16);
-      this.blocks(m, mpos, want);
+      blocks(m, mpos, want);
       mpos += want;
       bytes -= want;
     }
 
     if (bytes != 0) {
       for (i = 0; i < bytes; i++)
-        this._buffer[this._leftover + i] = m[mpos + i];
-      this._leftover += bytes;
+        _buffer[_leftover + i] = m[mpos + i];
+      _leftover += bytes;
     }
 
     return this;

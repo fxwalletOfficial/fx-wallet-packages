@@ -28,23 +28,23 @@ class PageRequest extends $pb.GeneratedMessage {
     $core.bool? countTotal,
     $core.bool? reverse,
   }) {
-    final _result = create();
+    final result = create();
     if (key != null) {
-      _result.key = key;
+      result.key = key;
     }
     if (offset != null) {
-      _result.offset = offset;
+      result.offset = offset;
     }
     if (limit != null) {
-      _result.limit = limit;
+      result.limit = limit;
     }
     if (countTotal != null) {
-      _result.countTotal = countTotal;
+      result.countTotal = countTotal;
     }
     if (reverse != null) {
-      _result.reverse = reverse;
+      result.reverse = reverse;
     }
-    return _result;
+    return result;
   }
   factory PageRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory PageRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -125,14 +125,14 @@ class PageResponse extends $pb.GeneratedMessage {
     $core.List<$core.int>? nextKey,
     $fixnum.Int64? total,
   }) {
-    final _result = create();
+    final result = create();
     if (nextKey != null) {
-      _result.nextKey = nextKey;
+      result.nextKey = nextKey;
     }
     if (total != null) {
-      _result.total = total;
+      result.total = total;
     }
-    return _result;
+    return result;
   }
   factory PageResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory PageResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

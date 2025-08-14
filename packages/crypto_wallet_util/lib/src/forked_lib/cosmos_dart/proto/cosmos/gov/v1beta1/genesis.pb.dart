@@ -7,7 +7,7 @@ import 'package:protobuf/protobuf.dart' as $pb;
 import 'gov.pb.dart' as $6;
 
 class GenesisState extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.gov.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.gov.v1beta1'), createEmptyInstance: create)
     ..a<$fixnum.Int64>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'startingProposalId', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..pc<$6.Deposit>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'deposits', $pb.PbFieldType.PM, subBuilder: $6.Deposit.create)
     ..pc<$6.Vote>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'votes', $pb.PbFieldType.PM, subBuilder: $6.Vote.create)
@@ -28,45 +28,49 @@ class GenesisState extends $pb.GeneratedMessage {
     $6.VotingParams? votingParams,
     $6.TallyParams? tallyParams,
   }) {
-    final _result = create();
+    final result = create();
     if (startingProposalId != null) {
-      _result.startingProposalId = startingProposalId;
+      result.startingProposalId = startingProposalId;
     }
     if (deposits != null) {
-      _result.deposits.addAll(deposits);
+      result.deposits.addAll(deposits);
     }
     if (votes != null) {
-      _result.votes.addAll(votes);
+      result.votes.addAll(votes);
     }
     if (proposals != null) {
-      _result.proposals.addAll(proposals);
+      result.proposals.addAll(proposals);
     }
     if (depositParams != null) {
-      _result.depositParams = depositParams;
+      result.depositParams = depositParams;
     }
     if (votingParams != null) {
-      _result.votingParams = votingParams;
+      result.votingParams = votingParams;
     }
     if (tallyParams != null) {
-      _result.tallyParams = tallyParams;
+      result.tallyParams = tallyParams;
     }
-    return _result;
+    return result;
   }
   factory GenesisState.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisState.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   GenesisState clone() => GenesisState()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   GenesisState copyWith(void Function(GenesisState) updates) => super.copyWith((message) => updates(message as GenesisState)) as GenesisState; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static GenesisState create() => GenesisState._();
+  @$core.override
   GenesisState createEmptyInstance() => create();
   static $pb.PbList<GenesisState> createRepeated() => $pb.PbList<GenesisState>();
   @$core.pragma('dart2js:noInline')

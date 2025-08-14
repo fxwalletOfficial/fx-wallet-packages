@@ -23,11 +23,11 @@ class QueryContractInfoRequest extends $pb.GeneratedMessage {
   factory QueryContractInfoRequest({
     $core.String? address,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
-    return _result;
+    return result;
   }
   factory QueryContractInfoRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryContractInfoRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -72,14 +72,14 @@ class QueryContractInfoResponse extends $pb.GeneratedMessage {
     $core.String? address,
     $3.ContractInfo? contractInfo,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (contractInfo != null) {
-      _result.contractInfo = contractInfo;
+      result.contractInfo = contractInfo;
     }
-    return _result;
+    return result;
   }
   factory QueryContractInfoResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryContractInfoResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -135,14 +135,14 @@ class QueryContractHistoryRequest extends $pb.GeneratedMessage {
     $core.String? address,
     $5.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryContractHistoryRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryContractHistoryRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -198,14 +198,14 @@ class QueryContractHistoryResponse extends $pb.GeneratedMessage {
     $core.Iterable<$3.ContractCodeHistoryEntry>? entries,
     $5.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (entries != null) {
-      _result.entries.addAll(entries);
+      result.entries.addAll(entries);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryContractHistoryResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryContractHistoryResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -255,14 +255,14 @@ class QueryContractsByCodeRequest extends $pb.GeneratedMessage {
     $fixnum.Int64? codeId,
     $5.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryContractsByCodeRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryContractsByCodeRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -318,14 +318,14 @@ class QueryContractsByCodeResponse extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? contracts,
     $5.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (contracts != null) {
-      _result.contracts.addAll(contracts);
+      result.contracts.addAll(contracts);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryContractsByCodeResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryContractsByCodeResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -375,14 +375,14 @@ class QueryAllContractStateRequest extends $pb.GeneratedMessage {
     $core.String? address,
     $5.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryAllContractStateRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryAllContractStateRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -438,14 +438,14 @@ class QueryAllContractStateResponse extends $pb.GeneratedMessage {
     $core.Iterable<$3.Model>? models,
     $5.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (models != null) {
-      _result.models.addAll(models);
+      result.models.addAll(models);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryAllContractStateResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryAllContractStateResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -495,14 +495,14 @@ class QueryRawContractStateRequest extends $pb.GeneratedMessage {
     $core.String? address,
     $core.List<$core.int>? queryData,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (queryData != null) {
-      _result.queryData = queryData;
+      result.queryData = queryData;
     }
-    return _result;
+    return result;
   }
   factory QueryRawContractStateRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryRawContractStateRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -554,11 +554,11 @@ class QueryRawContractStateResponse extends $pb.GeneratedMessage {
   factory QueryRawContractStateResponse({
     $core.List<$core.int>? data,
   }) {
-    final _result = create();
+    final result = create();
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
-    return _result;
+    return result;
   }
   factory QueryRawContractStateResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryRawContractStateResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -603,14 +603,14 @@ class QuerySmartContractStateRequest extends $pb.GeneratedMessage {
     $core.String? address,
     $core.List<$core.int>? queryData,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (queryData != null) {
-      _result.queryData = queryData;
+      result.queryData = queryData;
     }
-    return _result;
+    return result;
   }
   factory QuerySmartContractStateRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QuerySmartContractStateRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -662,11 +662,10 @@ class QuerySmartContractStateResponse extends $pb.GeneratedMessage {
   factory QuerySmartContractStateResponse({
     $core.List<$core.int>? data,
   }) {
-    final _result = create();
-    if (data != null) {
-      _result.data = data;
-    }
-    return _result;
+    final result = create();
+    if (data != null) result.data = data;
+
+    return result;
   }
   factory QuerySmartContractStateResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QuerySmartContractStateResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -709,11 +708,11 @@ class QueryCodeRequest extends $pb.GeneratedMessage {
   factory QueryCodeRequest({
     $fixnum.Int64? codeId,
   }) {
-    final _result = create();
+    final result = create();
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
-    return _result;
+    return result;
   }
   factory QueryCodeRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryCodeRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -762,20 +761,20 @@ class CodeInfoResponse extends $pb.GeneratedMessage {
     $core.List<$core.int>? dataHash,
     $3.AccessConfig? instantiatePermission,
   }) {
-    final _result = create();
+    final result = create();
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (creator != null) {
-      _result.creator = creator;
+      result.creator = creator;
     }
     if (dataHash != null) {
-      _result.dataHash = dataHash;
+      result.dataHash = dataHash;
     }
     if (instantiatePermission != null) {
-      _result.instantiatePermission = instantiatePermission;
+      result.instantiatePermission = instantiatePermission;
     }
-    return _result;
+    return result;
   }
   factory CodeInfoResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CodeInfoResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -849,14 +848,14 @@ class QueryCodeResponse extends $pb.GeneratedMessage {
     CodeInfoResponse? codeInfo,
     $core.List<$core.int>? data,
   }) {
-    final _result = create();
+    final result = create();
     if (codeInfo != null) {
-      _result.codeInfo = codeInfo;
+      result.codeInfo = codeInfo;
     }
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
-    return _result;
+    return result;
   }
   factory QueryCodeResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryCodeResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -910,11 +909,11 @@ class QueryCodesRequest extends $pb.GeneratedMessage {
   factory QueryCodesRequest({
     $5.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryCodesRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryCodesRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -961,14 +960,14 @@ class QueryCodesResponse extends $pb.GeneratedMessage {
     $core.Iterable<CodeInfoResponse>? codeInfos,
     $5.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (codeInfos != null) {
-      _result.codeInfos.addAll(codeInfos);
+      result.codeInfos.addAll(codeInfos);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryCodesResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryCodesResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1016,11 +1015,11 @@ class QueryPinnedCodesRequest extends $pb.GeneratedMessage {
   factory QueryPinnedCodesRequest({
     $5.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryPinnedCodesRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryPinnedCodesRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1067,14 +1066,14 @@ class QueryPinnedCodesResponse extends $pb.GeneratedMessage {
     $core.Iterable<$fixnum.Int64>? codeIds,
     $5.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (codeIds != null) {
-      _result.codeIds.addAll(codeIds);
+      result.codeIds.addAll(codeIds);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryPinnedCodesResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryPinnedCodesResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

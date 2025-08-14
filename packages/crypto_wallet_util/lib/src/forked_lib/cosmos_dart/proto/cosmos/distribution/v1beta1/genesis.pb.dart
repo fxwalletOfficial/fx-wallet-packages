@@ -8,7 +8,7 @@ import '../../base/v1beta1/coin.pb.dart' as $2;
 import 'distribution.pb.dart' as $3;
 
 class DelegatorWithdrawInfo extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'DelegatorWithdrawInfo', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'DelegatorWithdrawInfo', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatorAddress')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'withdrawAddress')
     ..hasRequiredFields = false
@@ -19,30 +19,34 @@ class DelegatorWithdrawInfo extends $pb.GeneratedMessage {
     $core.String? delegatorAddress,
     $core.String? withdrawAddress,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddress != null) {
-      _result.delegatorAddress = delegatorAddress;
+      result.delegatorAddress = delegatorAddress;
     }
     if (withdrawAddress != null) {
-      _result.withdrawAddress = withdrawAddress;
+      result.withdrawAddress = withdrawAddress;
     }
-    return _result;
+    return result;
   }
   factory DelegatorWithdrawInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory DelegatorWithdrawInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   DelegatorWithdrawInfo clone() => DelegatorWithdrawInfo()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   DelegatorWithdrawInfo copyWith(void Function(DelegatorWithdrawInfo) updates) => super.copyWith((message) => updates(message as DelegatorWithdrawInfo)) as DelegatorWithdrawInfo; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static DelegatorWithdrawInfo create() => DelegatorWithdrawInfo._();
+  @$core.override
   DelegatorWithdrawInfo createEmptyInstance() => create();
   static $pb.PbList<DelegatorWithdrawInfo> createRepeated() => $pb.PbList<DelegatorWithdrawInfo>();
   @$core.pragma('dart2js:noInline')
@@ -69,7 +73,7 @@ class DelegatorWithdrawInfo extends $pb.GeneratedMessage {
 }
 
 class ValidatorOutstandingRewardsRecord extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorOutstandingRewardsRecord', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorOutstandingRewardsRecord', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
     ..pc<$2.DecCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'outstandingRewards', $pb.PbFieldType.PM, subBuilder: $2.DecCoin.create)
     ..hasRequiredFields = false
@@ -80,30 +84,34 @@ class ValidatorOutstandingRewardsRecord extends $pb.GeneratedMessage {
     $core.String? validatorAddress,
     $core.Iterable<$2.DecCoin>? outstandingRewards,
   }) {
-    final _result = create();
+    final result = create();
     if (validatorAddress != null) {
-      _result.validatorAddress = validatorAddress;
+      result.validatorAddress = validatorAddress;
     }
     if (outstandingRewards != null) {
-      _result.outstandingRewards.addAll(outstandingRewards);
+      result.outstandingRewards.addAll(outstandingRewards);
     }
-    return _result;
+    return result;
   }
   factory ValidatorOutstandingRewardsRecord.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorOutstandingRewardsRecord.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   ValidatorOutstandingRewardsRecord clone() => ValidatorOutstandingRewardsRecord()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   ValidatorOutstandingRewardsRecord copyWith(void Function(ValidatorOutstandingRewardsRecord) updates) => super.copyWith((message) => updates(message as ValidatorOutstandingRewardsRecord)) as ValidatorOutstandingRewardsRecord; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static ValidatorOutstandingRewardsRecord create() => ValidatorOutstandingRewardsRecord._();
+  @$core.override
   ValidatorOutstandingRewardsRecord createEmptyInstance() => create();
   static $pb.PbList<ValidatorOutstandingRewardsRecord> createRepeated() => $pb.PbList<ValidatorOutstandingRewardsRecord>();
   @$core.pragma('dart2js:noInline')
@@ -124,7 +132,7 @@ class ValidatorOutstandingRewardsRecord extends $pb.GeneratedMessage {
 }
 
 class ValidatorAccumulatedCommissionRecord extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorAccumulatedCommissionRecord', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorAccumulatedCommissionRecord', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
     ..aOM<$3.ValidatorAccumulatedCommission>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'accumulated', subBuilder: $3.ValidatorAccumulatedCommission.create)
     ..hasRequiredFields = false
@@ -135,30 +143,34 @@ class ValidatorAccumulatedCommissionRecord extends $pb.GeneratedMessage {
     $core.String? validatorAddress,
     $3.ValidatorAccumulatedCommission? accumulated,
   }) {
-    final _result = create();
+    final result = create();
     if (validatorAddress != null) {
-      _result.validatorAddress = validatorAddress;
+      result.validatorAddress = validatorAddress;
     }
     if (accumulated != null) {
-      _result.accumulated = accumulated;
+      result.accumulated = accumulated;
     }
-    return _result;
+    return result;
   }
   factory ValidatorAccumulatedCommissionRecord.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorAccumulatedCommissionRecord.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   ValidatorAccumulatedCommissionRecord clone() => ValidatorAccumulatedCommissionRecord()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   ValidatorAccumulatedCommissionRecord copyWith(void Function(ValidatorAccumulatedCommissionRecord) updates) => super.copyWith((message) => updates(message as ValidatorAccumulatedCommissionRecord)) as ValidatorAccumulatedCommissionRecord; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static ValidatorAccumulatedCommissionRecord create() => ValidatorAccumulatedCommissionRecord._();
+  @$core.override
   ValidatorAccumulatedCommissionRecord createEmptyInstance() => create();
   static $pb.PbList<ValidatorAccumulatedCommissionRecord> createRepeated() => $pb.PbList<ValidatorAccumulatedCommissionRecord>();
   @$core.pragma('dart2js:noInline')
@@ -187,7 +199,7 @@ class ValidatorAccumulatedCommissionRecord extends $pb.GeneratedMessage {
 }
 
 class ValidatorHistoricalRewardsRecord extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorHistoricalRewardsRecord', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorHistoricalRewardsRecord', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
     ..a<$fixnum.Int64>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'period', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..aOM<$3.ValidatorHistoricalRewards>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'rewards', subBuilder: $3.ValidatorHistoricalRewards.create)
@@ -200,33 +212,37 @@ class ValidatorHistoricalRewardsRecord extends $pb.GeneratedMessage {
     $fixnum.Int64? period,
     $3.ValidatorHistoricalRewards? rewards,
   }) {
-    final _result = create();
+    final result = create();
     if (validatorAddress != null) {
-      _result.validatorAddress = validatorAddress;
+      result.validatorAddress = validatorAddress;
     }
     if (period != null) {
-      _result.period = period;
+      result.period = period;
     }
     if (rewards != null) {
-      _result.rewards = rewards;
+      result.rewards = rewards;
     }
-    return _result;
+    return result;
   }
   factory ValidatorHistoricalRewardsRecord.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorHistoricalRewardsRecord.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   ValidatorHistoricalRewardsRecord clone() => ValidatorHistoricalRewardsRecord()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   ValidatorHistoricalRewardsRecord copyWith(void Function(ValidatorHistoricalRewardsRecord) updates) => super.copyWith((message) => updates(message as ValidatorHistoricalRewardsRecord)) as ValidatorHistoricalRewardsRecord; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static ValidatorHistoricalRewardsRecord create() => ValidatorHistoricalRewardsRecord._();
+  @$core.override
   ValidatorHistoricalRewardsRecord createEmptyInstance() => create();
   static $pb.PbList<ValidatorHistoricalRewardsRecord> createRepeated() => $pb.PbList<ValidatorHistoricalRewardsRecord>();
   @$core.pragma('dart2js:noInline')
@@ -264,7 +280,7 @@ class ValidatorHistoricalRewardsRecord extends $pb.GeneratedMessage {
 }
 
 class ValidatorCurrentRewardsRecord extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorCurrentRewardsRecord', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorCurrentRewardsRecord', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
     ..aOM<$3.ValidatorCurrentRewards>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'rewards', subBuilder: $3.ValidatorCurrentRewards.create)
     ..hasRequiredFields = false
@@ -275,30 +291,34 @@ class ValidatorCurrentRewardsRecord extends $pb.GeneratedMessage {
     $core.String? validatorAddress,
     $3.ValidatorCurrentRewards? rewards,
   }) {
-    final _result = create();
+    final result = create();
     if (validatorAddress != null) {
-      _result.validatorAddress = validatorAddress;
+      result.validatorAddress = validatorAddress;
     }
     if (rewards != null) {
-      _result.rewards = rewards;
+      result.rewards = rewards;
     }
-    return _result;
+    return result;
   }
   factory ValidatorCurrentRewardsRecord.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorCurrentRewardsRecord.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   ValidatorCurrentRewardsRecord clone() => ValidatorCurrentRewardsRecord()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   ValidatorCurrentRewardsRecord copyWith(void Function(ValidatorCurrentRewardsRecord) updates) => super.copyWith((message) => updates(message as ValidatorCurrentRewardsRecord)) as ValidatorCurrentRewardsRecord; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static ValidatorCurrentRewardsRecord create() => ValidatorCurrentRewardsRecord._();
+  @$core.override
   ValidatorCurrentRewardsRecord createEmptyInstance() => create();
   static $pb.PbList<ValidatorCurrentRewardsRecord> createRepeated() => $pb.PbList<ValidatorCurrentRewardsRecord>();
   @$core.pragma('dart2js:noInline')
@@ -327,7 +347,7 @@ class ValidatorCurrentRewardsRecord extends $pb.GeneratedMessage {
 }
 
 class DelegatorStartingInfoRecord extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'DelegatorStartingInfoRecord', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'DelegatorStartingInfoRecord', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatorAddress')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
     ..aOM<$3.DelegatorStartingInfo>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'startingInfo', subBuilder: $3.DelegatorStartingInfo.create)
@@ -340,33 +360,37 @@ class DelegatorStartingInfoRecord extends $pb.GeneratedMessage {
     $core.String? validatorAddress,
     $3.DelegatorStartingInfo? startingInfo,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddress != null) {
-      _result.delegatorAddress = delegatorAddress;
+      result.delegatorAddress = delegatorAddress;
     }
     if (validatorAddress != null) {
-      _result.validatorAddress = validatorAddress;
+      result.validatorAddress = validatorAddress;
     }
     if (startingInfo != null) {
-      _result.startingInfo = startingInfo;
+      result.startingInfo = startingInfo;
     }
-    return _result;
+    return result;
   }
   factory DelegatorStartingInfoRecord.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory DelegatorStartingInfoRecord.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   DelegatorStartingInfoRecord clone() => DelegatorStartingInfoRecord()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   DelegatorStartingInfoRecord copyWith(void Function(DelegatorStartingInfoRecord) updates) => super.copyWith((message) => updates(message as DelegatorStartingInfoRecord)) as DelegatorStartingInfoRecord; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static DelegatorStartingInfoRecord create() => DelegatorStartingInfoRecord._();
+  @$core.override
   DelegatorStartingInfoRecord createEmptyInstance() => create();
   static $pb.PbList<DelegatorStartingInfoRecord> createRepeated() => $pb.PbList<DelegatorStartingInfoRecord>();
   @$core.pragma('dart2js:noInline')
@@ -404,7 +428,7 @@ class DelegatorStartingInfoRecord extends $pb.GeneratedMessage {
 }
 
 class ValidatorSlashEventRecord extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorSlashEventRecord', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ValidatorSlashEventRecord', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'validatorAddress')
     ..a<$fixnum.Int64>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'height', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..a<$fixnum.Int64>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'period', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
@@ -419,36 +443,40 @@ class ValidatorSlashEventRecord extends $pb.GeneratedMessage {
     $fixnum.Int64? period,
     $3.ValidatorSlashEvent? validatorSlashEvent,
   }) {
-    final _result = create();
+    final result = create();
     if (validatorAddress != null) {
-      _result.validatorAddress = validatorAddress;
+      result.validatorAddress = validatorAddress;
     }
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
     if (period != null) {
-      _result.period = period;
+      result.period = period;
     }
     if (validatorSlashEvent != null) {
-      _result.validatorSlashEvent = validatorSlashEvent;
+      result.validatorSlashEvent = validatorSlashEvent;
     }
-    return _result;
+    return result;
   }
   factory ValidatorSlashEventRecord.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorSlashEventRecord.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   ValidatorSlashEventRecord clone() => ValidatorSlashEventRecord()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   ValidatorSlashEventRecord copyWith(void Function(ValidatorSlashEventRecord) updates) => super.copyWith((message) => updates(message as ValidatorSlashEventRecord)) as ValidatorSlashEventRecord; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static ValidatorSlashEventRecord create() => ValidatorSlashEventRecord._();
+  @$core.override
   ValidatorSlashEventRecord createEmptyInstance() => create();
   static $pb.PbList<ValidatorSlashEventRecord> createRepeated() => $pb.PbList<ValidatorSlashEventRecord>();
   @$core.pragma('dart2js:noInline')
@@ -495,7 +523,7 @@ class ValidatorSlashEventRecord extends $pb.GeneratedMessage {
 }
 
 class GenesisState extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.distribution.v1beta1'), createEmptyInstance: create)
     ..aOM<$3.Params>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'params', subBuilder: $3.Params.create)
     ..aOM<$3.FeePool>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'feePool', subBuilder: $3.FeePool.create)
     ..pc<DelegatorWithdrawInfo>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatorWithdrawInfos', $pb.PbFieldType.PM, subBuilder: DelegatorWithdrawInfo.create)
@@ -522,54 +550,58 @@ class GenesisState extends $pb.GeneratedMessage {
     $core.Iterable<DelegatorStartingInfoRecord>? delegatorStartingInfos,
     $core.Iterable<ValidatorSlashEventRecord>? validatorSlashEvents,
   }) {
-    final _result = create();
+    final result = create();
     if (params != null) {
-      _result.params = params;
+      result.params = params;
     }
     if (feePool != null) {
-      _result.feePool = feePool;
+      result.feePool = feePool;
     }
     if (delegatorWithdrawInfos != null) {
-      _result.delegatorWithdrawInfos.addAll(delegatorWithdrawInfos);
+      result.delegatorWithdrawInfos.addAll(delegatorWithdrawInfos);
     }
     if (previousProposer != null) {
-      _result.previousProposer = previousProposer;
+      result.previousProposer = previousProposer;
     }
     if (outstandingRewards != null) {
-      _result.outstandingRewards.addAll(outstandingRewards);
+      result.outstandingRewards.addAll(outstandingRewards);
     }
     if (validatorAccumulatedCommissions != null) {
-      _result.validatorAccumulatedCommissions.addAll(validatorAccumulatedCommissions);
+      result.validatorAccumulatedCommissions.addAll(validatorAccumulatedCommissions);
     }
     if (validatorHistoricalRewards != null) {
-      _result.validatorHistoricalRewards.addAll(validatorHistoricalRewards);
+      result.validatorHistoricalRewards.addAll(validatorHistoricalRewards);
     }
     if (validatorCurrentRewards != null) {
-      _result.validatorCurrentRewards.addAll(validatorCurrentRewards);
+      result.validatorCurrentRewards.addAll(validatorCurrentRewards);
     }
     if (delegatorStartingInfos != null) {
-      _result.delegatorStartingInfos.addAll(delegatorStartingInfos);
+      result.delegatorStartingInfos.addAll(delegatorStartingInfos);
     }
     if (validatorSlashEvents != null) {
-      _result.validatorSlashEvents.addAll(validatorSlashEvents);
+      result.validatorSlashEvents.addAll(validatorSlashEvents);
     }
-    return _result;
+    return result;
   }
   factory GenesisState.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisState.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   GenesisState clone() => GenesisState()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   GenesisState copyWith(void Function(GenesisState) updates) => super.copyWith((message) => updates(message as GenesisState)) as GenesisState; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static GenesisState create() => GenesisState._();
+  @$core.override
   GenesisState createEmptyInstance() => create();
   static $pb.PbList<GenesisState> createRepeated() => $pb.PbList<GenesisState>();
   @$core.pragma('dart2js:noInline')

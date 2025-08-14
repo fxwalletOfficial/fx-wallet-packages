@@ -15,9 +15,9 @@ void main() {
 			expect(m.hasAddress(), isFalse);
 			m.coins.add(CosmosCoin(denom: 'uiris', amount: '2'));
 			expect(m.coins.length, 2);
-			final clone = m.clone();
+			final clone = m.deepCopy();
 			expect(clone.coins.length, 2);
-			final copied = m.copyWith((x) => x.address = 'addr2');
+			final copied = m.rebuild((x) => x.address = 'addr2');
 			expect(copied.address, 'addr2');
 			final jsonStr = jsonEncode(copied.writeToJsonMap());
 			expect(jsonStr.isNotEmpty, isTrue);

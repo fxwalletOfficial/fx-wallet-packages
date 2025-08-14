@@ -19,11 +19,10 @@ class PubKey extends $pb.GeneratedMessage {
   factory PubKey({
     $core.List<$core.int>? key,
   }) {
-    final _result = create();
-    if (key != null) {
-      _result.key = key;
-    }
-    return _result;
+    final result = create();
+    if (key != null) result.key = key;
+
+    return result;
   }
   factory PubKey.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory PubKey.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -66,11 +65,11 @@ class PrivKey extends $pb.GeneratedMessage {
   factory PrivKey({
     $core.List<$core.int>? secret,
   }) {
-    final _result = create();
+    final result = create();
     if (secret != null) {
-      _result.secret = secret;
+      result.secret = secret;
     }
-    return _result;
+    return result;
   }
   factory PrivKey.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory PrivKey.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

@@ -62,7 +62,7 @@ void main() {
 			final ensured = b.ensurePubKey();
 			expect(ensured, isA<Any>());
 
-			final copied = b.copyWith((m) {
+			final copied = b.rebuild((m) {
 				m.address = '';
 				m.accountNumber = Int64(9223372036854775807);
 				m.sequence = Int64(0);
@@ -105,7 +105,7 @@ void main() {
 			expect(p.hasTxSizeCostPerByte(), isTrue);
 			expect(p.hasSigVerifyCostEd25519(), isTrue);
 			expect(p.hasSigVerifyCostSecp256k1(), isTrue);
-			final p2 = p.copyWith((pp) {
+			final p2 = p.rebuild((pp) {
 				pp.maxMemoCharacters = Int64(1);
 				pp.txSigLimit = Int64(2);
 				pp.txSizeCostPerByte = Int64(3);
@@ -165,7 +165,7 @@ void main() {
 			expect(empty, isA<GenesisState>());
 			final list = GenesisState.createRepeated();
 			expect(list, isA<pb.PbList<GenesisState>>());
-			final copied = g.copyWith((gg) => gg.params = authpb.Params(txSigLimit: Int64(10)));
+			final copied = g.rebuild((gg) => gg.params = authpb.Params(txSigLimit: Int64(10)));
 			expect(copied.params.txSigLimit.toInt(), 10);
 		});
 
@@ -188,9 +188,9 @@ void main() {
 			expect(m.hasName(), isFalse);
 			m.ensureBaseAccount();
 			expect(m.hasBaseAccount(), isTrue);
-			final cloned = m.clone();
+			final cloned = m.deepCopy();
 			expect(cloned, isA<ModuleAccount>());
-			final copied = m.copyWith((mm) {
+			final copied = m.rebuild((mm) {
 				mm.name = 'n2';
 				mm.baseAccount = BaseAccount(address: 'b');
 			});
@@ -206,4 +206,4 @@ void main() {
 			expect(() => ModuleAccount.fromBuffer([0xFF]), throwsA(isA<pb.InvalidProtocolBufferException>()));
 		});
 	});
-} 
+}

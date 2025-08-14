@@ -6,7 +6,7 @@ import 'package:protobuf/protobuf.dart' as $pb;
 import 'mint.pb.dart' as $1;
 
 class GenesisState extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.mint.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.mint.v1beta1'), createEmptyInstance: create)
     ..aOM<$1.Minter>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'minter', subBuilder: $1.Minter.create)
     ..aOM<$1.Params>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'params', subBuilder: $1.Params.create)
     ..hasRequiredFields = false
@@ -17,30 +17,34 @@ class GenesisState extends $pb.GeneratedMessage {
     $1.Minter? minter,
     $1.Params? params,
   }) {
-    final _result = create();
+    final result = create();
     if (minter != null) {
-      _result.minter = minter;
+      result.minter = minter;
     }
     if (params != null) {
-      _result.params = params;
+      result.params = params;
     }
-    return _result;
+    return result;
   }
   factory GenesisState.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisState.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   GenesisState clone() => GenesisState()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   GenesisState copyWith(void Function(GenesisState) updates) => super.copyWith((message) => updates(message as GenesisState)) as GenesisState; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static GenesisState create() => GenesisState._();
+  @$core.override
   GenesisState createEmptyInstance() => create();
   static $pb.PbList<GenesisState> createRepeated() => $pb.PbList<GenesisState>();
   @$core.pragma('dart2js:noInline')

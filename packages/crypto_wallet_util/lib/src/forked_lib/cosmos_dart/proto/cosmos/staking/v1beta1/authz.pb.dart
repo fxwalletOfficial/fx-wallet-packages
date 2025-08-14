@@ -9,7 +9,7 @@ import 'authz.pbenum.dart';
 export 'authz.pbenum.dart';
 
 class StakeAuthorization_Validators extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'StakeAuthorization.Validators', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'StakeAuthorization.Validators', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
     ..pPS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
     ..hasRequiredFields = false
   ;
@@ -18,27 +18,30 @@ class StakeAuthorization_Validators extends $pb.GeneratedMessage {
   factory StakeAuthorization_Validators({
     $core.Iterable<$core.String>? address,
   }) {
-    final _result = create();
-    if (address != null) {
-      _result.address.addAll(address);
-    }
-    return _result;
+    final result = create();
+    if (address != null) result.address.addAll(address);
+
+    return result;
   }
   factory StakeAuthorization_Validators.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory StakeAuthorization_Validators.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   StakeAuthorization_Validators clone() => StakeAuthorization_Validators()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   StakeAuthorization_Validators copyWith(void Function(StakeAuthorization_Validators) updates) => super.copyWith((message) => updates(message as StakeAuthorization_Validators)) as StakeAuthorization_Validators; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static StakeAuthorization_Validators create() => StakeAuthorization_Validators._();
+  @$core.override
   StakeAuthorization_Validators createEmptyInstance() => create();
   static $pb.PbList<StakeAuthorization_Validators> createRepeated() => $pb.PbList<StakeAuthorization_Validators>();
   @$core.pragma('dart2js:noInline')
@@ -61,7 +64,7 @@ class StakeAuthorization extends $pb.GeneratedMessage {
     3 : StakeAuthorization_Validators_.denyList,
     0 : StakeAuthorization_Validators_.notSet
   };
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'StakeAuthorization', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'StakeAuthorization', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
     ..oo(0, [2, 3])
     ..aOM<$6.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'maxTokens', subBuilder: $6.CosmosCoin.create)
     ..aOM<StakeAuthorization_Validators>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'allowList', subBuilder: StakeAuthorization_Validators.create)
@@ -77,36 +80,40 @@ class StakeAuthorization extends $pb.GeneratedMessage {
     StakeAuthorization_Validators? denyList,
     AuthorizationType? authorizationType,
   }) {
-    final _result = create();
+    final result = create();
     if (maxTokens != null) {
-      _result.maxTokens = maxTokens;
+      result.maxTokens = maxTokens;
     }
     if (allowList != null) {
-      _result.allowList = allowList;
+      result.allowList = allowList;
     }
     if (denyList != null) {
-      _result.denyList = denyList;
+      result.denyList = denyList;
     }
     if (authorizationType != null) {
-      _result.authorizationType = authorizationType;
+      result.authorizationType = authorizationType;
     }
-    return _result;
+    return result;
   }
   factory StakeAuthorization.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory StakeAuthorization.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   StakeAuthorization clone() => StakeAuthorization()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   StakeAuthorization copyWith(void Function(StakeAuthorization) updates) => super.copyWith((message) => updates(message as StakeAuthorization)) as StakeAuthorization; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static StakeAuthorization create() => StakeAuthorization._();
+  @$core.override
   StakeAuthorization createEmptyInstance() => create();
   static $pb.PbList<StakeAuthorization> createRepeated() => $pb.PbList<StakeAuthorization>();
   @$core.pragma('dart2js:noInline')

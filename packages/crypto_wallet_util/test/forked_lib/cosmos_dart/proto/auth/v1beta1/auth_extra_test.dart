@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:protobuf/protobuf.dart';
 import 'package:test/test.dart';
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/auth/v1beta1/auth.pb.dart';
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/google/protobuf/any.pb.dart';
@@ -31,7 +32,7 @@ void main() {
 			final ensuredPk = b.ensurePubKey();
 			expect(ensuredPk, isA<Any>());
 
-			final copied = b.copyWith((m) {
+			final copied = b.rebuild((m) {
 				m.address = 'cosmos1abc';
 				m.accountNumber = Int64(8);
 				m.sequence = Int64(9);
@@ -63,4 +64,4 @@ void main() {
 			expect(jsonStr.isNotEmpty, isTrue);
 		});
 	});
-} 
+}

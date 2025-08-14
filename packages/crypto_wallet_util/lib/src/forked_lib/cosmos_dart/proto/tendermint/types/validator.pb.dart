@@ -26,17 +26,17 @@ class ValidatorSet extends $pb.GeneratedMessage {
     Validator? proposer,
     $fixnum.Int64? totalVotingPower,
   }) {
-    final _result = create();
+    final result = create();
     if (validators != null) {
-      _result.validators.addAll(validators);
+      result.validators.addAll(validators);
     }
     if (proposer != null) {
-      _result.proposer = proposer;
+      result.proposer = proposer;
     }
     if (totalVotingPower != null) {
-      _result.totalVotingPower = totalVotingPower;
+      result.totalVotingPower = totalVotingPower;
     }
-    return _result;
+    return result;
   }
   factory ValidatorSet.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorSet.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -99,20 +99,20 @@ class Validator extends $pb.GeneratedMessage {
     $fixnum.Int64? votingPower,
     $fixnum.Int64? proposerPriority,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (pubKey != null) {
-      _result.pubKey = pubKey;
+      result.pubKey = pubKey;
     }
     if (votingPower != null) {
-      _result.votingPower = votingPower;
+      result.votingPower = votingPower;
     }
     if (proposerPriority != null) {
-      _result.proposerPriority = proposerPriority;
+      result.proposerPriority = proposerPriority;
     }
-    return _result;
+    return result;
   }
   factory Validator.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Validator.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -186,14 +186,14 @@ class SimpleValidator extends $pb.GeneratedMessage {
     $0.PublicKey? pubKey,
     $fixnum.Int64? votingPower,
   }) {
-    final _result = create();
+    final result = create();
     if (pubKey != null) {
-      _result.pubKey = pubKey;
+      result.pubKey = pubKey;
     }
     if (votingPower != null) {
-      _result.votingPower = votingPower;
+      result.votingPower = votingPower;
     }
-    return _result;
+    return result;
   }
   factory SimpleValidator.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SimpleValidator.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

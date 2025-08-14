@@ -3,39 +3,39 @@ import 'dart:convert' as $convert;
 import 'dart:core' as $core;
 import 'dart:typed_data' as $typed_data;
 @$core.Deprecated('Use authorizationTypeDescriptor instead')
-const AuthorizationType$json = const {
+const AuthorizationType$json = {
   '1': 'AuthorizationType',
-  '2': const [
-    const {'1': 'AUTHORIZATION_TYPE_UNSPECIFIED', '2': 0},
-    const {'1': 'AUTHORIZATION_TYPE_DELEGATE', '2': 1},
-    const {'1': 'AUTHORIZATION_TYPE_UNDELEGATE', '2': 2},
-    const {'1': 'AUTHORIZATION_TYPE_REDELEGATE', '2': 3},
+  '2': [
+    {'1': 'AUTHORIZATION_TYPE_UNSPECIFIED', '2': 0},
+    {'1': 'AUTHORIZATION_TYPE_DELEGATE', '2': 1},
+    {'1': 'AUTHORIZATION_TYPE_UNDELEGATE', '2': 2},
+    {'1': 'AUTHORIZATION_TYPE_REDELEGATE', '2': 3},
   ],
 };
 
 /// Descriptor for `AuthorizationType`. Decode as a `google.protobuf.EnumDescriptorProto`.
 final $typed_data.Uint8List authorizationTypeDescriptor = $convert.base64Decode('ChFBdXRob3JpemF0aW9uVHlwZRIiCh5BVVRIT1JJWkFUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABIfChtBVVRIT1JJWkFUSU9OX1RZUEVfREVMRUdBVEUQARIhCh1BVVRIT1JJWkFUSU9OX1RZUEVfVU5ERUxFR0FURRACEiEKHUFVVEhPUklaQVRJT05fVFlQRV9SRURFTEVHQVRFEAM=');
 @$core.Deprecated('Use stakeAuthorizationDescriptor instead')
-const StakeAuthorization$json = const {
+const StakeAuthorization$json = {
   '1': 'StakeAuthorization',
-  '2': const [
-    const {'1': 'max_tokens', '3': 1, '4': 1, '5': 11, '6': '.cosmos.base.v1beta1.Coin', '8': const {}, '10': 'maxTokens'},
-    const {'1': 'allow_list', '3': 2, '4': 1, '5': 11, '6': '.cosmos.staking.v1beta1.StakeAuthorization.Validators', '9': 0, '10': 'allowList'},
-    const {'1': 'deny_list', '3': 3, '4': 1, '5': 11, '6': '.cosmos.staking.v1beta1.StakeAuthorization.Validators', '9': 0, '10': 'denyList'},
-    const {'1': 'authorization_type', '3': 4, '4': 1, '5': 14, '6': '.cosmos.staking.v1beta1.AuthorizationType', '10': 'authorizationType'},
+  '2': [
+    {'1': 'max_tokens', '3': 1, '4': 1, '5': 11, '6': '.cosmos.base.v1beta1.Coin', '8': {}, '10': 'maxTokens'},
+    {'1': 'allow_list', '3': 2, '4': 1, '5': 11, '6': '.cosmos.staking.v1beta1.StakeAuthorization.Validators', '9': 0, '10': 'allowList'},
+    {'1': 'deny_list', '3': 3, '4': 1, '5': 11, '6': '.cosmos.staking.v1beta1.StakeAuthorization.Validators', '9': 0, '10': 'denyList'},
+    {'1': 'authorization_type', '3': 4, '4': 1, '5': 14, '6': '.cosmos.staking.v1beta1.AuthorizationType', '10': 'authorizationType'},
   ],
-  '3': const [StakeAuthorization_Validators$json],
-  '7': const {},
-  '8': const [
-    const {'1': 'validators'},
+  '3': [StakeAuthorization_Validators$json],
+  '7': {},
+  '8': [
+    {'1': 'validators'},
   ],
 };
 
 @$core.Deprecated('Use stakeAuthorizationDescriptor instead')
-const StakeAuthorization_Validators$json = const {
+const StakeAuthorization_Validators$json = {
   '1': 'Validators',
-  '2': const [
-    const {'1': 'address', '3': 1, '4': 3, '5': 9, '10': 'address'},
+  '2': [
+    {'1': 'address', '3': 1, '4': 3, '5': 9, '10': 'address'},
   ],
 };
 

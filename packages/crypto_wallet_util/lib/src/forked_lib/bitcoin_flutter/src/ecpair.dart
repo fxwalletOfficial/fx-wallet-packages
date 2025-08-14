@@ -1,3 +1,5 @@
+// ignore_for_file: implementation_imports
+
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -14,9 +16,9 @@ class ECPair {
   late NetworkType network;
   bool compressed = true;
 
-  ECPair(Uint8List? _d, Uint8List? _Q, {NetworkType? network, bool? compressed}) {
-    this._d = _d;
-    this._Q = _Q;
+  ECPair(Uint8List? d, Uint8List? Q, {NetworkType? network, bool? compressed}) {
+    _d = d;
+    _Q = Q;
     this.network = network ?? bitcoin;
     this.compressed = compressed ?? true;
   }

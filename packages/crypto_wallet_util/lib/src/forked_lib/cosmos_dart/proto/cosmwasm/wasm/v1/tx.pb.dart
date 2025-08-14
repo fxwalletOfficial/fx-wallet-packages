@@ -27,17 +27,17 @@ class MsgStoreCode extends $pb.GeneratedMessage {
     $core.List<$core.int>? wasmByteCode,
     $3.AccessConfig? instantiatePermission,
   }) {
-    final _result = create();
+    final result = create();
     if (sender != null) {
-      _result.sender = sender;
+      result.sender = sender;
     }
     if (wasmByteCode != null) {
-      _result.wasmByteCode = wasmByteCode;
+      result.wasmByteCode = wasmByteCode;
     }
     if (instantiatePermission != null) {
-      _result.instantiatePermission = instantiatePermission;
+      result.instantiatePermission = instantiatePermission;
     }
-    return _result;
+    return result;
   }
   factory MsgStoreCode.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgStoreCode.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -100,11 +100,11 @@ class MsgStoreCodeResponse extends $pb.GeneratedMessage {
   factory MsgStoreCodeResponse({
     $fixnum.Int64? codeId,
   }) {
-    final _result = create();
+    final result = create();
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
-    return _result;
+    return result;
   }
   factory MsgStoreCodeResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgStoreCodeResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -157,26 +157,26 @@ class MsgInstantiateContract extends $pb.GeneratedMessage {
     $core.List<$core.int>? msg,
     $core.Iterable<$4.CosmosCoin>? funds,
   }) {
-    final _result = create();
+    final result = create();
     if (sender != null) {
-      _result.sender = sender;
+      result.sender = sender;
     }
     if (admin != null) {
-      _result.admin = admin;
+      result.admin = admin;
     }
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (label != null) {
-      _result.label = label;
+      result.label = label;
     }
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
     if (funds != null) {
-      _result.funds.addAll(funds);
+      result.funds.addAll(funds);
     }
-    return _result;
+    return result;
   }
   factory MsgInstantiateContract.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgInstantiateContract.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -260,14 +260,14 @@ class MsgInstantiateContractResponse extends $pb.GeneratedMessage {
     $core.String? address,
     $core.List<$core.int>? data,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
-    return _result;
+    return result;
   }
   factory MsgInstantiateContractResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgInstantiateContractResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -325,20 +325,20 @@ class MsgExecuteContract extends $pb.GeneratedMessage {
     $core.List<$core.int>? msg,
     $core.Iterable<$4.CosmosCoin>? funds,
   }) {
-    final _result = create();
+    final result = create();
     if (sender != null) {
-      _result.sender = sender;
+      result.sender = sender;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
     if (funds != null) {
-      _result.funds.addAll(funds);
+      result.funds.addAll(funds);
     }
-    return _result;
+    return result;
   }
   factory MsgExecuteContract.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgExecuteContract.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -402,11 +402,11 @@ class MsgExecuteContractResponse extends $pb.GeneratedMessage {
   factory MsgExecuteContractResponse({
     $core.List<$core.int>? data,
   }) {
-    final _result = create();
+    final result = create();
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
-    return _result;
+    return result;
   }
   factory MsgExecuteContractResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgExecuteContractResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -455,20 +455,20 @@ class MsgMigrateContract extends $pb.GeneratedMessage {
     $fixnum.Int64? codeId,
     $core.List<$core.int>? msg,
   }) {
-    final _result = create();
+    final result = create();
     if (sender != null) {
-      _result.sender = sender;
+      result.sender = sender;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
-    return _result;
+    return result;
   }
   factory MsgMigrateContract.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgMigrateContract.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -538,11 +538,11 @@ class MsgMigrateContractResponse extends $pb.GeneratedMessage {
   factory MsgMigrateContractResponse({
     $core.List<$core.int>? data,
   }) {
-    final _result = create();
+    final result = create();
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
-    return _result;
+    return result;
   }
   factory MsgMigrateContractResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgMigrateContractResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -589,17 +589,17 @@ class MsgUpdateAdmin extends $pb.GeneratedMessage {
     $core.String? newAdmin,
     $core.String? contract,
   }) {
-    final _result = create();
+    final result = create();
     if (sender != null) {
-      _result.sender = sender;
+      result.sender = sender;
     }
     if (newAdmin != null) {
-      _result.newAdmin = newAdmin;
+      result.newAdmin = newAdmin;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
-    return _result;
+    return result;
   }
   factory MsgUpdateAdmin.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgUpdateAdmin.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -691,14 +691,14 @@ class MsgClearAdmin extends $pb.GeneratedMessage {
     $core.String? sender,
     $core.String? contract,
   }) {
-    final _result = create();
+    final result = create();
     if (sender != null) {
-      _result.sender = sender;
+      result.sender = sender;
     }
     if (contract != null) {
-      _result.contract = contract;
+      result.contract = contract;
     }
-    return _result;
+    return result;
   }
   factory MsgClearAdmin.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgClearAdmin.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

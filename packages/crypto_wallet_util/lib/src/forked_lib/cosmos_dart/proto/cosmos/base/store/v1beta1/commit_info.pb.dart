@@ -5,7 +5,7 @@ import 'package:fixnum/fixnum.dart' as $fixnum;
 import 'package:protobuf/protobuf.dart' as $pb;
 
 class CommitInfo extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'CommitInfo', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.base.store.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'CommitInfo', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.base.store.v1beta1'), createEmptyInstance: create)
     ..aInt64(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'version')
     ..pc<StoreInfo>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'storeInfos', $pb.PbFieldType.PM, subBuilder: StoreInfo.create)
     ..hasRequiredFields = false
@@ -16,14 +16,14 @@ class CommitInfo extends $pb.GeneratedMessage {
     $fixnum.Int64? version,
     $core.Iterable<StoreInfo>? storeInfos,
   }) {
-    final _result = create();
+    final result = create();
     if (version != null) {
-      _result.version = version;
+      result.version = version;
     }
     if (storeInfos != null) {
-      _result.storeInfos.addAll(storeInfos);
+      result.storeInfos.addAll(storeInfos);
     }
-    return _result;
+    return result;
   }
   factory CommitInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CommitInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -60,7 +60,7 @@ class CommitInfo extends $pb.GeneratedMessage {
 }
 
 class StoreInfo extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'StoreInfo', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.base.store.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'StoreInfo', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.base.store.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'name')
     ..aOM<CommitID>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'commitId', subBuilder: CommitID.create)
     ..hasRequiredFields = false
@@ -71,14 +71,14 @@ class StoreInfo extends $pb.GeneratedMessage {
     $core.String? name,
     CommitID? commitId,
   }) {
-    final _result = create();
+    final result = create();
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
     if (commitId != null) {
-      _result.commitId = commitId;
+      result.commitId = commitId;
     }
-    return _result;
+    return result;
   }
   factory StoreInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory StoreInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -123,7 +123,7 @@ class StoreInfo extends $pb.GeneratedMessage {
 }
 
 class CommitID extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'CommitID', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.base.store.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'CommitID', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.base.store.v1beta1'), createEmptyInstance: create)
     ..aInt64(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'version')
     ..a<$core.List<$core.int>>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'hash', $pb.PbFieldType.OY)
     ..hasRequiredFields = false
@@ -134,14 +134,12 @@ class CommitID extends $pb.GeneratedMessage {
     $fixnum.Int64? version,
     $core.List<$core.int>? hash,
   }) {
-    final _result = create();
-    if (version != null) {
-      _result.version = version;
-    }
-    if (hash != null) {
-      _result.hash = hash;
-    }
-    return _result;
+    final result = create();
+
+    if (version != null) result.version = version;
+    if (hash != null) result.hash = hash;
+
+    return result;
   }
   factory CommitID.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CommitID.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

@@ -50,7 +50,7 @@ class PsbtTxData extends TxData {
     for (int i = 0; i < psbt.inputs.length; i++) {
       final psbtInput = psbt.inputs[i];
       final txInput = unsignedTx.inputs[i];
-      
+
       // Handle cases where witnessUtxo might be null
       double value = 0.0;
       String address = '';

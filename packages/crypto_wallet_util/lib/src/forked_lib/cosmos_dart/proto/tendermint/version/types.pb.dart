@@ -22,14 +22,14 @@ class App extends $pb.GeneratedMessage {
     $fixnum.Int64? protocol,
     $core.String? software,
   }) {
-    final _result = create();
+    final result = create();
     if (protocol != null) {
-      _result.protocol = protocol;
+      result.protocol = protocol;
     }
     if (software != null) {
-      _result.software = software;
+      result.software = software;
     }
-    return _result;
+    return result;
   }
   factory App.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory App.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -83,14 +83,14 @@ class Consensus extends $pb.GeneratedMessage {
     $fixnum.Int64? block,
     $fixnum.Int64? app,
   }) {
-    final _result = create();
+    final result = create();
     if (block != null) {
-      _result.block = block;
+      result.block = block;
     }
     if (app != null) {
-      _result.app = app;
+      result.app = app;
     }
-    return _result;
+    return result;
   }
   factory Consensus.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Consensus.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

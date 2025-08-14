@@ -7,7 +7,7 @@ import 'package:protobuf/protobuf.dart' as $pb;
 import 'staking.pb.dart' as $7;
 
 class GenesisState extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
     ..aOM<$7.Params>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'params', subBuilder: $7.Params.create)
     ..a<$core.List<$core.int>>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'lastTotalPower', $pb.PbFieldType.OY)
     ..pc<LastValidatorPower>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'lastValidatorPowers', $pb.PbFieldType.PM, subBuilder: LastValidatorPower.create)
@@ -30,48 +30,52 @@ class GenesisState extends $pb.GeneratedMessage {
     $core.Iterable<$7.Redelegation>? redelegations,
     $core.bool? exported,
   }) {
-    final _result = create();
+    final result = create();
     if (params != null) {
-      _result.params = params;
+      result.params = params;
     }
     if (lastTotalPower != null) {
-      _result.lastTotalPower = lastTotalPower;
+      result.lastTotalPower = lastTotalPower;
     }
     if (lastValidatorPowers != null) {
-      _result.lastValidatorPowers.addAll(lastValidatorPowers);
+      result.lastValidatorPowers.addAll(lastValidatorPowers);
     }
     if (validators != null) {
-      _result.validators.addAll(validators);
+      result.validators.addAll(validators);
     }
     if (delegations != null) {
-      _result.delegations.addAll(delegations);
+      result.delegations.addAll(delegations);
     }
     if (unbondingDelegations != null) {
-      _result.unbondingDelegations.addAll(unbondingDelegations);
+      result.unbondingDelegations.addAll(unbondingDelegations);
     }
     if (redelegations != null) {
-      _result.redelegations.addAll(redelegations);
+      result.redelegations.addAll(redelegations);
     }
     if (exported != null) {
-      _result.exported = exported;
+      result.exported = exported;
     }
-    return _result;
+    return result;
   }
   factory GenesisState.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory GenesisState.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   GenesisState clone() => GenesisState()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   GenesisState copyWith(void Function(GenesisState) updates) => super.copyWith((message) => updates(message as GenesisState)) as GenesisState; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static GenesisState create() => GenesisState._();
+  @$core.override
   GenesisState createEmptyInstance() => create();
   static $pb.PbList<GenesisState> createRepeated() => $pb.PbList<GenesisState>();
   @$core.pragma('dart2js:noInline')
@@ -124,7 +128,7 @@ class GenesisState extends $pb.GeneratedMessage {
 }
 
 class LastValidatorPower extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'LastValidatorPower', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'LastValidatorPower', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
     ..aInt64(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'power')
     ..hasRequiredFields = false
@@ -135,30 +139,34 @@ class LastValidatorPower extends $pb.GeneratedMessage {
     $core.String? address,
     $fixnum.Int64? power,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (power != null) {
-      _result.power = power;
+      result.power = power;
     }
-    return _result;
+    return result;
   }
   factory LastValidatorPower.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory LastValidatorPower.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   LastValidatorPower clone() => LastValidatorPower()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   LastValidatorPower copyWith(void Function(LastValidatorPower) updates) => super.copyWith((message) => updates(message as LastValidatorPower)) as LastValidatorPower; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static LastValidatorPower create() => LastValidatorPower._();
+  @$core.override
   LastValidatorPower createEmptyInstance() => create();
   static $pb.PbList<LastValidatorPower> createRepeated() => $pb.PbList<LastValidatorPower>();
   @$core.pragma('dart2js:noInline')

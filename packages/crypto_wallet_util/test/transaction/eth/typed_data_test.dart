@@ -103,8 +103,8 @@ void main() {
 			final sig4 = AbiDecoder.compute4BytesSignature('transfer(address,uint256)');
 			expect(dec.getFunctionName('${sig4}00000000'), 'transfer');
 			expect(dec.getFunctionSignature('${sig4}00000000'), 'transfer(address,uint256)');
-			final decoded = dec.decodeParameters('${sig4}'+('0'*64)+'0'.padLeft(64,'0'));
+			final decoded = dec.decodeParameters('$sig4${'0'*64}${'0'.padLeft(64,'0')}');
 			expect(decoded?['function'], 'transfer');
 		});
 	});
-} 
+}

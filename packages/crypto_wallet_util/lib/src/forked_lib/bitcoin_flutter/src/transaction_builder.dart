@@ -36,8 +36,12 @@ class TransactionBuilder {
     txb.setVersion(transaction.version!);
     txb.setLockTime(transaction.locktime!);
 
-    transaction.outs.forEach((txOut) => txb.addOutput(txOut.script, txOut.value));
-    transaction.ins.forEach((txIn) => txb._addInputUnsafe(txIn.hash!, txIn.index, Input(sequence: txIn.sequence, script: txIn.script, witness: txIn.witness)));
+    for (var txOut in transaction.outs) {
+      txb.addOutput(txOut.script, txOut.value);
+    }
+    for (var txIn in transaction.ins) {
+      txb._addInputUnsafe(txIn.hash!, txIn.index, Input(sequence: txIn.sequence, script: txIn.script, witness: txIn.witness));
+    }
 
     return txb;
   }
@@ -409,7 +413,7 @@ Uint8List  generateSignRaw({required int vin,Uint8List? ourPubKey, NetworkType? 
     if (isCoinbaseHash(hash)) throw ArgumentError('coinbase inputs not supported');
 
     final prevTxOut = '$txHash:$vout';
-    if (_prevTxSet[prevTxOut] != null) throw ArgumentError('Duplicate TxOut: ' + prevTxOut);
+    if (_prevTxSet[prevTxOut] != null) throw ArgumentError('Duplicate TxOut: $prevTxOut');
 
 
     // if an input value was given, retain it

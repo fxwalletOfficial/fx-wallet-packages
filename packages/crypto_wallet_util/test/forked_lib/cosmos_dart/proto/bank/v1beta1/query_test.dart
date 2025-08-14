@@ -42,7 +42,7 @@ void main() {
 			final req = QueryAllBalancesRequest(
 				address: 'cosmos1xyz',
 				pagination: PageRequest(limit: Int64(10)),
-			); 
+			);
 			expect(req.hasPagination(), isTrue);
 			final reqClone = req.clone();
 			expect(reqClone.pagination.limit.toInt(), 10);
@@ -162,7 +162,7 @@ void main() {
 			final bal = resp.ensureBalance();
 			expect(bal.denom, isEmpty);
 			resp.balance = CosmosCoin(denom: 'uatom', amount: '1');
-			final clone = resp.clone();
+			final clone = resp.deepCopy();
 			expect(clone.balance.denom, 'uatom');
 			final bz = resp.writeToBuffer();
 			final resp2 = QueryBalanceResponse.fromBuffer(bz);
@@ -489,4 +489,4 @@ void main() {
 			expect(empty.hasDenom(), isFalse);
 		});
 	});
-} 
+}

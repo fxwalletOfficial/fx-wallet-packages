@@ -10,8 +10,8 @@ import 'dart:core' as $core;
 import 'package:protobuf/protobuf.dart' as $pb;
 
 enum PublicKey_Sum {
-  ed25519, 
-  secp256k1, 
+  ed25519,
+  secp256k1,
   notSet
 }
 
@@ -33,14 +33,14 @@ class PublicKey extends $pb.GeneratedMessage {
     $core.List<$core.int>? ed25519,
     $core.List<$core.int>? secp256k1,
   }) {
-    final _result = create();
+    final result = create();
     if (ed25519 != null) {
-      _result.ed25519 = ed25519;
+      result.ed25519 = ed25519;
     }
     if (secp256k1 != null) {
-      _result.secp256k1 = secp256k1;
+      result.secp256k1 = secp256k1;
     }
-    return _result;
+    return result;
   }
   factory PublicKey.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory PublicKey.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

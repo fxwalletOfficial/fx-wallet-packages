@@ -28,23 +28,23 @@ class Snapshot extends $pb.GeneratedMessage {
     $core.List<$core.int>? hash,
     Metadata? metadata,
   }) {
-    final _result = create();
+    final result = create();
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
     if (format != null) {
-      _result.format = format;
+      result.format = format;
     }
     if (chunks != null) {
-      _result.chunks = chunks;
+      result.chunks = chunks;
     }
     if (hash != null) {
-      _result.hash = hash;
+      result.hash = hash;
     }
     if (metadata != null) {
-      _result.metadata = metadata;
+      result.metadata = metadata;
     }
-    return _result;
+    return result;
   }
   factory Snapshot.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Snapshot.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -125,11 +125,11 @@ class Metadata extends $pb.GeneratedMessage {
   factory Metadata({
     $core.Iterable<$core.List<$core.int>>? chunkHashes,
   }) {
-    final _result = create();
+    final result = create();
     if (chunkHashes != null) {
-      _result.chunkHashes.addAll(chunkHashes);
+      result.chunkHashes.addAll(chunkHashes);
     }
-    return _result;
+    return result;
   }
   factory Metadata.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Metadata.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -157,10 +157,10 @@ class Metadata extends $pb.GeneratedMessage {
 }
 
 enum SnapshotItem_Item {
-  store, 
-  iavl, 
-  extension_3, 
-  extensionPayload, 
+  store,
+  iavl,
+  extension_3,
+  extensionPayload,
   notSet
 }
 
@@ -188,20 +188,20 @@ class SnapshotItem extends $pb.GeneratedMessage {
     SnapshotExtensionMeta? extension_3,
     SnapshotExtensionPayload? extensionPayload,
   }) {
-    final _result = create();
+    final result = create();
     if (store != null) {
-      _result.store = store;
+      result.store = store;
     }
     if (iavl != null) {
-      _result.iavl = iavl;
+      result.iavl = iavl;
     }
     if (extension_3 != null) {
-      _result.extension_3 = extension_3;
+      result.extension_3 = extension_3;
     }
     if (extensionPayload != null) {
-      _result.extensionPayload = extensionPayload;
+      result.extensionPayload = extensionPayload;
     }
-    return _result;
+    return result;
   }
   factory SnapshotItem.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SnapshotItem.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -282,11 +282,11 @@ class SnapshotStoreItem extends $pb.GeneratedMessage {
   factory SnapshotStoreItem({
     $core.String? name,
   }) {
-    final _result = create();
+    final result = create();
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
-    return _result;
+    return result;
   }
   factory SnapshotStoreItem.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SnapshotStoreItem.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -335,20 +335,14 @@ class SnapshotIAVLItem extends $pb.GeneratedMessage {
     $fixnum.Int64? version,
     $core.int? height,
   }) {
-    final _result = create();
-    if (key != null) {
-      _result.key = key;
-    }
-    if (value != null) {
-      _result.value = value;
-    }
-    if (version != null) {
-      _result.version = version;
-    }
-    if (height != null) {
-      _result.height = height;
-    }
-    return _result;
+    final result = create();
+
+    if (key != null) result.key = key;
+    if (value != null) result.value = value;
+    if (version != null) result.version = version;
+    if (height != null) result.height = height;
+
+    return result;
   }
   factory SnapshotIAVLItem.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SnapshotIAVLItem.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -420,14 +414,14 @@ class SnapshotExtensionMeta extends $pb.GeneratedMessage {
     $core.String? name,
     $core.int? format,
   }) {
-    final _result = create();
+    final result = create();
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
     if (format != null) {
-      _result.format = format;
+      result.format = format;
     }
-    return _result;
+    return result;
   }
   factory SnapshotExtensionMeta.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SnapshotExtensionMeta.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -479,11 +473,11 @@ class SnapshotExtensionPayload extends $pb.GeneratedMessage {
   factory SnapshotExtensionPayload({
     $core.List<$core.int>? payload,
   }) {
-    final _result = create();
+    final result = create();
     if (payload != null) {
-      _result.payload = payload;
+      result.payload = payload;
     }
-    return _result;
+    return result;
   }
   factory SnapshotExtensionPayload.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SnapshotExtensionPayload.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

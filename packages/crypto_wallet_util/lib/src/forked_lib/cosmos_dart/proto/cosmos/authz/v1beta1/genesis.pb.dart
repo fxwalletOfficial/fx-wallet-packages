@@ -6,7 +6,7 @@ import 'package:protobuf/protobuf.dart' as $pb;
 import 'authz.pb.dart' as $5;
 
 class GenesisState extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.authz.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.authz.v1beta1'), createEmptyInstance: create)
     ..pc<$5.GrantAuthorization>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'authorization', $pb.PbFieldType.PM, subBuilder: $5.GrantAuthorization.create)
     ..hasRequiredFields = false
   ;

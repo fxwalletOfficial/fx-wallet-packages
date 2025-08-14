@@ -3,10 +3,10 @@ import 'dart:convert' as $convert;
 import 'dart:core' as $core;
 import 'dart:typed_data' as $typed_data;
 @$core.Deprecated('Use genesisStateDescriptor instead')
-const GenesisState$json = const {
+const GenesisState$json = {
   '1': 'GenesisState',
-  '2': const [
-    const {'1': 'authorization', '3': 1, '4': 3, '5': 11, '6': '.cosmos.authz.v1beta1.GrantAuthorization', '8': const {}, '10': 'authorization'},
+  '2': [
+    {'1': 'authorization', '3': 1, '4': 3, '5': 11, '6': '.cosmos.authz.v1beta1.GrantAuthorization', '8': {}, '10': 'authorization'},
   ],
 };
 

@@ -3,43 +3,43 @@ import 'dart:convert' as $convert;
 import 'dart:core' as $core;
 import 'dart:typed_data' as $typed_data;
 @$core.Deprecated('Use baseAccountDescriptor instead')
-const BaseAccount$json = const {
+const BaseAccount$json = {
   '1': 'BaseAccount',
-  '2': const [
-    const {'1': 'address', '3': 1, '4': 1, '5': 9, '10': 'address'},
-    const {'1': 'pub_key', '3': 2, '4': 1, '5': 11, '6': '.google.protobuf.Any', '8': const {}, '10': 'pubKey'},
-    const {'1': 'account_number', '3': 3, '4': 1, '5': 4, '8': const {}, '10': 'accountNumber'},
-    const {'1': 'sequence', '3': 4, '4': 1, '5': 4, '10': 'sequence'},
+  '2': [
+    {'1': 'address', '3': 1, '4': 1, '5': 9, '10': 'address'},
+    {'1': 'pub_key', '3': 2, '4': 1, '5': 11, '6': '.google.protobuf.Any', '8': {}, '10': 'pubKey'},
+    {'1': 'account_number', '3': 3, '4': 1, '5': 4, '8': {}, '10': 'accountNumber'},
+    {'1': 'sequence', '3': 4, '4': 1, '5': 4, '10': 'sequence'},
   ],
-  '7': const {},
+  '7': {}
 };
 
 /// Descriptor for `BaseAccount`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List baseAccountDescriptor = $convert.base64Decode('CgtCYXNlQWNjb3VudBIYCgdhZGRyZXNzGAEgASgJUgdhZGRyZXNzElwKB3B1Yl9rZXkYAiABKAsyFC5nb29nbGUucHJvdG9idWYuQW55Qi3q3h8UcHVibGljX2tleSxvbWl0ZW1wdHny3h8ReWFtbDoicHVibGljX2tleSJSBnB1YktleRJACg5hY2NvdW50X251bWJlchgDIAEoBEIZ8t4fFXlhbWw6ImFjY291bnRfbnVtYmVyIlINYWNjb3VudE51bWJlchIaCghzZXF1ZW5jZRgEIAEoBFIIc2VxdWVuY2U6GIigHwCYoB8A6KAfANK0LQhBY2NvdW50SQ==');
 @$core.Deprecated('Use moduleAccountDescriptor instead')
-const ModuleAccount$json = const {
+const ModuleAccount$json = {
   '1': 'ModuleAccount',
-  '2': const [
-    const {'1': 'base_account', '3': 1, '4': 1, '5': 11, '6': '.cosmos.auth.v1beta1.BaseAccount', '8': const {}, '10': 'baseAccount'},
-    const {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
-    const {'1': 'permissions', '3': 3, '4': 3, '5': 9, '10': 'permissions'},
+  '2': [
+    {'1': 'base_account', '3': 1, '4': 1, '5': 11, '6': '.cosmos.auth.v1beta1.BaseAccount', '8': {}, '10': 'baseAccount'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'permissions', '3': 3, '4': 3, '5': 9, '10': 'permissions'},
   ],
-  '7': const {},
+  '7': {},
 };
 
 /// Descriptor for `ModuleAccount`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List moduleAccountDescriptor = $convert.base64Decode('Cg1Nb2R1bGVBY2NvdW50EmAKDGJhc2VfYWNjb3VudBgBIAEoCzIgLmNvc21vcy5hdXRoLnYxYmV0YTEuQmFzZUFjY291bnRCG9DeHwHy3h8TeWFtbDoiYmFzZV9hY2NvdW50IlILYmFzZUFjY291bnQSEgoEbmFtZRgCIAEoCVIEbmFtZRIgCgtwZXJtaXNzaW9ucxgDIAMoCVILcGVybWlzc2lvbnM6GoigHwCYoB8A0rQtDk1vZHVsZUFjY291bnRJ');
 @$core.Deprecated('Use paramsDescriptor instead')
-const Params$json = const {
+const Params$json = {
   '1': 'Params',
-  '2': const [
-    const {'1': 'max_memo_characters', '3': 1, '4': 1, '5': 4, '8': const {}, '10': 'maxMemoCharacters'},
-    const {'1': 'tx_sig_limit', '3': 2, '4': 1, '5': 4, '8': const {}, '10': 'txSigLimit'},
-    const {'1': 'tx_size_cost_per_byte', '3': 3, '4': 1, '5': 4, '8': const {}, '10': 'txSizeCostPerByte'},
-    const {'1': 'sig_verify_cost_ed25519', '3': 4, '4': 1, '5': 4, '8': const {}, '10': 'sigVerifyCostEd25519'},
-    const {'1': 'sig_verify_cost_secp256k1', '3': 5, '4': 1, '5': 4, '8': const {}, '10': 'sigVerifyCostSecp256k1'},
+  '2': [
+    {'1': 'max_memo_characters', '3': 1, '4': 1, '5': 4, '8': {}, '10': 'maxMemoCharacters'},
+    {'1': 'tx_sig_limit', '3': 2, '4': 1, '5': 4, '8': {}, '10': 'txSigLimit'},
+    {'1': 'tx_size_cost_per_byte', '3': 3, '4': 1, '5': 4, '8': {}, '10': 'txSizeCostPerByte'},
+    {'1': 'sig_verify_cost_ed25519', '3': 4, '4': 1, '5': 4, '8': {}, '10': 'sigVerifyCostEd25519'},
+    {'1': 'sig_verify_cost_secp256k1', '3': 5, '4': 1, '5': 4, '8': {}, '10': 'sigVerifyCostSecp256k1'},
   ],
-  '7': const {},
+  '7': {},
 };
 
 /// Descriptor for `Params`. Decode as a `google.protobuf.DescriptorProto`.

@@ -33,25 +33,25 @@ class Plan extends $pb.GeneratedMessage {
   @$core.Deprecated('This field is deprecated.')
     $2.Any? upgradedClientState,
   }) {
-    final _result = create();
+    final result = create();
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
     if (time != null) {
       // ignore: deprecated_member_use_from_same_package
-      _result.time = time;
+      result.time = time;
     }
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
     if (info != null) {
-      _result.info = info;
+      result.info = info;
     }
     if (upgradedClientState != null) {
       // ignore: deprecated_member_use_from_same_package
-      _result.upgradedClientState = upgradedClientState;
+      result.upgradedClientState = upgradedClientState;
     }
-    return _result;
+    return result;
   }
   factory Plan.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Plan.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -148,17 +148,17 @@ class SoftwareUpgradeProposal extends $pb.GeneratedMessage {
     $core.String? description,
     Plan? plan,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (plan != null) {
-      _result.plan = plan;
+      result.plan = plan;
     }
-    return _result;
+    return result;
   }
   factory SoftwareUpgradeProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SoftwareUpgradeProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -223,14 +223,14 @@ class CancelSoftwareUpgradeProposal extends $pb.GeneratedMessage {
     $core.String? title,
     $core.String? description,
   }) {
-    final _result = create();
+    final result = create();
     if (title != null) {
-      _result.title = title;
+      result.title = title;
     }
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
-    return _result;
+    return result;
   }
   factory CancelSoftwareUpgradeProposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CancelSoftwareUpgradeProposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -284,14 +284,14 @@ class ModuleVersion extends $pb.GeneratedMessage {
     $core.String? name,
     $fixnum.Int64? version,
   }) {
-    final _result = create();
+    final result = create();
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
     if (version != null) {
-      _result.version = version;
+      result.version = version;
     }
-    return _result;
+    return result;
   }
   factory ModuleVersion.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ModuleVersion.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

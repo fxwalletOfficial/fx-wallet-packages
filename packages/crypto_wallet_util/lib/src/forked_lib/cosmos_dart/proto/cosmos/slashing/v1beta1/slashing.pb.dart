@@ -33,26 +33,26 @@ class ValidatorSigningInfo extends $pb.GeneratedMessage {
     $core.bool? tombstoned,
     $fixnum.Int64? missedBlocksCounter,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (startHeight != null) {
-      _result.startHeight = startHeight;
+      result.startHeight = startHeight;
     }
     if (indexOffset != null) {
-      _result.indexOffset = indexOffset;
+      result.indexOffset = indexOffset;
     }
     if (jailedUntil != null) {
-      _result.jailedUntil = jailedUntil;
+      result.jailedUntil = jailedUntil;
     }
     if (tombstoned != null) {
-      _result.tombstoned = tombstoned;
+      result.tombstoned = tombstoned;
     }
     if (missedBlocksCounter != null) {
-      _result.missedBlocksCounter = missedBlocksCounter;
+      result.missedBlocksCounter = missedBlocksCounter;
     }
-    return _result;
+    return result;
   }
   factory ValidatorSigningInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorSigningInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -150,23 +150,23 @@ class Params extends $pb.GeneratedMessage {
     $core.List<$core.int>? slashFractionDoubleSign,
     $core.List<$core.int>? slashFractionDowntime,
   }) {
-    final _result = create();
+    final result = create();
     if (signedBlocksWindow != null) {
-      _result.signedBlocksWindow = signedBlocksWindow;
+      result.signedBlocksWindow = signedBlocksWindow;
     }
     if (minSignedPerWindow != null) {
-      _result.minSignedPerWindow = minSignedPerWindow;
+      result.minSignedPerWindow = minSignedPerWindow;
     }
     if (downtimeJailDuration != null) {
-      _result.downtimeJailDuration = downtimeJailDuration;
+      result.downtimeJailDuration = downtimeJailDuration;
     }
     if (slashFractionDoubleSign != null) {
-      _result.slashFractionDoubleSign = slashFractionDoubleSign;
+      result.slashFractionDoubleSign = slashFractionDoubleSign;
     }
     if (slashFractionDowntime != null) {
-      _result.slashFractionDowntime = slashFractionDowntime;
+      result.slashFractionDowntime = slashFractionDowntime;
     }
-    return _result;
+    return result;
   }
   factory Params.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Params.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

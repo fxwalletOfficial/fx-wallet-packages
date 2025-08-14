@@ -26,11 +26,11 @@ class AccessTypeParam extends $pb.GeneratedMessage {
   factory AccessTypeParam({
     AccessType? value,
   }) {
-    final _result = create();
+    final result = create();
     if (value != null) {
-      _result.value = value;
+      result.value = value;
     }
-    return _result;
+    return result;
   }
   factory AccessTypeParam.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory AccessTypeParam.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -75,14 +75,14 @@ class AccessConfig extends $pb.GeneratedMessage {
     AccessType? permission,
     $core.String? address,
   }) {
-    final _result = create();
+    final result = create();
     if (permission != null) {
-      _result.permission = permission;
+      result.permission = permission;
     }
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
-    return _result;
+    return result;
   }
   factory AccessConfig.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory AccessConfig.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -136,14 +136,14 @@ class Params extends $pb.GeneratedMessage {
     AccessConfig? codeUploadAccess,
     AccessType? instantiateDefaultPermission,
   }) {
-    final _result = create();
+    final result = create();
     if (codeUploadAccess != null) {
-      _result.codeUploadAccess = codeUploadAccess;
+      result.codeUploadAccess = codeUploadAccess;
     }
     if (instantiateDefaultPermission != null) {
-      _result.instantiateDefaultPermission = instantiateDefaultPermission;
+      result.instantiateDefaultPermission = instantiateDefaultPermission;
     }
-    return _result;
+    return result;
   }
   factory Params.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Params.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -201,17 +201,17 @@ class CodeInfo extends $pb.GeneratedMessage {
     $core.String? creator,
     AccessConfig? instantiateConfig,
   }) {
-    final _result = create();
+    final result = create();
     if (codeHash != null) {
-      _result.codeHash = codeHash;
+      result.codeHash = codeHash;
     }
     if (creator != null) {
-      _result.creator = creator;
+      result.creator = creator;
     }
     if (instantiateConfig != null) {
-      _result.instantiateConfig = instantiateConfig;
+      result.instantiateConfig = instantiateConfig;
     }
-    return _result;
+    return result;
   }
   factory CodeInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CodeInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -286,29 +286,29 @@ class ContractInfo extends $pb.GeneratedMessage {
     $core.String? ibcPortId,
     $2.Any? extension_7,
   }) {
-    final _result = create();
+    final result = create();
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (creator != null) {
-      _result.creator = creator;
+      result.creator = creator;
     }
     if (admin != null) {
-      _result.admin = admin;
+      result.admin = admin;
     }
     if (label != null) {
-      _result.label = label;
+      result.label = label;
     }
     if (created != null) {
-      _result.created = created;
+      result.created = created;
     }
     if (ibcPortId != null) {
-      _result.ibcPortId = ibcPortId;
+      result.ibcPortId = ibcPortId;
     }
     if (extension_7 != null) {
-      _result.extension_7 = extension_7;
+      result.extension_7 = extension_7;
     }
-    return _result;
+    return result;
   }
   factory ContractInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ContractInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -415,20 +415,20 @@ class ContractCodeHistoryEntry extends $pb.GeneratedMessage {
     AbsoluteTxPosition? updated,
     $core.List<$core.int>? msg,
   }) {
-    final _result = create();
+    final result = create();
     if (operation != null) {
-      _result.operation = operation;
+      result.operation = operation;
     }
     if (codeId != null) {
-      _result.codeId = codeId;
+      result.codeId = codeId;
     }
     if (updated != null) {
-      _result.updated = updated;
+      result.updated = updated;
     }
     if (msg != null) {
-      _result.msg = msg;
+      result.msg = msg;
     }
-    return _result;
+    return result;
   }
   factory ContractCodeHistoryEntry.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ContractCodeHistoryEntry.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -502,14 +502,14 @@ class AbsoluteTxPosition extends $pb.GeneratedMessage {
     $fixnum.Int64? blockHeight,
     $fixnum.Int64? txIndex,
   }) {
-    final _result = create();
+    final result = create();
     if (blockHeight != null) {
-      _result.blockHeight = blockHeight;
+      result.blockHeight = blockHeight;
     }
     if (txIndex != null) {
-      _result.txIndex = txIndex;
+      result.txIndex = txIndex;
     }
-    return _result;
+    return result;
   }
   factory AbsoluteTxPosition.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory AbsoluteTxPosition.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -563,14 +563,14 @@ class Model extends $pb.GeneratedMessage {
     $core.List<$core.int>? key,
     $core.List<$core.int>? value,
   }) {
-    final _result = create();
+    final result = create();
     if (key != null) {
-      _result.key = key;
+      result.key = key;
     }
     if (value != null) {
-      _result.value = value;
+      result.value = value;
     }
-    return _result;
+    return result;
   }
   factory Model.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Model.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

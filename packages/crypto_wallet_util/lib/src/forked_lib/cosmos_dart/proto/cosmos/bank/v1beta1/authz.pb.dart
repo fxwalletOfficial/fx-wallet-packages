@@ -6,7 +6,7 @@ import 'package:protobuf/protobuf.dart' as $pb;
 import '../../base/v1beta1/coin.pb.dart' as $2;
 
 class SendAuthorization extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'SendAuthorization', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'SendAuthorization', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'spendLimit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;

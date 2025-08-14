@@ -6,7 +6,7 @@ import 'package:protobuf/protobuf.dart' as $pb;
 import '../../base/v1beta1/coin.pb.dart' as $2;
 
 class Params extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Params', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Params', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..pc<SendEnabled>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'sendEnabled', $pb.PbFieldType.PM, subBuilder: SendEnabled.create)
     ..aOB(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'defaultSendEnabled')
     ..hasRequiredFields = false
@@ -17,14 +17,14 @@ class Params extends $pb.GeneratedMessage {
     $core.Iterable<SendEnabled>? sendEnabled,
     $core.bool? defaultSendEnabled,
   }) {
-    final _result = create();
+    final result = create();
     if (sendEnabled != null) {
-      _result.sendEnabled.addAll(sendEnabled);
+      result.sendEnabled.addAll(sendEnabled);
     }
     if (defaultSendEnabled != null) {
-      _result.defaultSendEnabled = defaultSendEnabled;
+      result.defaultSendEnabled = defaultSendEnabled;
     }
-    return _result;
+    return result;
   }
   factory Params.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Params.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -61,7 +61,7 @@ class Params extends $pb.GeneratedMessage {
 }
 
 class SendEnabled extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'SendEnabled', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'SendEnabled', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'denom')
     ..aOB(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'enabled')
     ..hasRequiredFields = false
@@ -72,14 +72,14 @@ class SendEnabled extends $pb.GeneratedMessage {
     $core.String? denom,
     $core.bool? enabled,
   }) {
-    final _result = create();
+    final result = create();
     if (denom != null) {
-      _result.denom = denom;
+      result.denom = denom;
     }
     if (enabled != null) {
-      _result.enabled = enabled;
+      result.enabled = enabled;
     }
-    return _result;
+    return result;
   }
   factory SendEnabled.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SendEnabled.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -122,7 +122,7 @@ class SendEnabled extends $pb.GeneratedMessage {
 }
 
 class Input extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Input', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Input', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
     ..pc<$2.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'coins', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
@@ -133,14 +133,14 @@ class Input extends $pb.GeneratedMessage {
     $core.String? address,
     $core.Iterable<$2.CosmosCoin>? coins,
   }) {
-    final _result = create();
+    final result = create();
     if (address != null) {
-      _result.address = address;
+      result.address = address;
     }
     if (coins != null) {
-      _result.coins.addAll(coins);
+      result.coins.addAll(coins);
     }
-    return _result;
+    return result;
   }
   factory Input.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Input.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -177,7 +177,7 @@ class Input extends $pb.GeneratedMessage {
 }
 
 class Output extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Output', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Output', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
     ..pc<$2.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'coins', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
@@ -188,14 +188,12 @@ class Output extends $pb.GeneratedMessage {
     $core.String? address,
     $core.Iterable<$2.CosmosCoin>? coins,
   }) {
-    final _result = create();
-    if (address != null) {
-      _result.address = address;
-    }
-    if (coins != null) {
-      _result.coins.addAll(coins);
-    }
-    return _result;
+    final result = create();
+
+    if (address != null) result.address = address;
+    if (coins != null) result.coins.addAll(coins);
+
+    return result;
   }
   factory Output.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Output.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -232,7 +230,7 @@ class Output extends $pb.GeneratedMessage {
 }
 
 class Supply extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Supply', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Supply', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'total', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
@@ -241,11 +239,11 @@ class Supply extends $pb.GeneratedMessage {
   factory Supply({
     $core.Iterable<$2.CosmosCoin>? total,
   }) {
-    final _result = create();
+    final result = create();
     if (total != null) {
-      _result.total.addAll(total);
+      result.total.addAll(total);
     }
-    return _result;
+    return result;
   }
   factory Supply.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Supply.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -273,7 +271,7 @@ class Supply extends $pb.GeneratedMessage {
 }
 
 class DenomUnit extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'DenomUnit', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'DenomUnit', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'denom')
     ..a<$core.int>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'exponent', $pb.PbFieldType.OU3)
     ..pPS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'aliases')
@@ -286,17 +284,17 @@ class DenomUnit extends $pb.GeneratedMessage {
     $core.int? exponent,
     $core.Iterable<$core.String>? aliases,
   }) {
-    final _result = create();
+    final result = create();
     if (denom != null) {
-      _result.denom = denom;
+      result.denom = denom;
     }
     if (exponent != null) {
-      _result.exponent = exponent;
+      result.exponent = exponent;
     }
     if (aliases != null) {
-      _result.aliases.addAll(aliases);
+      result.aliases.addAll(aliases);
     }
-    return _result;
+    return result;
   }
   factory DenomUnit.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory DenomUnit.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -342,7 +340,7 @@ class DenomUnit extends $pb.GeneratedMessage {
 }
 
 class Metadata extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Metadata', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Metadata', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'description')
     ..pc<DenomUnit>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'denomUnits', $pb.PbFieldType.PM, subBuilder: DenomUnit.create)
     ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'base')
@@ -361,26 +359,26 @@ class Metadata extends $pb.GeneratedMessage {
     $core.String? name,
     $core.String? symbol,
   }) {
-    final _result = create();
+    final result = create();
     if (description != null) {
-      _result.description = description;
+      result.description = description;
     }
     if (denomUnits != null) {
-      _result.denomUnits.addAll(denomUnits);
+      result.denomUnits.addAll(denomUnits);
     }
     if (base != null) {
-      _result.base = base;
+      result.base = base;
     }
     if (display != null) {
-      _result.display = display;
+      result.display = display;
     }
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
     if (symbol != null) {
-      _result.symbol = symbol;
+      result.symbol = symbol;
     }
-    return _result;
+    return result;
   }
   factory Metadata.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Metadata.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

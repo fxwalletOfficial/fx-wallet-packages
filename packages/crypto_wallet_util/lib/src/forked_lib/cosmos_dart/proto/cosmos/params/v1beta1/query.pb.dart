@@ -23,14 +23,14 @@ class QueryParamsRequest extends $pb.GeneratedMessage {
     $core.String? subspace,
     $core.String? key,
   }) {
-    final _result = create();
+    final result = create();
     if (subspace != null) {
-      _result.subspace = subspace;
+      result.subspace = subspace;
     }
     if (key != null) {
-      _result.key = key;
+      result.key = key;
     }
-    return _result;
+    return result;
   }
   factory QueryParamsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryParamsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -82,11 +82,11 @@ class QueryParamsResponse extends $pb.GeneratedMessage {
   factory QueryParamsResponse({
     $1.ParamChange? param,
   }) {
-    final _result = create();
+    final result = create();
     if (param != null) {
-      _result.param = param;
+      result.param = param;
     }
-    return _result;
+    return result;
   }
   factory QueryParamsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryParamsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

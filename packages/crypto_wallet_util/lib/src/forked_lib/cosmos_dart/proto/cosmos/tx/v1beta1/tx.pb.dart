@@ -30,17 +30,17 @@ class Tx extends $pb.GeneratedMessage {
     AuthInfo? authInfo,
     $core.Iterable<$core.List<$core.int>>? signatures,
   }) {
-    final _result = create();
+    final result = create();
     if (body != null) {
-      _result.body = body;
+      result.body = body;
     }
     if (authInfo != null) {
-      _result.authInfo = authInfo;
+      result.authInfo = authInfo;
     }
     if (signatures != null) {
-      _result.signatures.addAll(signatures);
+      result.signatures.addAll(signatures);
     }
-    return _result;
+    return result;
   }
   factory Tx.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Tx.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -103,17 +103,17 @@ class TxRaw extends $pb.GeneratedMessage {
     $core.List<$core.int>? authInfoBytes,
     $core.Iterable<$core.List<$core.int>>? signatures,
   }) {
-    final _result = create();
+    final result = create();
     if (bodyBytes != null) {
-      _result.bodyBytes = bodyBytes;
+      result.bodyBytes = bodyBytes;
     }
     if (authInfoBytes != null) {
-      _result.authInfoBytes = authInfoBytes;
+      result.authInfoBytes = authInfoBytes;
     }
     if (signatures != null) {
-      _result.signatures.addAll(signatures);
+      result.signatures.addAll(signatures);
     }
-    return _result;
+    return result;
   }
   factory TxRaw.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory TxRaw.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -174,20 +174,20 @@ class SignDoc extends $pb.GeneratedMessage {
     $core.String? chainId,
     $fixnum.Int64? accountNumber,
   }) {
-    final _result = create();
+    final result = create();
     if (bodyBytes != null) {
-      _result.bodyBytes = bodyBytes;
+      result.bodyBytes = bodyBytes;
     }
     if (authInfoBytes != null) {
-      _result.authInfoBytes = authInfoBytes;
+      result.authInfoBytes = authInfoBytes;
     }
     if (chainId != null) {
-      _result.chainId = chainId;
+      result.chainId = chainId;
     }
     if (accountNumber != null) {
-      _result.accountNumber = accountNumber;
+      result.accountNumber = accountNumber;
     }
-    return _result;
+    return result;
   }
   factory SignDoc.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SignDoc.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -265,23 +265,23 @@ class TxBody extends $pb.GeneratedMessage {
     $core.Iterable<$2.Any>? extensionOptions,
     $core.Iterable<$2.Any>? nonCriticalExtensionOptions,
   }) {
-    final _result = create();
+    final result = create();
     if (messages != null) {
-      _result.messages.addAll(messages);
+      result.messages.addAll(messages);
     }
     if (memo != null) {
-      _result.memo = memo;
+      result.memo = memo;
     }
     if (timeoutHeight != null) {
-      _result.timeoutHeight = timeoutHeight;
+      result.timeoutHeight = timeoutHeight;
     }
     if (extensionOptions != null) {
-      _result.extensionOptions.addAll(extensionOptions);
+      result.extensionOptions.addAll(extensionOptions);
     }
     if (nonCriticalExtensionOptions != null) {
-      _result.nonCriticalExtensionOptions.addAll(nonCriticalExtensionOptions);
+      result.nonCriticalExtensionOptions.addAll(nonCriticalExtensionOptions);
     }
-    return _result;
+    return result;
   }
   factory TxBody.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory TxBody.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -344,14 +344,14 @@ class AuthInfo extends $pb.GeneratedMessage {
     $core.Iterable<SignerInfo>? signerInfos,
     Fee? fee,
   }) {
-    final _result = create();
+    final result = create();
     if (signerInfos != null) {
-      _result.signerInfos.addAll(signerInfos);
+      result.signerInfos.addAll(signerInfos);
     }
     if (fee != null) {
-      _result.fee = fee;
+      result.fee = fee;
     }
-    return _result;
+    return result;
   }
   factory AuthInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory AuthInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -403,17 +403,17 @@ class SignerInfo extends $pb.GeneratedMessage {
     ModeInfo? modeInfo,
     $fixnum.Int64? sequence,
   }) {
-    final _result = create();
+    final result = create();
     if (publicKey != null) {
-      _result.publicKey = publicKey;
+      result.publicKey = publicKey;
     }
     if (modeInfo != null) {
-      _result.modeInfo = modeInfo;
+      result.modeInfo = modeInfo;
     }
     if (sequence != null) {
-      _result.sequence = sequence;
+      result.sequence = sequence;
     }
-    return _result;
+    return result;
   }
   factory SignerInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SignerInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -478,11 +478,11 @@ class ModeInfo_Single extends $pb.GeneratedMessage {
   factory ModeInfo_Single({
     $5.SignMode? mode,
   }) {
-    final _result = create();
+    final result = create();
     if (mode != null) {
-      _result.mode = mode;
+      result.mode = mode;
     }
-    return _result;
+    return result;
   }
   factory ModeInfo_Single.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ModeInfo_Single.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -527,14 +527,14 @@ class ModeInfo_Multi extends $pb.GeneratedMessage {
     $3.CompactBitArray? bitarray,
     $core.Iterable<ModeInfo>? modeInfos,
   }) {
-    final _result = create();
+    final result = create();
     if (bitarray != null) {
-      _result.bitarray = bitarray;
+      result.bitarray = bitarray;
     }
     if (modeInfos != null) {
-      _result.modeInfos.addAll(modeInfos);
+      result.modeInfos.addAll(modeInfos);
     }
-    return _result;
+    return result;
   }
   factory ModeInfo_Multi.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ModeInfo_Multi.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -573,8 +573,8 @@ class ModeInfo_Multi extends $pb.GeneratedMessage {
 }
 
 enum ModeInfo_Sum {
-  single, 
-  multi, 
+  single,
+  multi,
   notSet
 }
 
@@ -596,14 +596,14 @@ class ModeInfo extends $pb.GeneratedMessage {
     ModeInfo_Single? single,
     ModeInfo_Multi? multi,
   }) {
-    final _result = create();
+    final result = create();
     if (single != null) {
-      _result.single = single;
+      result.single = single;
     }
     if (multi != null) {
-      _result.multi = multi;
+      result.multi = multi;
     }
-    return _result;
+    return result;
   }
   factory ModeInfo.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ModeInfo.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -668,20 +668,20 @@ class Fee extends $pb.GeneratedMessage {
     $core.String? payer,
     $core.String? granter,
   }) {
-    final _result = create();
+    final result = create();
     if (amount != null) {
-      _result.amount.addAll(amount);
+      result.amount.addAll(amount);
     }
     if (gasLimit != null) {
-      _result.gasLimit = gasLimit;
+      result.gasLimit = gasLimit;
     }
     if (payer != null) {
-      _result.payer = payer;
+      result.payer = payer;
     }
     if (granter != null) {
-      _result.granter = granter;
+      result.granter = granter;
     }
-    return _result;
+    return result;
   }
   factory Fee.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Fee.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

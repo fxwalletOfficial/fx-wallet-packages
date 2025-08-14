@@ -204,10 +204,10 @@ class Transaction {
     if ((hashType & SIGHASH_ANYONECANPAY) == 0) {
       final prevoutsBuf = Buffer(36 * ins.length);
 
-      ins.forEach((txIn) {
+      for (var txIn in ins) {
         prevoutsBuf.writeSlice(txIn.hash);
         prevoutsBuf.writeUInt32(txIn.index);
-      });
+      }
       hashPrevouts = prevoutsBuf.toHash256();
     }
 
@@ -216,7 +216,9 @@ class Transaction {
         (hashType & 0x1f) != SIGHASH_NONE) {
       final sequenceBuf = Buffer(4 * ins.length);
 
-      ins.forEach((txIn) => sequenceBuf.writeUInt32(txIn.sequence));
+      for (var txIn in ins) {
+        sequenceBuf.writeUInt32(txIn.sequence);
+      }
       hashSequence = sequenceBuf.toHash256();
     }
 
@@ -226,23 +228,22 @@ class Transaction {
           0,
           (dynamic sum, output) =>
               sum +
-              (this.version! > MIN_VERSION_NO_TOKENS ? 1 : 0) +
+              (version! > MIN_VERSION_NO_TOKENS ? 1 : 0) +
               8 +
               varSliceSize(output.script!));
       final outputsBuf = Buffer(txOutsSize);
 
-      outs.forEach((txOut) {
+      for (var txOut in outs) {
         outputsBuf.writeUInt64(txOut.value);
         outputsBuf.writeVarSlice(txOut.script);
-        if (version! > MIN_VERSION_NO_TOKENS)
-          outputsBuf.writeVarInt(txOut.tokenId);
-      });
+        if (version! > MIN_VERSION_NO_TOKENS) outputsBuf.writeVarInt(txOut.tokenId);
+      }
       hashOutputs = outputsBuf.toHash256();
     } else if ((hashType & 0x1f) == SIGHASH_SINGLE && inIndex < outs.length) {
       // SIGHASH_SINGLE only hash that according output
       final output = outs[inIndex];
       final outputsBuf = Buffer(8 +
-          (this.version! > MIN_VERSION_NO_TOKENS ? 1 : 0) +
+          (version! > MIN_VERSION_NO_TOKENS ? 1 : 0) +
           varSliceSize(output.script!));
 
       outputsBuf.writeUInt64(output.value);
@@ -290,30 +291,35 @@ class Transaction {
       // Hash txid.
       final hashBuf = Buffer(36 * ins.length);
 
-      this.ins.forEach((txIn) {
+      for (var txIn in ins) {
         hashBuf.writeSlice(txIn.hash);
         hashBuf.writeUInt32(txIn.index);
-      });
+      }
 
       hashPrevouts = hashBuf.toSha256();
 
       // Hash value.
       final valueBuf = Buffer(8 * ins.length);
 
-      values.forEach((value) => valueBuf.writeUInt64(value));
+      for (var value in values) {
+        valueBuf.writeUInt64(value);
+      }
       hashAmounts = valueBuf.toSha256();
 
       // Hash prevout script.
       final scriptBuf =
           Buffer(prevOutScripts.map(varSliceSize).reduce((a, b) => a + b));
-      prevOutScripts
-          .forEach((prevOutScript) => scriptBuf.writeVarSlice(prevOutScript));
+      for (var prevOutScript in prevOutScripts) {
+        scriptBuf.writeVarSlice(prevOutScript);
+      }
       hashScriptPubKeys = scriptBuf.toSha256();
 
       // Hash sequence.
-      final sequenceBuf = Buffer(4 * this.ins.length);
+      final sequenceBuf = Buffer(4 * ins.length);
 
-      ins.forEach((txIn) => sequenceBuf.writeUInt32(txIn.sequence));
+      for (var txIn in ins) {
+        sequenceBuf.writeUInt32(txIn.sequence);
+      }
       hashSequences = sequenceBuf.toSha256();
     }
 
@@ -323,10 +329,10 @@ class Transaction {
           .reduce((a, b) => a + b);
       final outBuf = Buffer(txOutsSize);
 
-      this.outs.forEach((out) {
+      for (var out in outs) {
         outBuf.writeUInt64(out.value);
         outBuf.writeVarSlice(out.script);
-      });
+      }
 
       hashOutputs = outBuf.toSha256();
     } else if (isSingle && inIndex < outs.length) {
@@ -432,9 +438,9 @@ class Transaction {
       // SIGHASH_ALL: only ignore input scripts
     } else {
       // 'blank' others input scripts
-      txTmp.ins.forEach((input) {
+      for (var input in txTmp.ins) {
         input.script = EMPTY_SCRIPT;
-      });
+      }
       txTmp.ins[inIndex].script = ourScript;
     }
     // serialize and hash
@@ -457,7 +463,7 @@ class Transaction {
             0,
             (sum, output) =>
                 sum +
-                (this.version! > MIN_VERSION_NO_TOKENS ? 1 : 0) +
+                (version! > MIN_VERSION_NO_TOKENS ? 1 : 0) +
                 8 +
                 varSliceSize(output.script!)) +
         (hasWitness
@@ -555,7 +561,7 @@ class Transaction {
         buf.writeSlice(txOut.valueBuffer);
       }
       buf.writeVarSlice(txOut.script);
-      if (this.version! > MIN_VERSION_NO_TOKENS) buf.writeVarInt(txOut.tokenId);
+      if (version! > MIN_VERSION_NO_TOKENS) buf.writeVarInt(txOut.tokenId);
     });
 
     if (_ALLOW_WITNESS && hasWitnesses()) {

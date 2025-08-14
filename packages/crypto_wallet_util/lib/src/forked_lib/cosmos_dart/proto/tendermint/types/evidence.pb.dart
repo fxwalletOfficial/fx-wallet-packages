@@ -43,19 +43,23 @@ class Evidence extends $pb.GeneratedMessage {
   }
   factory Evidence.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Evidence.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   Evidence clone() => Evidence()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   Evidence copyWith(void Function(Evidence) updates) => super.copyWith((message) => updates(message as Evidence)) as Evidence; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Evidence create() => Evidence._();
+  @$core.override
   Evidence createEmptyInstance() => create();
   static $pb.PbList<Evidence> createRepeated() => $pb.PbList<Evidence>();
   @$core.pragma('dart2js:noInline')
@@ -126,19 +130,23 @@ class DuplicateVoteEvidence extends $pb.GeneratedMessage {
   }
   factory DuplicateVoteEvidence.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory DuplicateVoteEvidence.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   DuplicateVoteEvidence clone() => DuplicateVoteEvidence()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   DuplicateVoteEvidence copyWith(void Function(DuplicateVoteEvidence) updates) => super.copyWith((message) => updates(message as DuplicateVoteEvidence)) as DuplicateVoteEvidence; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static DuplicateVoteEvidence create() => DuplicateVoteEvidence._();
+  @$core.override
   DuplicateVoteEvidence createEmptyInstance() => create();
   static $pb.PbList<DuplicateVoteEvidence> createRepeated() => $pb.PbList<DuplicateVoteEvidence>();
   @$core.pragma('dart2js:noInline')
@@ -235,19 +243,23 @@ class LightClientAttackEvidence extends $pb.GeneratedMessage {
   }
   factory LightClientAttackEvidence.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory LightClientAttackEvidence.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   LightClientAttackEvidence clone() => LightClientAttackEvidence()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   LightClientAttackEvidence copyWith(void Function(LightClientAttackEvidence) updates) => super.copyWith((message) => updates(message as LightClientAttackEvidence)) as LightClientAttackEvidence; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static LightClientAttackEvidence create() => LightClientAttackEvidence._();
+  @$core.override
   LightClientAttackEvidence createEmptyInstance() => create();
   static $pb.PbList<LightClientAttackEvidence> createRepeated() => $pb.PbList<LightClientAttackEvidence>();
   @$core.pragma('dart2js:noInline')
@@ -316,19 +328,23 @@ class EvidenceList extends $pb.GeneratedMessage {
   }
   factory EvidenceList.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory EvidenceList.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   EvidenceList clone() => EvidenceList()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   EvidenceList copyWith(void Function(EvidenceList) updates) => super.copyWith((message) => updates(message as EvidenceList)) as EvidenceList; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static EvidenceList create() => EvidenceList._();
+  @$core.override
   EvidenceList createEmptyInstance() => create();
   static $pb.PbList<EvidenceList> createRepeated() => $pb.PbList<EvidenceList>();
   @$core.pragma('dart2js:noInline')

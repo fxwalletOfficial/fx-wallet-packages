@@ -9,7 +9,7 @@ import '../../../google/protobuf/timestamp.pb.dart' as $3;
 import '../../base/v1beta1/coin.pb.dart' as $2;
 
 class BasicAllowance extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'BasicAllowance', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'BasicAllowance', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
     ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'spendLimit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOM<$3.Timestamp>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'expiration', subBuilder: $3.Timestamp.create)
     ..hasRequiredFields = false
@@ -20,30 +20,34 @@ class BasicAllowance extends $pb.GeneratedMessage {
     $core.Iterable<$2.CosmosCoin>? spendLimit,
     $3.Timestamp? expiration,
   }) {
-    final _result = create();
+    final result = create();
     if (spendLimit != null) {
-      _result.spendLimit.addAll(spendLimit);
+      result.spendLimit.addAll(spendLimit);
     }
     if (expiration != null) {
-      _result.expiration = expiration;
+      result.expiration = expiration;
     }
-    return _result;
+    return result;
   }
   factory BasicAllowance.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory BasicAllowance.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   BasicAllowance clone() => BasicAllowance()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   BasicAllowance copyWith(void Function(BasicAllowance) updates) => super.copyWith((message) => updates(message as BasicAllowance)) as BasicAllowance; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static BasicAllowance create() => BasicAllowance._();
+  @$core.override
   BasicAllowance createEmptyInstance() => create();
   static $pb.PbList<BasicAllowance> createRepeated() => $pb.PbList<BasicAllowance>();
   @$core.pragma('dart2js:noInline')
@@ -66,7 +70,7 @@ class BasicAllowance extends $pb.GeneratedMessage {
 }
 
 class PeriodicAllowance extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'PeriodicAllowance', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'PeriodicAllowance', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
     ..aOM<BasicAllowance>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'basic', subBuilder: BasicAllowance.create)
     ..aOM<$4.Duration>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'period', subBuilder: $4.Duration.create)
     ..pc<$2.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'periodSpendLimit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
@@ -83,39 +87,43 @@ class PeriodicAllowance extends $pb.GeneratedMessage {
     $core.Iterable<$2.CosmosCoin>? periodCanSpend,
     $3.Timestamp? periodReset,
   }) {
-    final _result = create();
+    final result = create();
     if (basic != null) {
-      _result.basic = basic;
+      result.basic = basic;
     }
     if (period != null) {
-      _result.period = period;
+      result.period = period;
     }
     if (periodSpendLimit != null) {
-      _result.periodSpendLimit.addAll(periodSpendLimit);
+      result.periodSpendLimit.addAll(periodSpendLimit);
     }
     if (periodCanSpend != null) {
-      _result.periodCanSpend.addAll(periodCanSpend);
+      result.periodCanSpend.addAll(periodCanSpend);
     }
     if (periodReset != null) {
-      _result.periodReset = periodReset;
+      result.periodReset = periodReset;
     }
-    return _result;
+    return result;
   }
   factory PeriodicAllowance.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory PeriodicAllowance.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   PeriodicAllowance clone() => PeriodicAllowance()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   PeriodicAllowance copyWith(void Function(PeriodicAllowance) updates) => super.copyWith((message) => updates(message as PeriodicAllowance)) as PeriodicAllowance; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static PeriodicAllowance create() => PeriodicAllowance._();
+  @$core.override
   PeriodicAllowance createEmptyInstance() => create();
   static $pb.PbList<PeriodicAllowance> createRepeated() => $pb.PbList<PeriodicAllowance>();
   @$core.pragma('dart2js:noInline')
@@ -163,7 +171,7 @@ class PeriodicAllowance extends $pb.GeneratedMessage {
 }
 
 class AllowedMsgAllowance extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'AllowedMsgAllowance', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'AllowedMsgAllowance', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
     ..aOM<$5.Any>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'allowance', subBuilder: $5.Any.create)
     ..pPS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'allowedMessages')
     ..hasRequiredFields = false
@@ -174,30 +182,34 @@ class AllowedMsgAllowance extends $pb.GeneratedMessage {
     $5.Any? allowance,
     $core.Iterable<$core.String>? allowedMessages,
   }) {
-    final _result = create();
+    final result = create();
     if (allowance != null) {
-      _result.allowance = allowance;
+      result.allowance = allowance;
     }
     if (allowedMessages != null) {
-      _result.allowedMessages.addAll(allowedMessages);
+      result.allowedMessages.addAll(allowedMessages);
     }
-    return _result;
+    return result;
   }
   factory AllowedMsgAllowance.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory AllowedMsgAllowance.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   AllowedMsgAllowance clone() => AllowedMsgAllowance()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   AllowedMsgAllowance copyWith(void Function(AllowedMsgAllowance) updates) => super.copyWith((message) => updates(message as AllowedMsgAllowance)) as AllowedMsgAllowance; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static AllowedMsgAllowance create() => AllowedMsgAllowance._();
+  @$core.override
   AllowedMsgAllowance createEmptyInstance() => create();
   static $pb.PbList<AllowedMsgAllowance> createRepeated() => $pb.PbList<AllowedMsgAllowance>();
   @$core.pragma('dart2js:noInline')
@@ -220,7 +232,7 @@ class AllowedMsgAllowance extends $pb.GeneratedMessage {
 }
 
 class Grant extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Grant', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Grant', package: const $pb.PackageName($core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'granter')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'grantee')
     ..aOM<$5.Any>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'allowance', subBuilder: $5.Any.create)
@@ -233,33 +245,37 @@ class Grant extends $pb.GeneratedMessage {
     $core.String? grantee,
     $5.Any? allowance,
   }) {
-    final _result = create();
+    final result = create();
     if (granter != null) {
-      _result.granter = granter;
+      result.granter = granter;
     }
     if (grantee != null) {
-      _result.grantee = grantee;
+      result.grantee = grantee;
     }
     if (allowance != null) {
-      _result.allowance = allowance;
+      result.allowance = allowance;
     }
-    return _result;
+    return result;
   }
   factory Grant.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Grant.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
   Grant clone() => Grant()..mergeFromMessage(this);
+  @$core.override
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
   Grant copyWith(void Function(Grant) updates) => super.copyWith((message) => updates(message as Grant)) as Grant; // ignore: deprecated_member_use
+  @$core.override
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Grant create() => Grant._();
+  @$core.override
   Grant createEmptyInstance() => create();
   static $pb.PbList<Grant> createRepeated() => $pb.PbList<Grant>();
   @$core.pragma('dart2js:noInline')

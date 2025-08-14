@@ -31,14 +31,14 @@ class PartSetHeader extends $pb.GeneratedMessage {
     $core.int? total,
     $core.List<$core.int>? hash,
   }) {
-    final _result = create();
+    final result = create();
     if (total != null) {
-      _result.total = total;
+      result.total = total;
     }
     if (hash != null) {
-      _result.hash = hash;
+      result.hash = hash;
     }
-    return _result;
+    return result;
   }
   factory PartSetHeader.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory PartSetHeader.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -94,17 +94,17 @@ class Part extends $pb.GeneratedMessage {
     $core.List<$core.int>? bytes,
     $1.Proof? proof,
   }) {
-    final _result = create();
+    final result = create();
     if (index != null) {
-      _result.index = index;
+      result.index = index;
     }
     if (bytes != null) {
-      _result.bytes = bytes;
+      result.bytes = bytes;
     }
     if (proof != null) {
-      _result.proof = proof;
+      result.proof = proof;
     }
-    return _result;
+    return result;
   }
   factory Part.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Part.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -169,14 +169,14 @@ class BlockID extends $pb.GeneratedMessage {
     $core.List<$core.int>? hash,
     PartSetHeader? partSetHeader,
   }) {
-    final _result = create();
+    final result = create();
     if (hash != null) {
-      _result.hash = hash;
+      result.hash = hash;
     }
     if (partSetHeader != null) {
-      _result.partSetHeader = partSetHeader;
+      result.partSetHeader = partSetHeader;
     }
-    return _result;
+    return result;
   }
   factory BlockID.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory BlockID.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -256,50 +256,50 @@ class Header extends $pb.GeneratedMessage {
     $core.List<$core.int>? evidenceHash,
     $core.List<$core.int>? proposerAddress,
   }) {
-    final _result = create();
+    final result = create();
     if (version != null) {
-      _result.version = version;
+      result.version = version;
     }
     if (chainId != null) {
-      _result.chainId = chainId;
+      result.chainId = chainId;
     }
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
     if (time != null) {
-      _result.time = time;
+      result.time = time;
     }
     if (lastBlockId != null) {
-      _result.lastBlockId = lastBlockId;
+      result.lastBlockId = lastBlockId;
     }
     if (lastCommitHash != null) {
-      _result.lastCommitHash = lastCommitHash;
+      result.lastCommitHash = lastCommitHash;
     }
     if (dataHash != null) {
-      _result.dataHash = dataHash;
+      result.dataHash = dataHash;
     }
     if (validatorsHash != null) {
-      _result.validatorsHash = validatorsHash;
+      result.validatorsHash = validatorsHash;
     }
     if (nextValidatorsHash != null) {
-      _result.nextValidatorsHash = nextValidatorsHash;
+      result.nextValidatorsHash = nextValidatorsHash;
     }
     if (consensusHash != null) {
-      _result.consensusHash = consensusHash;
+      result.consensusHash = consensusHash;
     }
     if (appHash != null) {
-      _result.appHash = appHash;
+      result.appHash = appHash;
     }
     if (lastResultsHash != null) {
-      _result.lastResultsHash = lastResultsHash;
+      result.lastResultsHash = lastResultsHash;
     }
     if (evidenceHash != null) {
-      _result.evidenceHash = evidenceHash;
+      result.evidenceHash = evidenceHash;
     }
     if (proposerAddress != null) {
-      _result.proposerAddress = proposerAddress;
+      result.proposerAddress = proposerAddress;
     }
-    return _result;
+    return result;
   }
   factory Header.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Header.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -465,11 +465,11 @@ class Data extends $pb.GeneratedMessage {
   factory Data({
     $core.Iterable<$core.List<$core.int>>? txs,
   }) {
-    final _result = create();
+    final result = create();
     if (txs != null) {
-      _result.txs.addAll(txs);
+      result.txs.addAll(txs);
     }
-    return _result;
+    return result;
   }
   factory Data.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Data.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -520,32 +520,32 @@ class Vote extends $pb.GeneratedMessage {
     $core.int? validatorIndex,
     $core.List<$core.int>? signature,
   }) {
-    final _result = create();
+    final result = create();
     if (type != null) {
-      _result.type = type;
+      result.type = type;
     }
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
     if (round != null) {
-      _result.round = round;
+      result.round = round;
     }
     if (blockId != null) {
-      _result.blockId = blockId;
+      result.blockId = blockId;
     }
     if (timestamp != null) {
-      _result.timestamp = timestamp;
+      result.timestamp = timestamp;
     }
     if (validatorAddress != null) {
-      _result.validatorAddress = validatorAddress;
+      result.validatorAddress = validatorAddress;
     }
     if (validatorIndex != null) {
-      _result.validatorIndex = validatorIndex;
+      result.validatorIndex = validatorIndex;
     }
     if (signature != null) {
-      _result.signature = signature;
+      result.signature = signature;
     }
-    return _result;
+    return result;
   }
   factory Vote.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Vote.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -661,20 +661,20 @@ class Commit extends $pb.GeneratedMessage {
     BlockID? blockId,
     $core.Iterable<CommitSig>? signatures,
   }) {
-    final _result = create();
+    final result = create();
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
     if (round != null) {
-      _result.round = round;
+      result.round = round;
     }
     if (blockId != null) {
-      _result.blockId = blockId;
+      result.blockId = blockId;
     }
     if (signatures != null) {
-      _result.signatures.addAll(signatures);
+      result.signatures.addAll(signatures);
     }
-    return _result;
+    return result;
   }
   factory Commit.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Commit.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -746,20 +746,20 @@ class CommitSig extends $pb.GeneratedMessage {
     $3.Timestamp? timestamp,
     $core.List<$core.int>? signature,
   }) {
-    final _result = create();
+    final result = create();
     if (blockIdFlag != null) {
-      _result.blockIdFlag = blockIdFlag;
+      result.blockIdFlag = blockIdFlag;
     }
     if (validatorAddress != null) {
-      _result.validatorAddress = validatorAddress;
+      result.validatorAddress = validatorAddress;
     }
     if (timestamp != null) {
-      _result.timestamp = timestamp;
+      result.timestamp = timestamp;
     }
     if (signature != null) {
-      _result.signature = signature;
+      result.signature = signature;
     }
-    return _result;
+    return result;
   }
   factory CommitSig.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory CommitSig.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -843,29 +843,29 @@ class Proposal extends $pb.GeneratedMessage {
     $3.Timestamp? timestamp,
     $core.List<$core.int>? signature,
   }) {
-    final _result = create();
+    final result = create();
     if (type != null) {
-      _result.type = type;
+      result.type = type;
     }
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
     if (round != null) {
-      _result.round = round;
+      result.round = round;
     }
     if (polRound != null) {
-      _result.polRound = polRound;
+      result.polRound = polRound;
     }
     if (blockId != null) {
-      _result.blockId = blockId;
+      result.blockId = blockId;
     }
     if (timestamp != null) {
-      _result.timestamp = timestamp;
+      result.timestamp = timestamp;
     }
     if (signature != null) {
-      _result.signature = signature;
+      result.signature = signature;
     }
-    return _result;
+    return result;
   }
   factory Proposal.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory Proposal.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -968,14 +968,14 @@ class SignedHeader extends $pb.GeneratedMessage {
     Header? header,
     Commit? commit,
   }) {
-    final _result = create();
+    final result = create();
     if (header != null) {
-      _result.header = header;
+      result.header = header;
     }
     if (commit != null) {
-      _result.commit = commit;
+      result.commit = commit;
     }
-    return _result;
+    return result;
   }
   factory SignedHeader.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory SignedHeader.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1033,14 +1033,14 @@ class LightBlock extends $pb.GeneratedMessage {
     SignedHeader? signedHeader,
     $4.ValidatorSet? validatorSet,
   }) {
-    final _result = create();
+    final result = create();
     if (signedHeader != null) {
-      _result.signedHeader = signedHeader;
+      result.signedHeader = signedHeader;
     }
     if (validatorSet != null) {
-      _result.validatorSet = validatorSet;
+      result.validatorSet = validatorSet;
     }
-    return _result;
+    return result;
   }
   factory LightBlock.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory LightBlock.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1102,20 +1102,20 @@ class BlockMeta extends $pb.GeneratedMessage {
     Header? header,
     $fixnum.Int64? numTxs,
   }) {
-    final _result = create();
+    final result = create();
     if (blockId != null) {
-      _result.blockId = blockId;
+      result.blockId = blockId;
     }
     if (blockSize != null) {
-      _result.blockSize = blockSize;
+      result.blockSize = blockSize;
     }
     if (header != null) {
-      _result.header = header;
+      result.header = header;
     }
     if (numTxs != null) {
-      _result.numTxs = numTxs;
+      result.numTxs = numTxs;
     }
-    return _result;
+    return result;
   }
   factory BlockMeta.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory BlockMeta.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1193,17 +1193,17 @@ class TxProof extends $pb.GeneratedMessage {
     $core.List<$core.int>? data,
     $1.Proof? proof,
   }) {
-    final _result = create();
+    final result = create();
     if (rootHash != null) {
-      _result.rootHash = rootHash;
+      result.rootHash = rootHash;
     }
     if (data != null) {
-      _result.data = data;
+      result.data = data;
     }
     if (proof != null) {
-      _result.proof = proof;
+      result.proof = proof;
     }
-    return _result;
+    return result;
   }
   factory TxProof.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory TxProof.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

@@ -25,14 +25,14 @@ class QueryValidatorsRequest extends $pb.GeneratedMessage {
     $core.String? status,
     $8.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (status != null) {
-      _result.status = status;
+      result.status = status;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryValidatorsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryValidatorsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -88,14 +88,14 @@ class QueryValidatorsResponse extends $pb.GeneratedMessage {
     $core.Iterable<$7.Validator>? validators,
     $8.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (validators != null) {
-      _result.validators.addAll(validators);
+      result.validators.addAll(validators);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryValidatorsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryValidatorsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -143,11 +143,11 @@ class QueryValidatorRequest extends $pb.GeneratedMessage {
   factory QueryValidatorRequest({
     $core.String? validatorAddr,
   }) {
-    final _result = create();
+    final result = create();
     if (validatorAddr != null) {
-      _result.validatorAddr = validatorAddr;
+      result.validatorAddr = validatorAddr;
     }
-    return _result;
+    return result;
   }
   factory QueryValidatorRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryValidatorRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -190,11 +190,11 @@ class QueryValidatorResponse extends $pb.GeneratedMessage {
   factory QueryValidatorResponse({
     $7.Validator? validator,
   }) {
-    final _result = create();
+    final result = create();
     if (validator != null) {
-      _result.validator = validator;
+      result.validator = validator;
     }
-    return _result;
+    return result;
   }
   factory QueryValidatorResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryValidatorResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -241,14 +241,14 @@ class QueryValidatorDelegationsRequest extends $pb.GeneratedMessage {
     $core.String? validatorAddr,
     $8.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (validatorAddr != null) {
-      _result.validatorAddr = validatorAddr;
+      result.validatorAddr = validatorAddr;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryValidatorDelegationsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryValidatorDelegationsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -304,14 +304,14 @@ class QueryValidatorDelegationsResponse extends $pb.GeneratedMessage {
     $core.Iterable<$7.DelegationResponse>? delegationResponses,
     $8.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (delegationResponses != null) {
-      _result.delegationResponses.addAll(delegationResponses);
+      result.delegationResponses.addAll(delegationResponses);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryValidatorDelegationsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryValidatorDelegationsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -361,14 +361,14 @@ class QueryValidatorUnbondingDelegationsRequest extends $pb.GeneratedMessage {
     $core.String? validatorAddr,
     $8.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (validatorAddr != null) {
-      _result.validatorAddr = validatorAddr;
+      result.validatorAddr = validatorAddr;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryValidatorUnbondingDelegationsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryValidatorUnbondingDelegationsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -424,14 +424,14 @@ class QueryValidatorUnbondingDelegationsResponse extends $pb.GeneratedMessage {
     $core.Iterable<$7.UnbondingDelegation>? unbondingResponses,
     $8.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (unbondingResponses != null) {
-      _result.unbondingResponses.addAll(unbondingResponses);
+      result.unbondingResponses.addAll(unbondingResponses);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryValidatorUnbondingDelegationsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryValidatorUnbondingDelegationsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -481,14 +481,14 @@ class QueryDelegationRequest extends $pb.GeneratedMessage {
     $core.String? delegatorAddr,
     $core.String? validatorAddr,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddr != null) {
-      _result.delegatorAddr = delegatorAddr;
+      result.delegatorAddr = delegatorAddr;
     }
     if (validatorAddr != null) {
-      _result.validatorAddr = validatorAddr;
+      result.validatorAddr = validatorAddr;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegationRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegationRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -540,11 +540,11 @@ class QueryDelegationResponse extends $pb.GeneratedMessage {
   factory QueryDelegationResponse({
     $7.DelegationResponse? delegationResponse,
   }) {
-    final _result = create();
+    final result = create();
     if (delegationResponse != null) {
-      _result.delegationResponse = delegationResponse;
+      result.delegationResponse = delegationResponse;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegationResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegationResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -591,14 +591,14 @@ class QueryUnbondingDelegationRequest extends $pb.GeneratedMessage {
     $core.String? delegatorAddr,
     $core.String? validatorAddr,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddr != null) {
-      _result.delegatorAddr = delegatorAddr;
+      result.delegatorAddr = delegatorAddr;
     }
     if (validatorAddr != null) {
-      _result.validatorAddr = validatorAddr;
+      result.validatorAddr = validatorAddr;
     }
-    return _result;
+    return result;
   }
   factory QueryUnbondingDelegationRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryUnbondingDelegationRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -650,11 +650,11 @@ class QueryUnbondingDelegationResponse extends $pb.GeneratedMessage {
   factory QueryUnbondingDelegationResponse({
     $7.UnbondingDelegation? unbond,
   }) {
-    final _result = create();
+    final result = create();
     if (unbond != null) {
-      _result.unbond = unbond;
+      result.unbond = unbond;
     }
-    return _result;
+    return result;
   }
   factory QueryUnbondingDelegationResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryUnbondingDelegationResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -701,14 +701,14 @@ class QueryDelegatorDelegationsRequest extends $pb.GeneratedMessage {
     $core.String? delegatorAddr,
     $8.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddr != null) {
-      _result.delegatorAddr = delegatorAddr;
+      result.delegatorAddr = delegatorAddr;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegatorDelegationsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegatorDelegationsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -764,14 +764,14 @@ class QueryDelegatorDelegationsResponse extends $pb.GeneratedMessage {
     $core.Iterable<$7.DelegationResponse>? delegationResponses,
     $8.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (delegationResponses != null) {
-      _result.delegationResponses.addAll(delegationResponses);
+      result.delegationResponses.addAll(delegationResponses);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegatorDelegationsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegatorDelegationsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -821,14 +821,14 @@ class QueryDelegatorUnbondingDelegationsRequest extends $pb.GeneratedMessage {
     $core.String? delegatorAddr,
     $8.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddr != null) {
-      _result.delegatorAddr = delegatorAddr;
+      result.delegatorAddr = delegatorAddr;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegatorUnbondingDelegationsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegatorUnbondingDelegationsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -884,14 +884,14 @@ class QueryDelegatorUnbondingDelegationsResponse extends $pb.GeneratedMessage {
     $core.Iterable<$7.UnbondingDelegation>? unbondingResponses,
     $8.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (unbondingResponses != null) {
-      _result.unbondingResponses.addAll(unbondingResponses);
+      result.unbondingResponses.addAll(unbondingResponses);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegatorUnbondingDelegationsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegatorUnbondingDelegationsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -945,20 +945,20 @@ class QueryRedelegationsRequest extends $pb.GeneratedMessage {
     $core.String? dstValidatorAddr,
     $8.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddr != null) {
-      _result.delegatorAddr = delegatorAddr;
+      result.delegatorAddr = delegatorAddr;
     }
     if (srcValidatorAddr != null) {
-      _result.srcValidatorAddr = srcValidatorAddr;
+      result.srcValidatorAddr = srcValidatorAddr;
     }
     if (dstValidatorAddr != null) {
-      _result.dstValidatorAddr = dstValidatorAddr;
+      result.dstValidatorAddr = dstValidatorAddr;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryRedelegationsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryRedelegationsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1032,14 +1032,14 @@ class QueryRedelegationsResponse extends $pb.GeneratedMessage {
     $core.Iterable<$7.RedelegationResponse>? redelegationResponses,
     $8.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (redelegationResponses != null) {
-      _result.redelegationResponses.addAll(redelegationResponses);
+      result.redelegationResponses.addAll(redelegationResponses);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryRedelegationsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryRedelegationsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1089,14 +1089,14 @@ class QueryDelegatorValidatorsRequest extends $pb.GeneratedMessage {
     $core.String? delegatorAddr,
     $8.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddr != null) {
-      _result.delegatorAddr = delegatorAddr;
+      result.delegatorAddr = delegatorAddr;
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegatorValidatorsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegatorValidatorsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1152,14 +1152,14 @@ class QueryDelegatorValidatorsResponse extends $pb.GeneratedMessage {
     $core.Iterable<$7.Validator>? validators,
     $8.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (validators != null) {
-      _result.validators.addAll(validators);
+      result.validators.addAll(validators);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegatorValidatorsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegatorValidatorsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1209,14 +1209,14 @@ class QueryDelegatorValidatorRequest extends $pb.GeneratedMessage {
     $core.String? delegatorAddr,
     $core.String? validatorAddr,
   }) {
-    final _result = create();
+    final result = create();
     if (delegatorAddr != null) {
-      _result.delegatorAddr = delegatorAddr;
+      result.delegatorAddr = delegatorAddr;
     }
     if (validatorAddr != null) {
-      _result.validatorAddr = validatorAddr;
+      result.validatorAddr = validatorAddr;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegatorValidatorRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegatorValidatorRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1268,11 +1268,11 @@ class QueryDelegatorValidatorResponse extends $pb.GeneratedMessage {
   factory QueryDelegatorValidatorResponse({
     $7.Validator? validator,
   }) {
-    final _result = create();
+    final result = create();
     if (validator != null) {
-      _result.validator = validator;
+      result.validator = validator;
     }
-    return _result;
+    return result;
   }
   factory QueryDelegatorValidatorResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryDelegatorValidatorResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1317,11 +1317,11 @@ class QueryHistoricalInfoRequest extends $pb.GeneratedMessage {
   factory QueryHistoricalInfoRequest({
     $fixnum.Int64? height,
   }) {
-    final _result = create();
+    final result = create();
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
-    return _result;
+    return result;
   }
   factory QueryHistoricalInfoRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryHistoricalInfoRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1364,11 +1364,11 @@ class QueryHistoricalInfoResponse extends $pb.GeneratedMessage {
   factory QueryHistoricalInfoResponse({
     $7.HistoricalInfo? hist,
   }) {
-    final _result = create();
+    final result = create();
     if (hist != null) {
-      _result.hist = hist;
+      result.hist = hist;
     }
-    return _result;
+    return result;
   }
   factory QueryHistoricalInfoResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryHistoricalInfoResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1442,11 +1442,11 @@ class QueryPoolResponse extends $pb.GeneratedMessage {
   factory QueryPoolResponse({
     $7.Pool? pool,
   }) {
-    final _result = create();
+    final result = create();
     if (pool != null) {
-      _result.pool = pool;
+      result.pool = pool;
     }
-    return _result;
+    return result;
   }
   factory QueryPoolResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryPoolResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -1520,11 +1520,11 @@ class QueryParamsResponse extends $pb.GeneratedMessage {
   factory QueryParamsResponse({
     $7.Params? params,
   }) {
-    final _result = create();
+    final result = create();
     if (params != null) {
-      _result.params = params;
+      result.params = params;
     }
-    return _result;
+    return result;
   }
   factory QueryParamsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryParamsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

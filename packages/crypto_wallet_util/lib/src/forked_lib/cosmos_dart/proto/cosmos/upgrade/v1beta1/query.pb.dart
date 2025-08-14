@@ -51,11 +51,11 @@ class QueryCurrentPlanResponse extends $pb.GeneratedMessage {
   factory QueryCurrentPlanResponse({
     $3.Plan? plan,
   }) {
-    final _result = create();
+    final result = create();
     if (plan != null) {
-      _result.plan = plan;
+      result.plan = plan;
     }
-    return _result;
+    return result;
   }
   factory QueryCurrentPlanResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryCurrentPlanResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -100,11 +100,11 @@ class QueryAppliedPlanRequest extends $pb.GeneratedMessage {
   factory QueryAppliedPlanRequest({
     $core.String? name,
   }) {
-    final _result = create();
+    final result = create();
     if (name != null) {
-      _result.name = name;
+      result.name = name;
     }
-    return _result;
+    return result;
   }
   factory QueryAppliedPlanRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryAppliedPlanRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -147,11 +147,11 @@ class QueryAppliedPlanResponse extends $pb.GeneratedMessage {
   factory QueryAppliedPlanResponse({
     $fixnum.Int64? height,
   }) {
-    final _result = create();
+    final result = create();
     if (height != null) {
-      _result.height = height;
+      result.height = height;
     }
-    return _result;
+    return result;
   }
   factory QueryAppliedPlanResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryAppliedPlanResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -194,11 +194,11 @@ class QueryUpgradedConsensusStateRequest extends $pb.GeneratedMessage {
   factory QueryUpgradedConsensusStateRequest({
     $fixnum.Int64? lastHeight,
   }) {
-    final _result = create();
+    final result = create();
     if (lastHeight != null) {
-      _result.lastHeight = lastHeight;
+      result.lastHeight = lastHeight;
     }
-    return _result;
+    return result;
   }
   factory QueryUpgradedConsensusStateRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryUpgradedConsensusStateRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -241,11 +241,11 @@ class QueryUpgradedConsensusStateResponse extends $pb.GeneratedMessage {
   factory QueryUpgradedConsensusStateResponse({
     $core.List<$core.int>? upgradedConsensusState,
   }) {
-    final _result = create();
+    final result = create();
     if (upgradedConsensusState != null) {
-      _result.upgradedConsensusState = upgradedConsensusState;
+      result.upgradedConsensusState = upgradedConsensusState;
     }
-    return _result;
+    return result;
   }
   factory QueryUpgradedConsensusStateResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryUpgradedConsensusStateResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -288,11 +288,11 @@ class QueryModuleVersionsRequest extends $pb.GeneratedMessage {
   factory QueryModuleVersionsRequest({
     $core.String? moduleName,
   }) {
-    final _result = create();
+    final result = create();
     if (moduleName != null) {
-      _result.moduleName = moduleName;
+      result.moduleName = moduleName;
     }
-    return _result;
+    return result;
   }
   factory QueryModuleVersionsRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryModuleVersionsRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -335,11 +335,11 @@ class QueryModuleVersionsResponse extends $pb.GeneratedMessage {
   factory QueryModuleVersionsResponse({
     $core.Iterable<$3.ModuleVersion>? moduleVersions,
   }) {
-    final _result = create();
+    final result = create();
     if (moduleVersions != null) {
-      _result.moduleVersions.addAll(moduleVersions);
+      result.moduleVersions.addAll(moduleVersions);
     }
-    return _result;
+    return result;
   }
   factory QueryModuleVersionsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryModuleVersionsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

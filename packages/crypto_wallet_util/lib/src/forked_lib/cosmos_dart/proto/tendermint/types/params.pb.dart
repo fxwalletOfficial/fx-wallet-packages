@@ -28,20 +28,20 @@ class ConsensusParams extends $pb.GeneratedMessage {
     ValidatorParams? validator,
     VersionParams? version,
   }) {
-    final _result = create();
+    final result = create();
     if (block != null) {
-      _result.block = block;
+      result.block = block;
     }
     if (evidence != null) {
-      _result.evidence = evidence;
+      result.evidence = evidence;
     }
     if (validator != null) {
-      _result.validator = validator;
+      result.validator = validator;
     }
     if (version != null) {
-      _result.version = version;
+      result.version = version;
     }
-    return _result;
+    return result;
   }
   factory ConsensusParams.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ConsensusParams.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -123,17 +123,17 @@ class BlockParams extends $pb.GeneratedMessage {
     $fixnum.Int64? maxGas,
     $fixnum.Int64? timeIotaMs,
   }) {
-    final _result = create();
+    final result = create();
     if (maxBytes != null) {
-      _result.maxBytes = maxBytes;
+      result.maxBytes = maxBytes;
     }
     if (maxGas != null) {
-      _result.maxGas = maxGas;
+      result.maxGas = maxGas;
     }
     if (timeIotaMs != null) {
-      _result.timeIotaMs = timeIotaMs;
+      result.timeIotaMs = timeIotaMs;
     }
-    return _result;
+    return result;
   }
   factory BlockParams.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory BlockParams.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -198,17 +198,17 @@ class EvidenceParams extends $pb.GeneratedMessage {
     $7.Duration? maxAgeDuration,
     $fixnum.Int64? maxBytes,
   }) {
-    final _result = create();
+    final result = create();
     if (maxAgeNumBlocks != null) {
-      _result.maxAgeNumBlocks = maxAgeNumBlocks;
+      result.maxAgeNumBlocks = maxAgeNumBlocks;
     }
     if (maxAgeDuration != null) {
-      _result.maxAgeDuration = maxAgeDuration;
+      result.maxAgeDuration = maxAgeDuration;
     }
     if (maxBytes != null) {
-      _result.maxBytes = maxBytes;
+      result.maxBytes = maxBytes;
     }
-    return _result;
+    return result;
   }
   factory EvidenceParams.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory EvidenceParams.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -271,11 +271,11 @@ class ValidatorParams extends $pb.GeneratedMessage {
   factory ValidatorParams({
     $core.Iterable<$core.String>? pubKeyTypes,
   }) {
-    final _result = create();
+    final result = create();
     if (pubKeyTypes != null) {
-      _result.pubKeyTypes.addAll(pubKeyTypes);
+      result.pubKeyTypes.addAll(pubKeyTypes);
     }
-    return _result;
+    return result;
   }
   factory ValidatorParams.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory ValidatorParams.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -312,11 +312,11 @@ class VersionParams extends $pb.GeneratedMessage {
   factory VersionParams({
     $fixnum.Int64? appVersion,
   }) {
-    final _result = create();
+    final result = create();
     if (appVersion != null) {
-      _result.appVersion = appVersion;
+      result.appVersion = appVersion;
     }
-    return _result;
+    return result;
   }
   factory VersionParams.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory VersionParams.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -361,14 +361,14 @@ class HashedParams extends $pb.GeneratedMessage {
     $fixnum.Int64? blockMaxBytes,
     $fixnum.Int64? blockMaxGas,
   }) {
-    final _result = create();
+    final result = create();
     if (blockMaxBytes != null) {
-      _result.blockMaxBytes = blockMaxBytes;
+      result.blockMaxBytes = blockMaxBytes;
     }
     if (blockMaxGas != null) {
-      _result.blockMaxGas = blockMaxGas;
+      result.blockMaxGas = blockMaxGas;
     }
-    return _result;
+    return result;
   }
   factory HashedParams.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory HashedParams.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

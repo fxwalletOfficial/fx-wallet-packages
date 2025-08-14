@@ -77,7 +77,9 @@ class Buffer {
     if (vector == null) return;
 
     writeVarInt(vector.length);
-    vector.forEach((buf) => writeVarSlice(buf));
+    for (var buf in vector) {
+      writeVarSlice(buf);
+    }
   }
 
   Uint8List toHash256() => hash256(tBuffer);

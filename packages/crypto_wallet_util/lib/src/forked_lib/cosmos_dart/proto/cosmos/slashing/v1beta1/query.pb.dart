@@ -51,11 +51,11 @@ class QueryParamsResponse extends $pb.GeneratedMessage {
   factory QueryParamsResponse({
     $4.Params? params,
   }) {
-    final _result = create();
+    final result = create();
     if (params != null) {
-      _result.params = params;
+      result.params = params;
     }
-    return _result;
+    return result;
   }
   factory QueryParamsResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QueryParamsResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -100,11 +100,11 @@ class QuerySigningInfoRequest extends $pb.GeneratedMessage {
   factory QuerySigningInfoRequest({
     $core.String? consAddress,
   }) {
-    final _result = create();
+    final result = create();
     if (consAddress != null) {
-      _result.consAddress = consAddress;
+      result.consAddress = consAddress;
     }
-    return _result;
+    return result;
   }
   factory QuerySigningInfoRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QuerySigningInfoRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -147,11 +147,11 @@ class QuerySigningInfoResponse extends $pb.GeneratedMessage {
   factory QuerySigningInfoResponse({
     $4.ValidatorSigningInfo? valSigningInfo,
   }) {
-    final _result = create();
+    final result = create();
     if (valSigningInfo != null) {
-      _result.valSigningInfo = valSigningInfo;
+      result.valSigningInfo = valSigningInfo;
     }
-    return _result;
+    return result;
   }
   factory QuerySigningInfoResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QuerySigningInfoResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -196,11 +196,11 @@ class QuerySigningInfosRequest extends $pb.GeneratedMessage {
   factory QuerySigningInfosRequest({
     $5.PageRequest? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QuerySigningInfosRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QuerySigningInfosRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -247,14 +247,14 @@ class QuerySigningInfosResponse extends $pb.GeneratedMessage {
     $core.Iterable<$4.ValidatorSigningInfo>? info,
     $5.PageResponse? pagination,
   }) {
-    final _result = create();
+    final result = create();
     if (info != null) {
-      _result.info.addAll(info);
+      result.info.addAll(info);
     }
     if (pagination != null) {
-      _result.pagination = pagination;
+      result.pagination = pagination;
     }
-    return _result;
+    return result;
   }
   factory QuerySigningInfosResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory QuerySigningInfosResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);

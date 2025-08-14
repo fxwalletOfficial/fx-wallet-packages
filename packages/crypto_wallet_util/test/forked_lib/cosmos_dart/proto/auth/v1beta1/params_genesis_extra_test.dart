@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:protobuf/protobuf.dart';
 import 'package:test/test.dart';
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/auth/v1beta1/auth.pb.dart' as authpb;
 import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/auth/v1beta1/genesis.pb.dart';
@@ -14,7 +15,7 @@ void main() {
 			p.clearMaxMemoCharacters();
 			expect(p.hasMaxMemoCharacters(), isFalse);
 
-			final copied = p.copyWith((m) {
+			final copied = p.rebuild((m) {
 				m.maxMemoCharacters = Int64(2);
 				m.txSigLimit = Int64(3);
 			});
@@ -35,4 +36,4 @@ void main() {
 			expect(g.accounts.length, 1);
 		});
 	});
-} 
+}

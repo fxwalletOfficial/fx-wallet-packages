@@ -25,17 +25,17 @@ class MsgGrantAllowance extends $pb.GeneratedMessage {
     $core.String? grantee,
     $5.Any? allowance,
   }) {
-    final _result = create();
+    final result = create();
     if (granter != null) {
-      _result.granter = granter;
+      result.granter = granter;
     }
     if (grantee != null) {
-      _result.grantee = grantee;
+      result.grantee = grantee;
     }
     if (allowance != null) {
-      _result.allowance = allowance;
+      result.allowance = allowance;
     }
-    return _result;
+    return result;
   }
   factory MsgGrantAllowance.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgGrantAllowance.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
@@ -129,14 +129,14 @@ class MsgRevokeAllowance extends $pb.GeneratedMessage {
     $core.String? granter,
     $core.String? grantee,
   }) {
-    final _result = create();
+    final result = create();
     if (granter != null) {
-      _result.granter = granter;
+      result.granter = granter;
     }
     if (grantee != null) {
-      _result.grantee = grantee;
+      result.grantee = grantee;
     }
-    return _result;
+    return result;
   }
   factory MsgRevokeAllowance.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
   factory MsgRevokeAllowance.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
