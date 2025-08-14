@@ -3,15 +3,15 @@ import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
 
-class Coin extends $pb.GeneratedMessage {
+class CosmosCoin extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Coin', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.base.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'denom')
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount')
     ..hasRequiredFields = false
   ;
 
-  Coin._() : super();
-  factory Coin({
+  CosmosCoin._() : super();
+  factory CosmosCoin({
     $core.String? denom,
     $core.String? amount,
   }) {
@@ -24,26 +24,26 @@ class Coin extends $pb.GeneratedMessage {
     }
     return _result;
   }
-  factory Coin.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
-  factory Coin.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  factory CosmosCoin.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory CosmosCoin.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
-  Coin clone() => Coin()..mergeFromMessage(this);
+  CosmosCoin clone() => CosmosCoin()..mergeFromMessage(this);
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
-  Coin copyWith(void Function(Coin) updates) => super.copyWith((message) => updates(message as Coin)) as Coin; // ignore: deprecated_member_use
+  CosmosCoin copyWith(void Function(CosmosCoin) updates) => super.copyWith((message) => updates(message as CosmosCoin)) as CosmosCoin; // ignore: deprecated_member_use
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
-  static Coin create() => Coin._();
-  Coin createEmptyInstance() => create();
-  static $pb.PbList<Coin> createRepeated() => $pb.PbList<Coin>();
+  static CosmosCoin create() => CosmosCoin._();
+  CosmosCoin createEmptyInstance() => create();
+  static $pb.PbList<CosmosCoin> createRepeated() => $pb.PbList<CosmosCoin>();
   @$core.pragma('dart2js:noInline')
-  static Coin getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Coin>(create);
-  static Coin? _defaultInstance;
+  static CosmosCoin getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CosmosCoin>(create);
+  static CosmosCoin? _defaultInstance;
 
   @$pb.TagNumber(1)
   $core.String get denom => $_getSZ(0);

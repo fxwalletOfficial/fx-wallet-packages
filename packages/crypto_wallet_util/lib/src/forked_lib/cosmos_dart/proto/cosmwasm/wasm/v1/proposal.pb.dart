@@ -127,7 +127,7 @@ class InstantiateContractProposal extends $pb.GeneratedMessage {
     ..a<$fixnum.Int64>(5, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'codeId', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..aOS(6, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'label')
     ..a<$core.List<$core.int>>(7, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'msg', $pb.PbFieldType.OY)
-    ..pc<$4.Coin>(8, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'funds', $pb.PbFieldType.PM, subBuilder: $4.Coin.create)
+    ..pc<$4.CosmosCoin>(8, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'funds', $pb.PbFieldType.PM, subBuilder: $4.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -140,7 +140,7 @@ class InstantiateContractProposal extends $pb.GeneratedMessage {
     $fixnum.Int64? codeId,
     $core.String? label,
     $core.List<$core.int>? msg,
-    $core.Iterable<$4.Coin>? funds,
+    $core.Iterable<$4.CosmosCoin>? funds,
   }) {
     final _result = create();
     if (title != null) {
@@ -254,7 +254,7 @@ class InstantiateContractProposal extends $pb.GeneratedMessage {
   void clearMsg() => clearField(7);
 
   @$pb.TagNumber(8)
-  $core.List<$4.Coin> get funds => $_getList(7);
+  $core.List<$4.CosmosCoin> get funds => $_getList(7);
 }
 
 class MigrateContractProposal extends $pb.GeneratedMessage {
@@ -456,7 +456,7 @@ class ExecuteContractProposal extends $pb.GeneratedMessage {
     ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'runAs')
     ..aOS(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'contract')
     ..a<$core.List<$core.int>>(5, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'msg', $pb.PbFieldType.OY)
-    ..pc<$4.Coin>(6, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'funds', $pb.PbFieldType.PM, subBuilder: $4.Coin.create)
+    ..pc<$4.CosmosCoin>(6, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'funds', $pb.PbFieldType.PM, subBuilder: $4.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -467,7 +467,7 @@ class ExecuteContractProposal extends $pb.GeneratedMessage {
     $core.String? runAs,
     $core.String? contract,
     $core.List<$core.int>? msg,
-    $core.Iterable<$4.Coin>? funds,
+    $core.Iterable<$4.CosmosCoin>? funds,
   }) {
     final _result = create();
     if (title != null) {
@@ -557,7 +557,7 @@ class ExecuteContractProposal extends $pb.GeneratedMessage {
   void clearMsg() => clearField(5);
 
   @$pb.TagNumber(6)
-  $core.List<$4.Coin> get funds => $_getList(5);
+  $core.List<$4.CosmosCoin> get funds => $_getList(5);
 }
 
 class UpdateAdminProposal extends $pb.GeneratedMessage {

@@ -63,7 +63,7 @@ class StakeAuthorization extends $pb.GeneratedMessage {
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'StakeAuthorization', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.staking.v1beta1'), createEmptyInstance: create)
     ..oo(0, [2, 3])
-    ..aOM<$6.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'maxTokens', subBuilder: $6.Coin.create)
+    ..aOM<$6.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'maxTokens', subBuilder: $6.CosmosCoin.create)
     ..aOM<StakeAuthorization_Validators>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'allowList', subBuilder: StakeAuthorization_Validators.create)
     ..aOM<StakeAuthorization_Validators>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'denyList', subBuilder: StakeAuthorization_Validators.create)
     ..e<AuthorizationType>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'authorizationType', $pb.PbFieldType.OE, defaultOrMaker: AuthorizationType.AUTHORIZATION_TYPE_UNSPECIFIED, valueOf: AuthorizationType.valueOf, enumValues: AuthorizationType.values)
@@ -72,7 +72,7 @@ class StakeAuthorization extends $pb.GeneratedMessage {
 
   StakeAuthorization._() : super();
   factory StakeAuthorization({
-    $6.Coin? maxTokens,
+    $6.CosmosCoin? maxTokens,
     StakeAuthorization_Validators? allowList,
     StakeAuthorization_Validators? denyList,
     AuthorizationType? authorizationType,
@@ -117,15 +117,15 @@ class StakeAuthorization extends $pb.GeneratedMessage {
   void clearValidators() => clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
-  $6.Coin get maxTokens => $_getN(0);
+  $6.CosmosCoin get maxTokens => $_getN(0);
   @$pb.TagNumber(1)
-  set maxTokens($6.Coin v) { setField(1, v); }
+  set maxTokens($6.CosmosCoin v) { setField(1, v); }
   @$pb.TagNumber(1)
   $core.bool hasMaxTokens() => $_has(0);
   @$pb.TagNumber(1)
   void clearMaxTokens() => clearField(1);
   @$pb.TagNumber(1)
-  $6.Coin ensureMaxTokens() => $_ensure(0);
+  $6.CosmosCoin ensureMaxTokens() => $_ensure(0);
 
   @$pb.TagNumber(2)
   StakeAuthorization_Validators get allowList => $_getN(1);

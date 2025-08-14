@@ -2,10 +2,8 @@ import 'dart:math';
 
 import 'package:test/test.dart';
 
-import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/proto/cosmos/bank/v1beta1/export.dart'
-    as bank;
-import 'package:crypto_wallet_util/src/forked_lib/cosmos_dart/types/export.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart';
+import 'package:crypto_wallet_util/forked_lib.dart';
 
 void main() {
   const String TEST_MNEMONIC =
@@ -26,11 +24,11 @@ void main() {
     expect(wallet.address, 'kava16cmj4yxnqllcx2e480j2tgw43tvd753x7l9tfk');
   });
   test('cosmos transaction', () async {
-    final message = bank.MsgSend.create()
+    final message = MsgSend.create()
       ..fromAddress = 'kava1qu252p5jwrafawgmns47wzgqfrjg3qp5ugg8rs'
       ..toAddress = 'kava1qu252p5jwrafawgmns47wzgqfrjg3qp5ugg8rs';
     message.amount.add(
-      Coin.create()
+      CosmosCoin.create()
         ..denom = 'ukava'
         ..amount = (1 * pow(10, 6)).toInt().toString(),
     );
@@ -41,7 +39,7 @@ void main() {
     Fee fee = Fee();
     fee.gasLimit = 109963.toInt64();
     fee.amount.add(
-      Coin.create()
+      CosmosCoin.create()
         ..amount = '2750'
         ..denom = 'ukava',
     );

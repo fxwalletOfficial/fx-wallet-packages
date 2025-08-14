@@ -7,13 +7,13 @@ import '../../base/v1beta1/coin.pb.dart' as $2;
 
 class SendAuthorization extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'SendAuthorization', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
-    ..pc<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'spendLimit', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'spendLimit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   SendAuthorization._() : super();
   factory SendAuthorization({
-    $core.Iterable<$2.Coin>? spendLimit,
+    $core.Iterable<$2.CosmosCoin>? spendLimit,
   }) {
     final _result = create();
     if (spendLimit != null) {
@@ -43,6 +43,6 @@ class SendAuthorization extends $pb.GeneratedMessage {
   static SendAuthorization? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$2.Coin> get spendLimit => $_getList(0);
+  $core.List<$2.CosmosCoin> get spendLimit => $_getList(0);
 }
 

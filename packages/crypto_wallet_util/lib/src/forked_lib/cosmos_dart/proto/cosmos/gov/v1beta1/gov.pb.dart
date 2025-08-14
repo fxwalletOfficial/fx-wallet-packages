@@ -145,7 +145,7 @@ class Deposit extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Deposit', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.gov.v1beta1'), createEmptyInstance: create)
     ..a<$fixnum.Int64>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'proposalId', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'depositor')
-    ..pc<$2.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
@@ -153,7 +153,7 @@ class Deposit extends $pb.GeneratedMessage {
   factory Deposit({
     $fixnum.Int64? proposalId,
     $core.String? depositor,
-    $core.Iterable<$2.Coin>? amount,
+    $core.Iterable<$2.CosmosCoin>? amount,
   }) {
     final _result = create();
     if (proposalId != null) {
@@ -207,7 +207,7 @@ class Deposit extends $pb.GeneratedMessage {
   void clearDepositor() => clearField(2);
 
   @$pb.TagNumber(3)
-  $core.List<$2.Coin> get amount => $_getList(2);
+  $core.List<$2.CosmosCoin> get amount => $_getList(2);
 }
 
 class Proposal extends $pb.GeneratedMessage {
@@ -218,7 +218,7 @@ class Proposal extends $pb.GeneratedMessage {
     ..aOM<TallyResult>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'finalTallyResult', subBuilder: TallyResult.create)
     ..aOM<$4.Timestamp>(5, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'submitTime', subBuilder: $4.Timestamp.create)
     ..aOM<$4.Timestamp>(6, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'depositEndTime', subBuilder: $4.Timestamp.create)
-    ..pc<$2.Coin>(7, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'totalDeposit', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(7, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'totalDeposit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOM<$4.Timestamp>(8, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'votingStartTime', subBuilder: $4.Timestamp.create)
     ..aOM<$4.Timestamp>(9, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'votingEndTime', subBuilder: $4.Timestamp.create)
     ..hasRequiredFields = false
@@ -232,7 +232,7 @@ class Proposal extends $pb.GeneratedMessage {
     TallyResult? finalTallyResult,
     $4.Timestamp? submitTime,
     $4.Timestamp? depositEndTime,
-    $core.Iterable<$2.Coin>? totalDeposit,
+    $core.Iterable<$2.CosmosCoin>? totalDeposit,
     $4.Timestamp? votingStartTime,
     $4.Timestamp? votingEndTime,
   }) {
@@ -350,7 +350,7 @@ class Proposal extends $pb.GeneratedMessage {
   $4.Timestamp ensureDepositEndTime() => $_ensure(5);
 
   @$pb.TagNumber(7)
-  $core.List<$2.Coin> get totalDeposit => $_getList(6);
+  $core.List<$2.CosmosCoin> get totalDeposit => $_getList(6);
 
   @$pb.TagNumber(8)
   $4.Timestamp get votingStartTime => $_getN(7);
@@ -555,14 +555,14 @@ class Vote extends $pb.GeneratedMessage {
 
 class DepositParams extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'DepositParams', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.gov.v1beta1'), createEmptyInstance: create)
-    ..pc<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'minDeposit', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'minDeposit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOM<$5.Duration>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'maxDepositPeriod', subBuilder: $5.Duration.create)
     ..hasRequiredFields = false
   ;
 
   DepositParams._() : super();
   factory DepositParams({
-    $core.Iterable<$2.Coin>? minDeposit,
+    $core.Iterable<$2.CosmosCoin>? minDeposit,
     $5.Duration? maxDepositPeriod,
   }) {
     final _result = create();
@@ -596,7 +596,7 @@ class DepositParams extends $pb.GeneratedMessage {
   static DepositParams? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$2.Coin> get minDeposit => $_getList(0);
+  $core.List<$2.CosmosCoin> get minDeposit => $_getList(0);
 
   @$pb.TagNumber(2)
   $5.Duration get maxDepositPeriod => $_getN(1);

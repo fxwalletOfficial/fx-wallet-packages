@@ -7,13 +7,13 @@ import '../../base/v1beta1/coin.pb.dart' as $1;
 
 class GenesisState extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.crisis.v1beta1'), createEmptyInstance: create)
-    ..aOM<$1.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'constantFee', subBuilder: $1.Coin.create)
+    ..aOM<$1.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'constantFee', subBuilder: $1.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   GenesisState._() : super();
   factory GenesisState({
-    $1.Coin? constantFee,
+    $1.CosmosCoin? constantFee,
   }) {
     final _result = create();
     if (constantFee != null) {
@@ -43,14 +43,14 @@ class GenesisState extends $pb.GeneratedMessage {
   static GenesisState? _defaultInstance;
 
   @$pb.TagNumber(3)
-  $1.Coin get constantFee => $_getN(0);
+  $1.CosmosCoin get constantFee => $_getN(0);
   @$pb.TagNumber(3)
-  set constantFee($1.Coin v) { setField(3, v); }
+  set constantFee($1.CosmosCoin v) { setField(3, v); }
   @$pb.TagNumber(3)
   $core.bool hasConstantFee() => $_has(0);
   @$pb.TagNumber(3)
   void clearConstantFee() => clearField(3);
   @$pb.TagNumber(3)
-  $1.Coin ensureConstantFee() => $_ensure(0);
+  $1.CosmosCoin ensureConstantFee() => $_ensure(0);
 }
 

@@ -10,7 +10,7 @@ class GenesisState extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'GenesisState', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOM<$3.Params>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'params', subBuilder: $3.Params.create)
     ..pc<Balance>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'balances', $pb.PbFieldType.PM, subBuilder: Balance.create)
-    ..pc<$2.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'supply', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'supply', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..pc<$3.Metadata>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'denomMetadata', $pb.PbFieldType.PM, subBuilder: $3.Metadata.create)
     ..hasRequiredFields = false
   ;
@@ -19,7 +19,7 @@ class GenesisState extends $pb.GeneratedMessage {
   factory GenesisState({
     $3.Params? params,
     $core.Iterable<Balance>? balances,
-    $core.Iterable<$2.Coin>? supply,
+    $core.Iterable<$2.CosmosCoin>? supply,
     $core.Iterable<$3.Metadata>? denomMetadata,
   }) {
     final _result = create();
@@ -73,7 +73,7 @@ class GenesisState extends $pb.GeneratedMessage {
   $core.List<Balance> get balances => $_getList(1);
 
   @$pb.TagNumber(3)
-  $core.List<$2.Coin> get supply => $_getList(2);
+  $core.List<$2.CosmosCoin> get supply => $_getList(2);
 
   @$pb.TagNumber(4)
   $core.List<$3.Metadata> get denomMetadata => $_getList(3);
@@ -82,14 +82,14 @@ class GenesisState extends $pb.GeneratedMessage {
 class Balance extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Balance', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
-    ..pc<$2.Coin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'coins', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'coins', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   Balance._() : super();
   factory Balance({
     $core.String? address,
-    $core.Iterable<$2.Coin>? coins,
+    $core.Iterable<$2.CosmosCoin>? coins,
   }) {
     final _result = create();
     if (address != null) {
@@ -131,6 +131,6 @@ class Balance extends $pb.GeneratedMessage {
   void clearAddress() => clearField(1);
 
   @$pb.TagNumber(2)
-  $core.List<$2.Coin> get coins => $_getList(1);
+  $core.List<$2.CosmosCoin> get coins => $_getList(1);
 }
 

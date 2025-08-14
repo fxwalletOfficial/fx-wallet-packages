@@ -1,7 +1,7 @@
 import '../cosmos_dart.dart';
 
 /// Contains the data of a specific coin amount.
-extension CoinExt on Coin {
+extension CoinExt on CosmosCoin {
   bool get isPositive {
     if (amount.isEmpty == true) return false;
     return double.parse(amount) > 0;
@@ -27,7 +27,7 @@ extension CoinExt on Coin {
 }
 
 /// Useful method on list of coins.
-extension CoinsExt on List<Coin> {
+extension CoinsExt on List<CosmosCoin> {
   bool get isValid {
     return isNotEmpty && !any((element) => !element.isValid);
   }

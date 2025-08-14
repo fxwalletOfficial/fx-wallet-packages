@@ -654,7 +654,7 @@ class ModeInfo extends $pb.GeneratedMessage {
 
 class Fee extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Fee', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.tx.v1beta1'), createEmptyInstance: create)
-    ..pc<$4.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $4.Coin.create)
+    ..pc<$4.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $4.CosmosCoin.create)
     ..a<$fixnum.Int64>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'gasLimit', $pb.PbFieldType.OU6, defaultOrMaker: $fixnum.Int64.ZERO)
     ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'payer')
     ..aOS(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'granter')
@@ -663,7 +663,7 @@ class Fee extends $pb.GeneratedMessage {
 
   Fee._() : super();
   factory Fee({
-    $core.Iterable<$4.Coin>? amount,
+    $core.Iterable<$4.CosmosCoin>? amount,
     $fixnum.Int64? gasLimit,
     $core.String? payer,
     $core.String? granter,
@@ -705,7 +705,7 @@ class Fee extends $pb.GeneratedMessage {
   static Fee? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$4.Coin> get amount => $_getList(0);
+  $core.List<$4.CosmosCoin> get amount => $_getList(0);
 
   @$pb.TagNumber(2)
   $fixnum.Int64 get gasLimit => $_getI64(1);

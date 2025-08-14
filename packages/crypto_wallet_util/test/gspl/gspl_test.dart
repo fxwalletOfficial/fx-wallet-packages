@@ -185,8 +185,8 @@ void main() async {
 
   group('GSPL Updated Data Structure Tests', () {
     test('should return payments array instead of single paymentAddress', () async {
-      final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
-      final wallet = await DogeCoin.fromMnemonic(mnemonic);
+      // final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
+      // final wallet = await DogeCoin.fromMnemonic(mnemonic);
       
       final txData = GsplTxData(
         inputs: [
@@ -229,8 +229,8 @@ void main() async {
     });
 
     test('should filter out change output from payments array', () async {
-      final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
-      final wallet = await DogeCoin.fromMnemonic(mnemonic);
+      // final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
+      // final wallet = await DogeCoin.fromMnemonic(mnemonic);
       
       final txData = GsplTxData(
         inputs: [

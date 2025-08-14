@@ -10,14 +10,14 @@ import '../../base/v1beta1/coin.pb.dart' as $2;
 
 class BasicAllowance extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'BasicAllowance', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
-    ..pc<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'spendLimit', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'spendLimit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOM<$3.Timestamp>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'expiration', subBuilder: $3.Timestamp.create)
     ..hasRequiredFields = false
   ;
 
   BasicAllowance._() : super();
   factory BasicAllowance({
-    $core.Iterable<$2.Coin>? spendLimit,
+    $core.Iterable<$2.CosmosCoin>? spendLimit,
     $3.Timestamp? expiration,
   }) {
     final _result = create();
@@ -51,7 +51,7 @@ class BasicAllowance extends $pb.GeneratedMessage {
   static BasicAllowance? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$2.Coin> get spendLimit => $_getList(0);
+  $core.List<$2.CosmosCoin> get spendLimit => $_getList(0);
 
   @$pb.TagNumber(2)
   $3.Timestamp get expiration => $_getN(1);
@@ -69,8 +69,8 @@ class PeriodicAllowance extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'PeriodicAllowance', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.feegrant.v1beta1'), createEmptyInstance: create)
     ..aOM<BasicAllowance>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'basic', subBuilder: BasicAllowance.create)
     ..aOM<$4.Duration>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'period', subBuilder: $4.Duration.create)
-    ..pc<$2.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'periodSpendLimit', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
-    ..pc<$2.Coin>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'periodCanSpend', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'periodSpendLimit', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
+    ..pc<$2.CosmosCoin>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'periodCanSpend', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aOM<$3.Timestamp>(5, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'periodReset', subBuilder: $3.Timestamp.create)
     ..hasRequiredFields = false
   ;
@@ -79,8 +79,8 @@ class PeriodicAllowance extends $pb.GeneratedMessage {
   factory PeriodicAllowance({
     BasicAllowance? basic,
     $4.Duration? period,
-    $core.Iterable<$2.Coin>? periodSpendLimit,
-    $core.Iterable<$2.Coin>? periodCanSpend,
+    $core.Iterable<$2.CosmosCoin>? periodSpendLimit,
+    $core.Iterable<$2.CosmosCoin>? periodCanSpend,
     $3.Timestamp? periodReset,
   }) {
     final _result = create();
@@ -145,10 +145,10 @@ class PeriodicAllowance extends $pb.GeneratedMessage {
   $4.Duration ensurePeriod() => $_ensure(1);
 
   @$pb.TagNumber(3)
-  $core.List<$2.Coin> get periodSpendLimit => $_getList(2);
+  $core.List<$2.CosmosCoin> get periodSpendLimit => $_getList(2);
 
   @$pb.TagNumber(4)
-  $core.List<$2.Coin> get periodCanSpend => $_getList(3);
+  $core.List<$2.CosmosCoin> get periodCanSpend => $_getList(3);
 
   @$pb.TagNumber(5)
   $3.Timestamp get periodReset => $_getN(4);

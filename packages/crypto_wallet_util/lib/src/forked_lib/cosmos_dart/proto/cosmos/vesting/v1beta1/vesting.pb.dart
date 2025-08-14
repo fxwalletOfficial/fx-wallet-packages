@@ -16,9 +16,9 @@ import '../../base/v1beta1/coin.pb.dart' as $2;
 class BaseVestingAccount extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'BaseVestingAccount', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.vesting.v1beta1'), createEmptyInstance: create)
     ..aOM<$1.BaseAccount>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'baseAccount', subBuilder: $1.BaseAccount.create)
-    ..pc<$2.Coin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'originalVesting', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
-    ..pc<$2.Coin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatedFree', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
-    ..pc<$2.Coin>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatedVesting', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'originalVesting', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
+    ..pc<$2.CosmosCoin>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatedFree', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
+    ..pc<$2.CosmosCoin>(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'delegatedVesting', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..aInt64(5, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'endTime')
     ..hasRequiredFields = false
   ;
@@ -26,9 +26,9 @@ class BaseVestingAccount extends $pb.GeneratedMessage {
   BaseVestingAccount._() : super();
   factory BaseVestingAccount({
     $1.BaseAccount? baseAccount,
-    $core.Iterable<$2.Coin>? originalVesting,
-    $core.Iterable<$2.Coin>? delegatedFree,
-    $core.Iterable<$2.Coin>? delegatedVesting,
+    $core.Iterable<$2.CosmosCoin>? originalVesting,
+    $core.Iterable<$2.CosmosCoin>? delegatedFree,
+    $core.Iterable<$2.CosmosCoin>? delegatedVesting,
     $fixnum.Int64? endTime,
   }) {
     final _result = create();
@@ -82,13 +82,13 @@ class BaseVestingAccount extends $pb.GeneratedMessage {
   $1.BaseAccount ensureBaseAccount() => $_ensure(0);
 
   @$pb.TagNumber(2)
-  $core.List<$2.Coin> get originalVesting => $_getList(1);
+  $core.List<$2.CosmosCoin> get originalVesting => $_getList(1);
 
   @$pb.TagNumber(3)
-  $core.List<$2.Coin> get delegatedFree => $_getList(2);
+  $core.List<$2.CosmosCoin> get delegatedFree => $_getList(2);
 
   @$pb.TagNumber(4)
-  $core.List<$2.Coin> get delegatedVesting => $_getList(3);
+  $core.List<$2.CosmosCoin> get delegatedVesting => $_getList(3);
 
   @$pb.TagNumber(5)
   $fixnum.Int64 get endTime => $_getI64(4);
@@ -215,14 +215,14 @@ class DelayedVestingAccount extends $pb.GeneratedMessage {
 class Period extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Period', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.vesting.v1beta1'), createEmptyInstance: create)
     ..aInt64(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'length')
-    ..pc<$2.Coin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'amount', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   Period._() : super();
   factory Period({
     $fixnum.Int64? length,
-    $core.Iterable<$2.Coin>? amount,
+    $core.Iterable<$2.CosmosCoin>? amount,
   }) {
     final _result = create();
     if (length != null) {
@@ -264,7 +264,7 @@ class Period extends $pb.GeneratedMessage {
   void clearLength() => clearField(1);
 
   @$pb.TagNumber(2)
-  $core.List<$2.Coin> get amount => $_getList(1);
+  $core.List<$2.CosmosCoin> get amount => $_getList(1);
 }
 
 class PeriodicVestingAccount extends $pb.GeneratedMessage {

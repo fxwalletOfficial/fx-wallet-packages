@@ -124,14 +124,14 @@ class SendEnabled extends $pb.GeneratedMessage {
 class Input extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Input', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
-    ..pc<$2.Coin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'coins', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'coins', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   Input._() : super();
   factory Input({
     $core.String? address,
-    $core.Iterable<$2.Coin>? coins,
+    $core.Iterable<$2.CosmosCoin>? coins,
   }) {
     final _result = create();
     if (address != null) {
@@ -173,20 +173,20 @@ class Input extends $pb.GeneratedMessage {
   void clearAddress() => clearField(1);
 
   @$pb.TagNumber(2)
-  $core.List<$2.Coin> get coins => $_getList(1);
+  $core.List<$2.CosmosCoin> get coins => $_getList(1);
 }
 
 class Output extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Output', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
     ..aOS(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'address')
-    ..pc<$2.Coin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'coins', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'coins', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   Output._() : super();
   factory Output({
     $core.String? address,
-    $core.Iterable<$2.Coin>? coins,
+    $core.Iterable<$2.CosmosCoin>? coins,
   }) {
     final _result = create();
     if (address != null) {
@@ -228,18 +228,18 @@ class Output extends $pb.GeneratedMessage {
   void clearAddress() => clearField(1);
 
   @$pb.TagNumber(2)
-  $core.List<$2.Coin> get coins => $_getList(1);
+  $core.List<$2.CosmosCoin> get coins => $_getList(1);
 }
 
 class Supply extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'Supply', package: const $pb.PackageName(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'cosmos.bank.v1beta1'), createEmptyInstance: create)
-    ..pc<$2.Coin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'total', $pb.PbFieldType.PM, subBuilder: $2.Coin.create)
+    ..pc<$2.CosmosCoin>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'total', $pb.PbFieldType.PM, subBuilder: $2.CosmosCoin.create)
     ..hasRequiredFields = false
   ;
 
   Supply._() : super();
   factory Supply({
-    $core.Iterable<$2.Coin>? total,
+    $core.Iterable<$2.CosmosCoin>? total,
   }) {
     final _result = create();
     if (total != null) {
@@ -269,7 +269,7 @@ class Supply extends $pb.GeneratedMessage {
   static Supply? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.List<$2.Coin> get total => $_getList(0);
+  $core.List<$2.CosmosCoin> get total => $_getList(0);
 }
 
 class DenomUnit extends $pb.GeneratedMessage {
