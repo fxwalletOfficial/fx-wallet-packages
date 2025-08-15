@@ -521,4 +521,81 @@ void main() {
 			expect(identical(SearchTxsResult.getDefault(), SearchTxsResult.getDefault()), isTrue);
 		});
 	});
+
+	group('cosmos.base.abci.v1beta1 edge cases & identities', () {
+		test('TxResponse createEmptyInstance defaults and getDefault identity', () {
+			final empty = TxResponse().createEmptyInstance();
+			expect(empty.height.toInt(), 0);
+			expect(empty.logs, isEmpty);
+			expect(identical(TxResponse.getDefault(), TxResponse.getDefault()), isTrue);
+		});
+
+			test('TxResponse zero code and empty strings has/clear; setting negative throws', () {
+				final tx = TxResponse()
+					..codespace = ''
+					..code = 0
+					..data = ''
+					..rawLog = ''
+					..info = ''
+					..timestamp = '';
+				// presence bits should reflect set/clear operations regardless of content
+				expect(tx.hasCodespace(), isTrue);
+				tx.clearCodespace();
+				expect(tx.hasCodespace(), isFalse);
+				expect(tx.hasCode(), isTrue);
+				expect(() => tx.code = -1, throwsA(isA<ArgumentError>()));
+				tx.clearCode();
+				expect(tx.hasCode(), isFalse);
+				expect(tx.hasData(), isTrue);
+				tx.clearData();
+				expect(tx.hasData(), isFalse);
+				expect(tx.hasRawLog(), isTrue);
+				tx.clearRawLog();
+				expect(tx.hasRawLog(), isFalse);
+				expect(tx.hasInfo(), isTrue);
+				tx.clearInfo();
+				expect(tx.hasInfo(), isFalse);
+				expect(tx.hasTimestamp(), isTrue);
+				tx.clearTimestamp();
+				expect(tx.hasTimestamp(), isFalse);
+			});
+
+		test('ABCIMessageLog copyWith modifies nested event type; clone unaffected', () {
+			final log = ABCIMessageLog(events: [StringEvent(type: 'old')]);
+			final cloned = log.clone();
+			final modified = log.copyWith((l) => l.events.first.type = 'new');
+			expect(modified.events.first.type, 'new');
+			expect(cloned.events.first.type, 'old');
+		});
+
+		test('Result events list add multiple and clear', () {
+			final r = Result(log: 'x');
+			r.events.addAll([tend.Event(type: 'e1'), tend.Event(type: 'e2')]);
+			expect(r.events.length, 2);
+			r.events.clear();
+			expect(r.events, isEmpty);
+		});
+
+		test('TxMsgData createEmptyInstance and list ops', () {
+			final t = TxMsgData().createEmptyInstance();
+			expect(t.data, isEmpty);
+			t.data.add(MsgData(msgType: 'm'));
+			expect(t.data.length, 1);
+			t.data.removeAt(0);
+			expect(t.data, isEmpty);
+		});
+
+		test('SimulationResponse copyWith deep mutation leaves original unchanged', () {
+			final sr = SimulationResponse(gasInfo: GasInfo(gasWanted: Int64(1)));
+			final sr2 = sr.copyWith((s) => s.gasInfo = GasInfo(gasWanted: Int64(9)));
+			expect(sr.gasInfo.gasWanted.toInt(), 1);
+			expect(sr2.gasInfo.gasWanted.toInt(), 9);
+		});
+
+		test('SearchTxsResult txs removeAt and bounds remain valid', () {
+			final s = SearchTxsResult(txs: [TxResponse(txhash: 'a'), TxResponse(txhash: 'b')]);
+			s.txs.removeAt(0);
+			expect(s.txs.first.txhash, 'b');
+		});
+	});
 } 
