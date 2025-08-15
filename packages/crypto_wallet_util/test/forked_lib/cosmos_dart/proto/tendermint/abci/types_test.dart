@@ -28,7 +28,7 @@ void main() {
 			expect(Response.createRepeated(), isA<pb.PbList<Response>>());
 		});
 
-				test('Event and EventAttribute list ops', () {
+					test('Event and EventAttribute list ops', () {
 			final e = Event(type: 't', attributes: [EventAttribute(key: [0x6b], value: [0x76], index: true)]);
 			expect(e.attributes.first.index, isTrue);
 			final bz = e.writeToBuffer();
@@ -37,7 +37,7 @@ void main() {
 			expect(copied.attributes.length, 2);
 		});
 
-				test('ResponseInfo/RequestInfo minimal fields', () {
+					test('ResponseInfo/RequestInfo minimal fields', () {
 			final ri = ResponseInfo(data: 'd', version: 'v', appVersion: Int64(1));
 			final bz = ri.writeToBuffer();
 			expect(ResponseInfo.fromBuffer(bz).appVersion.toInt(), 1);
