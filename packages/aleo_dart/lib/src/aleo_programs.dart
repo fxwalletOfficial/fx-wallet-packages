@@ -76,6 +76,19 @@ class AleoProgram {
     return result.toDartString();
   }
 
+  Future<String> upgradeAuthorization(
+    String private_key_raw,
+    String record_raw,
+    String url_raw,
+  ) async {
+    final private_key = dartStrToC(private_key_raw);
+    final record = dartStrToC(record_raw);
+    final url = dartStrToC(url_raw);
+    final result =
+        await programsRustFFI.upgradeAuthorization(private_key, record, url);
+    return result.toDartString();
+  }
+
   Future<String> buildTransaction(
     String private_key_raw,
     String recipient_raw,

@@ -42,6 +42,18 @@ class AleoRecord {
     return processRecord(result.toDartString());
   }
 
+  String decryptCipherTextRaw(String record, String viewKey) {
+    AleoUtils.checkRecord(record);
+    AleoUtils.checkViewKey(viewKey);
+    final flag = isOwner(record, viewKey);
+    if (!flag) {
+      throw Exception('Record is not owned by the view key');
+    }
+    final result = recordRustFFI.decryptCipherText(
+        dartStrToC(record), dartStrToC(viewKey));
+    return result.toDartString();
+  }
+
   bool isOwner(String record, String viewKey) {
     AleoUtils.checkRecord(record);
     AleoUtils.checkViewKey(viewKey);
@@ -109,7 +121,8 @@ class AleoRecord {
     return RecordPlainText(
         owner: map['owner'],
         microcredits: map['microcredits'],
-        nonce: map['_nonce']);
+        nonce: map['_nonce'],
+        version: map['_version']);
   }
 }
 
@@ -132,15 +145,20 @@ class RecordPlainText {
   String owner;
   String microcredits;
   String nonce;
+  String version;
 
   RecordPlainText(
-      {required this.owner, required this.microcredits, required this.nonce});
+      {required this.owner,
+      required this.microcredits,
+      required this.nonce,
+      required this.version});
 
   factory RecordPlainText.fromJson(Map<String, dynamic> json) =>
       RecordPlainText(
           owner: json['owner'],
           microcredits: json['microcredits'],
-          nonce: json['_nonce']);
+          nonce: json['_nonce'],
+          version: json['_version']);
 
   String getMicrocredits() {
     final credits = this.microcredits.split('.');
@@ -155,9 +173,14 @@ class RecordPlainText {
     return this.nonce.split('.')[0];
   }
 
+  String getVersion() {
+    return this.version.split('.')[0];
+  }
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'owner': owner,
         'microcredits': microcredits,
-        '_nonce': nonce
+        '_nonce': nonce,
+        '_version': version
       };
 }

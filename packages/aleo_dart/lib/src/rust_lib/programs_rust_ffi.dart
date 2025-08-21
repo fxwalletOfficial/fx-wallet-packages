@@ -56,6 +56,9 @@ typedef TypeExecuteProof = ffi.Pointer<Utf8> Function(
 typedef TypeExecuteProgramProof = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
+typedef TypeUpgradeAuthorization = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
 typedef TypeJoinInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
@@ -190,6 +193,17 @@ class ProgramsRustFFI {
     return rustFunction(private_key, record_1, record_2, url, this.network);
   }
 
+  Future<ffi.Pointer<Utf8>> upgradeAuthorization(
+    ffi.Pointer<Utf8> private_key,
+    ffi.Pointer<Utf8> record,
+    ffi.Pointer<Utf8> url,
+  ) async {
+    final rustFunction = dyLib.lookupFunction<TypeUpgradeAuthorization,
+        TypeUpgradeAuthorization>('upgrade_authorization');
+
+    return rustFunction(private_key, record, url, this.network);
+  }
+
   Future<ffi.Pointer<Utf8>> buildTransaction(
     ffi.Pointer<Utf8> private_key,
     ffi.Pointer<Utf8> recipient,
@@ -266,8 +280,8 @@ class ProgramsRustFFI {
     ffi.Pointer<Utf8> authorization,
     ffi.Pointer<Utf8> program_id,
   ) async {
-    final rustFunction = dyLib
-        .lookupFunction<TypeExecuteProgramProof, TypeExecuteProgramProof>(
+    final rustFunction =
+        dyLib.lookupFunction<TypeExecuteProgramProof, TypeExecuteProgramProof>(
             'execute_program_proof');
 
     return rustFunction(url, authorization, this.network, program_id);

@@ -682,6 +682,18 @@ pub extern "C" fn build_transaction_offline(
 }
 
 #[no_mangle]
+pub extern "C" fn build_upgrade_transaction_offline(execution_raw: *const c_char) -> *const c_char {
+    let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
+    let execution_str: &str = execution_cstr.to_str().unwrap();
+    let execution = Execution::<CurrentNetwork>::from_str(&execution_str.to_string()).unwrap();
+
+    let transaction = Transaction::from_execution(execution, None).unwrap();
+
+    let c_string = CString::new(transaction.to_string()).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
 pub extern "C" fn build_transaction(
     private_key_raw: *const c_char,
     recipient_raw: *const c_char,
@@ -961,6 +973,56 @@ pub extern "C" fn join_authorization(
     let mut authorization = "error".to_string();
     for i in 0..10 {
         let result = program_manager.join_authorization(record1.clone(), record2.clone(), None);
+        if result.is_err() {
+            println!("Transfer error: {} - retrying", result.unwrap_err());
+            if i == 9 {
+                panic!("Transfer failed after 10 attempts");
+            }
+        } else {
+            authorization = result.unwrap();
+            break;
+        }
+    }
+    let c_string = CString::new(authorization).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn upgrade_authorization(
+    private_key_raw: *const c_char,
+    record_raw: *const c_char,
+    url_raw: *const c_char,
+    network_raw: *const c_char,
+) -> *const c_char {
+    // let visibility = TransferType::Private;
+    let network_cstr = unsafe { CStr::from_ptr(network_raw) };
+    let network: &str = network_cstr.to_str().unwrap();
+    let private_key_cstr = unsafe { CStr::from_ptr(private_key_raw) };
+    let private_key: &str = private_key_cstr.to_str().unwrap();
+    let sender = PrivateKey::<CurrentNetwork>::from_str(private_key).unwrap();
+    let url_cstr = unsafe { CStr::from_ptr(url_raw) };
+    let url = url_cstr.to_str().unwrap();
+    let view_key = ViewKey::try_from(&sender).unwrap();
+
+    let record_ciphertext =
+        Record::<CurrentNetwork, Ciphertext<CurrentNetwork>>::from_str(&cstr_to_string(record_raw))
+            .unwrap();
+    let record = record_ciphertext.decrypt(&view_key).unwrap();
+
+    println!("Attempting to upgrade in {network} of type : upgrade");
+    let api_client = AleoAPIClient::<CurrentNetwork>::aleo_net(url, network);
+    let program_manager = ProgramManager::<CurrentNetwork>::new(
+        Some(sender),
+        None,
+        Some(api_client.clone()),
+        None,
+        false,
+    )
+    .unwrap();
+    // let record_finder = RecordFinder::new(api_client);
+    let mut authorization = "error".to_string();
+    for i in 0..10 {
+        let result = program_manager.upgrade_authorization(record.clone(), None);
         if result.is_err() {
             println!("Transfer error: {} - retrying", result.unwrap_err());
             if i == 9 {
