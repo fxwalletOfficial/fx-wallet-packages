@@ -207,6 +207,14 @@ class AleoProgram {
     return result.toDartString();
   }
 
+  Future<String> buildUpgradeTransactionOffline(
+    String execution_raw,
+  ) async {
+    final execution = dartStrToC(execution_raw);
+    final result = await programsRustFFI.buildUpgradeTransactionOffline(execution);
+    return result.toDartString();
+  }
+
   Future<int> getBaseFee(
     String url_raw,
     String execution_raw,

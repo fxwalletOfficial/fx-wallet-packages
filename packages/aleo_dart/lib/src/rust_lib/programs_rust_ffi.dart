@@ -47,6 +47,9 @@ typedef TypeAuthorizationInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
+typedef TypeUpgradeTransactionOffline = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
 typedef TypeProof = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
@@ -304,6 +307,14 @@ class ProgramsRustFFI {
     final rustFunction =
         dyLib.lookupFunction<TypeProof, TypeProof>('build_transaction_offline');
     return rustFunction(execution, fee, this.network);
+  }
+
+  Future<ffi.Pointer<Utf8>> buildUpgradeTransactionOffline(
+    ffi.Pointer<Utf8> execution,
+  ) async {
+    final rustFunction = dyLib.lookupFunction<TypeUpgradeTransactionOffline,
+        TypeUpgradeTransactionOffline>('build_upgrade_transaction_offline');
+    return rustFunction(execution, this.network);
   }
 
   Future<int> getBaseFee(
