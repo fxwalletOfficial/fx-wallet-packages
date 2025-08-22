@@ -84,3 +84,21 @@ final tx = rust.tryTransfer(private_key, recipient, transfer_type, amount_credit
 
 
 
+# build 
+
+
+export OPENSSL_INCLUDE_DIR=/home/zhun/openssl-3.1.5/android/arm64/include
+export OPENSSL_LIB_DIR=/home/zhun/openssl-3.1.5/android/arm64/lib
+
+cargo ndk --target aarch64-linux-android build --release
+
+
+export OPENSSL_INCLUDE_DIR=/home/zhun/openssl-3.1.5/android/x86_64/include
+export OPENSSL_LIB_DIR=/home/zhun/openssl-3.1.5/android/x86_64/lib
+
+cargo ndk --target x86_64-linux-android build --release
+
+export OPENSSL_INCLUDE_DIR=/home/zhun/openssl-3.1.5/android/armv7/include
+export OPENSSL_LIB_DIR=/home/zhun/openssl-3.1.5/android/armv7/lib
+
+cargo ndk --target armv7-linux-androideabi build --release
