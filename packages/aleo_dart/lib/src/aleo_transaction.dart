@@ -8,6 +8,7 @@ class TransferMethod {
   static const String join = 'join';
   static const String split = 'split';
   static const String contract = 'contract';
+  static const String upgrade = 'upgrade';
 }
 
 class ContractMethod {
@@ -122,11 +123,11 @@ class AleoTransaction {
     final type = json['type'];
     final transactionId = json['id'];
     final transition = json['execution']['transitions'][0];
-    final feeTx = json['fee']['transition'];
-    final feeType = feeTx['function'];
+    final feeTx = json['fee'] != null ? json['fee']['transition'] : null;
+    final feeType = feeTx != null ? feeTx['function'] : '';
     final List<String> transitionIds = [
       transition['id'].toString(),
-      feeTx['id'].toString()
+      feeTx != null ? feeTx['id'].toString() : ''
     ];
     String program = transition['program'];
     String transitionType = transition['function'];
@@ -162,6 +163,9 @@ class AleoTransaction {
       case TransferMethod.public_to_private:
         inputAddress = txOutput[0];
         value = getValue(txOutput[1]); // output is private, can not get.
+        break;
+      case TransferMethod.upgrade:
+        value = getValue(txOutput[0]);
         break;
       default:
         final tokenTransferData = parseTokenTransfer(
@@ -237,9 +241,9 @@ class AleoTransaction {
   }
 
   static FeeDetail getFee(feeTx) {
-    final function = feeTx['function'];
-    final inputs = feeTx['inputs'];
-    final outputs = feeTx['outputs'];
+    final function = feeTx != null ? feeTx['function'] : '';
+    final inputs = feeTx != null ? feeTx['inputs'] : [];
+    final outputs = feeTx != null ? feeTx['outputs'] : [];
 
     String baseFee = '0';
     String priorityFee = '0';
