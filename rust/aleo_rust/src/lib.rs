@@ -103,7 +103,7 @@ pub use snarkvm_types::*;
 
 use anyhow::{anyhow, bail, ensure, Error, Result};
 use indexmap::IndexMap;
-use once_cell::sync::OnceCell;
+use std::sync::OnceLock;
 #[cfg(feature = "full")]
 use std::{convert::TryInto, fs::File, io::Read, ops::Range, path::PathBuf};
 use std::{iter::FromIterator, marker::PhantomData, str::FromStr};
@@ -845,9 +845,10 @@ pub extern "C" fn serial_number_string(
     let record_name: &str = record_name_cstr.to_str().unwrap();
     let parsed_program_id = ProgramID::<CurrentNetwork>::from_str(program_id).unwrap();
     let record_identifier = Identifier::<CurrentNetwork>::from_str(record_name).unwrap();
-    let record_view_key = (*view_key * record_plaintext.nonce()).to_x_coordinate();
+    let view_key_str = view_key.to_string();
+    let view_key_field = Field::<CurrentNetwork>::new_domain_separator(&view_key_str);
     let commitment = record_plaintext
-        .to_commitment(&parsed_program_id, &record_identifier, &record_view_key)
+        .to_commitment(&parsed_program_id, &record_identifier, &view_key_field)
         .unwrap();
     let serial_number =
         Record::<CurrentNetwork, Plaintext<CurrentNetwork>>::serial_number(private_key, commitment)
@@ -1258,7 +1259,7 @@ pub extern "C" fn get_token_owner_hash(
                     Plaintext::<CurrentNetwork>::from(Literal::Field(token_id)),
                 ),
             ]),
-            OnceCell::new(),
+            OnceLock::new(),
         );
 
         // 使用BHP256哈希函数 - 这是正确的Leo兼容实现

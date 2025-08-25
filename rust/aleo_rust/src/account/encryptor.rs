@@ -51,7 +51,7 @@ impl<N: Network> Encryptor<N> {
                 (Identifier::from_str("key")?, Plaintext::<N>::from(Literal::Field(key))),
                 (Identifier::from_str("nonce")?, Plaintext::<N>::from(Literal::Field(nonce))),
             ]),
-            OnceCell::new(),
+            OnceLock::new(),
         );
         plaintext.encrypt_symmetric(secret)
     }
