@@ -16,13 +16,13 @@ class EthMessageSigner {
   static String signMessage(String message, Uint8List privateKey) {
     final hashed = ethereumMessageHash(message);
     final signature = EcdaSignature.sign(dynamicToString(hashed), privateKey);
-    return signature.getSignatureWithRecId();
+    return '0x${signature.getSignatureWithRecId()}';
   }
 
   /// Verify signature: recover signer address from message and signature
   static bool verifyMessage(String message, String signature, Uint8List publicKey) {
-    if (signature.length != 130) { // 0x + 64*2 (r+s+v)
-      throw ArgumentError('Signature must be 130 characters (0x + r + s + v)');
+    if (signature.length != 132) { // 0x + 130 (r+s+v as hex)
+      throw ArgumentError('Signature must be 132 characters (0x + r + s + v)');
     }
 
     final hashed = ethereumMessageHash(message);
