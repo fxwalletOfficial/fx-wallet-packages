@@ -11,4 +11,5 @@ export '../src/wallet.dart';
 export '../src/type/type.dart';
 export '../transaction.dart';
 export '../src/utils/address.dart';
+export '../src/utils/message.dart';
 export '../src/config/config.dart';
