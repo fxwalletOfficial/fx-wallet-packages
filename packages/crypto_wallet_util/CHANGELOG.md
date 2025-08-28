@@ -192,3 +192,8 @@
 ## Update
 
 - Update cosmos_dart export.
+
+## [1.1.13] - 2025-08-28
+## Update
+
+- add ethereum message sign.
