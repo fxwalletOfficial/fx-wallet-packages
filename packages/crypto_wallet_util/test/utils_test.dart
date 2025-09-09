@@ -151,10 +151,10 @@ void main() {
     test('ethereumMessageHash should generate correct hash', () {
       const message = 'Hello, Ethereum!';
       final hash = EthMessageSigner.ethereumMessageHash(message);
-      
+
       expect(hash, isA<Uint8List>());
       expect(hash.length, 32); // Keccak-256 produces 32-byte hash
-      
+
       // Verify hash is not empty
       expect(hash.any((byte) => byte != 0), isTrue);
     });
@@ -163,14 +163,14 @@ void main() {
       const message = 'Test message';
       final hash1 = EthMessageSigner.ethereumMessageHash(message);
       final hash2 = EthMessageSigner.ethereumMessageHash(message);
-      
+
       expect(hash1, equals(hash2));
     });
 
     test('ethereumMessageHash should handle empty message', () {
       const message = '';
       final hash = EthMessageSigner.ethereumMessageHash(message);
-      
+
       expect(hash, isA<Uint8List>());
       expect(hash.length, 32);
     });
@@ -178,7 +178,7 @@ void main() {
     test('ethereumMessageHash should handle unicode characters', () {
       const message = 'Hello 世界! 🚀';
       final hash = EthMessageSigner.ethereumMessageHash(message);
-      
+
       expect(hash, isA<Uint8List>());
       expect(hash.length, 32);
     });
@@ -186,11 +186,11 @@ void main() {
     test('signMessage should generate valid signature', () {
       const message = 'Test message for signing';
       final signature = EthMessageSigner.signMessage(message, testPrivateKey);
-      
+
       expect(signature, isA<String>());
       expect(signature.length, 132); // 0x + 130 hex chars (r+s+v)
       expect(signature.startsWith('0x'), isTrue); // Has 0x prefix
-      
+
       // Verify signature format (hexadecimal with 0x prefix)
       final hexPattern = RegExp(r'^0x[0-9a-fA-F]{130}$');
       expect(hexPattern.hasMatch(signature), isTrue);
@@ -200,7 +200,7 @@ void main() {
       const message = 'Deterministic test';
       final signature1 = EthMessageSigner.signMessage(message, testPrivateKey);
       final signature2 = EthMessageSigner.signMessage(message, testPrivateKey);
-      
+
       expect(signature1, equals(signature2));
     });
 
@@ -209,28 +209,28 @@ void main() {
       const message2 = 'Message 2';
       final signature1 = EthMessageSigner.signMessage(message1, testPrivateKey);
       final signature2 = EthMessageSigner.signMessage(message2, testPrivateKey);
-      
+
       expect(signature1, isNot(equals(signature2)));
     });
 
     test('verifyMessage should verify valid signature', () {
       const message = 'Message to verify';
       final signature = EthMessageSigner.signMessage(message, testPrivateKey);
-      
+
       // Get public key from private key - use getUnCompressedPublicKey for correct format
       final publicKey = EcdaSignature.getUnCompressedPublicKey(testPrivateKey);
-      
+
       final isValid = EthMessageSigner.verifyMessage(message, signature, publicKey);
       expect(isValid, isTrue);
     });
 
     test('verifyMessage should reject invalid signature', () {
       const message = 'Message to verify';
-      final invalidSignature = '0x' + '1' * 130; // Invalid signature (0x + 130 hex chars)
-      
+      final invalidSignature = '0x${'1' * 130}'; // Invalid signature (0x + 130 hex chars)
+
       // Get public key from private key - use getUnCompressedPublicKey for correct format
       final publicKey = EcdaSignature.getUnCompressedPublicKey(testPrivateKey);
-      
+
       final isValid = EthMessageSigner.verifyMessage(message, invalidSignature, publicKey);
       expect(isValid, isFalse);
     });
@@ -239,10 +239,10 @@ void main() {
       const message1 = 'Original message';
       const message2 = 'Different message';
       final signature = EthMessageSigner.signMessage(message1, testPrivateKey);
-      
+
       // Get public key from private key - use getUnCompressedPublicKey for correct format
       final publicKey = EcdaSignature.getUnCompressedPublicKey(testPrivateKey);
-      
+
       final isValid = EthMessageSigner.verifyMessage(message2, signature, publicKey);
       expect(isValid, isFalse);
     });
@@ -250,10 +250,10 @@ void main() {
     test('verifyMessage should throw error for invalid signature length', () {
       const message = 'Test message';
       const invalidSignature = '0x123'; // Too short (should be 0x + 130 hex chars)
-      
+
       // Get public key from private key - use getUnCompressedPublicKey for correct format
       final publicKey = EcdaSignature.getUnCompressedPublicKey(testPrivateKey);
-      
+
       expect(
         () => EthMessageSigner.verifyMessage(message, invalidSignature, publicKey),
         throwsA(isA<ArgumentError>()),
@@ -263,10 +263,10 @@ void main() {
     test('verifyMessage should throw error for signature without 0x prefix', () {
       const message = 'Test message';
       final invalidSignature = '1' * 130; // Missing 0x prefix (should be 0x + 130 hex chars)
-      
+
       // Get public key from private key - use getUnCompressedPublicKey for correct format
       final publicKey = EcdaSignature.getUnCompressedPublicKey(testPrivateKey);
-      
+
       expect(
         () => EthMessageSigner.verifyMessage(message, invalidSignature, publicKey),
         throwsA(isA<ArgumentError>()),
@@ -275,19 +275,19 @@ void main() {
 
     test('end-to-end message signing and verification', () {
       const message = 'Complete end-to-end test message';
-      
+
       // Sign the message
       final signature = EthMessageSigner.signMessage(message, testPrivateKey);
       expect(signature, isA<String>());
       expect(signature.length, 132); // 0x + 130 hex chars (r+s+v)
-      
+
       // Get public key - use getUnCompressedPublicKey for correct format
       final publicKey = EcdaSignature.getUnCompressedPublicKey(testPrivateKey);
-      
+
       // Verify the signature
       final isValid = EthMessageSigner.verifyMessage(message, signature, publicKey);
       expect(isValid, isTrue);
-      
+
       // Verify with wrong message should fail
       final isValidWrongMessage = EthMessageSigner.verifyMessage('Wrong message', signature, publicKey);
       expect(isValidWrongMessage, isFalse);

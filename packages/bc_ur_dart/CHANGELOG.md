@@ -74,3 +74,7 @@
 ## 0.1.19
 
 - Update: Update crypto_wallet_util pubspec version.
+
+## 0.1.20
+
+- Feature: Support EIP7702 Transaction.
