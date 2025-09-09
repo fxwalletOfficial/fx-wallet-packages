@@ -169,6 +169,8 @@ class EthSignRequestUR extends UR {
   void decodeTransaction() {
     if (data.first == 2) {
       _tx = Eip1559TxData.deserialize(hex.encode(data));
+    } else if (data.first == 4) {
+      _tx = Eip7702TxData.deserialize(hex.encode(data));
     } else {
       _tx = LegacyTxData.deserialize(hex.encode(data), chainId: chainId);
     }

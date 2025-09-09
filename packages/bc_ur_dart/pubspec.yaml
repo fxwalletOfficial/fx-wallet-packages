@@ -11,7 +11,7 @@ dependencies:
   cbor: ^6.3.3
   convert: ^3.1.1
   crypto: ^3.0.3
-  crypto_wallet_util: ^1.1.10
+  crypto_wallet_util: ^1.1.13
   uuid: ^4.4.0
   xrandom: ^0.7.2
 
