@@ -197,3 +197,8 @@
 ## Update
 
 - add ethereum message sign.
+
+## [1.1.14] - 2025-09-11
+## Update
+
+- add authorization in eth data.
