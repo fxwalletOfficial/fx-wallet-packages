@@ -45,7 +45,8 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
+        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
 
         // Retrieve the private key.
         let private_key = self.get_private_key(password)?;
@@ -142,7 +143,8 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
+        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
 
         // Retrieve the private key.
         let private_key = self.get_private_key(password)?;
@@ -376,7 +378,8 @@ impl<N: Network> ProgramManager<N> {
     }
 
     pub fn execute_proof(&self, authorization: Authorization<N>) -> Result<String> {
-        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
+        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
@@ -392,7 +395,8 @@ impl<N: Network> ProgramManager<N> {
         program_id: String,
         api_client: &AleoAPIClient<N>,
     ) -> Result<String> {
-        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
+        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
@@ -425,7 +429,8 @@ impl<N: Network> ProgramManager<N> {
     }
 
     pub fn execute_fee_proof(&self, authorization: Authorization<N>) -> Result<String> {
-        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
+        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
