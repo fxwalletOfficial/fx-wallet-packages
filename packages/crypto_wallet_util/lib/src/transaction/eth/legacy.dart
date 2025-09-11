@@ -105,4 +105,7 @@ class LegacyTxData extends EthTxData {
     return LegacyTxData(
         data: txData, network: TxNetwork(chainId: chainId ?? -1));
   }
+
+  @override
+  Eip7702Authorization get authorization => throw UnimplementedError();
 }
