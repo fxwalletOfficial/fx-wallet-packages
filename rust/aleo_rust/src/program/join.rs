@@ -36,7 +36,8 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        let query = Query::<N, BlockMemory<N>>::from(self.api_client.as_ref().unwrap().base_url());
+        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
 
         // Retrieve the private key.
         let private_key = self.get_private_key(None)?;

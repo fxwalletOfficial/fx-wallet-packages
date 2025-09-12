@@ -40,7 +40,8 @@ impl<N: Network> ProgramManager<N> {
     ) -> Result<OfflineExecution<N>> {
         // Initialize an RNG and query object for the transaction
         let rng = &mut rand::thread_rng();
-        let query = Query::<N, BlockMemory<N>>::from(url);
+        let uri = url.parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
 
         // Check that the function exists in the program
         let function_name = function
@@ -187,7 +188,8 @@ impl<N: Network> ProgramManager<N> {
     ) -> Result<Transaction<N>> {
         // Initialize an RNG and query object for the transaction
         let rng = &mut rand::thread_rng();
-        let query = Query::<N, BlockMemory<N>>::from(node_url);
+        let uri = node_url.parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
 
         // Check that the function exists in the program
         let function_name = function
@@ -272,7 +274,8 @@ impl<N: Network> ProgramManager<N> {
         // Create an ephemeral SnarkVM to store the programs
         // Initialize an RNG and query object for the transaction
         let rng = &mut rand::thread_rng();
-        let query = Query::<N, BlockMemory<N>>::from(url);
+        let uri = url.parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
+        let query = Query::<N, BlockMemory<N>>::from(uri);
         let vm = Self::initialize_vm(self.api_client()?, program, true)?;
 
         // Create an ephemeral private key for the sample execution
