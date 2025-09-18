@@ -97,6 +97,7 @@ pub mod snarkvm_types {
         Process, Program, Trace, VM,
     };
     pub use snarkvm_synthesizer_process::InclusionVersion;
+    pub use snarkvm_console_types_group::Group;
 }
 
 pub use snarkvm_types::*;
@@ -845,10 +846,14 @@ pub extern "C" fn serial_number_string(
     let record_name: &str = record_name_cstr.to_str().unwrap();
     let parsed_program_id = ProgramID::<CurrentNetwork>::from_str(program_id).unwrap();
     let record_identifier = Identifier::<CurrentNetwork>::from_str(record_name).unwrap();
-    let view_key_str = view_key.to_string();
-    let view_key_field = Field::<CurrentNetwork>::new_domain_separator(&view_key_str);
+
+    let record_view_key = (Group::<CurrentNetwork>::from_str(&record_plaintext.nonce().to_string())
+        .unwrap()
+        * *view_key)
+        .to_x_coordinate();
+    println!("record_view_key: {:?}", record_view_key);
     let commitment = record_plaintext
-        .to_commitment(&parsed_program_id, &record_identifier, &view_key_field)
+        .to_commitment(&parsed_program_id, &record_identifier, &record_view_key)
         .unwrap();
     let serial_number =
         Record::<CurrentNetwork, Plaintext<CurrentNetwork>>::serial_number(private_key, commitment)
