@@ -112,4 +112,7 @@ class Eip1559TxData extends EthTxData {
     }
     return Eip1559TxData(data: txData, network: TxNetwork(chainId: chainId));
   }
+
+  @override
+  Eip7702Authorization get authorization => throw UnimplementedError();
 }

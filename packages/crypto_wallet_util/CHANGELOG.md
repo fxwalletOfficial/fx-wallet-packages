@@ -202,9 +202,9 @@
 ### Update
 
 - Support EIP7702 transaction data.
+- add authorization in eth data.
 
 ## [1.1.15] - 2025-09-26
 ### Update
 
 - Add COW swap transaction ABI data parse.
-
