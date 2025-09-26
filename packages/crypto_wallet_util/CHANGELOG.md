@@ -174,26 +174,37 @@
 - Add bch wallet
 
 ## [1.1.9] - 2025-07-28
-## Update
+### Update
 
 - Update gitignore file.
 
 ## [1.1.10] - 2025-08-06
-## Update
+### Update
 
 - fix batch transfer error of psbt and gspl.
 
 ## [1.1.11] - 2025-08-14
-## Update
+### Update
 
 - Update tweetnacl-dart.
 
 ## [1.1.12] - 2025-08-14
-## Update
+### Update
 
 - Update cosmos_dart export.
 
 ## [1.1.13] - 2025-08-28
-## Update
+### Update
 
 - add ethereum message sign.
+
+## [1.1.14] - 2025-09-08
+### Update
+
+- Support EIP7702 transaction data.
+
+## [1.1.15] - 2025-09-26
+### Update
+
+- Add COW swap transaction ABI data parse.
+
