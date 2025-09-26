@@ -6,6 +6,10 @@
 echo "Starting Android cross-compilation..."
 
 # Enter aleo_rust directory
+# OpenSSL base path
+# OPENSSL_BASE_PATH="/home/zhun/openssl-3.1.5/android"
+OPENSSL_BASE_PATH="/home/zhun/jniLibs"
+
 cd aleo_rust
 
 # Create output directories
@@ -18,7 +22,7 @@ echo "Building ARM64 Architecture"
 echo "=========================================="
 
 export OPENSSL_INCLUDE_DIR=/home/zhun/openssl-3.1.5/android/arm64/include
-export OPENSSL_LIB_DIR=/home/zhun/openssl-3.1.5/android/arm64/lib
+export OPENSSL_LIB_DIR=${OPENSSL_BASE_PATH}/arm64/lib
 
 echo "Using OpenSSL:"
 echo "  Include: $OPENSSL_INCLUDE_DIR"
@@ -40,7 +44,7 @@ echo "Building x86_64 Architecture"
 echo "=========================================="
 
 export OPENSSL_INCLUDE_DIR=/home/zhun/openssl-3.1.5/android/x86_64/include
-export OPENSSL_LIB_DIR=/home/zhun/openssl-3.1.5/android/x86_64/lib
+export OPENSSL_LIB_DIR=${OPENSSL_BASE_PATH}/x86_64/lib
 
 echo "Using OpenSSL:"
 echo "  Include: $OPENSSL_INCLUDE_DIR"
@@ -62,7 +66,7 @@ echo "Building ARMv7 Architecture"
 echo "=========================================="
 
 export OPENSSL_INCLUDE_DIR=/home/zhun/openssl-3.1.5/android/armv7/include
-export OPENSSL_LIB_DIR=/home/zhun/openssl-3.1.5/android/armv7/lib
+export OPENSSL_LIB_DIR=${OPENSSL_BASE_PATH}/armv7/lib
 
 echo "Using OpenSSL:"
 echo "  Include: $OPENSSL_INCLUDE_DIR"
