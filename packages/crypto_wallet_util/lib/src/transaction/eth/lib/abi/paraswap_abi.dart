@@ -1,4 +1,4 @@
-[
+const paraSwapAbi = [
   {
     "inputs": [
       { "internalType": "address", "name": "_owner", "type": "address" },
@@ -953,4 +953,4 @@
     "type": "function"
   },
   { "stateMutability": "payable", "type": "receive" }
-]
+];

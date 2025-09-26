@@ -65,6 +65,16 @@ void main() {
       // Verify that the formatted parameter structure matches the expected values
       expect(formattedParams, equals(expectedValues));
     });
+
+    test('should decode cowswap function parameters', () {
+      final expectedFunctionName = 'createOrder';
+      final expectedFunctionSignature = 'createOrder((address,address,uint256,uint256,bytes32,uint256,uint32,bool,int64))';
+
+      final result = EthDataDecoder.cowSwap.decodeParameters('0x322bba21000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000fe41c979893d29dcb36b2bf9fa01d7168f038c4a000000000000000000000000000000000000000000000000000908d853a9f00000000000000000000000000000000000000000000000000000000000006528a857dd2c0a3c123dac2cd675953bef259a1470eb5d31f8a2f5f3221641591f2ead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000068d6695400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000038f81837');
+      expect(result, isNotNull);
+      expect(result!['function'], expectedFunctionName);
+      expect(result['signature'], expectedFunctionSignature);
+    });
   });
 
   test('should decode function parameters', () {
