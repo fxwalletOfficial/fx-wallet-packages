@@ -15,6 +15,8 @@ abstract class EthTxData extends TxData {
 
   EthTxData({required this.data, required this.network, required this.txType});
 
+  Eip7702Authorization get authorization;
+
   /// Returns the serialized unsigned tx (hashed or raw), which can be used.
   List raw();
 
