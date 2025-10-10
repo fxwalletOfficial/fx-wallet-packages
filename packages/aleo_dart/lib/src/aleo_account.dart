@@ -20,9 +20,9 @@ class AleoAccount {
     return accountRustFFI.testRustFFi(a, b);
   }
 
-  Uint8List mnemonicToSeed(String mnemonic) {
+  Uint8List mnemonicToSeed(String mnemonic, {String path = ALEO_PATH}) {
     final rootSeed = bip39.mnemonicToSeed(mnemonic);
-    return derive(ALEO_PATH, rootSeed);
+    return derive(path, rootSeed);
   }
 
   String seedToPrivateKey(Uint8List seedRaw) {
