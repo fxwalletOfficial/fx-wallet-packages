@@ -65,6 +65,8 @@ void main() async {
       address: address,
       programs: programs);  
   publicTxs.getPublicTxs(pubTxsJson);
+  // 解析付款方地址
+  publicTxs.getSender();
   for (final tx in publicTxs.txs) {
     print(tx.toJson());
   }

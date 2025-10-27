@@ -78,6 +78,34 @@ class TokenTransfer {
   }
 }
 
+class SendMessage {
+  String record;
+
+  String senderCiphertext;
+  SendMessage({
+    required this.record,
+    required this.senderCiphertext,
+  });
+
+  static SendMessage? getSendMessage(List<dynamic> outputs) {
+    try {
+      final output = outputs[0];
+      return SendMessage(
+          record: output['value'],
+          senderCiphertext: output['sender_ciphertext']);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  toJson() {
+    return {
+      'record': record,
+      'senderCiphertext': senderCiphertext,
+    };
+  }
+}
+
 class AleoTransaction {
   String type;
   String transactionId;
@@ -96,6 +124,7 @@ class AleoTransaction {
   String transferType = '';
   String amount_record = '';
   String fee_record = '';
+  SendMessage? sendMessage;
   int? height;
   int? timestamp;
   List<TokenTransfer> tokenTransfers = [];
@@ -115,7 +144,8 @@ class AleoTransaction {
       required this.feeChange,
       this.tokenTransfers = const [],
       this.height,
-      this.timestamp});
+      this.timestamp,
+      this.sendMessage});
 
   factory AleoTransaction.fromJson(Map<String, dynamic> jsonRaw,
       {List<String> programs = const []}) {
@@ -138,18 +168,21 @@ class AleoTransaction {
 
     FeeDetail feeDetail = getFee(feeTx);
     List<TokenTransfer> tokenTransfers = [];
+    SendMessage? sendMessage;
 
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
     switch (transitionType) {
       case TransferMethod.private:
       case TransferMethod.join:
         final outputs = transition['outputs'];
+        sendMessage = SendMessage.getSendMessage(outputs);
         value = outputs
             .map((e) => e['value'])
             .toString()
             .replaceAll('(', '')
             .replaceAll(')', '')
             .replaceAll(' ', '');
+
         break;
       case TransferMethod.private_to_public:
         outputAddress = txOutput[0];
@@ -178,22 +211,24 @@ class AleoTransaction {
     }
 
     return AleoTransaction(
-        type: type,
-        transactionId: transactionId,
-        transitionIds: transitionIds,
-        program: program,
-        transitionType: transitionType,
-        inputAddress: inputAddress,
-        outputAddress: outputAddress,
-        value: value,
-        feeType: feeType,
-        fee: feeDetail.fee,
-        baseFee: feeDetail.baseFee,
-        priorityFee: feeDetail.priorityFee,
-        feeChange: feeDetail.change,
-        height: jsonRaw['height'],
-        timestamp: jsonRaw['timestamp'],
-        tokenTransfers: tokenTransfers);
+      type: type,
+      transactionId: transactionId,
+      transitionIds: transitionIds,
+      program: program,
+      transitionType: transitionType,
+      inputAddress: inputAddress,
+      outputAddress: outputAddress,
+      value: value,
+      feeType: feeType,
+      fee: feeDetail.fee,
+      baseFee: feeDetail.baseFee,
+      priorityFee: feeDetail.priorityFee,
+      feeChange: feeDetail.change,
+      height: jsonRaw['height'],
+      timestamp: jsonRaw['timestamp'],
+      tokenTransfers: tokenTransfers,
+      sendMessage: sendMessage,
+    );
   }
 
   getSymbol(String program) {
@@ -228,7 +263,8 @@ class AleoTransaction {
       'feeChange': feeChange,
       'amount_record': amount_record,
       'fee_record': fee_record,
-      'tokenTransfers': tokenTransfers.map((e) => e.toJson()).toList()
+      'tokenTransfers': tokenTransfers.map((e) => e.toJson()).toList(),
+      'sendMessage': sendMessage?.toJson()
     };
   }
 
@@ -583,5 +619,17 @@ class TxsResult {
       }
     }
     return tokenTxs;
+  }
+
+  getSender() {
+    for (final tx in txs) {
+      if (tx.sendMessage != null) {
+        final sender = recordFFI.decryptSenderCiphertext(
+            tx.sendMessage?.record ?? '',
+            viewKey,
+            tx.sendMessage?.senderCiphertext ?? '');
+        tx.inputAddress = sender;
+      }
+    }
   }
 }

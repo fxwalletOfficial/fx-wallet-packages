@@ -942,7 +942,6 @@ pub extern "C" fn serial_number_string(
         (Group::<CurrentNetwork>::from_str(&record_plaintext.nonce().to_string()).unwrap()
             * *view_key)
             .to_x_coordinate();
-    println!("record_view_key: {:?}", record_view_key);
     let commitment = record_plaintext
         .to_commitment(&parsed_program_id, &record_identifier, &record_view_key)
         .unwrap();
