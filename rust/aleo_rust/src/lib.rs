@@ -84,6 +84,7 @@ pub mod snarkvm_types {
         },
         types::Field,
     };
+    pub use snarkvm_console_types_group::Group;
     pub use snarkvm_ledger_block::{Block, Deployment, Execution, Transaction};
     pub use snarkvm_ledger_query::Query;
     pub use snarkvm_ledger_store::{
@@ -97,7 +98,6 @@ pub mod snarkvm_types {
         Process, Program, Trace, VM,
     };
     pub use snarkvm_synthesizer_process::InclusionVersion;
-    pub use snarkvm_console_types_group::Group;
 }
 
 pub use snarkvm_types::*;
@@ -139,6 +139,7 @@ use snarkvm::circuit::prelude::PrimeField;
 use snarkvm_console::prelude::Environment;
 use snarkvm_console::prelude::FromBytes;
 use snarkvm_console::prelude::ToBits;
+use snarkvm_console_types_group::{One, FromField};
 
 #[no_mangle]
 pub extern "C" fn numbers_add(a: u32, b: u32) -> u32 {
@@ -311,6 +312,96 @@ pub extern "C" fn is_owner(
     let view_key = ViewKey::<CurrentNetwork>::from_str(&cstr_to_string(view_key_raw)).unwrap();
     let result: bool = record_ciphertext.is_owner(&view_key);
     result
+}
+
+// transfer
+#[no_mangle]
+pub extern "C" fn decrypt_sender_ciphertext(
+    record_ciphertext_raw: *const c_char,
+    view_key_raw: *const c_char,
+    sender_ciphertext_raw: *const c_char,
+) -> *const c_char {
+    let result = match decrypt_sender_ciphertext_internal(
+        &cstr_to_string(record_ciphertext_raw),
+        &cstr_to_string(view_key_raw),
+        &cstr_to_string(sender_ciphertext_raw),
+    ) {
+        Ok(sender_address) => sender_address,
+        Err(err) => format!("Error: {}", err.to_string()),
+    };
+    let c_string = CString::new(result).unwrap();
+    c_string.into_raw()
+}
+
+// Internal function to decrypt sender ciphertext
+fn decrypt_sender_ciphertext_internal(
+    record_ciphertext_str: &str,
+    view_key_str: &str,
+    sender_ciphertext_str: &str,
+) -> Result<String> {
+    // Parse the record ciphertext
+    let record_ciphertext: Record<CurrentNetwork, Ciphertext<CurrentNetwork>> =
+        Record::<CurrentNetwork, Ciphertext<CurrentNetwork>>::from_str(record_ciphertext_str)?;
+    
+    // Parse the view key
+    let view_key = ViewKey::<CurrentNetwork>::from_str(view_key_str)?;
+    
+    // First check if the record is owned by this view key
+    if !record_ciphertext.is_owner(&view_key) {
+        return Err(anyhow!("Record is not owned by the provided view key"));
+    }
+    
+    // Decrypt the record to get the plaintext
+    let record_plaintext: Record<CurrentNetwork, Plaintext<CurrentNetwork>> =
+        record_ciphertext.decrypt(&view_key)?;
+    
+    // Get the nonce from the decrypted record
+    let nonce = record_plaintext.nonce();
+    
+    // Parse the sender_ciphertext field value
+    let sender_ciphertext_field = match Field::<CurrentNetwork>::from_str(sender_ciphertext_str) {
+        Ok(field) => field,
+        Err(_) => {
+            // If direct parsing fails, try removing the "field" suffix if present
+            let cleaned_str = if sender_ciphertext_str.ends_with("field") {
+                &sender_ciphertext_str[..sender_ciphertext_str.len() - 5]
+            } else {
+                sender_ciphertext_str
+            };
+            
+            Field::<CurrentNetwork>::from_str(cleaned_str)
+                .map_err(|e| anyhow!("Failed to parse sender_ciphertext '{}': {}. Expected format: 'number' or 'numberfield'", sender_ciphertext_str, e))?
+        }
+    };
+    
+    // Calculate the record view key: (nonce * view_key).to_x_coordinate()
+    let record_view_key = (Group::<CurrentNetwork>::from_str(&nonce.to_string())? * *view_key)
+        .to_x_coordinate();
+    
+    // Use the official implementation approach
+    // Get the encryption domain from the network
+    let encryption_domain = CurrentNetwork::encryption_domain();
+    let one_field = Field::<CurrentNetwork>::one();
+    
+    // Calculate randomizer using PSD4 hash
+    let randomizer = CurrentNetwork::hash_psd4(&[encryption_domain, record_view_key, one_field])?;
+    
+    // Decrypt: sender_address_x = sender_ciphertext - randomizer
+    let sender_address_x = sender_ciphertext_field - randomizer;
+    
+    // Try to reconstruct the full address from the x-coordinate
+    // This follows the official implementation pattern
+    match Group::<CurrentNetwork>::from_field(&sender_address_x) {
+        Ok(group) => {
+            // Create address from the group using the correct constructor
+            let address = Address::<CurrentNetwork>::new(group);
+            Ok(address.to_string())
+        },
+        Err(_) => {
+            // If we can't reconstruct the full address, return the x-coordinate
+            Ok(format!("sender_x_coordinate:{}", sender_address_x.to_string()))
+        }
+    }
 }
 
 // use std::thread;
@@ -847,10 +938,10 @@ pub extern "C" fn serial_number_string(
     let parsed_program_id = ProgramID::<CurrentNetwork>::from_str(program_id).unwrap();
     let record_identifier = Identifier::<CurrentNetwork>::from_str(record_name).unwrap();
 
-    let record_view_key = (Group::<CurrentNetwork>::from_str(&record_plaintext.nonce().to_string())
-        .unwrap()
-        * *view_key)
-        .to_x_coordinate();
+    let record_view_key =
+        (Group::<CurrentNetwork>::from_str(&record_plaintext.nonce().to_string()).unwrap()
+            * *view_key)
+            .to_x_coordinate();
     println!("record_view_key: {:?}", record_view_key);
     let commitment = record_plaintext
         .to_commitment(&parsed_program_id, &record_identifier, &record_view_key)

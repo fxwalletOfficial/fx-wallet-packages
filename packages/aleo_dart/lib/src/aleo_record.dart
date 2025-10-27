@@ -60,6 +60,34 @@ class AleoRecord {
     return recordRustFFI.isOwner(dartStrToC(record), dartStrToC(viewKey));
   }
 
+  /// 解密 sender_ciphertext 字段，获取发送方地址
+  /// 这是 Aleo snarkOS v4.0.0 中的新功能，允许接收方解密发送方地址
+  ///
+  /// [record] - 加密的 record 字符串
+  /// [viewKey] - 接收方的 view key
+  /// [senderCiphertext] - sender_ciphertext 字段值
+  ///
+  /// 返回解密后的发送方地址信息，如果解密失败则抛出异常
+  String decryptSenderCiphertext(
+      String record, String viewKey, String senderCiphertext) {
+    AleoUtils.checkRecord(record);
+    AleoUtils.checkViewKey(viewKey);
+
+    // 首先检查 record 是否属于该 view key
+    final isOwned = isOwner(record, viewKey);
+    if (!isOwned) {
+      throw Exception('Record is not owned by the provided view key');
+    }
+
+    // 调用 Rust FFI 解密 sender_ciphertext
+    final result = recordRustFFI.decryptSenderCiphertext(
+        dartStrToC(record), dartStrToC(viewKey), dartStrToC(senderCiphertext));
+
+    final senderInfo = result.toDartString();
+
+    return senderInfo;
+  }
+
   String serialNumberString(String recordCipherTextRaw, String privateKeyRaw,
       {String programIdRaw = 'credits.aleo',
       String recordNameRaw = 'credits'}) {

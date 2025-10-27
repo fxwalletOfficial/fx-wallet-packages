@@ -4,6 +4,9 @@ import 'package:ffi/ffi.dart';
 typedef TypeStr2To1 = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
+typedef TypeStr3To1 = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
 typedef TypeStr4To1 = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
@@ -54,5 +57,14 @@ class RecordRustFFI {
         dyLib.lookupFunction<TypeStr4To1, TypeStr4To1>('serial_number_string');
     return serialNumberString(
         recordCipherText, privateKey, programId, recordName);
+  }
+
+  ffi.Pointer<Utf8> decryptSenderCiphertext(
+      ffi.Pointer<Utf8> recordCipherText, 
+      ffi.Pointer<Utf8> viewKey, 
+      ffi.Pointer<Utf8> senderCiphertext) {
+    final decryptSenderCiphertext =
+        dyLib.lookupFunction<TypeStr3To1, TypeStr3To1>('decrypt_sender_ciphertext');
+    return decryptSenderCiphertext(recordCipherText, viewKey, senderCiphertext);
   }
 }
