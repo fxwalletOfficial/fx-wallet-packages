@@ -232,12 +232,22 @@ Uint8List crc16(Uint8List data) {
 
 /// Check base32 address, such as bitcoincash.
 bool checkStandardBase32(String address) {
-  String addressData = address;
-  if (address.startsWith('bitcoincash:'))
-    addressData = address.substring(address.indexOf(':') + 1);
-  final decoded = Base32.decode(addressData).toUint8List();
-  final addressEncode = Base32.encode(decoded);
-  return addressEncode == addressData;
+  try {
+    String addressData = address;
+    if (address.startsWith('bitcoincash:'))
+      addressData = address.substring(address.indexOf(':') + 1);
+    
+    // Basic validation: CashAddr addresses should be at least 14 characters
+    if (addressData.length < 14) {
+      return false;
+    }
+    
+    final decoded = Base32.decode(addressData).toUint8List();
+    final addressEncode = Base32.encode(decoded);
+    return addressEncode == addressData;
+  } catch (error) {
+    return false;
+  }
 }
 
 bool checkRFC4648Base32(String address, String prefix) {
