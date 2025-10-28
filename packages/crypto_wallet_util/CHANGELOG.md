@@ -208,3 +208,8 @@
 ### Update
 
 - Add COW swap transaction ABI data parse.
+
+## [1.1.16] - 2025-10-28
+## Fix
+
+- Fix address check method.
