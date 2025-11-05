@@ -1,4 +1,6 @@
-import 'package:crypto_wallet_util/src/utils/utils.dart';
+import 'dart:typed_data';
+
+import 'package:bs58check/bs58check.dart';
 
 import '../crypto/pubkey.dart';
 import '../messages/message_instruction.dart';

@@ -1,7 +1,6 @@
 import 'package:crypto_wallet_util/src/transaction/btc/psbt_tx_data.dart';
 import 'package:crypto_wallet_util/src/type/tx_signer_type.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
-
 import 'package:crypto_wallet_util/utils.dart';
 
 /// PSBT transaction signer for Bitcoin Legacy and Taproot transactions

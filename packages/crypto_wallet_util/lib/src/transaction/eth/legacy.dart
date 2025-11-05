@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'lib/eth_lib.dart';
 import 'lib/rlp.dart' as rlp;

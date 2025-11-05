@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
+import 'package:bs58check/bs58check.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:crypto_wallet_util/src/config/constants/constants.dart';
 
-/// Create a **sol** wallet using mnemonic or private key, 
+/// Create a **sol** wallet using mnemonic or private key,
 /// with a signature algorithm of [ED25519].
 class SolCoin extends WalletType {
   final _default = WalletSetting(bip44Path: SOL_PATH);

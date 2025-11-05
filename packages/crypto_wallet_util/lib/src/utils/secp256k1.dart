@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+
+import 'package:buffer/buffer.dart';
+import 'package:crypto_wallet_util/src/transaction/eth/lib/utils.dart';
 import 'package:pointycastle/export.dart';
 
 import 'package:crypto_wallet_util/src/utils/utils.dart';
@@ -120,6 +124,27 @@ class EcdaSignature {
       buf.sublist(32, 64),
       v,
     );
+  }
+
+  /// Convert signature parameters into the format of `eth_sign` RPC method.
+  String toRpcSig({int chainId = -1}) {
+    var recovery = _calculateSigRecovery(v, chainId: chainId);
+    if (!_isValidSigRecovery(recovery)) throw ArgumentError('Invalid signature v value');
+
+    // geth (and the RPC eth_sign method) uses the 65 byte format used by Bitcoin
+    var bytesBuffer = BytesBuffer();
+    bytesBuffer.add(setLengthLeft(r, 32));
+    bytesBuffer.add(setLengthLeft(s, 32));
+    bytesBuffer.add(toBuffer(BigInt.from(v)));
+    return bufferToHex(bytesBuffer.toBytes());
+  }
+
+  int _calculateSigRecovery(int v, {int chainId = -1}) {
+    return chainId > 0 ? v - (2 * chainId + 35) : v - 27;
+  }
+
+  bool _isValidSigRecovery(int recoveryId) {
+    return recoveryId == 0 || recoveryId == 1;
   }
 
   static int calculateEthSigRecovery(int v, {int chainId = -1}) {

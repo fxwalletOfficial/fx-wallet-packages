@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
+import 'package:crypto_wallet_util/src/utils/bech32/bech32.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:crypto_wallet_util/src/config/constants/constants.dart';
 
-/// Create a **cosmos** wallet using mnemonic or private key, 
+/// Create a **cosmos** wallet using mnemonic or private key,
 /// with a signature algorithm of [EcdaSignature] and an address type of [bech32].
 /// Default create atom wallet.
 class Cosmos extends WalletType {

@@ -78,3 +78,7 @@
 ## 0.1.20
 
 - Feature: Support EIP7702 Transaction.
+
+## 0.1.21
+
+- Update: Update crypto utils.

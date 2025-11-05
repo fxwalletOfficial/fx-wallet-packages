@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/config/chain/btc/ltc.dart';
 import 'package:crypto_wallet_util/src/config/constants/constants.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/payments/p2pkh.dart';

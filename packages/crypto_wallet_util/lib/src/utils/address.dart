@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:bs58check/bs58check.dart';
 import 'package:crypto/crypto.dart';
+import 'package:crypto_wallet_util/src/utils/bech32/bech32.dart';
 
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart'
@@ -55,7 +60,7 @@ class AddressUtils {
   }
 
   static bool checkBtcAddress(String address,
-      [bitcoin.NetworkType? networkType]) {
+      [NetworkType? networkType]) {
     try {
       if (networkType?.prefix == 'bitcoincash' &&
           !address.startsWith('1') &&
@@ -236,12 +241,12 @@ bool checkStandardBase32(String address) {
     String addressData = address;
     if (address.startsWith('bitcoincash:'))
       addressData = address.substring(address.indexOf(':') + 1);
-    
+
     // Basic validation: CashAddr addresses should be at least 14 characters
     if (addressData.length < 14) {
       return false;
     }
-    
+
     final decoded = Base32.decode(addressData).toUint8List();
     final addressEncode = Base32.encode(decoded);
     return addressEncode == addressData;

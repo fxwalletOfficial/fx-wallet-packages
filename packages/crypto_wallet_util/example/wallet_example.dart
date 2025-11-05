@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print
 
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/crypto_utils.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 

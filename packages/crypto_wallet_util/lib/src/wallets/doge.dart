@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/config/chain/btc/doge.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_base_hd/src/crypto/keypair/ec_private.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';

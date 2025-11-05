@@ -1,14 +1,13 @@
-// ignore_for_file: implementation_imports
-
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:bip32/src/utils/ecurve.dart' as ecc;
-import 'package:bip32/src/utils/wif.dart' as wif;
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/ecurve.dart' as ecc;
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/wif.dart' show WIF, decode, encode;
 import 'package:hex/hex.dart';
 
-import '../src/models/networks.dart';
-import '../src/utils/script.dart';
+import '../../../../forked_lib/bitcoin_flutter/src/models/networks.dart';
+import '../../../../forked_lib/bitcoin_flutter/src/utils/script.dart';
 
 class ECPair {
   Uint8List? _d;
@@ -31,8 +30,7 @@ class ECPair {
 
   String toWIF() {
     if (privateKey == null) throw ArgumentError('Missing private key');
-
-    return wif.encode(wif.WIF(version: network.wif, privateKey: privateKey!, compressed: compressed));
+    return encode(WIF(version: network.wif, privateKey: privateKey!, compressed: compressed));
   }
 
   Uint8List sign(Uint8List hash) {
@@ -93,7 +91,7 @@ class ECPair {
   }
 
   factory ECPair.fromWIF(String w, {NetworkType? network}) {
-    var decoded = wif.decode(w);
+    var decoded = decode(w);
     final version = decoded.version;
 
     NetworkType nw;

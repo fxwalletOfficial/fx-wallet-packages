@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -7,7 +8,7 @@ import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 void main() async {
   /**
-   * test common function in coin_type.  
+   * test common function in coin_type.
    * (1) generate wallet
    * (2) sign message and verify signature
    */

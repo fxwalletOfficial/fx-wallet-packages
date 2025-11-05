@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:secp256k1_ecdsa/secp256k1.dart';
 
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';

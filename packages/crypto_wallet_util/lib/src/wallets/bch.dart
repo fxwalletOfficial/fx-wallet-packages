@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/config/chain/btc/bch.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_base_hd/src/crypto/keypair/ec_private.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart' as btc;
@@ -46,10 +48,10 @@ class BchCoin extends WalletType {
     versionedHash[0] = setting.networkType!.pubKeyHash;
     versionedHash.setRange(1, 21, addressBytes);
     final legacyAddress = getBase58Address(versionedHash);
-    
+
     // Use legacyToBch method to convert to BCH CashAddr format
     return btc.Address.legacyToBch(
-      address: legacyAddress, 
+      address: legacyAddress,
       prefix: setting.prefix
     );
   }

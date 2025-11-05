@@ -13,13 +13,39 @@ class Bip32Type {
 }
 
 class NetworkType {
-  int wif;
+  String messagePrefix;
+  String? bech32;
+  String ? prefix;
   Bip32Type bip32;
-  NetworkType({required this.wif, required this.bip32});
+  int pubKeyHash;
+  int scriptHash;
+  int wif;
+
+  NetworkType({
+    required this.messagePrefix,
+    this.bech32,
+    this.prefix,
+    required this.bip32,
+    required this.pubKeyHash,
+    required this.scriptHash,
+    required this.wif
+  });
+
+  @override
+  String toString() {
+    return 'NetworkType{messagePrefix: $messagePrefix, bech32: $bech32, bip32: ${bip32.toString()}, pubKeyHash: $pubKeyHash, scriptHash: $scriptHash, wif: $wif}';
+  }
 }
 
 final _BITCOIN = NetworkType(
-    wif: 0x80, bip32: Bip32Type(public: 0x0488b21e, private: 0x0488ade4));
+  messagePrefix: '\u0018Bitcoin Signed Message:\n',
+  bech32: 'bc',
+  wif: 128,
+  pubKeyHash: 0,
+  scriptHash: 5,
+  bip32: Bip32Type(public: 76067358, private: 76066276)
+);
+
 const HIGHEST_BIT = 0x80000000;
 const UINT31_MAX = 2147483647; // 2^31 - 1
 const UINT32_MAX = 4294967295; // 2^32 - 1
@@ -40,7 +66,7 @@ class BIP32 {
     return _Q!;
   }
 
-  Uint8List get decompressedpublicKey {
+  Uint8List get decompressedPublicKey {
     _Q ??= ecc.pointFromScalar(_d!, false)!;
     return _Q!;
   }

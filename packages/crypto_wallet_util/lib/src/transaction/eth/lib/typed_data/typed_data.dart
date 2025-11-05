@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:buffer/buffer.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 import './constants.dart';
@@ -68,4 +71,15 @@ String signToCompact(
   if (recoveryParam > 0) s[0] |= 0x80;
 
   return concatSigCompact((sig.r), s);
+}
+
+/// Returns the keccak-256 hash of `message`, prefixed with the header used by the `eth_sign` RPC call. The output of this function
+/// can be fed into `ecsign` to produce the same signature as the `eth_sign` call for a given `message`, or fed to `ecrecover` along
+/// with a signature to recover the public key used to produce the signature.
+Uint8List hashPersonalMessage(dynamic message) {
+  var prefix = toBuffer("\u0019Ethereum Signed Message:\n${message.length.toString()}");
+  var bytesBuffer = BytesBuffer();
+  bytesBuffer.add(prefix);
+  bytesBuffer.add(message);
+  return keccak(bytesBuffer.toBytes());
 }

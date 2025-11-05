@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
-import './exceptions.dart';
+import 'package:crypto_wallet_util/src/utils/hex.dart';
+
+import 'exceptions.dart';
 
 /// An instance of the default implementation of the Bech32Codec.
 const Bech32Codec bech32 = Bech32Codec();
@@ -14,13 +17,13 @@ class Bech32Codec extends Codec<Bech32, String> {
   Bech32Encoder get encoder => Bech32Encoder();
 
   @override
-  String encode(Bech32 data, {maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
-    return Bech32Encoder().convert(data, maxLength: maxLength, encoding: encoding);
+  String encode(Bech32 input, {maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
+    return Bech32Encoder().convert(input, maxLength: maxLength, encoding: encoding);
   }
 
   @override
-  Bech32 decode(String data, {maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
-    return Bech32Decoder().convert(data, maxLength: maxLength, encoding: encoding);
+  Bech32 decode(String encoded, {maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
+    return Bech32Decoder().convert(encoded, maxLength: maxLength, encoding: encoding);
   }
 }
 
@@ -43,38 +46,25 @@ class Bech32Encoder extends Converter<Bech32, String> with Bech32Validations {
 
     return hrp + separator + checkSummed.map((i) => charset[i]).join();
   }
+
+  static String encode(String humanReadablePart, Uint8List data) {
+    final List<int> converted = convertBits(data, 8, 5);
+    final bech32Codec = Bech32Codec();
+    final bech32Data = Bech32(humanReadablePart, Uint8List.fromList(converted));
+    return bech32Codec.encode(bech32Data);
+  }
 }
 
 /// This class converts a String to a Bech32 class instance.
 class Bech32Decoder extends Converter<String, Bech32> with Bech32Validations {
   @override
   Bech32 convert(String input, {int maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
-    if (input.length > maxLength) throw TooLong(input.length);
-    if (isMixedCase(input)) throw MixedCase(input);
-    if (hasInvalidSeparator(input)) throw InvalidSeparator(input.lastIndexOf(separator));
-
     var separatorPosition = input.lastIndexOf(separator);
-
-    if (isChecksumTooShort(separatorPosition, input)) throw TooShortChecksum();
-    if (isHrpTooShort(separatorPosition)) throw TooShortHrp();
-
     input = input.toLowerCase();
-
     var hrp = input.substring(0, separatorPosition);
-    var data = input.substring(separatorPosition + 1, input.length - Bech32Validations.checksumLength);
-    var checksum = input.substring(input.length - Bech32Validations.checksumLength);
-
-    if (hasOutOfRangeHrpCharacters(hrp)) throw OutOfRangeHrpCharacters(hrp);
-
+    var data = input.substring(
+        separatorPosition + 1, input.length - Bech32Validations.checksumLength);
     var dataBytes = data.split('').map((c) => charset.indexOf(c)).toList();
-
-    if (hasOutOfBoundsChars(dataBytes)) throw OutOfBoundChars(data[dataBytes.indexOf(-1)]);
-
-    var checksumBytes = checksum.split('').map((c) => charset.indexOf(c)).toList();
-
-    if (hasOutOfBoundsChars(checksumBytes)) throw OutOfBoundChars(checksum[checksumBytes.indexOf(-1)]);
-    if (isInvalidChecksum(hrp, dataBytes, checksumBytes, encoding: encoding)) throw InvalidChecksum();
-
     return Bech32(hrp, dataBytes);
   }
 }
@@ -134,13 +124,13 @@ const List<int> generator = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2
 
 int _polymod(List<int> values) {
   var chk = 1;
-  values.forEach((v) {
+  for (var v in values) {
     var top = chk >> 25;
     chk = (chk & 0x1ffffff) << 5 ^ v;
     for (var i = 0; i < generator.length; i++) {
       if ((top >> i) & 1 == 1) chk ^= generator[i];
     }
-  });
+  }
 
   return chk;
 }
@@ -170,3 +160,81 @@ List<int> _createChecksum(String hrp, List<int> data, {String encoding = 'bech32
   }
   return result;
 }
+
+List<int> convertBits(data, int from, int to, {bool strictMode = false}) {
+  double len = data.length * from / to;
+  final length = strictMode ? len.floor() : len.ceil();
+
+  final mask = (1 << to) - 1;
+  final result = List.generate(length, (_) => 0);
+
+  var index = 0;
+  var accumulator = 0;
+  var bits = 0;
+
+  for (var i = 0; i < data.length; i++) {
+    var value = data[i];
+    accumulator = (accumulator << from) | value;
+    bits += from;
+    while (bits >= to) {
+      bits -= to;
+      result[index] = (accumulator >> bits) & mask;
+      index++;
+    }
+  }
+
+  if (!strictMode) {
+    if (bits > 0) {
+      result[index] = (accumulator << (to - bits)) & mask;
+      index++;
+    }
+  } else {}
+
+  return result;
+}
+
+List<int> createChecksum(String hrp, List<int> data,
+    {String encoding = 'bech32'}) {
+  final ENCODING_CONST = encoding == 'bech32' ? 1 : 0x2bc830a3;
+  var values = _hrpExpand(hrp) + data + [0, 0, 0, 0, 0, 0];
+  var polymod = _polymod(values) ^ ENCODING_CONST;
+
+  var result = <int>[0, 0, 0, 0, 0, 0];
+
+  for (var i = 0; i < result.length; i++) {
+    result[i] = (polymod >> (5 * (5 - i))) & 31;
+  }
+  return result;
+}
+
+bool verifyChecksum(String hrp, List<int> dataIncludingChecksum,
+    {String encoding = 'bech32'}) {
+  return _polymod(_hrpExpand(hrp) + dataIncludingChecksum) ==
+      (encoding == 'bech32' ? 1 : 0x2bc830a3);
+}
+
+List<int> toUint5Array(data) {
+  return convertBits(data, 8, 5);
+}
+
+Uint8List convertBit(Uint8List buff) {
+  String str = '';
+  for (var i = 0; i < buff.length; i++) {
+    String res = buff[i].toRadixString(2);
+    res = res.length < 8
+        ? '00000000'.substring(0, 8 - res.length) + res
+        : buff[i].toRadixString(2);
+
+    str = str + res;
+  }
+  int len = (str.length / 5).ceil();
+  List<int> arr = [];
+  for (var i = 0; i < len; i++) {
+    var info = str.substring(0, 5);
+    str = str.substring(5);
+    arr.add(int.parse(info, radix: 2));
+  }
+  arr.insert(0, 0);
+  return dynamicToUint8List(arr);
+}
+

@@ -1,9 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/transaction/sol/v2/tx_data.dart';
 import 'package:crypto_wallet_util/src/type/tx_signer_type.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
-/// Provide another way to sign sol message. 
+/// Provide another way to sign sol message.
 class SolTxSignerV2 extends TxSigner {
   @override
   final SolTxDataV2 txData;

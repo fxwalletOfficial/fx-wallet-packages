@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:ss58/ss58.dart';
 
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
@@ -7,7 +9,7 @@ import 'package:crypto_wallet_util/src/config/constants/constants.dart';
 /// Select dot signature algorithm.
 enum DotScheme { sr25519, ed25519 }
 
-/// Create a **Dot** wallet using mnemonic or private key, 
+/// Create a **Dot** wallet using mnemonic or private key,
 /// with a signature algorithm of [SR25519] or [ED25519].
 class DotCoin extends WalletType {
   final PREFIX_LIST = [0, 2, 42];
@@ -39,7 +41,7 @@ class DotCoin extends WalletType {
   ///  rococo    (Prefix: 42): 5Gv8YYFu8H1btvmrJy9FjjAWfb99wrhV3uhPFoNEr918utyR;
   String get kusamaAddress => publicKeyToAddress(publicKey, prefix: 2);
   String get rococoAddress => publicKeyToAddress(publicKey, prefix: 42);
-  /// set signature schemes, support sr25519 and ed25519. 
+  /// set signature schemes, support sr25519 and ed25519.
   void setSr25519() {
     _scheme = DotScheme.sr25519;
   }

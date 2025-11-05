@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 
-import 'package:bip32/bip32.dart';
 import 'package:cbor/cbor.dart';
 import 'package:convert/convert.dart';
 
 import 'package:bc_ur_dart/src/ur.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
+import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32, HIGHEST_BIT;
 
 const String CRYPTO_HD_KEY = 'CRYPTO-HDKEY';
 

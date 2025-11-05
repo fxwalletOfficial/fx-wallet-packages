@@ -1,5 +1,6 @@
 import 'package:bc_ur_dart/src/models/eth/eth_sign_request.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart';
+import 'package:crypto_wallet_util/utils.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -16,7 +17,7 @@ void main() {
       );
 
       expect(request, isNotNull);
-      expect(request.address.hex, '0x742d35cc6634c0532925a3b8d4c9db96c4b4d8b6');
+      expect(request.address.toHex(), '0x742d35cc6634c0532925a3b8d4c9db96c4b4d8b6');
       expect(request.origin, 'https://example.com');
       expect(request.chainId, 1);
     });

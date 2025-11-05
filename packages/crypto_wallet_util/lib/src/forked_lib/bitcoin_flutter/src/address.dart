@@ -1,17 +1,18 @@
 import 'dart:typed_data';
 
 import 'package:bs58check/bs58check.dart' as bs58check;
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/base58.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/constants.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/extended_key.dart';
 import 'package:pointycastle/export.dart';
 
-import '../src/base58.dart';
-import '../src/bech32/bech32.dart';
-import '../src/bip32/bip32.dart';
+import '../../../utils/bech32/bech32.dart';
 import '../src/models/networks.dart';
 import '../src/payments/index.dart' show PaymentData;
 import '../src/payments/p2pkh.dart';
 import '../src/payments/p2sh.dart';
 import '../src/payments/p2wpkh.dart';
-import '../src/utils/constants/constants.dart';
 import '../src/utils/constants/op.dart';
 import '../src/utils/script.dart';
 
@@ -63,7 +64,7 @@ class Address {
     } catch (e) {
       flag = true;
     }
-    
+
     if(flag) throw ArgumentError('$address has no matching Script');
   }
 
@@ -111,6 +112,6 @@ class Address {
     final checksumData = prefixData + payloadData + List.generate(8, (index) => 0);
     final payload = payloadData + checksumToUint5Array(polymod(checksumData));
 
-    return '${prefix}:${base32Encode(payload)}';
+    return '$prefix:${base32Encode(payload)}';
   }
 }

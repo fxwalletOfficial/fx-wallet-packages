@@ -1,16 +1,16 @@
 import 'dart:typed_data';
 
-import 'package:bip32/src/utils/ecurve.dart' show isPoint;
 import 'package:bs58check/bs58check.dart' as bs58check;
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/ecurve.dart' show isPoint;
 import 'package:pointycastle/export.dart';
 
-import '../bech32/bech32.dart';
+import '../../../../utils/bech32/bech32.dart';
 import '../utils/script.dart';
 import '../crypto.dart';
 import '../models/networks.dart';
 import '../payments/index.dart' show PaymentData;
 import '../utils/blake2b.dart';
-import '../utils/common.dart';
 import '../utils/constants/op.dart';
 
 final _secp256k1 = ECCurve_secp256k1();
@@ -41,13 +41,13 @@ class P2PKH {
       _getDataFromHash();
       _getDataFromChunk();
     } else if (data.input != null) {
-      var _chunks = decompile(data.input)!;
-      _getDataFromChunk(_chunks);
+      final chunks = decompile(data.input)!;
+      _getDataFromChunk(chunks);
 
-      if (_chunks.length != 2) throw ArgumentError('Input is invalid');
-      if (!isCanonicalScriptSignature(_chunks[0]))
+      if (chunks.length != 2) throw ArgumentError('Input is invalid');
+      if (!isCanonicalScriptSignature(chunks[0]))
         throw ArgumentError('Input has invalid signature');
-      if (!isPoint(_chunks[1])) throw ArgumentError('Input has invalid pubkey');
+      if (!isPoint(chunks[1])) throw ArgumentError('Input has invalid pubkey');
 
       data.witness = [];
     } else {
@@ -55,16 +55,16 @@ class P2PKH {
     }
   }
 
-  void _getDataFromChunk([List<dynamic>? _chunks]) {
-    if (data.pubkey == null && _chunks != null) {
+  void _getDataFromChunk([List<dynamic>? chunks]) {
+    if (data.pubkey == null && chunks != null) {
       data.pubkey =
-          (_chunks[1] is int) ? Uint8List.fromList([_chunks[1]]) : _chunks[1];
+          (chunks[1] is int) ? Uint8List.fromList([chunks[1]]) : chunks[1];
       data.hash = hash160(data.pubkey!);
       _getDataFromHash();
     }
-    if (data.signature == null && _chunks != null) {
+    if (data.signature == null && chunks != null) {
       data.signature =
-          (_chunks[0] is int) ? Uint8List.fromList([_chunks[0]]) : _chunks[0];
+          (chunks[0] is int) ? Uint8List.fromList([chunks[0]]) : chunks[0];
     }
     if (data.input == null && data.pubkey != null && data.signature != null) {
       data.input = compile([data.signature, data.pubkey]);

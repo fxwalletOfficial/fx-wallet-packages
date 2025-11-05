@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:convert/convert.dart';
-import 'package:web3dart/web3dart.dart';
+import 'package:crypto_wallet_util/utils.dart' hide fromHex;
 
 const String ETH_SIGN_REQUEST = 'ETH-SIGN-REQUEST';
 
@@ -12,7 +12,7 @@ class EthSignRequestUR extends UR {
   final EthSignDataType dataType;
   final Uint8List data;
 
-  final EthereumAddress address;
+  final Uint8List address;
   final String origin;
   final String xfp;
 
@@ -43,7 +43,7 @@ class EthSignRequestUR extends UR {
   }) {
     uuid ??= UR.generateUUid();
     final dataType = tx.txType == EthTxType.legacy ? EthSignDataType.ETH_TRANSACTION_DATA : EthSignDataType.ETH_TYPED_TRANSACTION;
-    final addr = EthereumAddress.fromHex(address);
+    final addr = dynamicToUint8List(address);
     final msg = tx.serialize(sig: false);
 
     final ur = UR.fromCBOR(
@@ -57,7 +57,7 @@ class EthSignRequestUR extends UR {
           CborSmallInt(1): CborList(getPath(path)),
           if (xfp.isNotEmpty) CborSmallInt(2): CborInt(toXfpCode(xfp, bigEndian: xfpReverse))
         }, tags: [304]),
-        CborSmallInt(6): CborBytes(addr.addressBytes),
+        CborSmallInt(6): CborBytes(addr),
         CborSmallInt(7): CborString(origin)
       })
     );
@@ -90,7 +90,7 @@ class EthSignRequestUR extends UR {
     Uint8List? uuid
   }) {
     uuid ??= UR.generateUUid();
-    final addr = EthereumAddress.fromHex(address);
+    final addr = dynamicToUint8List(address);
     final msg = fromHex(signData);
 
     final ur = UR.fromCBOR(
@@ -104,7 +104,7 @@ class EthSignRequestUR extends UR {
           CborSmallInt(1): CborList(getPath(path)),
           if (xfp.isNotEmpty) CborSmallInt(2): CborInt(toXfpCode(xfp, bigEndian: xfpReverse))
         }, tags: [304]),
-        CborSmallInt(6): CborBytes(addr.addressBytes),
+        CborSmallInt(6): CborBytes(addr),
         CborSmallInt(7): CborString(origin)
       })
     );
@@ -130,7 +130,7 @@ class EthSignRequestUR extends UR {
     final msg = Uint8List.fromList((data[CborSmallInt(2)] as CborBytes).bytes);
     final dataType = EthSignDataType.values[(data[CborSmallInt(3)] as CborSmallInt).value];
     final chainId = (data[CborSmallInt(4)] as CborSmallInt).value;
-    final address = EthereumAddress(Uint8List.fromList((data[CborSmallInt(6)] as CborBytes).bytes));
+    final address = Uint8List.fromList((data[CborSmallInt(6)] as CborBytes).bytes);
     final origin = data[CborSmallInt(7)] == null ? '' : (data[CborSmallInt(7)] as CborString).toString();
 
     String xfp = '';

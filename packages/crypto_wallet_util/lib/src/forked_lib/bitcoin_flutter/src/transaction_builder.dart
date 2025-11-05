@@ -1,10 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
 import 'package:hex/hex.dart';
 
 import '../src/address.dart';
 import '../src/classify.dart';
-import '../src/ecpair.dart';
+import '../../../utils/bip32/src/utils/ecpair.dart';
 import '../src/models/networks.dart';
 import '../src/payments/index.dart' show PaymentData;
 import '../src/payments/p2pkh.dart';

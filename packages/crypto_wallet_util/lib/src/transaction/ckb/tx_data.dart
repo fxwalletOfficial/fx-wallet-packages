@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/type/type.dart';
 import 'package:crypto_wallet_util/src/transaction/ckb/lib/ckb_lib.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';

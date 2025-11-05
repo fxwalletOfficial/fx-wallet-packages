@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:bip32/src/utils/ecurve.dart' as ecc;
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/ecurve.dart' show isPoint;
 import 'package:hex/hex.dart';
 import 'package:crypto/crypto.dart';
 import 'package:pointycastle/export.dart';
 
-import '../bech32/bech32.dart';
+import '../../../../utils/bech32/bech32.dart';
 import '../transaction.dart';
 import '../utils/constants/op.dart';
 import '../utils/push_data.dart' as pushdata;
@@ -34,15 +34,14 @@ bool isPushOnly(dynamic value) {
 Uint8List? compile(List<dynamic> chunks) {
   final bufferSize = chunks.fold(0, (dynamic acc, chunk) {
     if (chunk is int) return acc + 1;
-    if (chunk.length == 1 && asMinimalOP(chunk) != null) {
-      return acc + 1;
-    }
+    if (chunk.length == 1 && asMinimalOP(chunk) != null) return acc + 1;
+
     return acc + pushdata.encodingLength(chunk.length) + chunk.length;
   });
   Uint8List? buffer = Uint8List(bufferSize);
 
   var offset = 0;
-  chunks.forEach((chunk) {
+  for (var chunk in chunks) {
     // data chunk
     if (chunk is Uint8List) {
       // adhere to BIP62.3, minimal push policy
@@ -50,7 +49,7 @@ Uint8List? compile(List<dynamic> chunks) {
       if (opcode != null) {
         buffer!.buffer.asByteData().setUint8(offset, opcode);
         offset += 1;
-        return null;
+        continue;
       }
       var epd = pushdata.encode(buffer, chunk.length, offset);
       offset += epd.size!;
@@ -62,7 +61,7 @@ Uint8List? compile(List<dynamic> chunks) {
       buffer!.buffer.asByteData().setUint8(offset, chunk);
       offset += 1;
     }
-  });
+  }
 
   if (offset != buffer!.length) throw ArgumentError('Could not decode chunks');
   return buffer;
@@ -94,7 +93,7 @@ List<dynamic>? decompile(dynamic buffer) {
 
       // decompile minimally
       final op = asMinimalOP(data);
-      chunks.add(op != null ? op : data);
+      chunks.add(op ?? data);
 
       // opcode
     } else {
@@ -147,7 +146,7 @@ bool isDefinedHashType(hashType) {
 }
 
 bool isCanonicalPubKey(Uint8List buffer) {
-  return ecc.isPoint(buffer);
+  return isPoint(buffer);
 }
 
 bool isCanonicalScriptSignature(Uint8List buffer) {
@@ -252,7 +251,7 @@ getTypeBits(String type) {
     case 'P2SH':
       return 8;
     default:
-      throw new Error();
+      throw Error();
   }
 }
 
@@ -275,46 +274,12 @@ getHashSizeBits(hash) {
     case 512:
       return 7;
     default:
-      throw new Error();
+      throw Error();
   }
 }
 
 toUint5Array(data) {
   return convertBits(data, 8, 5);
-}
-
-List<int> convertBits(data, int from, int to, {bool strictMode = false}) {
-  double len = data.length * from / to;
-  final length = strictMode ? len.floor() : len.ceil();
-
-  final mask = (1 << to) - 1;
-  final result = List.generate(length, (_) => 0);
-
-  var index = 0;
-  var accumulator = 0;
-  var bits = 0;
-
-  for (var i = 0; i < data.length; i++) {
-    var value = data[i];
-    accumulator = (accumulator << from) | value;
-    bits += from;
-    while (bits >= to) {
-      bits -= to;
-      result[index] = (accumulator >> bits) & mask;
-      index++;
-    }
-  }
-
-  if (!strictMode) {
-    if (bits > 0) {
-      result[index] = (accumulator << (to - bits)) & mask;
-      index++;
-    }
-  } else {
-
-  }
-
-  return result;
 }
 
 base32Encode(data) {
@@ -369,7 +334,7 @@ List<int> taggedHash(String tag, List<int> msg) {
 
 List<int> bigToBytes(BigInt integer) {
   var hexNum = integer.toRadixString(16);
-  if (hexNum.length % 2 == 1) hexNum = '0' + hexNum;
+  if (hexNum.length % 2 == 1) hexNum = '0$hexNum';
 
   return HEX.decode(hexNum);
 }
@@ -382,12 +347,12 @@ BigInt getE(ECPoint P, List<int> rX, List<int> m) {
   return bigFromBytes(taggedHash('BIP0340/challenge', rX + bigToBytes(P.x!.toBigInteger()!) + m)) % secp256k1.n;
 }
 
-/// If the spending conditions do not require a script path, the output key should commit to an unspendable script path
+/// If the spending conditions do not require a script path, the output key should commit to an unSpendable script path
 /// instead of having no script path. This can be achieved by computing the output key point as
 /// Q = P + int(hashTapTweak(bytes(P)))G.
 /// https://en.bitcoin.it/wiki/BIP_0341#cite_note-22
 List<int> taprootConstruct({required ECPoint pubKey, List<int>? merkleRoot}) {
-  if (merkleRoot == null) merkleRoot = [];
+  merkleRoot ??= [];
 
   final tweak = taggedHash('TapTweak', bigToBytes(pubKey.x!.toBigInteger()!));
   final mul = secp256k1.G * BigInt.parse(HEX.encode(tweak), radix: 16);

@@ -1,6 +1,6 @@
 import 'package:bc_ur_dart/src/models/key/crypto_hdkey.dart';
 import 'package:bc_ur_dart/src/ur.dart';
-import 'package:bip32/bip32.dart';
+import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32;
 import 'package:test/test.dart';
 
 void main() {

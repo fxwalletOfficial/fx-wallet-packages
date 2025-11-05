@@ -1,9 +1,9 @@
 import 'package:crypto_wallet_util/src/transaction/aptos/tx_data.dart';
 import 'package:crypto_wallet_util/src/type/tx_signer_type.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
-import 'package:crypto_wallet_util/src/utils/extension.dart';
+import 'package:crypto_wallet_util/src/utils/utils.dart';
 
-/// Require [AptosTxData] and wallet. 
+/// Require [AptosTxData] and wallet.
 class AptosTxSigner extends TxSigner {
   @override
   final AptosTxData txData;

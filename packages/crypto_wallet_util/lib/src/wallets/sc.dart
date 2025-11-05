@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
-/// Create a **sc** wallet using mnemonic or private key, 
+/// Create a **sc** wallet using mnemonic or private key,
 /// with a signature algorithm of [ED25519].
 class SiaCoin extends WalletType {
   static final SC_ADDRESS_LENGTH = 32;
@@ -107,7 +110,7 @@ class SiaCoin extends WalletType {
   }
 
   /// generate private key from [mnemonic], support 28 or 29 words.
-  /// 
+  ///
   /// @param mnemonic
   static Uint8List generateFromMnemonic(mnemonic) {
     final intEntropy = phraseToInt(mnemonic);

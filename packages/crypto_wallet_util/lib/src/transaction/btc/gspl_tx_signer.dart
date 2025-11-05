@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/script.dart' show compile;
 import 'package:crypto_wallet_util/src/type/tx_signer_type.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
@@ -13,7 +16,7 @@ class GsplTxSigner extends TxSigner {
   @override
   final GsplTxData txData;
 
-  late final btc.NetworkType networkType;
+  late final NetworkType networkType;
 
   bool get isDoge => wallet is DogeCoin;
 
@@ -110,7 +113,7 @@ class GsplTxSigner extends TxSigner {
       transactionSigned.ins[i].script = scriptSig;
     }
     final newHex = transactionSigned.toHex();
-    
+
     txData.hex = newHex;
     txData.inputs = signedInputs;
     txData.isSigned = true;

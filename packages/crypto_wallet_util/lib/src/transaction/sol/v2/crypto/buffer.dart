@@ -1,5 +1,8 @@
 
+import 'dart:convert';
 import 'dart:math' show Random, min;
+import 'dart:typed_data';
+import 'package:bs58check/bs58check.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:convert/convert.dart';
 // import 'package:fxwallet/utils/extension/bigint.dart';

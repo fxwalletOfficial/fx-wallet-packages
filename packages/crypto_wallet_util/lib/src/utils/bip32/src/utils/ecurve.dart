@@ -1,19 +1,21 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:hex/hex.dart';
-import "package:pointycastle/ecc/curves/secp256k1.dart";
-import "package:pointycastle/api.dart"
+import 'package:pointycastle/ecc/curves/secp256k1.dart';
+import 'package:pointycastle/api.dart'
     show PrivateKeyParameter, PublicKeyParameter;
 import 'package:pointycastle/ecc/api.dart'
     show ECPrivateKey, ECPublicKey, ECSignature, ECPoint;
-import "package:pointycastle/signers/ecdsa_signer.dart";
+import 'package:pointycastle/signers/ecdsa_signer.dart';
 import 'package:pointycastle/macs/hmac.dart';
-import "package:pointycastle/digests/sha256.dart";
+import 'package:pointycastle/digests/sha256.dart';
 
 final ZERO32 = Uint8List.fromList(List.generate(32, (index) => 0));
 final EC_GROUP_ORDER = HEX
-    .decode("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+    .decode('fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
 final EC_P = HEX
-    .decode("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
+    .decode('fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f');
 final secp256k1 = ECCurve_secp256k1();
 final n = secp256k1.n;
 final G = secp256k1.G;

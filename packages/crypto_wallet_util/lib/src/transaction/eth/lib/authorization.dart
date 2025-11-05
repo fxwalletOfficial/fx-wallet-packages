@@ -1,4 +1,6 @@
 // EIP-7702: Authorization
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:crypto_wallet_util/src/transaction/eth/lib/rlp.dart' as rlp;
 import 'package:crypto_wallet_util/src/transaction/eth/lib/utils.dart';

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/src/utils/utils.dart' show getPath, fromHex, cborPathToString;
 import 'package:cbor/cbor.dart';
 import 'package:crypto_wallet_util/transaction.dart' show GsplTxData, GsplItem, BtcSignDataType;
-import 'package:web3dart/crypto.dart' show bytesToHex;
+import 'package:crypto_wallet_util/utils.dart' hide fromHex;
 
 extension GsplTxDataWithCbor on GsplTxData {
   CborMap toCbor() {
@@ -35,7 +35,7 @@ GsplTxData getGsplTxDataFromCbor({required CborMap data}) {
   List<GsplItem>? inputs = (data[CborSmallInt(3)] as CborList).map((e) => getGsplItemFromCbor(data: e as CborMap)).toList();
   GsplItem? change = data[CborSmallInt(4)] == null ? null : getGsplItemFromCbor(data: data[CborSmallInt(4)] as CborMap);
 
-  return GsplTxData(inputs: inputs, hex: bytesToHex(hex), dataType: BtcSignDataType.TRANSACTION, change: change);
+  return GsplTxData(inputs: inputs, hex: hex.toHex(), dataType: BtcSignDataType.TRANSACTION, change: change);
 }
 
 GsplItem getGsplItemFromCbor({required CborMap data}) {

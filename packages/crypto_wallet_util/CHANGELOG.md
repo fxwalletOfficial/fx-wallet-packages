@@ -213,3 +213,13 @@
 ## Fix
 
 - Fix address check method.
+
+## [1.1.17] - 2025-11-04
+## Update
+
+- Update packages version.
+
+## [1.2.0] - 2025-11-05
+## Update
+
+- Update BIP32 & BIP39.

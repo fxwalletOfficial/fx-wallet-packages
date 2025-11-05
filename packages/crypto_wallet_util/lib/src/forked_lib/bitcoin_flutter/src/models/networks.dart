@@ -1,39 +1,4 @@
-class NetworkType {
-  String messagePrefix;
-  String? bech32;
-  String ? prefix;
-  Bip32Type bip32;
-  int pubKeyHash;
-  int scriptHash;
-  int wif;
-
-  NetworkType({
-    required this.messagePrefix,
-    this.bech32,
-    this.prefix,
-    required this.bip32,
-    required this.pubKeyHash,
-    required this.scriptHash,
-    required this.wif
-  });
-
-  @override
-  String toString() {
-    return 'NetworkType{messagePrefix: $messagePrefix, bech32: $bech32, bip32: ${bip32.toString()}, pubKeyHash: $pubKeyHash, scriptHash: $scriptHash, wif: $wif}';
-  }
-}
-
-class Bip32Type {
-  int public;
-  int private;
-
-  Bip32Type({required this.public, required this.private});
-
-  @override
-  String toString() {
-    return 'Bip32Type{public: $public, private: $private}';
-  }
-}
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType, Bip32Type;
 
 final bitcoin = NetworkType(
   prefix: 'bitcoincash',

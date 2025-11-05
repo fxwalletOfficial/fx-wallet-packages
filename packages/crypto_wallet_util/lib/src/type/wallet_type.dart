@@ -1,6 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/config/config.dart';
-import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart'
-    as bitcoin;
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 class WalletSetting {
@@ -8,14 +9,14 @@ class WalletSetting {
   /// [bip44Path]     m/44'/60'/0'/0/0
   /// [prefix]        ckb, kaspa...
   /// [addressType]   bech32, base58.. For further details, refer to [AddressType].
-  /// [networkType]   default bitcoin type. 
+  /// [networkType]   default bitcoin type.
   /// [bech32Length]  Employed for bech32 address verification.
   /// [regExp]        A regular expression for addresses, utilized in address verification.
   ///
   final String bip44Path;
   String prefix;
   AddressType addressType;
-  bitcoin.NetworkType? networkType;
+  NetworkType? networkType;
   int bech32Length;
   String regExp;
   WalletSetting(

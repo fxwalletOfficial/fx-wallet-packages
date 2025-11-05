@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/wallets/sol.dart';
 import 'package:crypto_wallet_util/transaction.dart';
@@ -14,7 +16,7 @@ void main() async {
     final transactionData = transactionsJson["transaction"];
 
     final target = transactionsJson['message'];
-    
+
     final solTx = SolanaTransaction.fromBase64(transactionData);
     final message = solTx.message.serialize().asUint8List().toStr();
 
@@ -114,7 +116,7 @@ void main() async {
 
       final allKeys = [accountPubkey, programId];
       final messageInstruction = instruction.toMessageInstruction(allKeys);
-      
+
       expect(messageInstruction.programIdIndex, 1); // programId at index 1
       expect(messageInstruction.accounts.first, 0); // accountPubkey at index 0
     });
@@ -187,7 +189,7 @@ void main() async {
       final txData = SolTxDataV2.fromJson(jsonData);
       final broadcastData = txData.toBroadcast();
       final jsonResult = txData.toJson();
-      
+
       expect(broadcastData, isA<Map<String, dynamic>>());
       expect(jsonResult, isA<Map<String, dynamic>>());
     });
@@ -203,9 +205,9 @@ void main() async {
 
       final txData = SolTxDataV2.fromJson(jsonData);
       final signer = SolTxSignerV2(solWallet, txData);
-      
+
       signer.sign();
-      
+
       expect(txData.isSigned, isTrue);
       expect(txData.signature, isNotEmpty);
       expect(txData.message, isNotEmpty);
@@ -220,7 +222,7 @@ void main() async {
 
       final txData = SolTxDataV2.fromJson(jsonData);
       final signer = SolTxSignerV2(solWallet, txData);
-      
+
       signer.sign();
       expect(signer.verify(), isTrue);
     });
@@ -234,7 +236,7 @@ void main() async {
 
       final txData = SolTxDataV2.fromJson(jsonData);
       final signer = SolTxSignerV2(solWallet, txData);
-      
+
       expect(signer.verify(), isFalse);
     });
   });

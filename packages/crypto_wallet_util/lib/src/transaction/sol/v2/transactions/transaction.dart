@@ -1,7 +1,9 @@
-import 'package:crypto_wallet_util/src/utils/utils.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:bs58check/bs58check.dart';
 
 import '../crypto/buffer.dart';
-
 import '../crypto/keypair.dart';
 import '../crypto/nacl.dart' as nacl;
 import '../crypto/pubkey.dart';

@@ -1,7 +1,13 @@
+import 'dart:typed_data';
+
+import 'package:bs58check/bs58check.dart';
 import 'package:crypto_wallet_util/src/forked_lib/psbt/network/bitcoin_network.dart';
+import 'package:crypto_wallet_util/src/utils/bech32/bech32.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 import '../utils/converter.dart';
+
+
 
 /// Represents an address type of Bitcoin.
 class BtcAddressType {
@@ -32,8 +38,8 @@ class BtcAddressType {
   /// Get the address from the public key. (not for multisig)
   final String Function(String) getAddress;
 
-  /// Get the multisignature address from the public keys and required signatures. (for multisig)
-  final String Function(List<String>, int) getMultisignatureAddress;
+  /// Get the multiSignature address from the public keys and required signatures. (for multisig)
+  final String Function(List<String>, int) getMultiSignatureAddress;
 
   BtcAddressType._(
       this.name,
@@ -45,7 +51,7 @@ class BtcAddressType {
       this.versionForMainnet,
       this.versionForTestnet,
       this.getAddress,
-      this.getMultisignatureAddress);
+      this.getMultiSignatureAddress);
 
   /// Address type for P2PKH(Legacy) address.
   static BtcAddressType p2pkh = BtcAddressType._(
@@ -58,7 +64,7 @@ class BtcAddressType {
       0x0488b21e,
       0x043587cf,
       getP2pkhAddress,
-      getWrongMultisigatureAddress);
+      getWrongMultiSignatureAddress);
 
   /// Address type for P2WPKH(Native Segwit) address.
   static BtcAddressType p2wpkh = BtcAddressType._(
@@ -71,7 +77,7 @@ class BtcAddressType {
       0x04b24746,
       0x045f1cf6,
       getP2wpkhAddress,
-      getWrongMultisigatureAddress);
+      getWrongMultiSignatureAddress);
 
   /// Address type for P2WSH-in-P2SH(Nested Segwit) address.
   static BtcAddressType p2wpkhInP2sh = BtcAddressType._(
@@ -84,7 +90,7 @@ class BtcAddressType {
       0x049d7cb2,
       0x044a5262,
       getP2wpkhInP2shAddress,
-      getWrongMultisigatureAddress);
+      getWrongMultiSignatureAddress);
 
   /// Address type for P2SH(Legacy Multisig) address.
   static BtcAddressType p2sh = BtcAddressType._('p2sh', 45, '3', 'P2SH', false,
@@ -136,13 +142,11 @@ class BtcAddressType {
 
   static String _getSegwitHrp() {
     BitcoinNetwork network = BitcoinNetwork.currentNetwork;
-    if (network == BitcoinNetwork.mainnet) {
-      return 'bc';
-    } else if (network == BitcoinNetwork.testnet) {
-      return 'tb';
-    } else if (network == BitcoinNetwork.regtest) {
-      return 'bcrt';
-    }
+
+    if (network == BitcoinNetwork.mainnet) return 'bc';
+    if (network == BitcoinNetwork.testnet) return 'tb';
+    if (network == BitcoinNetwork.regtest) return 'bcrt';
+
     throw Exception('Invalid network');
   }
 
@@ -265,7 +269,7 @@ class BtcAddressType {
   }
 
   /// @nodoc
-  static String getWrongMultisigatureAddress(
+  static String getWrongMultiSignatureAddress(
       List<String> publicKey, int requiredSignature) {
     throw Exception('Use getAddress for non multisig address type.');
   }

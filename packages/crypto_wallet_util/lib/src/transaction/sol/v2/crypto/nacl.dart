@@ -1,6 +1,7 @@
 library nacl;
 
-import 'package:crypto_wallet_util/src/utils/utils.dart';
+import 'dart:typed_data';
+
 import 'package:pinenacl/tweetnacl.dart' show TweetNaCl;
 import 'keypair.dart';
 

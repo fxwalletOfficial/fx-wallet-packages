@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 /// Ethereum Signed Message (EIP-191) signature and verification wrapper

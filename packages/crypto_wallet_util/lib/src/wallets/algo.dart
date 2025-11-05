@@ -1,8 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:crypto_wallet_util/src/config/constants/constants.dart';
 
-/// Create a **algo** wallet using mnemonic or private key, 
+/// Create a **algo** wallet using mnemonic or private key,
 /// with a signature algorithm of [ED25519].
 class AlgoCoin extends WalletType {
   final _default = WalletSetting(bip44Path: ALGO_PATH);

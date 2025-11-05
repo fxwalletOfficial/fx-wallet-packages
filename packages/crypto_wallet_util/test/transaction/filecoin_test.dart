@@ -1,10 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
 
 import 'package:crypto_wallet_util/src/wallets/fil.dart';
 import 'package:crypto_wallet_util/transaction.dart';
-import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 void main() async {
   const String mnemonic =

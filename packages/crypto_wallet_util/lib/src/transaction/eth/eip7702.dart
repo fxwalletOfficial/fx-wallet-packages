@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/transaction/eth/lib/eth_lib.dart';
 import 'package:crypto_wallet_util/src/transaction/eth/tx_data.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';

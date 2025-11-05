@@ -1,8 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:crypto_wallet_util/src/config/constants/constants.dart';
 
-/// Create a **sui** wallet using mnemonic or private key, 
+/// Create a **sui** wallet using mnemonic or private key,
 /// with a signature algorithm of [ED25519].
 class SuiCoin extends WalletType {
   static final SUI_ADDRESS_LENGTH = 32;

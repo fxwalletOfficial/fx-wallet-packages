@@ -5,7 +5,7 @@ import 'package:hex/hex.dart';
 
 import '../src/classify.dart';
 import '../src/crypto.dart' as bcrypto;
-import '../src/ecpair.dart';
+import '../../../utils/bip32/src/utils/ecpair.dart';
 import '../src/payments/index.dart' show PaymentData;
 import '../src/payments/p2pk.dart' show P2PK;
 import '../src/payments/p2pkh.dart' show P2PKH;

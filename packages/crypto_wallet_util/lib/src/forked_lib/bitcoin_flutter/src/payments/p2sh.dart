@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bs58check/bs58check.dart' as bs58check;
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart';
 
 import '../crypto.dart';
 import '../models/networks.dart';
@@ -111,17 +112,17 @@ class P2SH {
       _getDataFromHash();
 
       if (data.redeem!.input != null) {
-        var _chunks = bscript.decompile(data.redeem!.input)!;
-        _chunks.add(data.redeem!.output);
-        _getDataFromChunk(_chunks);
+        final chunks = bscript.decompile(data.redeem!.input)!;
+        chunks.add(data.redeem!.output);
+        _getDataFromChunk(chunks);
       }
     }
 
     data.witness ??= data.redeem!.witness ?? [];
   }
 
-  void _getDataFromChunk([List<dynamic>? _chunks]) {
-    if (data.input == null && _chunks != null) data.input = bscript.compile(_chunks);
+  void _getDataFromChunk([List<dynamic>? chunks]) {
+    if (data.input == null && chunks != null) data.input = bscript.compile(chunks);
   }
 
   void _getDataFromInput() {

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
-import 'package:bip32/bip32.dart';
 import 'package:convert/convert.dart';
+import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32, HIGHEST_BIT;
 
 const String CRYPTO_MULTI_ACCOUNTS = 'CRYPTO-MULTI-ACCOUNTS';
 

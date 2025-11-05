@@ -1,10 +1,14 @@
+import 'dart:typed_data';
+
+import 'package:crypto_wallet_util/src/utils/bech32/bech32.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart';
+import 'package:crypto_wallet_util/src/utils/bip39/src/bip39_base.dart';
 import 'package:equatable/equatable.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/export.dart';
 
 import '../cosmos_dart.dart';
-import '../wallet/network_info.dart';
-import 'package:crypto_wallet_util/src/utils/utils.dart';
+
 /// Represents a wallet which contains the hex private key, the hex public key
 /// and the hex address.
 /// In order to create one properly, the [Wallet.derive] method should always
@@ -34,38 +38,39 @@ class CosmosWallet extends Equatable {
     CosmosNetworkInfo networkInfo, {
     String derivationPath = derivationPath,
   }) {
-    // Validate the mnemonic
-    if (!Bip39.validateMnemonic(mnemonic)) throw Exception('Invalid mnemonic');
+    try {
+      // Convert the mnemonic to a BIP32 instance
+      final seed = BIP39.mnemonicToSeed(mnemonic.join(' '));
+      final root = BIP32.fromSeed(seed);
 
-    // Convert the mnemonic to a BIP32 instance
-    final seed = Bip39.mnemonicToSeed(mnemonic);
-    final root = Bip32.fromSeed(seed);
+      // Get the node from the derivation path
+      final derivedNode = root.derivePath(derivationPath);
 
-    // Get the node from the derivation path
-    final derivedNode = root.derivePath(derivationPath);
+      // Get the curve data
+      final secp256k1 = ECCurve_secp256k1();
+      final point = secp256k1.G;
 
-    // Get the curve data
-    final secp256k1 = ECCurve_secp256k1();
-    final point = secp256k1.G;
+      // Compute the curve point associated to the private key
+      final bigInt = BigInt.parse(HEX.encode(derivedNode.privateKey!), radix: 16);
+      final curvePoint = point * bigInt;
 
-    // Compute the curve point associated to the private key
-    final bigInt = BigInt.parse(HEX.encode(derivedNode.privateKey!), radix: 16);
-    final curvePoint = point * bigInt;
+      // Get the public key
+      final publicKeyBytes = curvePoint!.getEncoded();
 
-    // Get the public key
-    final publicKeyBytes = curvePoint!.getEncoded();
+      // Get the address
+      final sha256Digest = SHA256Digest().process(publicKeyBytes);
+      final address = RIPEMD160Digest().process(sha256Digest);
 
-    // Get the address
-    final sha256Digest = SHA256Digest().process(publicKeyBytes);
-    final address = RIPEMD160Digest().process(sha256Digest);
-
-    // Return the key bytes
-    return CosmosWallet(
-      address: address,
-      publicKey: publicKeyBytes,
-      privateKey: derivedNode.privateKey!,
-      networkInfo: networkInfo,
-    );
+      // Return the key bytes
+      return CosmosWallet(
+        address: address,
+        publicKey: publicKeyBytes,
+        privateKey: derivedNode.privateKey!,
+        networkInfo: networkInfo,
+      );
+    } catch (e) {
+      throw Exception('Invalid mnemonic');
+    }
   }
 
   /// Generated a new random [CosmosWallet] using the specified [networkInfo]
@@ -75,7 +80,7 @@ class CosmosWallet extends Equatable {
     String derivationPath = derivationPath,
   }) {
     return CosmosWallet.derive(
-      Bip39.generateMnemonic(strength: 256),
+      BIP39.generateMnemonic(strength: 256).split(' '),
       networkInfo,
       derivationPath: derivationPath,
     );

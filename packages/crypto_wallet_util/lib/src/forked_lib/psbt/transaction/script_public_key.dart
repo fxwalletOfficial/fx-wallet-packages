@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:bech32m_i/bech32m_i.dart' as bech32m;
+import 'package:bs58check/bs58check.dart';
 import 'package:crypto_wallet_util/src/forked_lib/psbt/network/bitcoin_network.dart';
+import 'package:crypto_wallet_util/src/utils/bech32/bech32.dart';
 
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 

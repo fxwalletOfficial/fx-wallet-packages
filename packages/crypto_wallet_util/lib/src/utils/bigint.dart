@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 

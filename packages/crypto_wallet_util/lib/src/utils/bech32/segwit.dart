@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import './bech32.dart';
-import './exceptions.dart';
+import 'bech32.dart';
+import 'exceptions.dart';
 
 /// An instance of the default implementation of the SegwitCodec
 const SegwitCodec segwit = SegwitCodec();
@@ -18,13 +18,13 @@ class SegwitCodec extends Codec<Segwit, SegwitInput> {
   void setValidHrp(String hrp) {}
 
   @override
-  SegwitInput encode(Segwit data) {
-    return SegwitEncoder().convert(data);
+  SegwitInput encode(Segwit input) {
+    return SegwitEncoder().convert(input);
   }
 
   @override
-  Segwit decode(SegwitInput data) {
-    return SegwitDecoder().convert(data);
+  Segwit decode(SegwitInput encoded) {
+    return SegwitDecoder().convert(encoded);
   }
 }
 
@@ -112,7 +112,7 @@ List<int> _convertBits(List<int> data, int from, int to, bool pad) {
   var result = <int>[];
   var maxv = (1 << to) - 1;
 
-  data.forEach((v) {
+  for (var v in data) {
     if (v < 0 || (v >> from) != 0) {
       throw Exception();
     }
@@ -122,7 +122,7 @@ List<int> _convertBits(List<int> data, int from, int to, bool pad) {
       bits -= to;
       result.add((acc >> bits) & maxv);
     }
-  });
+  }
 
   if (pad) {
     if (bits > 0) result.add((acc << (to - bits)) & maxv);

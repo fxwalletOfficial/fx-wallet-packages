@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:bip32/src/utils/ecurve.dart' show isPoint;
-
-import '../bech32/exceptions.dart';
-import '../bech32/segwit.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/ecurve.dart' show isPoint;
+import '../../../../utils/bech32/exceptions.dart';
+import '../../../../utils/bech32/segwit.dart';
 import '../crypto.dart';
 import '../models/networks.dart';
 import '../payments/index.dart' show PaymentData;
@@ -71,13 +71,13 @@ class P2WPKH {
 
   void _getDataFromAddress(String address) {
     try {
-      var _address = segwit.decode(SegwitInput(network.bech32!, address));
-      if (network.bech32 != _address.hrp) throw ArgumentError('Invalid prefix or Network mismatch');
+      final addr = segwit.decode(SegwitInput(network.bech32!, address));
+      if (network.bech32 != addr.hrp) throw ArgumentError('Invalid prefix or Network mismatch');
 
       // Only support version 0 now;
-      if (_address.version != 0) throw ArgumentError('Invalid address version');
+      if (addr.version != 0) throw ArgumentError('Invalid address version');
 
-      data.hash = Uint8List.fromList(_address.program);
+      data.hash = Uint8List.fromList(addr.program);
     } on InvalidHrp {
       throw ArgumentError('Invalid prefix or Network mismatch');
     } on InvalidProgramLength {

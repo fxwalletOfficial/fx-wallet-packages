@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:bs58check/bs58check.dart';
 import 'package:crypto_wallet_util/config.dart' show getChainConfigByBip44Path;
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart' as btc;
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/constants/op.dart';

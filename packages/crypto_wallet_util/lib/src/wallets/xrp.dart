@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/xrpl_dart.dart';
 
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';

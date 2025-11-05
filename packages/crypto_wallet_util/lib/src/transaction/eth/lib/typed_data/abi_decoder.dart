@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 /// ABI decoder for Ethereum smart contract function calls
@@ -328,7 +330,7 @@ class AbiDecoder {
     }
 
     final hexValue = hexData.substring(offset, offset + 64);
-    
+
     // Check if high bytes are non-zero (would overflow int)
     final highPart = hexValue.substring(0, 48); // First 24 bytes = 48 hex chars
     if (highPart != '0' * 48) {

@@ -1,54 +1,61 @@
-import 'package:bip39/bip39.dart' as bip39;
-import 'package:bip32/bip32.dart' as bip32;
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:crypto/crypto.dart';
+import 'package:crypto_wallet_util/src/utils/bip39/src/bip39_base.dart';
 import "package:ed25519_hd_key/ed25519_hd_key.dart";
 import 'package:substrate_bip39/substrate_bip39.dart';
 
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show BIP32, NetworkType, Bip32Type;
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
 /// Provide various methods to generate a hd wallet.
-///  Include [bip32], [bip39], [ED25519_HD_KEY].
+///  Include [BIP32], [BIP39], [ED25519_HD_KEY].
 class HDWallet {
   static final HARDENED_OFFSET = 0x80000000;
-  static final _BITCOIN = bip32.NetworkType(
-      wif: 0x80,
-      bip32: bip32.Bip32Type(public: 0x0488b21e, private: 0x0488ade4));
+  static final _BITCOIN = NetworkType(
+    messagePrefix: '\u0018Bitcoin Signed Message:\n',
+    bech32: 'bc',
+    wif: 128,
+    pubKeyHash: 0,
+    scriptHash: 5,
+    bip32: Bip32Type(public: 76067358, private: 76066276)
+  );
 
   static Uint8List mnemonicToSeed(String mnemonic) {
-    return bip39.mnemonicToSeed(mnemonic);
+    return BIP39.mnemonicToSeed(mnemonic);
   }
 
   static Uint8List mnemonicToEntropy(String mnemonic) {
-    final entropy = bip39.mnemonicToEntropy(mnemonic);
-    return dynamicToUint8List(entropy);
+    return dynamicToUint8List(BIP39.mnemonicToEntropy(mnemonic));
   }
 
   static Uint8List bip32DerivePath(String mnemonic, String path,
-      [bip32.NetworkType? networkType]) {
+      [NetworkType? networkType]) {
     final seed = mnemonicToSeed(mnemonic);
-    bip32.NetworkType network = networkType ?? _BITCOIN;
-    final keyChain = bip32.BIP32.fromSeed(seed, network);
+    NetworkType network = networkType ?? _BITCOIN;
+    final keyChain = BIP32.fromSeed(seed, network);
     final keyPair = keyChain.derivePath(path);
     return dynamicToUint8List(keyPair.privateKey!);
   }
 
-  static bip32.BIP32 bip32HdWallet(String mnemonic, String path,
-      [bip32.NetworkType? networkType]) {
+  static BIP32 bip32HdWallet(String mnemonic, String path,
+      [NetworkType? networkType]) {
     final seed = mnemonicToSeed(mnemonic);
-    bip32.NetworkType network = networkType ?? _BITCOIN;
-    final keyChain = bip32.BIP32.fromSeed(seed, network);
+    NetworkType network = networkType ?? _BITCOIN;
+    final keyChain = BIP32.fromSeed(seed, network);
     return keyChain.derivePath(path);
   }
 
-  static bip32.BIP32 getBip32Node(String mnemonic,
-      [bip32.NetworkType? networkType]) {
-    bip32.NetworkType network = networkType ?? _BITCOIN;
+  static BIP32 getBip32Node(String mnemonic,
+      [NetworkType? networkType]) {
+    NetworkType network = networkType ?? _BITCOIN;
     final seed = mnemonicToSeed(mnemonic);
-    return bip32.BIP32.fromSeed(seed, network);
+    return BIP32.fromSeed(seed, network);
   }
 
-  static bip32.BIP32 getBip32Signer(String mnemonic, String path,
-      [bip32.NetworkType? networkType]) {
+  static BIP32 getBip32Signer(String mnemonic, String path,
+      [NetworkType? networkType]) {
     final node = getBip32Node(mnemonic, networkType);
     return node.derivePath(path);
   }
@@ -101,14 +108,14 @@ class HDLedger {
     return dynamicToUint8List(result.sublist(0, 32));
   }
 
-  static bip32.BIP32 deriveChild(
+  static BIP32 deriveChild(
       Uint8List chainCode, Uint8List privateKey, Uint8List publicKey) {
     final data = Uint8List.fromList([...publicKey, 0, 0, 0, 0]);
     final I = _hmacShaAsU8a(chainCode, data, 512);
     final IL = I.sublist(0, 32);
     final IR = I.sublist(32);
     final ki = EcdaSignature.privateAdd(privateKey, IL);
-    bip32.BIP32 hd = bip32.BIP32.fromPrivateKey(ki, IR);
+    BIP32 hd = BIP32.fromPrivateKey(ki, IR);
     return hd;
   }
 

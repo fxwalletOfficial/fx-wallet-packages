@@ -1,10 +1,11 @@
 import 'dart:typed_data';
 
-import 'package:bip32/bip32.dart' as bip32;
 import 'package:bs58check/bs58check.dart' as bs58;
+import 'package:crypto_wallet_util/src/utils/bech32/bech32.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart';
 import 'package:hex/hex.dart';
 
-import '../src/ecpair.dart';
+import '../../../utils/bip32/src/utils/ecpair.dart';
 import '../src/models/networks.dart';
 import '../src/payments/index.dart' show PaymentData;
 import '../src/payments/p2pkh.dart';
@@ -13,7 +14,7 @@ import '../src/utils/script.dart';
 
 /// Checks if you are awesome. Spoiler: you are.
 class HDWallet {
-  bip32.BIP32? _bip32;
+  BIP32? _bip32;
   P2PKH? _p2pkh;
   String? seed;
   NetworkType network;
@@ -94,7 +95,13 @@ class HDWallet {
   factory HDWallet.fromSeed(Uint8List seed, {NetworkType? network}) {
     network = network ?? bitcoin;
     final seedHex = HEX.encode(seed);
-    final wallet = bip32.BIP32.fromSeed(seed, bip32.NetworkType(bip32: bip32.Bip32Type(public: network.bip32.public, private: network.bip32.private), wif: network.wif));
+    final wallet = BIP32.fromSeed(seed, NetworkType(
+      wif: network.wif,
+      messagePrefix: network.messagePrefix,
+      pubKeyHash: network.pubKeyHash,
+      scriptHash: network.scriptHash,
+      bip32: Bip32Type(public: network.bip32.public, private: network.bip32.private)
+    ));
     final p2pkh = P2PKH(data: PaymentData(pubkey: wallet.publicKey), network: network);
     return HDWallet(bip32: wallet, p2pkh: p2pkh, network: network, seed: seedHex);
   }
@@ -104,10 +111,13 @@ class HDWallet {
     var wallet;
     var p2pkh;
     try {
-      wallet = bip32.BIP32.fromBase58(xpub, bip32.NetworkType(
-          bip32: bip32.Bip32Type(
-              public: network.bip32.public, private: network.bip32.private),
-          wif: network.wif));
+      wallet = BIP32.fromBase58(xpub, NetworkType(
+        bip32: Bip32Type(public: network.bip32.public, private: network.bip32.private),
+        wif: network.wif,
+        messagePrefix: network.messagePrefix,
+        pubKeyHash: network.pubKeyHash,
+        scriptHash: network.scriptHash
+      ));
     }catch(e){
     }
     try {

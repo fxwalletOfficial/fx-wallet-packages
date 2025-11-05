@@ -1,10 +1,13 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:convert/convert.dart' show hex;
+
 import 'package:test/test.dart';
 import 'package:crypto_wallet_util/src/transaction/eth/lib/typed_data/abi.dart';
 import 'package:crypto_wallet_util/src/transaction/eth/lib/typed_data/models.dart';
 import 'package:crypto_wallet_util/src/transaction/eth/lib/typed_data/util.dart';
 import 'package:crypto_wallet_util/src/transaction/eth/lib/typed_data/constants.dart';
-import 'package:crypto_wallet_util/src/utils/utils.dart';
-import 'package:convert/convert.dart' show hex;
 
 void main() {
   group('AbiUtil comprehensive tests', () {

@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/exceptions.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/base58.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/constants.dart';
 import 'package:pointycastle/export.dart';
+// ignore: implementation_imports
 import 'package:pointycastle/src/utils.dart' as utils;
-
-import '../base58.dart';
-import './exceptions.dart';
-import '../utils/constants/constants.dart';
 
 /// The Bitcoin curve
 final _curve = ECCurve_secp256k1();
@@ -23,9 +23,9 @@ final Uint8List _masterKey = utf8.encoder.convert('Bitcoin seed');
 
 BigInt _decodeBigInt(Uint8List bytes) {
   var negative = bytes.isNotEmpty && bytes[0] & 0x80 == 0x80;
-  if (negative) return utils.decodeBigInt([0, ...bytes]);
+  if (negative) return bcDecodeBigInt([0, ...bytes]);
 
-  return utils.decodeBigInt(bytes);
+  return bcDecodeBigInt(bytes);
 }
 
 /// AKA 'point(k)' in the specification
@@ -45,7 +45,7 @@ Uint8List _serializeTo4bytes(int i) {
   return bytes.buffer.asUint8List();
 }
 
-/// CKDpriv in the specification
+/// CKDPriv in the specification
 ExtendedPrivateKey _deriveExtendedPrivateChildKey(ExtendedPrivateKey parent, int childNumber) {
   var message = childNumber >= firstHardenedChild ? _derivePrivateMessage(parent, childNumber) : _derivePublicMessage(parent.publicKey, childNumber);
   var hash = _hmacSha512(parent.chainCode, message);
@@ -69,7 +69,7 @@ ExtendedPrivateKey _deriveExtendedPrivateChildKey(ExtendedPrivateKey parent, int
   );
 }
 
-/// CKDpub in the specification
+/// CKDPub in the specification
 ExtendedPublicKey _deriveExtendedPublicChildKey(ExtendedPublicKey parent, int childNumber) {
   if (childNumber >= firstHardenedChild) throw InvalidChildNumber();
 
@@ -259,18 +259,12 @@ abstract class ExtendedKey {
 class ExtendedPrivateKey extends ExtendedKey {
   ExtendedPrivateKey({
     required this.key,
-    required Uint8List version,
-    required int depth,
-    required int childNumber,
-    required Uint8List chainCode,
-    required Uint8List parentFingerprint
-  }) : super(
-    version: version,
-    depth: depth,
-    childNumber: childNumber,
-    parentFingerprint: parentFingerprint,
-    chainCode: chainCode
-  );
+    required super.version,
+    required super.depth,
+    required super.childNumber,
+    required super.chainCode,
+    required super.parentFingerprint
+  });
 
   factory ExtendedPrivateKey.master(Uint8List seed, List<int> version) {
     final hash = _hmacSha512(_masterKey, seed);
@@ -330,18 +324,12 @@ class ExtendedPrivateKey extends ExtendedKey {
 class ExtendedPublicKey extends ExtendedKey {
   ExtendedPublicKey({
     required this.q,
-    required Uint8List version,
-    required int depth,
-    required int childNumber,
-    required Uint8List chainCode,
-    required Uint8List parentFingerprint
-  }) : super(
-    version: version,
-    depth: depth,
-    childNumber: childNumber,
-    parentFingerprint: parentFingerprint,
-    chainCode: chainCode
-  );
+    required super.version,
+    required super.depth,
+    required super.childNumber,
+    required super.chainCode,
+    required super.parentFingerprint
+  });
 
   final ECPoint q;
 
@@ -363,4 +351,27 @@ class ExtendedPublicKey extends ExtendedKey {
 
   @override
   ExtendedPublicKey derive(int childNumber) => _deriveExtendedPublicChildKey(this, childNumber);
+}
+
+/// Decode a BigInt from bytes in big-endian encoding.
+/// Twos compliment.
+BigInt bcDecodeBigInt(List<int> bytes) {
+  var negative = bytes.isNotEmpty && bytes[0] & 0x80 == 0x80;
+
+  BigInt result;
+
+  if (bytes.length == 1) {
+    result = BigInt.from(bytes[0]);
+  } else {
+    result = BigInt.zero;
+    for (var i = 0; i < bytes.length; i++) {
+      var item = bytes[bytes.length - i - 1];
+      result |= BigInt.from(item) << (8 * i);
+    }
+  }
+  return result != BigInt.zero
+      ? negative
+          ? result.toSigned(result.bitLength)
+          : result
+      : BigInt.zero;
 }

@@ -1,4 +1,5 @@
-import 'package:crypto_wallet_util/src/utils/utils.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'nacl.dart' as nacl;
 import 'pubkey.dart';
@@ -16,7 +17,7 @@ abstract class Signer {
   /// The keypair's public key.
   final Pubkey pubkey;
 
-  /// The keypair's secrey key.
+  /// The keypair's secret key.
   final Uint8List seckey;
 }
 

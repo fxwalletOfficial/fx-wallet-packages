@@ -186,7 +186,7 @@ class Blake2b {
 }
 
 class Blake2bItem {
-  Uint32List state = new Uint32List(16);
+  Uint32List state = Uint32List(16);
   int globalSize = 32;
   int count = 0;
   int pos = 0x80000000;

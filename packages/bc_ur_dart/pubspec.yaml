@@ -1,19 +1,20 @@
 name: bc_ur_dart
 description: A dart plugin for Uniform Resources(URs) decode/encode. URs are URI-encoded CBOR structures developed by Blockchain Commons.
-version: 0.1.20
+version: 0.1.21
 homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packages/bc_ur_dart
 
 environment:
   sdk: ^3.3.4
 
+dependency_overrides:
+  pointycastle: ^4.0.0
+
 dependencies:
-  bip32: ^2.0.0
-  cbor: ^6.3.3
-  convert: ^3.1.1
-  crypto: ^3.0.3
-  crypto_wallet_util: ^1.1.13
+  cbor: ^6.3.7
+  convert: ^3.1.2
+  crypto: ^3.0.6
+  crypto_wallet_util: ^1.2.0
   uuid: ^4.4.0
-  web3dart: ^2.7.3
   xrandom: ^0.7.2
 
 dev_dependencies:

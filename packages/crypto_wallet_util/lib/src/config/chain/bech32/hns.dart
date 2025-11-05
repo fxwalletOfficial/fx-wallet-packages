@@ -1,7 +1,6 @@
 import 'package:crypto_wallet_util/crypto_utils.dart';
-import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart';
 
-/// Provide default config for **hns**, address type is [AddressType.BECH32], bip44 path is [HNS_PATH].  
+/// Provide default config for **hns**, address type is [AddressType.BECH32], bip44 path is [HNS_PATH].
 /// Testnet and mainnet share the different setting. Use [mainnet] to instantiate [HnsCoin].
 class HNSChain extends ConfChain {
   HNSChain()
