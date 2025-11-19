@@ -116,7 +116,13 @@ impl<N: Network> ProgramManager<N> {
         // If the initialization is for an execution, add the program. Otherwise, don't add it as
         // it will be added during the deployment process
         if initialize_execution {
-            vm.process().write().add_program(program)?;
+            // If the program doesn't have a constructor, use edition 1 to avoid edition 0 execution errors
+            // in ConsensusVersion::V8 or higher
+            if program.contains_constructor() {
+                vm.process().write().add_program(program)?;
+            } else {
+                vm.process().write().add_program_with_edition(program, 1)?;
+            }
         }
         Ok(vm)
     }

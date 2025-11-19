@@ -77,7 +77,7 @@ pub mod snarkvm_types {
     pub use snarkvm_algorithms::snark::varuna::VarunaVersion;
     pub use snarkvm_console::{
         account::{Address, PrivateKey, Signature, ViewKey},
-        prelude::{ToBytes, Uniform},
+        prelude::{ConsensusVersion, ToBytes, Uniform},
         program::{
             Ciphertext, Entry, EntryType, Identifier, Literal, Locator, Network, OutputID,
             Plaintext, PlaintextType, ProgramID, ProgramOwner, Record, Response, Value, ValueType,
@@ -91,7 +91,7 @@ pub mod snarkvm_types {
         helpers::memory::{BlockMemory, ConsensusMemory},
         BlockStore, ConsensusStore,
     };
-    pub use snarkvm_synthesizer::prelude::{cost_in_microcredits_v2, execution_cost_v2};
+    pub use snarkvm_synthesizer::process::execution_cost;
     pub use snarkvm_synthesizer::Authorization;
     pub use snarkvm_synthesizer::{
         snark::{Proof, ProvingKey, VerifyingKey},

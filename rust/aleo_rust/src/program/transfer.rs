@@ -321,7 +321,7 @@ impl<N: Network> ProgramManager<N> {
         // Compute the fee.
 
         // Compute the minimum execution cost.
-        let (minimum_execution_cost, (_, _)) = execution_cost_v2(&vm.process().read(), &execution)?;
+        let (minimum_execution_cost, (_, _)) = execution_cost(&vm.process().read(), &execution, ConsensusVersion::V10)?;
         // Compute the execution ID.
         Ok(minimum_execution_cost)
     }
@@ -353,7 +353,7 @@ impl<N: Network> ProgramManager<N> {
         // Compute the fee.
 
         // Compute the minimum execution cost.
-        let (minimum_execution_cost, (_, _)) = execution_cost_v2(&vm.process().read(), &execution)?;
+        let (minimum_execution_cost, (_, _)) = execution_cost(&vm.process().read(), &execution, ConsensusVersion::V10)?;
         // Compute the execution ID.
         let execution_id = execution.to_execution_id()?;
         // Authorize the fee.
@@ -420,7 +420,13 @@ impl<N: Network> ProgramManager<N> {
         // If the initialization is for an execution, add the program. Otherwise, don't add it as
         // it will be added during the deployment process
         if !vm.process().read().contains_program(program.id()) {
-            vm.process().write().add_program(&program)?;
+            // If the program doesn't have a constructor, use edition 1 to avoid edition 0 execution errors
+            // in ConsensusVersion::V8 or higher
+            if program.contains_constructor() {
+                vm.process().write().add_program(&program)?;
+            } else {
+                vm.process().write().add_program_with_edition(&program, 1)?;
+            }
         }
         let rng = &mut rand::thread_rng();
         // Compute the execution.
@@ -530,7 +536,13 @@ impl<N: Network> ProgramManager<N> {
             // If the initialization is for an execution, add the program. Otherwise, don't add it as
             // it will be added during the deployment process
             if !vm.process().read().contains_program(program.id()) {
-                vm.process().write().add_program(&program)?;
+                // If the program doesn't have a constructor, use edition 1 to avoid edition 0 execution errors
+                // in ConsensusVersion::V8 or higher
+                if program.contains_constructor() {
+                    vm.process().write().add_program(&program)?;
+                } else {
+                    vm.process().write().add_program_with_edition(&program, 1)?;
+                }
             }
             // Compute the authorization.
             vm.authorize(&private_key, program_id, function_name, inputs, rng)?
@@ -578,10 +590,16 @@ impl<N: Network> ProgramManager<N> {
         // If the initialization is for an execution, add the program. Otherwise, don't add it as
         // it will be added during the deployment process
         if !vm.process().read().contains_program(program.id()) {
-            vm.process().write().add_program(&program)?;
+            // If the program doesn't have a constructor, use edition 1 to avoid edition 0 execution errors
+            // in ConsensusVersion::V8 or higher
+            if program.contains_constructor() {
+                vm.process().write().add_program(&program)?;
+            } else {
+                vm.process().write().add_program_with_edition(&program, 1)?;
+            }
         }
         // Compute the minimum execution cost.
-        let (minimum_execution_cost, (_, _)) = execution_cost_v2(&vm.process().read(), &execution)?;
+        let (minimum_execution_cost, (_, _)) = execution_cost(&vm.process().read(), &execution, ConsensusVersion::V10)?;
         // Compute the execution ID.
         let execution_id = execution.to_execution_id()?;
         // Authorize the fee.

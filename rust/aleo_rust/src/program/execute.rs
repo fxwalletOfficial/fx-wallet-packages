@@ -60,11 +60,23 @@ impl<N: Network> ProgramManager<N> {
         let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
         imports.iter().try_for_each(|program| {
             if &credits_id != program.id() {
-                vm.process().write().add_program(program)?;
+                // If the program doesn't have a constructor, use edition 1 to avoid edition 0 execution errors
+                // in ConsensusVersion::V8 or higher
+                if program.contains_constructor() {
+                    vm.process().write().add_program(program)?;
+                } else {
+                    vm.process().write().add_program_with_edition(program, 1)?;
+                }
             }
             Ok::<(), Error>(())
         })?;
-        let _ = vm.process().write().add_program(program);
+        // If the program doesn't have a constructor, use edition 1 to avoid edition 0 execution errors
+        // in ConsensusVersion::V8 or higher
+        if program.contains_constructor() {
+            let _ = vm.process().write().add_program(program);
+        } else {
+            let _ = vm.process().write().add_program_with_edition(program, 1);
+        }
 
         // Compute the authorization.
         let authorization = vm.authorize(private_key, program_id, function_name, inputs, rng)?;
@@ -220,7 +232,13 @@ impl<N: Network> ProgramManager<N> {
             // If the initialization is for an execution, add the program. Otherwise, don't add it as
             // it will be added during the deployment process
             if !vm.process().read().contains_program(program.id()) {
-                vm.process().write().add_program(program)?;
+                // If the program doesn't have a constructor, use edition 1 to avoid edition 0 execution errors
+                // in ConsensusVersion::V8 or higher
+                if program.contains_constructor() {
+                    vm.process().write().add_program(program)?;
+                } else {
+                    vm.process().write().add_program_with_edition(program, 1)?;
+                }
             }
             vm.execute(
                 private_key,
@@ -292,6 +310,6 @@ impl<N: Network> ProgramManager<N> {
             VarunaVersion::V2,
             &mut rand::thread_rng(),
         )?;
-        execution_cost_v2(&vm.process().read(), &execution)
+        execution_cost(&vm.process().read(), &execution, ConsensusVersion::V10)
     }
 }
