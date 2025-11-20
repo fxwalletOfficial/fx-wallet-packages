@@ -37,9 +37,11 @@ class FunctionName {
   static const String transfer_as_signer = 'transfer_public_as_signer';
   static const String stake_public = 'stake_public';
   static const String withdraw = 'withdraw';
+  static const String transfer_public = 'transfer_public';
 }
 
 class ProgramName {
+  static const String credits = 'credits.aleo';
   static const String pondo = 'pondo_protocol.aleo';
   static const String tokenRegistry = 'token_registry.aleo';
   static const String betastaking = 'betastaking.aleo';
@@ -148,7 +150,7 @@ class AleoTransaction {
       this.sendMessage});
 
   factory AleoTransaction.fromJson(Map<String, dynamic> jsonRaw,
-      {List<String> programs = const []}) {
+      {List<String> programs = const [], String address = ''}) {
     final json = jsonRaw['transaction'];
     final type = json['type'];
     final transactionId = json['id'];
@@ -171,43 +173,65 @@ class AleoTransaction {
     SendMessage? sendMessage;
 
     /// transfer_[inputAddress]_to_[outputAddress], when private in [], this address is '';
-    switch (transitionType) {
-      case TransferMethod.private:
-      case TransferMethod.join:
-        final outputs = transition['outputs'];
-        sendMessage = SendMessage.getSendMessage(outputs);
-        value = outputs
-            .map((e) => e['value'])
-            .toString()
-            .replaceAll('(', '')
-            .replaceAll(')', '')
-            .replaceAll(' ', '');
+    if (program == ProgramName.credits) {
+      switch (transitionType) {
+        case TransferMethod.private:
+        case TransferMethod.join:
+          final outputs = transition['outputs'];
+          sendMessage = SendMessage.getSendMessage(outputs);
+          value = outputs
+              .map((e) => e['value'])
+              .toString()
+              .replaceAll('(', '')
+              .replaceAll(')', '')
+              .replaceAll(' ', '');
 
-        break;
-      case TransferMethod.private_to_public:
-        outputAddress = txOutput[0];
-        value = getValue(txOutput[1]); // input is private.
-        break;
-      case TransferMethod.public:
-        inputAddress = txOutput[0];
-        outputAddress = txOutput[1];
-        value = getValue(txOutput[2]);
-        break;
-      case TransferMethod.public_to_private:
-        inputAddress = txOutput[0];
-        value = getValue(txOutput[1]); // output is private, can not get.
-        break;
-      case TransferMethod.upgrade:
-        value = getValue(txOutput[0]);
-        break;
-      default:
-        final tokenTransferData = parseTokenTransfer(
-            json['execution']['transitions'],
-            programs: programs);
-        tokenTransfers = tokenTransferData['tokenTransfers'];
-        program = tokenTransferData['program'];
-        transitionType = TransferMethod.contract;
-        break;
+          break;
+        case TransferMethod.private_to_public:
+          outputAddress = txOutput[0];
+          value = getValue(txOutput[1]); // input is private.
+          break;
+        case TransferMethod.public:
+          inputAddress = txOutput[0];
+          outputAddress = txOutput[1];
+          value = getValue(txOutput[2]);
+          break;
+        case TransferMethod.public_to_private:
+          inputAddress = txOutput[0];
+          value = getValue(txOutput[1]); // output is private, can not get.
+          break;
+        case TransferMethod.upgrade:
+          value = getValue(txOutput[0]);
+          break;
+        default:
+          final tokenTransferData = parseTokenTransfer(
+              json['execution']['transitions'],
+              programs: programs,
+              address: address);
+          tokenTransfers = tokenTransferData['tokenTransfers'];
+          program = tokenTransferData['program'];
+          transitionType = TransferMethod.contract;
+          if (tokenTransferData['inputAddress'] != '') {
+            inputAddress = tokenTransferData['inputAddress'];
+          }
+          if (tokenTransferData['outputAddress'] != '') {
+            outputAddress = tokenTransferData['outputAddress'];
+          }
+          break;
+      }
+    } else {
+      final tokenTransferData = parseTokenTransfer(
+          json['execution']['transitions'],
+          programs: programs,
+          address: address);
+      tokenTransfers = tokenTransferData['tokenTransfers'];
+      program = tokenTransferData['program'];
+      if (tokenTransferData['inputAddress'] != '') {
+        inputAddress = tokenTransferData['inputAddress'];
+      }
+      if (tokenTransferData['outputAddress'] != '') {
+        outputAddress = tokenTransferData['outputAddress'];
+      }
     }
 
     return AleoTransaction(
@@ -269,7 +293,7 @@ class AleoTransaction {
   }
 
   static String getValue(String microcredits) {
-    if (microcredits.contains('u64')) {
+    if (microcredits.contains('u64') || microcredits.contains('u128')) {
       return microcredits.split('u')[0];
     } else {
       return '';
@@ -307,8 +331,11 @@ class AleoTransaction {
   }
 
   static Map<String, dynamic> parseTokenTransfer(List<dynamic> transitions,
-      {List<String> programs = const []}) {
+      {List<String> programs = const [], String address = ''}) {
     final List<TokenTransfer> tokenTransfers = [];
+    String inputAddress = '';
+    String outputAddress = '';
+
     String program = 'contract';
     for (final transition in transitions) {
       if (programs.contains(transition['program'])) {
@@ -361,7 +388,6 @@ class AleoTransaction {
             default:
               break;
           }
-          print(transition['function']);
           if ([FunctionName.stake_public, FunctionName.withdraw]
               .contains(transition['function'])) {
             tokenTransfers.add(TokenTransfer(
@@ -374,11 +400,45 @@ class AleoTransaction {
                 symbol: outputSymbol));
           }
           break;
+        // 标准token交易解析
+        case ProgramName.tokenRegistry:
+          switch (transition['function']) {
+            case FunctionName.transfer_public:
+              // 把argument中拿到数据拿出来
+              final arguments = findFuture(transition['outputs']);
+              String symbol = '';
+              // 前四个值分别是token id, from, amount, to
+              final tokenId = arguments[0];
+              if (tokenId ==
+                  '1751493913335802797273486270793650302076377624243810059080883537084141842600field') {
+                symbol = "paleo";
+                program = ProgramName.pondo;
+              }
+              inputAddress = arguments[3];
+              outputAddress = arguments[1];
+
+
+              final amount = arguments[2];
+              tokenTransfers.add(TokenTransfer(
+                  transferType: address == outputAddress
+                      ? TransferType.income
+                      : TransferType.expense,
+                  value: getValue(amount),
+                  symbol: symbol));
+          }
+          break;
         default:
           break;
       }
     }
-    return {'program': program, 'tokenTransfers': tokenTransfers};
+    final result = {
+      'program': program,
+      'tokenTransfers': tokenTransfers,
+      'inputAddress': inputAddress,
+      'outputAddress': outputAddress
+    };
+    print(tokenTransfers.map((e) => e.toJson()).toList());
+    return result;
   }
 
   static findFuture(List<dynamic> outputs) {
@@ -506,7 +566,18 @@ class TxsResult {
       required this.recordCipherTexts,
       required this.viewKey,
       required this.address,
-      this.programs = const []});
+      List<String>? programs})
+      : programs = _initializePrograms(programs);
+
+  // 辅助方法：初始化 programs 列表，默认添加 token_registry.aleo
+  static List<String> _initializePrograms(List<String>? programs) {
+    final result = programs ?? <String>[];
+    const tokenRegistry = 'token_registry.aleo';
+    if (!result.contains(tokenRegistry)) {
+      return [...result, tokenRegistry];
+    }
+    return result;
+  }
 
   getOutputTxs(
     List<dynamic> transactions,
@@ -526,7 +597,7 @@ class TxsResult {
       } else {
         final transactionId = outTxJson['transaction']['id'];
         if (!txIds.contains(transactionId)) {
-          final outTx = AleoTransaction.fromJson(outTxJson);
+          final outTx = AleoTransaction.fromJson(outTxJson, address: address);
           outTx.transferType = TransferType.expense;
           outTx.processPrivateTx(recordFFI, viewKey, privateKey,
               outTxJson['transaction'], recordCipherTexts);
@@ -546,7 +617,7 @@ class TxsResult {
     for (final inTxJson in inTxsJson) {
       final transactionId = inTxJson['transaction']['id'];
       if (!txIds.contains(transactionId)) {
-        final tx = AleoTransaction.fromJson(inTxJson);
+        final tx = AleoTransaction.fromJson(inTxJson, address: address);
         if (tx.transitionType == TransferMethod.private_to_public) {
           tx.transferType = TransferType.expense;
           txs.add(tx);
@@ -569,7 +640,7 @@ class TxsResult {
       throw Exception('Unsupport record in public txs');
     }
     for (final inTxJson in inTxsJson) {
-      final tx = AleoTransaction.fromJson(inTxJson, programs: programs);
+      final tx = AleoTransaction.fromJson(inTxJson, programs: programs, address: address);
       if (tx.inputAddress == address) {
         tx.transferType = TransferType.expense;
       }
@@ -609,12 +680,21 @@ class TxsResult {
           tx.program == program) {
         tokenTxs.add(tx);
       }
-      if (tx.transitionType == TransferMethod.public && tx.program == program) {
+      // 对于 public 类型的交易，如果已经有 tokenTransfers（比如从 parseTokenTransfer 中解析的），
+      // 就不需要再添加了，避免重复
+      if (tx.transitionType == TransferMethod.public && 
+          tx.program == program && 
+          tx.tokenTransfers.isEmpty) {
         tx.tokenTransfers.add(TokenTransfer(
             transferType: tx.transferType,
             value: tx.value,
             symbol: tx.getSymbol(program)));
         tx.value = '';
+        tokenTxs.add(tx);
+      } else if (tx.transitionType == TransferMethod.public && 
+                 tx.program == program && 
+                 tx.tokenTransfers.isNotEmpty) {
+        // 如果已经有 tokenTransfers，直接添加交易，不需要再创建新的 token transfer
         tokenTxs.add(tx);
       }
     }
