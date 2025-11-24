@@ -258,9 +258,9 @@ class AleoTransaction {
   getSymbol(String program) {
     switch (program) {
       case ProgramName.pondo:
-        return 'paleo';
+        return 'pALEO';
       case ProgramName.betastaking:
-        return 'staleo';
+        return 'stALEO';
       default:
         return '';
     }
@@ -351,11 +351,11 @@ class AleoTransaction {
         case ProgramName.pondo:
           switch (transition['function']) {
             case FunctionName.deposit:
-              inputSymbol = "paleo";
+              inputSymbol = "pALEO";
               outputSymbol = "aleo";
               break;
             case FunctionName.instant_withdraw_public_signer:
-              outputSymbol = "paleo";
+              outputSymbol = "pALEO";
               inputSymbol = "aleo";
               break;
             default:
@@ -378,12 +378,12 @@ class AleoTransaction {
         case ProgramName.betastaking:
           switch (transition['function']) {
             case FunctionName.stake_public:
-              inputSymbol = "staleo";
+              inputSymbol = "stALEO";
               outputSymbol = "aleo";
               break;
             case FunctionName.withdraw:
               inputSymbol = "aleo";
-              outputSymbol = "staleo";
+              outputSymbol = "stALEO";
               break;
             default:
               break;
@@ -411,7 +411,7 @@ class AleoTransaction {
               final tokenId = arguments[0];
               if (tokenId ==
                   '1751493913335802797273486270793650302076377624243810059080883537084141842600field') {
-                symbol = "paleo";
+                symbol = "pALEO";
                 program = ProgramName.pondo;
               }
               inputAddress = arguments[3];
