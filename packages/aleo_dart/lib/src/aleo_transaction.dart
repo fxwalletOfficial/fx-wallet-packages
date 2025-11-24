@@ -352,11 +352,11 @@ class AleoTransaction {
           switch (transition['function']) {
             case FunctionName.deposit:
               inputSymbol = "pALEO";
-              outputSymbol = "aleo";
+              outputSymbol = "ALEO";
               break;
             case FunctionName.instant_withdraw_public_signer:
               outputSymbol = "pALEO";
-              inputSymbol = "aleo";
+              inputSymbol = "ALEO";
               break;
             default:
               break;
@@ -379,10 +379,10 @@ class AleoTransaction {
           switch (transition['function']) {
             case FunctionName.stake_public:
               inputSymbol = "stALEO";
-              outputSymbol = "aleo";
+              outputSymbol = "ALEO";
               break;
             case FunctionName.withdraw:
-              inputSymbol = "aleo";
+              inputSymbol = "ALEO";
               outputSymbol = "stALEO";
               break;
             default:
