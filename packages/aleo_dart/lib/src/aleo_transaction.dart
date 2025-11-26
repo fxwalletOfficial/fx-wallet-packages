@@ -399,6 +399,18 @@ class AleoTransaction {
                 value: valueOut,
                 symbol: outputSymbol));
           }
+          if (transition['function'] == FunctionName.transfer_public) {
+            final arguments = findFuture(transition['outputs']);
+            inputAddress = arguments[0];
+            outputAddress = arguments[1];
+            final amount = arguments[2];
+            tokenTransfers.add(TokenTransfer(
+                transferType: address == outputAddress
+                    ? TransferType.income
+                    : TransferType.expense,
+                value: getValue(amount),
+                symbol: "stALEO"));
+          }
           break;
         // 标准token交易解析
         case ProgramName.tokenRegistry:
@@ -416,7 +428,6 @@ class AleoTransaction {
               }
               inputAddress = arguments[3];
               outputAddress = arguments[1];
-
 
               final amount = arguments[2];
               tokenTransfers.add(TokenTransfer(
@@ -437,7 +448,6 @@ class AleoTransaction {
       'inputAddress': inputAddress,
       'outputAddress': outputAddress
     };
-    print(tokenTransfers.map((e) => e.toJson()).toList());
     return result;
   }
 
@@ -640,7 +650,8 @@ class TxsResult {
       throw Exception('Unsupport record in public txs');
     }
     for (final inTxJson in inTxsJson) {
-      final tx = AleoTransaction.fromJson(inTxJson, programs: programs, address: address);
+      final tx = AleoTransaction.fromJson(inTxJson,
+          programs: programs, address: address);
       if (tx.inputAddress == address) {
         tx.transferType = TransferType.expense;
       }
@@ -682,8 +693,8 @@ class TxsResult {
       }
       // 对于 public 类型的交易，如果已经有 tokenTransfers（比如从 parseTokenTransfer 中解析的），
       // 就不需要再添加了，避免重复
-      if (tx.transitionType == TransferMethod.public && 
-          tx.program == program && 
+      if (tx.transitionType == TransferMethod.public &&
+          tx.program == program &&
           tx.tokenTransfers.isEmpty) {
         tx.tokenTransfers.add(TokenTransfer(
             transferType: tx.transferType,
@@ -691,9 +702,9 @@ class TxsResult {
             symbol: tx.getSymbol(program)));
         tx.value = '';
         tokenTxs.add(tx);
-      } else if (tx.transitionType == TransferMethod.public && 
-                 tx.program == program && 
-                 tx.tokenTransfers.isNotEmpty) {
+      } else if (tx.transitionType == TransferMethod.public &&
+          tx.program == program &&
+          tx.tokenTransfers.isNotEmpty) {
         // 如果已经有 tokenTransfers，直接添加交易，不需要再创建新的 token transfer
         tokenTxs.add(tx);
       }
