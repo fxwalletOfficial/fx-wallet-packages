@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart' show IterableExtension;
+import 'package:crypto_wallet_util/utils.dart';
 import 'package:hex/hex.dart';
 
 import '../src/classify.dart';
@@ -696,8 +697,7 @@ class Transaction {
   }
 
   factory Transaction.fromHex(String hex, {bool noStrict = false}) {
-    return Transaction.fromBuffer(Uint8List.fromList(HEX.decode(hex)),
-        noStrict: noStrict);
+    return Transaction.fromBuffer(dynamicToUint8List(hex), noStrict: noStrict);
   }
 
   @override

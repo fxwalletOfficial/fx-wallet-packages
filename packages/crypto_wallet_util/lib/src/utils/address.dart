@@ -49,8 +49,6 @@ class AddressUtils {
       case AddressType.NONE:
         return RegExp(COMMON_REG).hasMatch(address);
       default:
-        // ignore: avoid_print
-        print('${getTypeName(conf.addressType)} address not fully support');
         return RegExp(COMMON_REG).hasMatch(address);
     }
   }

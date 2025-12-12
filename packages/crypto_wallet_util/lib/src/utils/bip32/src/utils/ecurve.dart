@@ -134,15 +134,20 @@ Uint8List? privateAdd(Uint8List d, Uint8List tweak) {
 Uint8List sign(Uint8List hash, Uint8List x) {
   if (!isScalar(hash)) throw ArgumentError(THROW_BAD_HASH);
   if (!isPrivate(x)) throw ArgumentError(THROW_BAD_PRIVATE);
+
   ECSignature sig = deterministicGenerateK(hash, x);
   Uint8List buffer = Uint8List(64);
-  buffer.setRange(0, 32, _encodeBigInt(sig.r));
+
+  final r = _encodeBigInt(sig.r);
+  buffer.setRange(32 - r.length, 32, r);
+
   var s;
   if (sig.s.compareTo(nDiv2) > 0) {
     s = n - sig.s;
   } else {
     s = sig.s;
   }
+
   buffer.setRange(32, 64, _encodeBigInt(s));
   return buffer;
 }

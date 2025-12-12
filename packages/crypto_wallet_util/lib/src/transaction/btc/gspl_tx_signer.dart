@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/script.dart' show compile;
 import 'package:crypto_wallet_util/src/type/tx_signer_type.dart';
@@ -46,7 +44,7 @@ class GsplTxSigner extends TxSigner {
   @override
   GsplTxData sign() {
     // Deserialize and identify transaction information, get readable transaction structure
-    final transaction = btc.Transaction.fromHex(txData.hex);
+    final tx = btc.Transaction.fromHex(txData.hex);
     final inputAddress = wallet.publicKeyToAddress(wallet.publicKey);
     final payments = txData.toJson()['payments'];
     if (payments == null || payments.isEmpty) {
@@ -57,27 +55,20 @@ class GsplTxSigner extends TxSigner {
     final List<GsplItem> signedInputs = [];
     for (int i = 0; i < txData.inputs.length; i++) {
       final input = txData.inputs[i];
-      if (input.path == null) {
-        throw Exception('Input path cannot be null');
-      }
+      if (input.path == null) throw Exception('Input path cannot be null');
+
       int hashType = input.signHashType ?? btc.SIGHASH_ALL;
-      if (isBch) {
-        hashType |= btc.SIGHASH_BITCOINCASHBIP143;
-      }
-      if (input.amount == null) {
-        throw Exception('Input amount required for sigHash');
-      }
+      if (isBch) hashType |= btc.SIGHASH_BITCOINCASHBIP143;
+
+      if (input.amount == null) throw Exception('Input amount required for sigHash');
 
       final prevOutScript = btc.Address.addressToOutputScript(inputAddress, networkType)!;
       final value = input.amount!;
 
       // Choose correct signature hash method based on wallet type and configuration
-      Uint8List sigHash;
-      if (_shouldUseSegwitSignature()) {
-        sigHash = transaction.hashForWitnessV0(i, prevOutScript, value, hashType);
-      } else {
-        sigHash = transaction.hashForSignature(i, prevOutScript, hashType);
-      }
+      final sigHash = _shouldUseSegwitSignature() ?
+        tx.hashForWitnessV0(i, prevOutScript, value, hashType) :
+        tx.hashForSignature(i, prevOutScript, hashType);
 
       String sigResult;
       final sigHashHex = dynamicToString(sigHash);
@@ -91,7 +82,7 @@ class GsplTxSigner extends TxSigner {
         sigResult = wallet.sign(sigHashHex);
       }
 
-      final Uint8List signatureBytes = Uint8List.fromList(hexToBytes(sigResult));
+      final signatureBytes = dynamicToUint8List(sigResult);
 
       // Construct new GsplItem to replace
       signedInputs.add(GsplItem(
@@ -102,6 +93,7 @@ class GsplTxSigner extends TxSigner {
         signature: signatureBytes,
       ));
     }
+
     final transactionSigned = btc.Transaction.fromHex(txData.hex);
     for (int i = 0; i < signedInputs.length; i++) {
       final sig = signedInputs[i].signature;
@@ -112,13 +104,12 @@ class GsplTxSigner extends TxSigner {
       final scriptSig = compile([sig, pubkey]);
       transactionSigned.ins[i].script = scriptSig;
     }
-    final newHex = transactionSigned.toHex();
-
-    txData.hex = newHex;
+    final signedHex = transactionSigned.toHex();
+    txData.hex = signedHex;
     txData.inputs = signedInputs;
     txData.isSigned = true;
-    txData.message = newHex;
-    txData.signature = "";
+    txData.message = signedHex;
+    txData.signature = '';
 
     return txData;
   }
@@ -126,19 +117,13 @@ class GsplTxSigner extends TxSigner {
   /// Determine whether to use SegWit signature method
   bool _shouldUseSegwitSignature() {
     // BCH uses BIP143 signature hash method
-    if (isBch) {
-      return true;  // ✅ BCH should use BIP143
-    }
+    if (isBch) return true;  // ✅ BCH should use BIP143
 
     // DOGE doesn't support SegWit, use Legacy signature
-    if (isDoge) {
-      return false;
-    }
+    if (isDoge) return false;
 
     // LTC case: Taproot uses BIP143, regular uses Legacy
-    if (isLtc) {
-      return (wallet as LtcCoin).isTaproot;
-    }
+    if (isLtc) return (wallet as LtcCoin).isTaproot;
 
     return false;
   }

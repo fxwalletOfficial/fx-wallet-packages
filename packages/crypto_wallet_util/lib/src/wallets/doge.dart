@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/config/chain/btc/doge.dart';
-import 'package:crypto_wallet_util/src/forked_lib/bitcoin_base_hd/src/crypto/keypair/ec_private.dart';
+import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart' show SIGHASH_ALL;
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/utils/utils.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/ecurve.dart' as ecc;
+import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/script.dart' as bscript;
 
 /// Create a **doge** wallet using mnemonic or private key,
 /// with a signature algorithm of [EcdaSignature] and an address type of [doge]
@@ -48,8 +50,9 @@ class DogeCoin extends WalletType {
 
   @override
   String sign(String message) {
-    final ecPrivateKey = ECPrivate.fromBytes(privateKey);
-    return ecPrivateKey.signInput(message.toUint8List()).toHex();
+    final sig = ecc.sign(dynamicToUint8List(message), privateKey);
+    final signature = bscript.encodeSignature(sig, SIGHASH_ALL);
+    return dynamicToString(signature);
   }
 
   @override

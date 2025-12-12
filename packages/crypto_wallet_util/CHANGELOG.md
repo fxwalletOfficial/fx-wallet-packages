@@ -223,3 +223,8 @@
 ## Update
 
 - Update BIP32 & BIP39.
+
+## [1.2.1] - 2025-12-12
+## Update
+
+- Update GSPL Signer.
