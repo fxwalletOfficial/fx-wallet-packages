@@ -639,8 +639,20 @@ pub extern "C" fn execute_program_proof(
     let execution =
         program_manager.execute_program_proof(authorization, program_id.to_string(), &api_client);
     let result = match execution {
-        Ok(value) => value,
-        Err(err) => format!("Error: {}!", err.to_string()),
+        Ok(value) => {
+            // 验证返回的 proof 是否有效（不是错误字符串）
+            if value.starts_with("Error:") {
+                format!("Error: Invalid proof result: {}! This usually indicates the execution failed.", value)
+            } else {
+                value
+            }
+        },
+        Err(err) => {
+            let error_msg = format!("Error: {}! (URL: {}, Program: {}, Network: {})", 
+                err.to_string(), url, program_id, network);
+            println!("{}", error_msg);
+            error_msg
+        },
     };
     let c_string = CString::new(result.to_string()).unwrap();
     c_string.into_raw()
@@ -748,8 +760,20 @@ pub extern "C" fn execute_fee_proof(
         Authorization::<CurrentNetwork>::from_str(&authorization_str.to_string()).unwrap();
     let execution = program_manager.execute_fee_proof(authorization);
     let result = match execution {
-        Ok(value) => value,
-        Err(err) => format!("Error: {}!", err.to_string()),
+        Ok(value) => {
+            // 验证返回的 fee proof 是否有效（不是错误字符串）
+            if value.starts_with("Error:") {
+                format!("Error: Invalid fee proof result: {}! This usually indicates the fee execution failed.", value)
+            } else {
+                value
+            }
+        },
+        Err(err) => {
+            let error_msg = format!("Error: {}! (URL: {}, Network: {})", 
+                err.to_string(), url, network);
+            println!("{}", error_msg);
+            error_msg
+        },
     };
     let c_string = CString::new(result.to_string()).unwrap();
     c_string.into_raw()
@@ -762,12 +786,42 @@ pub extern "C" fn build_transaction_offline(
 ) -> *const c_char {
     let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
     let execution_str: &str = execution_cstr.to_str().unwrap();
-    let execution = Execution::<CurrentNetwork>::from_str(&execution_str.to_string()).unwrap();
+    let execution = match Execution::<CurrentNetwork>::from_str(&execution_str.to_string()) {
+        Ok(exec) => exec,
+        Err(err) => {
+            let error_msg = format!("Error: Failed to parse execution string: {}! Input was: {}", err, execution_str);
+            let c_string = CString::new(error_msg).unwrap();
+            return c_string.into_raw();
+        }
+    };
 
     let fee_cstr = unsafe { CStr::from_ptr(fee_raw) };
     let fee_str: &str = fee_cstr.to_str().unwrap();
-    let fee = Some(Fee::<CurrentNetwork>::from_str(&fee_str.to_string()).unwrap());
-    let transaction = Transaction::from_execution(execution, fee).unwrap();
+    
+    // 检查是否是错误字符串
+    if fee_str.starts_with("Error:") {
+        let error_msg = format!("Error: Fee string is an error message: {}! Cannot build transaction.", fee_str);
+        let c_string = CString::new(error_msg).unwrap();
+        return c_string.into_raw();
+    }
+    
+    let fee = match Fee::<CurrentNetwork>::from_str(&fee_str.to_string()) {
+        Ok(f) => Some(f),
+        Err(err) => {
+            let error_msg = format!("Error: Failed to parse fee string: {}! Input was: {}", err, fee_str);
+            let c_string = CString::new(error_msg).unwrap();
+            return c_string.into_raw();
+        }
+    };
+    
+    let transaction = match Transaction::from_execution(execution, fee) {
+        Ok(tx) => tx,
+        Err(err) => {
+            let error_msg = format!("Error: Failed to build transaction from execution and fee: {}!", err);
+            let c_string = CString::new(error_msg).unwrap();
+            return c_string.into_raw();
+        }
+    };
 
     let c_string = CString::new(transaction.to_string()).unwrap();
     c_string.into_raw()
@@ -1301,7 +1355,14 @@ pub extern "C" fn contract_fee_execution(
     .unwrap();
     let execution_cstr = unsafe { CStr::from_ptr(execution_raw) };
     let execution_str: &str = execution_cstr.to_str().unwrap();
-    let execution = Execution::<CurrentNetwork>::from_str(&execution_str.to_string()).unwrap();
+    let execution = match Execution::<CurrentNetwork>::from_str(&execution_str.to_string()) {
+        Ok(exec) => exec,
+        Err(err) => {
+            let error_msg = format!("Error: Failed to parse execution string: {}! Input was: {}", err, execution_str);
+            let c_string = CString::new(error_msg).unwrap();
+            return c_string.into_raw();
+        }
+    };
 
     let mut authorization = "error".to_string();
     for i in 0..10 {
