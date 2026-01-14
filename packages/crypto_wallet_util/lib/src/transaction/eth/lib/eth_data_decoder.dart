@@ -6,7 +6,7 @@ import 'package:crypto_wallet_util/src/transaction/eth/lib/abi/meson_bridge_abi.
 import 'package:crypto_wallet_util/src/transaction/eth/lib/abi/relay_bridge_abi.dart';
 import 'package:crypto_wallet_util/src/transaction/eth/lib/abi/across_bridge_abi.dart';
 import 'package:crypto_wallet_util/src/transaction/eth/lib/abi/cctp_bridge_abi.dart';
-
+import 'package:crypto_wallet_util/src/transaction/eth/lib/abi/gaszip_bridge_abi.dart';
 class EthDataDecoder {
   static final AbiDecoder paraSwap = AbiDecoder.fromABI(paraSwapAbi);
   static final AbiDecoder cowSwap = AbiDecoder.fromABI(cowswapAbi);
@@ -15,7 +15,8 @@ class EthDataDecoder {
   static final AbiDecoder relayBridge = AbiDecoder.fromABI(relayBridgeAbi);
   static final AbiDecoder acrossBridge = AbiDecoder.fromABI(acrossBridgeAbi);
   static final AbiDecoder cctpBridge = AbiDecoder.fromABI(cctpBridgeAbi);
-
+  static final AbiDecoder gaszipBridge = AbiDecoder.fromABI(gaszipBridgeAbi);
+  
   static decodeByAbi(List<dynamic> abiJson, String data) {
     final decoder = AbiDecoder.fromABI(abiJson);
     return decoder.decodeParameters(data);
