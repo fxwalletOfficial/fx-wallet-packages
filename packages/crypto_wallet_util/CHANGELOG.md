@@ -228,3 +228,8 @@
 ## Update
 
 - Update GSPL Signer.
+
+## [1.2.2] - 2025-12-30
+## Update
+
+- Add bridge tx parse.
