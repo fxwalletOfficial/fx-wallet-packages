@@ -10,6 +10,8 @@ export 'package:bc_ur_dart/src/models/btc/gspl_signature.dart';
 export 'package:bc_ur_dart/src/models/btc/gspl_tx_data.dart';
 export 'package:bc_ur_dart/src/models/btc/psbt_sign_request.dart';
 export 'package:bc_ur_dart/src/models/btc/psbt_signature.dart';
+export 'package:bc_ur_dart/src/models/cosmos/cosmos_sign_request.dart';
+export 'package:bc_ur_dart/src/models/cosmos/cosmos_signature.dart';
 export 'package:bc_ur_dart/src/models/eth/eth_sign_request.dart';
 export 'package:bc_ur_dart/src/models/eth/eth_signature.dart';
 export 'package:bc_ur_dart/src/models/key/crypto_hdkey.dart';
