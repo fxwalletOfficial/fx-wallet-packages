@@ -3,6 +3,8 @@
 class ExtendedRegistryType extends RegistryType {
   ExtendedRegistryType(super._type, super._tag);
 
+  static RegistryType GS_SIGNATURE = RegistryType("gs-signature", 6102);
+
   static RegistryType SOL_SIGN_REQUEST = RegistryType("sol-sign-request", 1101);
   static RegistryType SOL_SIGNATURE = RegistryType("sol-signature", 1102);
   static RegistryType SOL_NFT_ITEM = RegistryType("sol-nft-item", 1104);
