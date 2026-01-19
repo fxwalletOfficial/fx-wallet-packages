@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
@@ -6,10 +5,9 @@ import 'package:bc_ur_dart/src/registry/gs_signature.dart';
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 class SolSignature extends GsSignature {
-
   SolSignature({
     required super.signature,
-    super.uuid,
+    required super.uuid,
     super.origin,
   });
 
@@ -19,18 +17,11 @@ class SolSignature extends GsSignature {
   }
 
   static SolSignature fromDataItem(dynamic jsonData) {
-    final map = jsonData is String ? jsonDecode(jsonData) : jsonData is Map? jsonData : null;
-    if(map == null){
-      throw "Param for fromDataItem is neither String nor Map, please check it!";
-    }
-    final signature = map[GsSignatureKeys.signature.index.toString()];
-    final uuid = map[GsSignatureKeys.uuid.index.toString()];
-    final origin = map[GsSignatureKeys.origin.index.toString()];
-
+    final gs = GsSignature.fromDataItem(jsonData);
     return SolSignature(
-      signature: fromHex(signature),
-      uuid: uuid != null ? fromHex(uuid) : null , 
-      origin: origin,
+      signature: gs.signature,
+      uuid: gs.uuid,
+      origin: gs.origin,
     );
   }
 
@@ -38,5 +29,9 @@ class SolSignature extends GsSignature {
     CborValue cborValue = cbor.decode(cborPayload);
     String jsonData = const CborJsonEncoder().convert(cborValue);
     return fromDataItem(jsonData);
+  }
+
+  static UR fromSignature({required SolSignRequest request, required Uint8List signature}) {
+    return SolSignature(uuid: request.getRequestId(), signature: signature, origin: request.getOrigin()).toUR();
   }
 }

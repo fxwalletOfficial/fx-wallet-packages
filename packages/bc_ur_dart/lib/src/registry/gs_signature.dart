@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -14,32 +13,31 @@ enum GsSignatureKeys {
 }
 
 class GsSignature extends RegistryItem {
-  final Uint8List? uuid;
+  final Uint8List uuid;
   final String? origin;
   final Uint8List signature;
 
   GsSignature({
     required this.signature,
-    this.uuid,
+    required this.uuid,
     this.origin,
   });
-
 
   @override
   RegistryType getRegistryType() {
     return ExtendedRegistryType.GS_SIGNATURE;
   }
 
-  Uint8List getRequestId() => uuid ?? generateUuid();
+  Uint8List getRequestId() => uuid;
   Uint8List getSignature() => signature;
   String? getOrigin() => origin;
 
   @override
   CborValue toCborValue() {
     final Map map = {};
-    if (uuid != null) {
-      map[GsSignatureKeys.uuid.index] = CborBytes(uuid!, tags: [RegistryType.UUID.tag]);
-    }
+
+    map[GsSignatureKeys.uuid.index] = CborBytes(uuid, tags: [RegistryType.UUID.tag]);
+
     if (origin != null) {
       map[GsSignatureKeys.origin.index] = origin;
     }
@@ -62,7 +60,7 @@ class GsSignature extends RegistryItem {
 
     return GsSignature(
       signature: fromHex(signature),
-      uuid: uuid != null ? fromHex(uuid) : null,
+      uuid: fromHex(uuid),
       origin: origin,
     );
   }

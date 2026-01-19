@@ -120,4 +120,30 @@ class SolSignRequest extends RegistryItem {
     String jsonData = const CborJsonEncoder().convert(cborValue);
     return fromDataItem(jsonData);
   }
+
+  static UR generateSignRequest({
+    String? uuid,
+    required String signData,
+    required SignType signType,
+    required String path,
+    required String xfp,
+    String? outputAddress,
+    String? contractAddress,
+    String? origin,
+    int? fee,
+  }) {
+    return SolSignRequest(
+      uuid: uuid != null ? Uint8List.fromList(uuidParse(uuid)) : null,
+      signData: fromHex(signData),
+      signType: signType,
+      derivationPath: CryptoKeypath(
+        components: parsePath(path).map((e) => PathComponent(index: e["index"], hardened: e["hardened"])).toList(),
+        sourceFingerprint: fromHex(xfp),
+      ),
+      outputAddress: outputAddress,
+      contractAddress: contractAddress,
+      origin: origin,
+      fee: fee,
+    ).toUR();
+  }
 }
