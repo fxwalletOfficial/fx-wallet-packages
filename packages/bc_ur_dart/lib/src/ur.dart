@@ -10,7 +10,6 @@ import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:bc_ur_dart/src/models/common/seq.dart';
 import 'package:bc_ur_dart/src/utils/type.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
-import 'package:uuid/uuid.dart';
 
 class UR {
   String _type = '';
@@ -300,5 +299,5 @@ class UR {
   }
 
   /// Generate random UUID for request.
-  static Uint8List generateUUid() => Uuid().v8obj().toBytes();
+  static Uint8List generateUUid() => generateUuid();
 }

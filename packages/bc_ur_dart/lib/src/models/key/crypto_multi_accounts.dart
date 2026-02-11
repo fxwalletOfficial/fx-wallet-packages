@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32, HIGHEST_BIT;
@@ -150,8 +151,8 @@ class CryptoAccountItemUR extends UR {
   String toString() => '''
 {
 "derivationPath":"$path",
-"masterFingerprint":"${hex.encode(wallet?.fingerprint ?? Uint8List(0))}",
-"extendedPublicKey": "${wallet?.toBase58()}",
+"masterFingerprint":"${hex.encode(wallet?.fingerprint ?? crypto.sha256.convert(publicKey).bytes.sublist(0, 4))}",
+"extendedPublicKey": "${wallet?.toBase58()??''}",
 "chainCode": "${hex.encode(wallet?.chainCode ?? Uint8List(0))}"
 }''';
 }
