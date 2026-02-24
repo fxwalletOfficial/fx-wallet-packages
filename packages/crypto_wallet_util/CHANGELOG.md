@@ -233,3 +233,8 @@
 ## Update
 
 - Add bridge tx parse.
+
+## [1.2.3] - 2026-02-24
+## Update
+
+- Update: Update export.
