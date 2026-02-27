@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:cbor/cbor.dart';
+import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
@@ -44,21 +43,11 @@ class CryptoKeypath extends RegistryItem {
     this.depth,
   });
 
-  @override
-  RegistryType getRegistryType() {
-    return RegistryType.CRYPTO_KEYPATH;
-  }
-
   String? getPath() {
-    if (components.isEmpty) {
-      return null;
-    }
-
-    final pathComponents = components.map((component) {
-      return '${component.isWildcard() ? '*' : component.getIndex()}${component.isHardened() ? "'" : ''}';
+    if (components.isEmpty) return null;
+    return components.map((c) {
+      return '${c.isWildcard() ? '*' : c.getIndex()}${c.isHardened() ? "'" : ''}';
     }).join('/');
-
-    return pathComponents;
   }
 
   List<PathComponent> getComponents() => components;
@@ -66,60 +55,69 @@ class CryptoKeypath extends RegistryItem {
   int? getDepth() => depth;
 
   @override
+  RegistryType getRegistryType() => RegistryType.CRYPTO_KEYPATH;
+
+  @override
   CborValue toCborValue() {
-    final map = {};
-    final List componentsData = [];
-
-    for (var component in components) {
+    // components: [index/[], isHardened, ...]
+    final List<CborValue> componentsData = [];
+    for (final component in components) {
       if (component.isWildcard()) {
-        componentsData.add([]);
+        componentsData.add(CborList([]));
       } else {
-        componentsData.add(component.getIndex());
+        componentsData.add(CborSmallInt(component.getIndex()!));
       }
-      componentsData.add(component.isHardened());
+      componentsData.add(CborBool(component.isHardened()));
     }
 
-    map[KeyPathKeys.components.index] = componentsData;
+    final Map<CborValue, CborValue> innerMap = {
+      CborSmallInt(KeyPathKeys.components.index): CborList(componentsData),
+    };
+
+    // sourceFingerprint：xfp uint32，字节序与 Keystone 基准一致
     if (sourceFingerprint != null) {
-      map[KeyPathKeys.sourceFingerprint.index] = sourceFingerprint!.buffer.asByteData().getUint32(0, Endian.little); // , Endian.little
-    }
-    if (depth != null) {
-      map[KeyPathKeys.depth.index] = depth;
+      final fp = sourceFingerprint!.buffer.asByteData().getUint32(0, Endian.little);
+      innerMap[CborSmallInt(KeyPathKeys.sourceFingerprint.index)] = CborInt(BigInt.from(fp));
     }
 
-    return CborValue(map);
+    if (depth != null) {
+      innerMap[CborSmallInt(KeyPathKeys.depth.index)] = CborSmallInt(depth!);
+    }
+
+    return CborMap(innerMap, tags: [getRegistryType().tag]);
   }
 
-  static CryptoKeypath fromDataItem(dynamic jsonData) {
-    final map = jsonData is String
-        ? jsonDecode(jsonData)
-        : jsonData is Map
-            ? jsonData
-            : null;
-    if (map == null) {
-      throw "Param for fromDataItem is neither String nor Map, please check it!";
-    }
+  @override
+  RegistryItem decodeFromCbor(CborMap map) {
     final pathComponents = <PathComponent>[];
-    final components = map[KeyPathKeys.components.index.toString()] as List<dynamic>? ?? [];
+    final componentsList = map[CborSmallInt(KeyPathKeys.components.index)];
 
-    for (var i = 0; i < components.length; i += 2) {
-      final isHardened = components[i + 1] as bool;
-      final path = components[i];
+    if (componentsList is CborList) {
+      final items = componentsList.toList();
+      for (var i = 0; i + 1 < items.length; i += 2) {
+        final pathItem = items[i];
+        final hardenedItem = items[i + 1];
+        final isHardened = hardenedItem is CborBool && hardenedItem.value;
 
-      if (path is int) {
-        pathComponents.add(PathComponent(index: path, hardened: isHardened));
-      } else {
-        pathComponents.add(PathComponent(hardened: isHardened));
+        if (pathItem is CborList && pathItem.isEmpty) {
+          pathComponents.add(PathComponent(hardened: isHardened));
+        } else if (pathItem is CborInt) {
+          pathComponents.add(PathComponent(
+            index: pathItem.toInt(),
+            hardened: isHardened,
+          ));
+        }
       }
     }
-    final sourceFingerprintData = map[KeyPathKeys.sourceFingerprint.index.toString()];
+
     Uint8List? sourceFingerprint;
-    if (sourceFingerprintData != null) {
+    if (RegistryItem.hasKey(map, KeyPathKeys.sourceFingerprint.index)) {
+      final fp = RegistryItem.readInt(map, KeyPathKeys.sourceFingerprint.index);
       sourceFingerprint = Uint8List(4);
-      sourceFingerprint.buffer.asByteData().setUint32(0, sourceFingerprintData, Endian.little); // , Endian.little
+      sourceFingerprint.buffer.asByteData().setUint32(0, fp, Endian.little);
     }
 
-    final depth = map[KeyPathKeys.depth.index.toString()];
+    final depth = RegistryItem.readOptionalInt(map, KeyPathKeys.depth.index);
 
     return CryptoKeypath(
       components: pathComponents,
@@ -129,8 +127,6 @@ class CryptoKeypath extends RegistryItem {
   }
 
   static CryptoKeypath fromCBOR(Uint8List cborPayload) {
-    CborValue cborValue = cbor.decode(cborPayload);
-    String jsonData = const CborJsonEncoder().convert(cborValue);
-    return fromDataItem(jsonData);
+    return RegistryItem.fromCBOR<CryptoKeypath>(cborPayload, CryptoKeypath());
   }
 }

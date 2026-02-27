@@ -1,22 +1,20 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
-import 'package:bc_ur_dart/src/registry/data_item.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 enum SolSignRequestKeys {
-  zero,
-  uuid,
-  signData,
-  derivationPath,
-  outputAddress,
-  origin,
-  signType,
-  contractAddress,
-  fee,
+  zero, // 0 
+  uuid, // 1
+  signData, // 2
+  derivationPath, // 3
+  outputAddress, // 4
+  origin, // 5
+  signType, // 6
+  contractAddress, // 7
+  fee, // 8
 }
 
 enum SignType {
@@ -46,11 +44,6 @@ class SolSignRequest extends RegistryItem {
     this.fee,
   });
 
-  @override
-  RegistryType getRegistryType() {
-    return ExtendedRegistryType.SOL_SIGN_REQUEST;
-  }
-
   Uint8List getRequestId() => uuid ??= generateUuid();
   Uint8List getSignData() => signData;
   SignType getSignType() => signType;
@@ -62,63 +55,60 @@ class SolSignRequest extends RegistryItem {
   int? getFee() => fee;
 
   @override
+  RegistryType getRegistryType() => ExtendedRegistryType.SOL_SIGN_REQUEST;
+
+  @override
   CborValue toCborValue() {
-    final Map map = {};
-    map[SolSignRequestKeys.uuid.index] = CborBytes(getRequestId(), tags: [RegistryType.UUID.tag]);
-    map[SolSignRequestKeys.signData.index] = signData;
-    CborValue keyPath = derivationPath.toCborValue();
-    keyPath = cborValueSetTags(keyPath, [derivationPath.getRegistryType().tag]);
-    map[SolSignRequestKeys.derivationPath.index] = keyPath;
+    final Map<CborValue, CborValue> map = {};
+
+    map[CborSmallInt(SolSignRequestKeys.uuid.index)] = cborBytes(
+      getRequestId(),
+      tags: [RegistryType.UUID.tag],
+    );
+    map[CborSmallInt(SolSignRequestKeys.signData.index)] = cborBytes(signData);
+    map[CborSmallInt(SolSignRequestKeys.derivationPath.index)] = derivationPath.toCborValue();
+    map[CborSmallInt(SolSignRequestKeys.signType.index)] = cborInt(signType.index);
     if (outputAddress != null) {
-      map[SolSignRequestKeys.outputAddress.index] = outputAddress;
+      map[CborSmallInt(SolSignRequestKeys.outputAddress.index)] = CborString(outputAddress!);
     }
     if (origin != null) {
-      map[SolSignRequestKeys.origin.index] = origin;
+      map[CborSmallInt(SolSignRequestKeys.origin.index)] = CborString(origin!);
     }
-    map[SolSignRequestKeys.signType.index] = signType.index;
     if (contractAddress != null) {
-      map[SolSignRequestKeys.contractAddress.index] = contractAddress;
+      map[CborSmallInt(SolSignRequestKeys.contractAddress.index)] = CborString(contractAddress!);
     }
     if (fee != null) {
-      map[SolSignRequestKeys.fee.index] = fee;
+      map[CborSmallInt(SolSignRequestKeys.fee.index)] = cborInt(fee!);
     }
-    return CborValue(map);
+
+    return CborMap(map);
   }
 
-  static SolSignRequest fromDataItem(dynamic jsonData) {
-    final map = jsonData is String
-        ? jsonDecode(jsonData)
-        : jsonData is Map
-            ? jsonData
-            : null;
-    if (map == null) {
-      throw "Param for fromDataItem is neither String nor Map, please check it!";
-    }
-    final signData = map[SolSignRequestKeys.signData.index.toString()];
-    final signType = SignType.values[map[SolSignRequestKeys.signType.index.toString()]];
-    final derivationPath = CryptoKeypath.fromDataItem(map[SolSignRequestKeys.derivationPath.index.toString()]);
-    final outputAddress = map[SolSignRequestKeys.outputAddress.index.toString()];
-    final contractAddress = map[SolSignRequestKeys.contractAddress.index.toString()];
-    final uuid = map[SolSignRequestKeys.uuid.index.toString()];
-    final origin = map[SolSignRequestKeys.origin.index.toString()];
-    final fee = map[SolSignRequestKeys.fee.index.toString()];
+  @override
+  RegistryItem decodeFromCbor(CborMap map) {
+    // signType 枚举
+    final signTypeIndex = RegistryItem.readInt(
+      map,
+      SolSignRequestKeys.signType.index,
+    );
 
     return SolSignRequest(
-      uuid: uuid != null ? fromHex(uuid) : null,
-      signData: fromHex(signData),
-      signType: signType,
-      derivationPath: derivationPath,
-      outputAddress: outputAddress,
-      contractAddress: contractAddress,
-      origin: origin,
-      fee: fee,
+      uuid: RegistryItem.readBytes(map, SolSignRequestKeys.uuid.index),
+      signData: RegistryItem.readBytes(map, SolSignRequestKeys.signData.index),
+      signType: SignType.values[signTypeIndex],
+      derivationPath: RegistryItem.readKeypath(map, SolSignRequestKeys.derivationPath.index),
+      outputAddress: RegistryItem.readOptionalText(map, SolSignRequestKeys.outputAddress.index),
+      origin: RegistryItem.readOptionalText(map, SolSignRequestKeys.origin.index),
+      contractAddress: RegistryItem.readOptionalText(map, SolSignRequestKeys.contractAddress.index),
+      fee: RegistryItem.readOptionalInt(map, SolSignRequestKeys.fee.index),
     );
   }
 
   static SolSignRequest fromCBOR(Uint8List cborPayload) {
-    CborValue cborValue = cbor.decode(cborPayload);
-    String jsonData = const CborJsonEncoder().convert(cborValue);
-    return fromDataItem(jsonData);
+    return RegistryItem.fromCBOR<SolSignRequest>(
+      cborPayload,
+      SolSignRequest(signData: Uint8List(0), signType: SignType.transaction, derivationPath: CryptoKeypath()),
+    );
   }
 
   static UR generateSignRequest({

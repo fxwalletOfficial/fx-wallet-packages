@@ -1,21 +1,26 @@
-import 'dart:convert';
 import 'dart:typed_data';
-import 'package:protobuf/protobuf.dart';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
-import 'package:bc_ur_dart/src/registry/data_item.dart';
+import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
-import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 
-enum CosmosSignRequestKeys { zero, uuid, signData, derivationPath, chain, origin, fee }
+enum CosmosSignRequestKeys {
+  zero, // 0 
+  uuid, // 1
+  signData, // 2
+  derivationPath, // 3
+  chain, // 4
+  origin, // 5
+  fee, // 6
+}
 
 class CosmosSignRequest extends RegistryItem {
   Uint8List? uuid;
   final Uint8List signData;
-  final String? origin;
   final String chain;
   final CryptoKeypath derivationPath;
+  final String? origin;
   final int? fee;
 
   CosmosSignRequest({
@@ -27,76 +32,57 @@ class CosmosSignRequest extends RegistryItem {
     this.fee,
   });
 
-  @override
-  RegistryType getRegistryType() {
-    return ExtendedRegistryType.COSMOS_SIGN_REQUEST;
-  }
-
   Uint8List getRequestId() => uuid ??= generateUuid();
   Uint8List getSignData() => signData;
-  String? getOrigin() => origin;
   String getChain() => chain;
   String? getDerivationPath() => derivationPath.getPath();
   Uint8List? getSourceFingerprint() => derivationPath.sourceFingerprint;
+  String? getOrigin() => origin;
   int? getFee() => fee;
 
-  /// 转换为 CBOR 值
+  @override
+  RegistryType getRegistryType() => ExtendedRegistryType.COSMOS_SIGN_REQUEST;
+
+
   @override
   CborValue toCborValue() {
-    final Map map = {};
-    // UUID
-    map[CosmosSignRequestKeys.uuid.index] = CborBytes(getRequestId(), tags: [RegistryType.UUID.tag]);
-    // 签名数据
-    map[CosmosSignRequestKeys.signData.index] = CborBytes(signData);
-    // 派生路径（带标签）
-    CborValue keyPath = derivationPath.toCborValue();
-    keyPath = cborValueSetTags(keyPath, [derivationPath.getRegistryType().tag]);
-    map[CosmosSignRequestKeys.derivationPath.index] = keyPath;
+    final Map<CborValue, CborValue> map = {};
 
-    // 链标识
-    map[CosmosSignRequestKeys.chain.index] = chain;
-
-    // 可选字段
+    map[CborSmallInt(CosmosSignRequestKeys.uuid.index)] = CborBytes(
+      getRequestId(),
+      tags: [RegistryType.UUID.tag],
+    );
+    map[CborSmallInt(CosmosSignRequestKeys.signData.index)] = CborBytes(signData);
+    map[CborSmallInt(CosmosSignRequestKeys.derivationPath.index)] = derivationPath.toCborValue();
+    map[CborSmallInt(CosmosSignRequestKeys.chain.index)] = CborString(chain);
     if (origin != null) {
-      map[CosmosSignRequestKeys.origin.index] = origin;
+      map[CborSmallInt(CosmosSignRequestKeys.origin.index)] = CborString(origin!);
     }
     if (fee != null) {
-      map[CosmosSignRequestKeys.fee.index] = fee;
+      map[CborSmallInt(CosmosSignRequestKeys.fee.index)] = CborInt(BigInt.from(fee!));
     }
-    return CborValue(map);
+
+    return CborMap(map);
   }
 
-  static CosmosSignRequest fromDataItem(dynamic jsonData) {
-    final map = jsonData is String
-        ? jsonDecode(jsonData)
-        : jsonData is Map
-            ? jsonData
-            : null;
-    if (map == null) {
-      throw "Param for fromDataItem is neither String nor Map, please check it!";
-    }
-    final signData = map[CosmosSignRequestKeys.signData.index.toString()];
-    final uuid = map[CosmosSignRequestKeys.uuid.index.toString()];
-    final chain = map[CosmosSignRequestKeys.chain.index.toString()];
-    final origin = map[CosmosSignRequestKeys.origin.index.toString()];
-    final derivationPath = CryptoKeypath.fromDataItem(map[CosmosSignRequestKeys.derivationPath.index.toString()]);
-    final fee = map[CosmosSignRequestKeys.fee.index.toString()];
+  @override
+  RegistryItem decodeFromCbor(CborMap map) {
 
     return CosmosSignRequest(
-      uuid: fromHex(uuid),
-      signData: fromHex(signData),
-      derivationPath: derivationPath,
-      chain: chain,
-      origin: origin,
-      fee: fee,
+      uuid: RegistryItem.readBytes(map, CosmosSignRequestKeys.uuid.index),
+      signData: RegistryItem.readBytes(map, CosmosSignRequestKeys.signData.index),
+      chain: RegistryItem.readOptionalText(map, CosmosSignRequestKeys.chain.index) ?? '',
+      derivationPath: RegistryItem.readKeypath(map, CosmosSignRequestKeys.derivationPath.index),
+      origin: RegistryItem.readOptionalText(map, CosmosSignRequestKeys.origin.index),
+      fee: RegistryItem.readOptionalInt(map, CosmosSignRequestKeys.fee.index),
     );
   }
 
-  /// 签名请求UR 解析
   static CosmosSignRequest fromCBOR(Uint8List cborPayload) {
-    CborValue cborValue = cbor.decode(cborPayload);
-    String jsonData = const CborJsonEncoder().convert(cborValue);
-    return fromDataItem(jsonData);
+    return RegistryItem.fromCBOR<CosmosSignRequest>(
+      cborPayload,
+      CosmosSignRequest(signData: Uint8List(0), chain: '', derivationPath: CryptoKeypath()),
+    );
   }
 
   /// 签名请求UR生成
@@ -108,7 +94,6 @@ class CosmosSignRequest extends RegistryItem {
     required String xfp,
     String? origin,
     int? fee,
-    List<GeneratedMessage>? msgs,
   }) {
     return CosmosSignRequest(
       uuid: uuid != null ? Uint8List.fromList(uuidParse(uuid)) : null,
