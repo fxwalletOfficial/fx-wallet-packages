@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 
 abstract class RegistryItem {

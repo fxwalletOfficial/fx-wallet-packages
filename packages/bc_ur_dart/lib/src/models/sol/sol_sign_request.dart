@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 enum SolSignRequestKeys {
   zero, // 0 
@@ -45,17 +44,11 @@ class SolSignRequest extends RegistryItem {
   });
 
   Uint8List getRequestId() => uuid ??= generateUuid();
-  Uint8List getSignData() => signData;
-  SignType getSignType() => signType;
   String? getDerivationPath() => derivationPath.getPath();
   Uint8List? getSourceFingerprint() => derivationPath.sourceFingerprint;
-  String? getOutputAddress() => outputAddress;
-  String? getContractAddress() => contractAddress;
-  String? getOrigin() => origin;
-  int? getFee() => fee;
 
   @override
-  RegistryType getRegistryType() => ExtendedRegistryType.SOL_SIGN_REQUEST;
+  RegistryType getRegistryType() => RegistryType.SOL_SIGN_REQUEST;
 
   @override
   CborValue toCborValue() {

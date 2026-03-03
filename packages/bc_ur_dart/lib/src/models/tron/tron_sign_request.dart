@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 enum TronSignRequestKeys {
   zero, // 0 
@@ -30,14 +29,11 @@ class TronSignRequest extends RegistryItem {
   });
 
   Uint8List getRequestId() => uuid ??= generateUuid();
-  Uint8List getSignData() => signData;
   String? getDerivationPath() => derivationPath.getPath();
   Uint8List? getSourceFingerprint() => derivationPath.sourceFingerprint;
-  int? getFee() => fee;
-  String? getOrigin() => origin;
 
   @override
-  RegistryType getRegistryType() => ExtendedRegistryType.TRON_SIGN_REQUEST;
+  RegistryType getRegistryType() => RegistryType.TRON_SIGN_REQUEST;
 
   @override
   CborValue toCborValue() {

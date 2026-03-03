@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 enum KeyPathKeys {
   zero,
@@ -45,9 +44,10 @@ class CryptoKeypath extends RegistryItem {
 
   String? getPath() {
     if (components.isEmpty) return null;
-    return components.map((c) {
+    final path = components.map((c) {
       return '${c.isWildcard() ? '*' : c.getIndex()}${c.isHardened() ? "'" : ''}';
     }).join('/');
+    return 'm/$path';
   }
 
   List<PathComponent> getComponents() => components;

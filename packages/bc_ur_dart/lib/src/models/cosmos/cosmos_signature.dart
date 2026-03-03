@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/gs_signature.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 class CosmosSignature extends GsSignature {
   CosmosSignature({
@@ -13,7 +12,7 @@ class CosmosSignature extends GsSignature {
   });
 
   @override
-  RegistryType getRegistryType() => ExtendedRegistryType.COSMOS_SIGNATURE;
+  RegistryType getRegistryType() => RegistryType.COSMOS_SIGNATURE;
 
   @override
   RegistryItem decodeFromCbor(CborMap map) {
@@ -34,6 +33,6 @@ class CosmosSignature extends GsSignature {
 
   /// 从签名请求 + 签名结果构建 UR
   static UR fromSignature({required CosmosSignRequest request, required Uint8List signature}) {
-    return CosmosSignature(uuid: request.getRequestId(), signature: signature, origin: request.getOrigin()).toUR();
+    return CosmosSignature(uuid: request.getRequestId(), signature: signature, origin: request.origin).toUR();
   }
 }

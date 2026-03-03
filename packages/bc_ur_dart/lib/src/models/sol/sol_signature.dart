@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/gs_signature.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 class SolSignature extends GsSignature {
   SolSignature({
@@ -13,7 +12,7 @@ class SolSignature extends GsSignature {
   });
 
   @override
-  RegistryType getRegistryType() => ExtendedRegistryType.SOL_SIGNATURE;
+  RegistryType getRegistryType() => RegistryType.SOL_SIGNATURE;
 
   @override
   RegistryItem decodeFromCbor(CborMap map) {
@@ -35,6 +34,6 @@ class SolSignature extends GsSignature {
 
   /// 从签名请求 + 签名结果构建 UR，用于钱包返回签名给 dApp
   static UR fromSignature({required SolSignRequest request, required Uint8List signature}) {
-    return SolSignature(uuid: request.getRequestId(), signature: signature, origin: request.getOrigin()).toUR();
+    return SolSignature(uuid: request.getRequestId(), signature: signature, origin: request.origin).toUR();
   }
 }

@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/gs_signature.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 enum TronSignatureKeys {
   zero, // 0
@@ -20,7 +19,7 @@ class TronSignature extends GsSignature {
   });
 
   @override
-  RegistryType getRegistryType() => ExtendedRegistryType.TRON_SIGNATURE;
+  RegistryType getRegistryType() => RegistryType.TRON_SIGNATURE;
 
   @override
   RegistryItem decodeFromCbor(CborMap map) {
@@ -41,6 +40,6 @@ class TronSignature extends GsSignature {
 
   /// 从签名请求 + 签名结果构建 UR
   static UR fromSignature({required TronSignRequest request, required Uint8List signature}) {
-    return TronSignature(uuid: request.getRequestId(), signature: signature, origin: request.getOrigin()).toUR();
+    return TronSignature(uuid: request.getRequestId(), signature: signature, origin: request.origin).toUR();
   }
 }

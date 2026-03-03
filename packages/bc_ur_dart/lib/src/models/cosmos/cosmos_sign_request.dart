@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 enum CosmosSignRequestKeys {
   zero, // 0 
@@ -33,15 +32,11 @@ class CosmosSignRequest extends RegistryItem {
   });
 
   Uint8List getRequestId() => uuid ??= generateUuid();
-  Uint8List getSignData() => signData;
-  String getChain() => chain;
   String? getDerivationPath() => derivationPath.getPath();
   Uint8List? getSourceFingerprint() => derivationPath.sourceFingerprint;
-  String? getOrigin() => origin;
-  int? getFee() => fee;
 
   @override
-  RegistryType getRegistryType() => ExtendedRegistryType.COSMOS_SIGN_REQUEST;
+  RegistryType getRegistryType() => RegistryType.COSMOS_SIGN_REQUEST;
 
 
   @override

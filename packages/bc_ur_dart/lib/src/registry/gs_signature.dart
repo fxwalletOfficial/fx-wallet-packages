@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
 
 /// 使用枚举管理 CBOR key，避免硬编码数字
 enum GsSignatureKeys {
@@ -32,7 +31,7 @@ class GsSignature extends RegistryItem {
   String? getOrigin() => origin;
 
   @override
-  RegistryType getRegistryType() => ExtendedRegistryType.GS_SIGNATURE;
+  RegistryType getRegistryType() => RegistryType.GS_SIGNATURE;
 
   @override
   Map<int, CborValue> buildCbor() {
