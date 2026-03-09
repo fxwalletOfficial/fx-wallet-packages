@@ -17,6 +17,53 @@
 use super::*;
 
 impl<N: Network> ProgramManager<N> {
+    /// 获取用于 Query 对象的 URL（移除版本路径）
+    ///
+    /// Query 对象用于查询链上数据，需要标准格式的 URL（不带版本路径如 /v2）
+    /// 而 AleoAPIClient 可以处理带版本路径的 URL
+    ///
+    /// # 参数
+    /// * `base_url` - API 客户端的基础 URL（可能包含版本路径）
+    ///
+    /// # 返回
+    /// 移除版本路径后的 URL，用于创建 Query 对象
+    ///
+    /// # 示例
+    /// - `https://api.explorer.provable.com/v2` -> `https://api.explorer.provable.com`
+    /// - `https://api.explorer.provable.com/v1` -> `https://api.explorer.provable.com`
+    /// - `https://api.explorer.provable.com` -> `https://api.explorer.provable.com` (不变)
+    fn get_query_url(base_url: &str) -> String {
+        // 移除末尾的斜杠（如果有）
+        let url = base_url.trim_end_matches('/');
+        
+        // 检查并移除版本路径
+        if url.ends_with("/v2") {
+            url.trim_end_matches("/v2").to_string()
+        } else if url.ends_with("/v1") {
+            url.trim_end_matches("/v1").to_string()
+        } else {
+            url.to_string()
+        }
+    }
+
+    /// 创建 Query 对象，自动处理 URL 格式
+    ///
+    /// 这个方法会从 API 客户端获取 base_url，移除版本路径（如 /v2），
+    /// 然后创建 Query 对象用于查询链上数据
+    fn create_query(&self) -> Result<Query<N, BlockMemory<N>>> {
+        let base_url = self
+            .api_client
+            .as_ref()
+            .ok_or_else(|| anyhow!("API client not available"))?
+            .base_url();
+
+        let query_url = Self::get_query_url(base_url);
+        let uri = query_url
+            .parse::<http::Uri>()
+            .map_err(|e| anyhow!("Invalid URL format: {} (URL: {})", e, query_url))?;
+
+        Ok(Query::<N, BlockMemory<N>>::from(uri))
+    }
     /// Executes a transfer to the specified recipient_address with the specified amount and fee.
     /// Specify 0 for no fee.
     #[allow(clippy::too_many_arguments)]
@@ -45,8 +92,8 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
-        let query = Query::<N, BlockMemory<N>>::from(uri);
+        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        let query = self.create_query()?;
 
         // Retrieve the private key.
         let private_key = self.get_private_key(password)?;
@@ -143,8 +190,8 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
-        let query = Query::<N, BlockMemory<N>>::from(uri);
+        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        let query = self.create_query()?;
 
         // Retrieve the private key.
         let private_key = self.get_private_key(password)?;
@@ -378,12 +425,14 @@ impl<N: Network> ProgramManager<N> {
     }
 
     pub fn execute_proof(&self, authorization: Authorization<N>) -> Result<String> {
-        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
-        let query = Query::<N, BlockMemory<N>>::from(uri);
+        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        let query = self.create_query()?;
+
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         let rng = &mut rand::thread_rng();
+
         // Compute the execution.
         let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
         Ok(format!("{:?}", execution))
@@ -395,15 +444,19 @@ impl<N: Network> ProgramManager<N> {
         program_id: String,
         api_client: &AleoAPIClient<N>,
     ) -> Result<String> {
-        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
-        let query = Query::<N, BlockMemory<N>>::from(uri);
-        // Initialize a VM
-        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
-        let vm = VM::from(store)?;
         let program_id = ProgramID::<N>::from_str(&program_id)?;
+
+        // AleoAPIClient 可以处理带版本路径的 URL（如 /v2），用于获取程序数据
         let program = self
             .get_program(program_id)
             .or_else(|_| api_client.get_program(program_id))?;
+
+        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        let query = self.create_query()?;
+
+        // Initialize a VM
+        let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
+        let vm = VM::from(store)?;
 
         let credits_id = ProgramID::<N>::from_str("credits.aleo")?;
         api_client
@@ -429,18 +482,21 @@ impl<N: Network> ProgramManager<N> {
             }
         }
         let rng = &mut rand::thread_rng();
+
         // Compute the execution.
         let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
         Ok(format!("{:?}", execution))
     }
 
     pub fn execute_fee_proof(&self, authorization: Authorization<N>) -> Result<String> {
-        let uri = self.api_client.as_ref().unwrap().base_url().parse::<http::Uri>().map_err(|_| anyhow!("Invalid URL format"))?;
-        let query = Query::<N, BlockMemory<N>>::from(uri);
+        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        let query = self.create_query()?;
+
         // Initialize a VM
         let store = ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?;
         let vm = VM::from(store)?;
         let rng = &mut rand::thread_rng();
+
         // Compute the execution.
         let execution = vm.execute_fee_authorization_raw(authorization, &query, rng)?;
         Ok(execution.to_string())
