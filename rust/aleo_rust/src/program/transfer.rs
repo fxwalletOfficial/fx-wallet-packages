@@ -17,39 +17,10 @@
 use super::*;
 
 impl<N: Network> ProgramManager<N> {
-    /// 获取用于 Query 对象的 URL（移除版本路径）
+    /// 创建 Query 对象，使用 API 客户端的完整 base_url（保留版本路径如 /v2）
     ///
-    /// Query 对象用于查询链上数据，需要标准格式的 URL（不带版本路径如 /v2）
-    /// 而 AleoAPIClient 可以处理带版本路径的 URL
-    ///
-    /// # 参数
-    /// * `base_url` - API 客户端的基础 URL（可能包含版本路径）
-    ///
-    /// # 返回
-    /// 移除版本路径后的 URL，用于创建 Query 对象
-    ///
-    /// # 示例
-    /// - `https://api.explorer.provable.com/v2` -> `https://api.explorer.provable.com`
-    /// - `https://api.explorer.provable.com/v1` -> `https://api.explorer.provable.com`
-    /// - `https://api.explorer.provable.com` -> `https://api.explorer.provable.com` (不变)
-    fn get_query_url(base_url: &str) -> String {
-        // 移除末尾的斜杠（如果有）
-        let url = base_url.trim_end_matches('/');
-        
-        // 检查并移除版本路径
-        if url.ends_with("/v2") {
-            url.trim_end_matches("/v2").to_string()
-        } else if url.ends_with("/v1") {
-            url.trim_end_matches("/v1").to_string()
-        } else {
-            url.to_string()
-        }
-    }
-
-    /// 创建 Query 对象，自动处理 URL 格式
-    ///
-    /// 这个方法会从 API 客户端获取 base_url，移除版本路径（如 /v2），
-    /// 然后创建 Query 对象用于查询链上数据
+    /// 部分 API（如 api.explorer.provable.com）要求请求路径包含版本（如 /v2），
+    /// 否则会返回非 JSON 导致解析失败。因此 Query 使用与 AleoAPIClient 一致的完整 URL。
     fn create_query(&self) -> Result<Query<N, BlockMemory<N>>> {
         let base_url = self
             .api_client
@@ -57,7 +28,8 @@ impl<N: Network> ProgramManager<N> {
             .ok_or_else(|| anyhow!("API client not available"))?
             .base_url();
 
-        let query_url = Self::get_query_url(base_url);
+        // 保留完整 URL（含 /v2 等版本路径），确保 block/height/latest 等请求带版本
+        let query_url = base_url.trim_end_matches('/');
         let uri = query_url
             .parse::<http::Uri>()
             .map_err(|e| anyhow!("Invalid URL format: {} (URL: {})", e, query_url))?;
@@ -92,7 +64,7 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        // Query 使用完整 base_url（含版本路径），与 API 客户端一致
         let query = self.create_query()?;
 
         // Retrieve the private key.
@@ -190,7 +162,7 @@ impl<N: Network> ProgramManager<N> {
         }
 
         // Specify the network state query
-        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        // Query 使用完整 base_url（含版本路径），与 API 客户端一致
         let query = self.create_query()?;
 
         // Retrieve the private key.
@@ -425,7 +397,7 @@ impl<N: Network> ProgramManager<N> {
     }
 
     pub fn execute_proof(&self, authorization: Authorization<N>) -> Result<String> {
-        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        // Query 使用完整 base_url（含版本路径），与 API 客户端一致
         let query = self.create_query()?;
 
         // Initialize a VM
@@ -451,7 +423,7 @@ impl<N: Network> ProgramManager<N> {
             .get_program(program_id)
             .or_else(|_| api_client.get_program(program_id))?;
 
-        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        // Query 使用完整 base_url（含版本路径），与 API 客户端一致
         let query = self.create_query()?;
 
         // Initialize a VM
@@ -489,7 +461,7 @@ impl<N: Network> ProgramManager<N> {
     }
 
     pub fn execute_fee_proof(&self, authorization: Authorization<N>) -> Result<String> {
-        // Query 对象需要标准格式的 URL（不带版本路径），create_query 会自动处理
+        // Query 使用完整 base_url（含版本路径），与 API 客户端一致
         let query = self.create_query()?;
 
         // Initialize a VM
