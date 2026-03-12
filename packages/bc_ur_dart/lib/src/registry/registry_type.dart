@@ -49,7 +49,7 @@ class RegistryType {
   static const RegistryType COSMOS_SIGNATURE = RegistryType("cosmos-signature", 1202);
 
   static const RegistryType TRON_SIGN_REQUEST = RegistryType("tron-sign-request", 1301);
-  static const RegistryType TRON_SIGNATURE = RegistryType("tron-sign-request", 1302);
+  static const RegistryType TRON_SIGNATURE = RegistryType("tron-signature", 1302);
 
   static const RegistryType ALPH_SIGN_REQUEST = RegistryType("alph-sign-request", 8110);
   static const RegistryType ALPH_SIGNATURE = RegistryType("alph-signature", 8111);

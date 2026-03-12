@@ -107,7 +107,7 @@ Uint8List toUtf8Bytes(String str) {
       utf8.add(0x80 | (data & 0x3f));
     }
   }
- 
+
   return Uint8List.fromList(utf8);
 }
 
@@ -124,6 +124,17 @@ Uint8List bigIntToBytes(String bigIntStr) {
   }
 
   return bytes;
+}
+
+/// 将字节数组（Uint8List）转换为BigInt字符串
+String bytesToBigIntStr(Uint8List bytes) {
+  BigInt result = BigInt.zero;
+
+  for (int i = 0; i < bytes.length; i++) {
+    result = (result << 8) | BigInt.from(bytes[i]);
+  }
+
+  return result.toString();
 }
 
 bool arraysEqual(List a, List b) {

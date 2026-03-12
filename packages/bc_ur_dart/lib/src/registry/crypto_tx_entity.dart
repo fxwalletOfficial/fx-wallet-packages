@@ -4,7 +4,7 @@ import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 
 enum TxEntityKeys {
-  zero, // 0 
+  zero, // 0
   address, // 1
   amount, // 2
 }
@@ -64,12 +64,12 @@ CryptoTxEntity parseTxEntity(Map<String, dynamic> txEntityMap) {
 }
 
 /// CryptoTxEntity → Map，对应热钱包构造时的 parseTxEntity() 逆操作
-List<Map<String, dynamic>> parseOutputs(List<CryptoTxEntity>? outputs) {
+List<Map<String, dynamic>> parseTxOutputs(List<CryptoTxEntity>? outputs) {
   if (outputs == null || outputs.isEmpty) return [];
   return outputs
       .map((e) => {
-            'address': e.address, // CryptoTxEntity 字段，按实际定义调整
-            'amount': e.amount,
+            'address': e.address,
+            'amount': e.amount != null ? bytesToBigIntStr(e.amount!) : null,
           })
       .toList();
 }
