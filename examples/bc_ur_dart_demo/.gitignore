@@ -1,0 +1,61 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.g.dart
+*.freezed.dart
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthips.db
+Thumbs.db
+
+# Android
+android/.gradle/
+android/app/build/
+android/app/src/debug/
+android/app/src/profile/
+android/app/src/release/
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Podfile.lock
+
+# Linux/Windows
+linux/.cmake/
+windows/.cmake/
+
+# macOS
+macos/Flutter/Flutter.framework
+macos/Pods/
+
+# Coverage
+coverage/
+*.lcov
+
+# Logs
+*.log
+*.tmp
+*.temp
+
+# FVM
+.fvm/
+.fvmrc
