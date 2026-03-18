@@ -85,7 +85,11 @@
 
 - Update: Update crypto utils.
 
-## [1.2.3] - 2026-02-24
-## Feature
+## [0.1.22] - 2026-02-24
 
 - Feature: Support Cosmos & Solana.
+
+## [0.1.23] - 2026-03-18
+
+* Feature: Support ALPH & TRON.
+* Refactor: Refactor \`RegistryItem\` .
