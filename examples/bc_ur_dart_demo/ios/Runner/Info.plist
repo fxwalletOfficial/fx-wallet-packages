@@ -2,8 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleDisplayName</key>
+    <string>bc_ur_dart Demo</string>
     <key>NSCameraUsageDescription</key>
-    <string>需要使用摄像头扫描 UR 二维码，用于 bc_ur_dart 调试</string>
+    <string>Camera access is required to scan UR QR codes for bc_ur_dart debugging</string>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleExecutable</key>
@@ -23,6 +27,8 @@
     <key>CFBundleVersion</key>
     <string>$(FLUTTER_BUILD_NUMBER)</string>
     <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
