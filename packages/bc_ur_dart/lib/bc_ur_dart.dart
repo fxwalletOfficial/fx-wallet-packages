@@ -1,5 +1,7 @@
 library bc_ur_dart;
 
+export 'package:bc_ur_dart/src/models/alph/alph_sign_request.dart';
+export 'package:bc_ur_dart/src/models/alph/alph_signature.dart';
 export 'package:bc_ur_dart/src/models/btc/gspl_sign_request.dart';
 export 'package:bc_ur_dart/src/models/btc/gspl_signature.dart';
 export 'package:bc_ur_dart/src/models/btc/gspl_tx_data.dart';
@@ -15,6 +17,10 @@ export 'package:bc_ur_dart/src/models/key/crypto_hdkey.dart';
 export 'package:bc_ur_dart/src/models/key/crypto_multi_accounts.dart';
 export 'package:bc_ur_dart/src/models/sol/sol_sign_request.dart';
 export 'package:bc_ur_dart/src/models/sol/sol_signature.dart';
+export 'package:bc_ur_dart/src/models/tron/tron_sign_request.dart';
+export 'package:bc_ur_dart/src/models/tron/tron_signature.dart';
+export 'package:bc_ur_dart/src/registry/registry_type.dart';
+export 'package:bc_ur_dart/src/registry/crypto_tx_entity.dart';
 export 'package:bc_ur_dart/src/ur.dart';
 export 'package:bc_ur_dart/src/utils/error.dart';
 export 'package:bc_ur_dart/src/utils/type.dart';
