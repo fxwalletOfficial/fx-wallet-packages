@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'common/session_store.dart';
+import 'main.dart' show ThemeNotifier;
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -16,6 +17,15 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('bc_ur_dart Demo'),
         actions: [
+          Consumer<ThemeNotifier>(
+            builder: (context, themeNotifier, _) {
+              return IconButton(
+                icon: Icon(_getThemeIcon(themeNotifier.themeMode)),
+                tooltip: 'Theme: ${themeNotifier.themeLabel}',
+                onPressed: () => themeNotifier.toggleTheme(),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () => showAboutDialog(
@@ -23,7 +33,7 @@ class HomePage extends StatelessWidget {
               applicationName: 'bc_ur_dart Demo',
               applicationVersion: '1.0.0',
               applicationIcon: const Icon(Icons.qr_code_2, size: 48),
-              applicationLegalese: 'Debug Tool',
+              applicationLegalese: 'Debug & development tool App',
               children: [
                 const SizedBox(height: 16),
                 const Divider(),
@@ -39,7 +49,7 @@ class HomePage extends StatelessWidget {
                     _buildChip('Cosmos'),
                     _buildChip('Solana'),
                     _buildChip('Tron'),
-                    _buildChip('ALPH'),
+                    _buildChip('Alephium'),
                     _buildChip('PSBT'),
                     _buildChip('GSPL'),
                     _buildChip('CryptoHDKey'),
@@ -79,8 +89,7 @@ class HomePage extends StatelessWidget {
             subtitle: 'Select UR type, fill or use mock data, generate scannable QR',
             icon: Icons.edit_note_outlined,
             color: scheme.primary,
-            badge: 'Sprint 2',
-            onTap: () => _toast(context, 'Sprint 2 In Development 🚧'),
+            onTap: () => context.pushNamed('encode'),
           ),
 
           const SizedBox(height: 24),
@@ -131,6 +140,17 @@ class HomePage extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2), width: 260),
     );
+  }
+
+  IconData _getThemeIcon(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return Icons.brightness_auto;
+      case ThemeMode.light:
+        return Icons.light_mode;
+      case ThemeMode.dark:
+        return Icons.dark_mode;
+    }
   }
 }
 
