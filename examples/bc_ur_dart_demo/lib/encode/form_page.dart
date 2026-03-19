@@ -31,17 +31,12 @@ class _FormPageState extends State<FormPage> {
       final mockVal = mock[field.key];
 
       if (field.type == FieldType.dropdown) {
-        _dropdownValues[field.key] =
-            mockVal?.toString() ?? field.options!.first;
-      } else if (field.type == FieldType.jsonList ||
-          field.type == FieldType.jsonMap) {
-        final encoded = mockVal != null
-            ? const JsonEncoder.withIndent('  ').convert(mockVal)
-            : (field.type == FieldType.jsonList ? '[]' : '{}');
+        _dropdownValues[field.key] = mockVal?.toString() ?? field.options!.first;
+      } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
+        final encoded = mockVal != null ? const JsonEncoder.withIndent('  ').convert(mockVal) : (field.type == FieldType.jsonList ? '[]' : '{}');
         _controllers[field.key] = TextEditingController(text: encoded);
       } else {
-        _controllers[field.key] =
-            TextEditingController(text: mockVal?.toString() ?? '');
+        _controllers[field.key] = TextEditingController(text: mockVal?.toString() ?? '');
       }
     }
   }
@@ -59,8 +54,7 @@ class _FormPageState extends State<FormPage> {
     for (final field in widget.config.fields) {
       if (field.type == FieldType.dropdown) {
         params[field.key] = _dropdownValues[field.key];
-      } else if (field.type == FieldType.jsonList ||
-          field.type == FieldType.jsonMap) {
+      } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
         final text = _controllers[field.key]!.text.trim();
         if (text.isNotEmpty && text != '[]' && text != '{}') {
           try {
@@ -94,10 +88,8 @@ class _FormPageState extends State<FormPage> {
         if (mockVal == null) continue;
         if (field.type == FieldType.dropdown) {
           _dropdownValues[field.key] = mockVal.toString();
-        } else if (field.type == FieldType.jsonList ||
-            field.type == FieldType.jsonMap) {
-          _controllers[field.key]?.text =
-              const JsonEncoder.withIndent('  ').convert(mockVal);
+        } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
+          _controllers[field.key]?.text = const JsonEncoder.withIndent('  ').convert(mockVal);
         } else {
           _controllers[field.key]?.text = mockVal.toString();
         }
@@ -133,18 +125,14 @@ class _FormPageState extends State<FormPage> {
           children: [
             // 类型标签
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: scheme.secondaryContainer,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 widget.config.type,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                    color: scheme.onSecondaryContainer),
+                style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: scheme.onSecondaryContainer),
               ),
             ),
             const SizedBox(height: 16),
@@ -179,8 +167,7 @@ class _FormPageState extends State<FormPage> {
   }
 
   Widget _buildTextField(FieldConfig field) {
-    final isMultiline = field.type == FieldType.hex ||
-        field.type == FieldType.xpub;
+    final isMultiline = field.type == FieldType.hex || field.type == FieldType.xpub;
 
     return TextFormField(
       controller: _controllers[field.key],
@@ -190,14 +177,11 @@ class _FormPageState extends State<FormPage> {
         fontFamily: isMultiline ? 'monospace' : null,
       ),
       decoration: InputDecoration(
-        labelText: field.label +
-            (field.required ? '' : '  (optional)'),
-        hintText: field.hint ?? _hintFor(field.type),
+        labelText: field.label + (field.required ? '' : '  (optional)'),
+        hintText: field.hint ?? _hintForType(field.type),
         alignLabelWithHint: isMultiline,
       ),
-      validator: field.required
-          ? (v) => (v == null || v.trim().isEmpty) ? '${field.label} is required' : null
-          : null,
+      validator: field.required ? (v) => (v == null || v.trim().isEmpty) ? '${field.label} is required' : null : null,
     );
   }
 
@@ -208,21 +192,14 @@ class _FormPageState extends State<FormPage> {
       children: [
         Text(
           field.label,
-          style: TextStyle(
-              fontSize: 12,
-              color: scheme.onSurface.withValues(alpha: 0.6),
-              fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           decoration: const InputDecoration(
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           ),
-          items: field.options!
-              .map((opt) =>
-                  DropdownMenuItem(value: opt, child: Text(opt, style: const TextStyle(fontSize: 13))))
-              .toList(),
+          items: field.options!.map((opt) => DropdownMenuItem(value: opt, child: Text(opt, style: const TextStyle(fontSize: 13)))).toList(),
           onChanged: (val) {
             if (val != null) {
               setState(() => _dropdownValues[field.key] = val);
@@ -241,17 +218,10 @@ class _FormPageState extends State<FormPage> {
         Row(children: [
           Text(
             field.label + (field.required ? '' : '  (optional)'),
-            style: TextStyle(
-                fontSize: 12,
-                color: scheme.onSurface.withValues(alpha: 0.6),
-                fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
           ),
           const Spacer(),
-          Text('JSON',
-              style: TextStyle(
-                  fontSize: 10,
-                  color: scheme.primary,
-                  fontWeight: FontWeight.w500)),
+          Text('JSON', style: TextStyle(fontSize: 10, color: scheme.primary, fontWeight: FontWeight.w500)),
         ]),
         const SizedBox(height: 6),
         TextFormField(
@@ -288,13 +258,94 @@ class _FormPageState extends State<FormPage> {
       ],
     );
   }
-
-  String _hintFor(FieldType type) => switch (type) {
-        FieldType.path => "m/44'/60'/0'/0/0",
-        FieldType.hex => 'Hex, 0x prefix optional',
-        FieldType.address => 'On-chain address',
-        FieldType.integer => 'Integer',
-        FieldType.xpub => 'xpub6...',
-        _ => '',
-      };
 }
+
+// ─────────────────────────────────────────────────────────────
+// 顶层函数：供 sign_step1_page.dart 复用字段渲染，避免代码重复
+// ─────────────────────────────────────────────────────────────
+
+/// 渲染单个字段 Widget。
+/// [onDropdownChanged] 仅 dropdown 类型需要，调用方负责更新状态。
+Widget buildField({
+  required BuildContext context,
+  required FieldConfig field,
+  required Map<String, TextEditingController> controllers,
+  required Map<String, String> dropdownValues,
+  required void Function(String key, String val) onDropdownChanged,
+}) {
+  final scheme = Theme.of(context).colorScheme;
+
+  switch (field.type) {
+    case FieldType.dropdown:
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            field.label,
+            style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+            items: field.options!.map((opt) => DropdownMenuItem(value: opt, child: Text(opt, style: const TextStyle(fontSize: 13)))).toList(),
+            onChanged: (val) {
+              if (val != null) onDropdownChanged(field.key, val);
+            },
+          ),
+        ],
+      );
+
+    case FieldType.jsonList:
+    case FieldType.jsonMap:
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Text(
+              field.label + (field.required ? '' : '  (optional)'),
+              style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
+            ),
+            const Spacer(),
+            Text('JSON', style: TextStyle(fontSize: 10, color: scheme.primary, fontWeight: FontWeight.w500)),
+          ]),
+          const SizedBox(height: 6),
+          TextField(
+            controller: controllers[field.key],
+            maxLines: 4,
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            decoration: InputDecoration(
+              hintText: field.hint,
+              hintStyle: const TextStyle(fontSize: 11),
+            ),
+          ),
+        ],
+      );
+
+    default:
+      final isMultiline = field.type == FieldType.hex || field.type == FieldType.xpub;
+      return TextField(
+        controller: controllers[field.key],
+        maxLines: isMultiline ? 3 : 1,
+        style: TextStyle(
+          fontSize: 13,
+          fontFamily: isMultiline ? 'monospace' : null,
+        ),
+        decoration: InputDecoration(
+          labelText: field.label + (field.required ? '' : '  (optional)'),
+          hintText: field.hint ?? _hintForType(field.type),
+          alignLabelWithHint: isMultiline,
+        ),
+      );
+  }
+}
+
+String _hintForType(FieldType type) => switch (type) {
+      FieldType.path => "m/44'/60'/0'/0/0",
+      FieldType.hex => 'Hex, 0x prefix optional',
+      FieldType.address => 'On-chain address',
+      FieldType.integer => 'Integer',
+      FieldType.xpub => 'xpub6...',
+      _ => '',
+    };
