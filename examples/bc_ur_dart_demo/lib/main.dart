@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import 'common/app_theme.dart';
 import 'common/session_store.dart';
 import 'encode/form_page.dart';
+import 'sign_flow/sign_flow_entry_page.dart';
+import 'sign_flow/sign_result_page.dart';
+import 'sign_flow/sign_step1_page.dart';
+import 'sign_flow/sign_step2_page.dart';
 import 'encode/qr_display_page.dart';
 import 'encode/type_config.dart';
 import 'encode/type_selector_page.dart';
@@ -110,6 +114,28 @@ final _router = GoRouter(
           params: extra['params'] as Map<String, dynamic>,
         );
       },
+    ),
+
+    // ── 签名流程 ──────────────────────────────────────────────
+    GoRoute(
+      path: '/sign_flow',
+      name: 'sign_flow',
+      builder: (_, __) => const SignFlowEntryPage(),
+    ),
+    GoRoute(
+      path: '/sign_flow/step1',
+      name: 'sign_step1',
+      builder: (_, state) => SignStep1Page(config: state.extra as UrTypeConfig),
+    ),
+    GoRoute(
+      path: '/sign_flow/step2',
+      name: 'sign_step2',
+      builder: (_, __) => const SignStep2Page(),
+    ),
+    GoRoute(
+      path: '/sign_flow/result',
+      name: 'sign_result',
+      builder: (_, state) => SignResultPage(data: state.extra as Map<String, dynamic>),
     ),
   ],
 );

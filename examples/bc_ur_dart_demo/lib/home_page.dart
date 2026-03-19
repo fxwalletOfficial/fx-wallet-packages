@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import 'common/session_store.dart';
 import 'main.dart' show ThemeNotifier;
 
 class HomePage extends StatelessWidget {
@@ -11,7 +10,6 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final session = context.watch<SessionStore>();
 
     return Scaffold(
       appBar: AppBar(
@@ -97,28 +95,12 @@ class HomePage extends StatelessWidget {
           // ── Sprint 3: Signing ───────────────────────────
           _SectionLabel(title: 'Signing Flow', icon: Icons.verified_outlined),
           const SizedBox(height: 8),
-
-          if (session.hasActiveSession) ...[
-            _ActiveSessionBanner(session: session),
-            const SizedBox(height: 8),
-          ],
-
           _ModuleCard(
-            title: 'Step 1 — Initiate Sign Request',
-            subtitle: 'Build SignRequest, display dynamic QR for hardware wallet scan',
-            icon: Icons.send_outlined,
+            title: 'Two-Step Sign Flow',
+            subtitle: 'Step 1 — Initiate Sign Request\nStep 2 — Scan Signature Result',
+            icon: Icons.verified_outlined,
             color: const Color(0xFF1D9E75),
-            badge: 'Sprint 3',
-            onTap: () => _toast(context, 'Sprint 3 In Development 🚧'),
-          ),
-          const SizedBox(height: 8),
-          _ModuleCard(
-            title: 'Step 2 — Scan Signature Result',
-            subtitle: 'Scan hardware wallet signature, auto-validate requestId binding',
-            icon: Icons.task_alt_outlined,
-            color: const Color(0xFF1D9E75),
-            badge: 'Sprint 3',
-            onTap: () => _toast(context, 'Sprint 3 In Development 🚧'),
+            onTap: () => context.pushNamed('sign_flow'),
           ),
 
           const SizedBox(height: 32),
@@ -133,12 +115,6 @@ class HomePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
-    );
-  }
-
-  void _toast(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2), width: 260),
     );
   }
 
@@ -278,31 +254,3 @@ class _ModuleCard extends StatelessWidget {
   }
 }
 
-class _ActiveSessionBanner extends StatelessWidget {
-  const _ActiveSessionBanner({required this.session});
-  final SessionStore session;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final id = session.currentRequestId ?? '';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: scheme.tertiary.withValues(alpha: 0.3)),
-      ),
-      child: Row(children: [
-        Icon(Icons.pending_actions, size: 15, color: scheme.tertiary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Active Session: ${session.currentCoinType} · ${id.length > 8 ? '${id.substring(0, 8)}...' : id}',
-            style: TextStyle(fontSize: 12, color: scheme.onTertiaryContainer),
-          ),
-        ),
-      ]),
-    );
-  }
-}

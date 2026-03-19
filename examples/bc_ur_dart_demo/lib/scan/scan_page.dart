@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../common/scan_overlay.dart';
 import 'ur_parser.dart';
 
 class ScanPage extends StatefulWidget {
@@ -113,7 +114,7 @@ class _ScanPageState extends State<ScanPage> {
           MobileScanner(controller: _cameraController, onDetect: _onDetect),
 
           // ── Scan Overlay ──────────────────────────────────
-          const _ScanOverlay(),
+          const ScanOverlay(topOffset: -40.0),
 
           // ── Bottom Status Bar ──────────────────────────────────
           Positioned(
@@ -184,56 +185,4 @@ class _ScanPageState extends State<ScanPage> {
   }
 }
 
-// ── Scan Overlay Widget ──────────────────────────────────────
-
-class _ScanOverlay extends StatelessWidget {
-  const _ScanOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final size = constraints.biggest;
-      const cutOut = 260.0;
-      final left = (size.width - cutOut) / 2;
-      final top = (size.height - cutOut) / 2 - 40;
-      return CustomPaint(
-        size: size,
-        painter: _OverlayPainter(Rect.fromLTWH(left, top, cutOut, cutOut)),
-      );
-    });
-  }
-}
-
-class _OverlayPainter extends CustomPainter {
-  const _OverlayPainter(this.cutOut);
-  final Rect cutOut;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final shadow = Paint()..color = Colors.black54;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, cutOut.top), shadow);
-    canvas.drawRect(Rect.fromLTWH(0, cutOut.bottom, size.width, size.height - cutOut.bottom), shadow);
-    canvas.drawRect(Rect.fromLTWH(0, cutOut.top, cutOut.left, cutOut.height), shadow);
-    canvas.drawRect(Rect.fromLTWH(cutOut.right, cutOut.top, size.width - cutOut.right, cutOut.height), shadow);
-
-    final corner = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-
-    const L = 24.0;
-    final r = cutOut;
-    for (final path in [
-      Path()..moveTo(r.left, r.top + L)..lineTo(r.left, r.top)..lineTo(r.left + L, r.top),
-      Path()..moveTo(r.right - L, r.top)..lineTo(r.right, r.top)..lineTo(r.right, r.top + L),
-      Path()..moveTo(r.left, r.bottom - L)..lineTo(r.left, r.bottom)..lineTo(r.left + L, r.bottom),
-      Path()..moveTo(r.right - L, r.bottom)..lineTo(r.right, r.bottom)..lineTo(r.right, r.bottom - L),
-    ]) {
-      canvas.drawPath(path, corner);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
-}
+// ── Scan Overlay moved to common/scan_overlay.dart ────────────────
