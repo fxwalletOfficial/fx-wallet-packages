@@ -12,6 +12,7 @@ enum FieldType {
   jsonList,  // JSON 数组（outputs / inputs / chains）
   jsonMap,   // JSON 对象（change）
   xpub,      // BIP32 扩展公钥
+  chainList, // crypto-multi-accounts 的 chains 动态列表
 }
 
 class FieldConfig {
@@ -288,8 +289,7 @@ const List<UrTypeConfig> kUrTypeConfigs = [
       FieldConfig(key: 'masterFingerprint', label: 'Master Fingerprint', type: FieldType.hex),
       FieldConfig(key: 'device', label: 'Device Name', type: FieldType.text),
       FieldConfig(key: 'walletName', label: 'Wallet Name', type: FieldType.text),
-      FieldConfig(key: 'chains', label: 'Chains (JSON)', type: FieldType.jsonList,
-          hint: '[{"path":"m/44\'/60\'/0\'","chains":["ETH"],"xpub":"xpub..."}]'),
+      FieldConfig(key: 'chains', label: 'Chains', type: FieldType.chainList),
     ],
   ),
 ];
