@@ -9,7 +9,7 @@ class CopyHelper {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(label != null ? '已复制 $label' : '已复制到剪贴板'),
+          content: Text(label != null ? 'Copied $label' : 'Copied to clipboard'),
           duration: const Duration(milliseconds: 1500),
           width: 220,
         ),
@@ -18,52 +18,71 @@ class CopyHelper {
   }
 }
 
-/// 单行可复制字段 Widget — 显示 label + 值，右侧复制按钮
+/// 单行可复制字段 Widget — 显示 label + 值，整行可点击复制
 class CopyableField extends StatelessWidget {
-  const CopyableField({super.key, required this.label, required this.value});
+  const CopyableField({
+    super.key,
+    required this.label,
+    required this.value,
+    this.labelFontSize = 11,
+    this.valueFontSize = 13,
+    this.iconSize = 17,
+    this.padding = const EdgeInsets.symmetric(vertical: 5),
+    this.valueColor,
+  });
 
   final String label;
   final String value;
+  final double labelFontSize;
+  final double valueFontSize;
+  final double iconSize;
+  final EdgeInsets padding;
+  final Color? valueColor;
+
+  void _handleTap(BuildContext context) {
+    CopyHelper.copy(context, value, label: label);
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.w500, letterSpacing: 0.3),
+            style: TextStyle(fontSize: labelFontSize, color: scheme.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.w500, letterSpacing: 0.3),
           ),
           const SizedBox(height: 3),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: SelectableText(
-                    value,
-                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace', height: 1.5),
-                  ),
+              onTap: () => _handleTap(context),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: scheme.outlineVariant),
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => CopyHelper.copy(context, value, label: label),
-                  child: Tooltip(
-                    message: '复制',
-                    child: Icon(Icons.copy_rounded, size: 17, color: scheme.primary),
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: SelectableText(
+                        value,
+                        style: TextStyle(fontSize: valueFontSize, fontFamily: 'monospace', height: 1.5, color: valueColor),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.copy_rounded, size: iconSize, color: scheme.primary.withValues(alpha: 0.7)),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
