@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +18,11 @@ class _FormPageState extends State<FormPage> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String> _dropdownValues = {};
+  
+  // chainList 专用状态
+  final Map<String, List<Map<String, String>>> _chainLists = {}; // fieldKey -> list of chain data
+  // chainList 的 TextEditingController：fieldKey -> [{path, chains, xpub}]
+  final Map<String, List<Map<String, TextEditingController>>> _chainControllers = {};
 
   @override
   void initState() {
@@ -32,6 +38,32 @@ class _FormPageState extends State<FormPage> {
 
       if (field.type == FieldType.dropdown) {
         _dropdownValues[field.key] = mockVal?.toString() ?? field.options!.first;
+      } else if (field.type == FieldType.chainList) {
+        // 初始化 chainList：每个 chain 有 path, chains, xpub 三个字段
+        final chains = (mockVal as List? ?? []).map((c) {
+          final chainsList = (c as Map)['chains'];
+          final chainsStr = chainsList is List
+              ? chainsList.join(', ')
+              : chainsList?.toString() ?? '';
+          return {
+            'path': (c)['path']?.toString() ?? '',
+            'chains': chainsStr,
+            'xpub': (c)['xpub']?.toString() ?? '',
+          };
+        }).toList();
+        if (chains.isEmpty) {
+          // 默认添加一个空 chain
+          chains.add({'path': '', 'chains': '', 'xpub': ''});
+        }
+        _chainLists[field.key] = chains;
+        // 同步初始化 controllers
+        _chainControllers[field.key] = chains.map((c) {
+          return {
+            'path': TextEditingController(text: c['path'] ?? ''),
+            'chains': TextEditingController(text: c['chains'] ?? ''),
+            'xpub': TextEditingController(text: c['xpub'] ?? ''),
+          };
+        }).toList();
       } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
         final encoded = mockVal != null ? const JsonEncoder.withIndent('  ').convert(mockVal) : (field.type == FieldType.jsonList ? '[]' : '{}');
         _controllers[field.key] = TextEditingController(text: encoded);
@@ -46,6 +78,14 @@ class _FormPageState extends State<FormPage> {
     for (final c in _controllers.values) {
       c.dispose();
     }
+    // 清理 chain controllers
+    for (final fieldControllers in _chainControllers.values) {
+      for (final c in fieldControllers) {
+        c['path']?.dispose();
+        c['chains']?.dispose();
+        c['xpub']?.dispose();
+      }
+    }
     super.dispose();
   }
 
@@ -54,6 +94,20 @@ class _FormPageState extends State<FormPage> {
     for (final field in widget.config.fields) {
       if (field.type == FieldType.dropdown) {
         params[field.key] = _dropdownValues[field.key];
+      } else if (field.type == FieldType.chainList) {
+        // 转换 chainList 为 [{path, chains: [...], xpub}, ...] 格式
+        final chainControllers = _chainControllers[field.key] ?? [];
+        final validChains = chainControllers
+            .where((c) => c['path']!.text.isNotEmpty && c['xpub']!.text.isNotEmpty)
+            .map((c) => {
+                  'path': c['path']!.text,
+                  'chains': c['chains']!.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                  'xpub': c['xpub']!.text,
+                })
+            .toList();
+        if (validChains.isNotEmpty) {
+          params[field.key] = validChains;
+        }
       } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
         final text = _controllers[field.key]!.text.trim();
         if (text.isNotEmpty && text != '[]' && text != '{}') {
@@ -88,6 +142,27 @@ class _FormPageState extends State<FormPage> {
         if (mockVal == null) continue;
         if (field.type == FieldType.dropdown) {
           _dropdownValues[field.key] = mockVal.toString();
+        } else if (field.type == FieldType.chainList) {
+          final chains = (mockVal as List? ?? []).map((c) {
+            final chainsList = (c as Map)['chains'];
+            final chainsStr = chainsList is List
+                ? chainsList.join(', ')
+                : chainsList?.toString() ?? '';
+            return {
+              'path': (c)['path']?.toString() ?? '',
+              'chains': chainsStr,
+              'xpub': (c)['xpub']?.toString() ?? '',
+            };
+          }).toList();
+          _chainLists[field.key] = chains;
+          // 更新 controllers
+          _chainControllers[field.key] = chains.map((c) {
+            return {
+              'path': TextEditingController(text: c['path'] ?? ''),
+              'chains': TextEditingController(text: c['chains'] ?? ''),
+              'xpub': TextEditingController(text: c['xpub'] ?? ''),
+            };
+          }).toList();
         } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
           _controllers[field.key]?.text = const JsonEncoder.withIndent('  ').convert(mockVal);
         } else {
@@ -161,6 +236,7 @@ class _FormPageState extends State<FormPage> {
       child: switch (field.type) {
         FieldType.dropdown => _buildDropdown(field),
         FieldType.jsonList || FieldType.jsonMap => _buildJsonField(field),
+        FieldType.chainList => _buildChainListField(field),
         _ => _buildTextField(field),
       },
     );
@@ -256,6 +332,161 @@ class _FormPageState extends State<FormPage> {
                 },
         ),
       ],
+    );
+  }
+
+  Widget _buildChainListField(FieldConfig field) {
+    final scheme = Theme.of(context).colorScheme;
+    final chains = _chainLists[field.key] ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              field.label + (field.required ? '' : '  (optional)'),
+              style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _chainLists[field.key] ??= [];
+                  _chainLists[field.key]!.add({'path': '', 'chains': '', 'xpub': ''});
+                  _chainControllers[field.key] ??= [];
+                  _chainControllers[field.key]!.add({
+                    'path': TextEditingController(),
+                    'chains': TextEditingController(),
+                    'xpub': TextEditingController(),
+                  });
+                });
+              },
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Add Chain', style: TextStyle(fontSize: 12)),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...chains.asMap().entries.map((entry) {
+          final index = entry.key;
+          final controllers = _chainControllers[field.key]![index];
+          return _ChainItem(
+            index: index,
+            controllers: controllers,
+            onRemove: chains.length > 1
+                ? () {
+                    setState(() {
+                      // 清理被删除项的 controllers
+                      _chainControllers[field.key]![index]['path']!.dispose();
+                      _chainControllers[field.key]![index]['chains']!.dispose();
+                      _chainControllers[field.key]![index]['xpub']!.dispose();
+                      _chainControllers[field.key]!.removeAt(index);
+                      _chainLists[field.key]!.removeAt(index);
+                    });
+                  }
+                : null,
+          );
+        }),
+      ],
+    );
+  }
+}
+
+/// 单个 Chain 项的 UI：path + chains + xpub + 删除按钮
+class _ChainItem extends StatelessWidget {
+  const _ChainItem({
+    required this.index,
+    required this.controllers,
+    this.onRemove,
+  });
+
+  final int index;
+  final Map<String, TextEditingController> controllers;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Chain ${index + 1}',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onPrimaryContainer),
+                ),
+              ),
+              const Spacer(),
+              if (onRemove != null)
+                IconButton(
+                  onPressed: onRemove,
+                  icon: Icon(Icons.delete_outline, size: 18, color: scheme.error),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  tooltip: 'Remove',
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Path field
+          TextField(
+            controller: controllers['path'],
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              labelText: 'Derivation Path',
+              hintText: "m/44'/60'/0'",
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Chains field
+          TextField(
+            controller: controllers['chains'],
+            style: const TextStyle(fontSize: 12),
+            decoration: const InputDecoration(
+              labelText: 'Chains (comma separated)',
+              hintText: 'ETH, BTC',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Xpub field
+          TextField(
+            controller: controllers['xpub'],
+            maxLines: 3,
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              labelText: 'Extended Public Key (xpub)',
+              hintText: 'xpub6...',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -9,7 +9,7 @@ class CopyHelper {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(label != null ? 'Copied $label' : 'Copied to clipboard'),
+          content: Text(label != null ? '$label Copied' : 'Copied to clipboard'),
           duration: const Duration(milliseconds: 1500),
           width: 220,
         ),
