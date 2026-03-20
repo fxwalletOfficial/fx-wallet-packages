@@ -213,6 +213,26 @@ Map<String, dynamic> parseUR(UR ur) {
       // ── Multi Accounts ─────────────────────────────────
       case 'crypto-multi-accounts':
         final accounts = CryptoMultiAccountsUR.fromUR(ur: ur);
+        
+        // Build detailed chain info for each CryptoAccountItemUR
+        final chainDetails = accounts.chains.map((chain) {
+          final wallet = chain.wallet;
+          // wallet.fingerprint is Uint8List, need to convert to hex
+          final xfp = wallet != null 
+              ? hex.encode(wallet.fingerprint)
+              : '';
+          
+          return {
+            'derivationPath': chain.path,
+            'chains': chain.chains.join(', '),
+            'coin': chain.coin.isNotEmpty ? chain.coin : chain.chains.first,
+            'publicKey': hex.encode(chain.publicKey),
+            'chainCode': wallet != null ? hex.encode(wallet.chainCode) : '',
+            'extendedPublicKey': wallet?.toBase58() ?? '',
+            'masterFingerprint': xfp,
+          };
+        }).toList();
+        
         return {
           'type': ur.type,
           'fields': {
@@ -220,8 +240,8 @@ Map<String, dynamic> parseUR(UR ur) {
             'device': accounts.device,
             'walletName': accounts.walletName,
             'chainsCount': accounts.chains.length.toString(),
-            'chains': accounts.chains.map((c) => c.path).join(', '),
           },
+          'chainDetails': chainDetails,
         };
 
       // ── Unknown Type ───────────────────────────────────────
