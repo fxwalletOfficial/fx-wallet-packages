@@ -256,13 +256,23 @@ class _FormPageState extends State<FormPage> {
         labelText: field.label + (field.required ? '' : '  (optional)'),
         hintText: field.hint ?? _hintForType(field.type),
         alignLabelWithHint: isMultiline,
+        suffixIcon: _controllers[field.key]!.text.isNotEmpty
+            ? IconButton(
+                icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                onPressed: () => setState(() => _controllers[field.key]!.clear()),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              )
+            : null,
       ),
       validator: field.required ? (v) => (v == null || v.trim().isEmpty) ? '${field.label} is required' : null : null,
+      onChanged: (_) => setState(() {}), // 更新 clear button 状态
     );
   }
 
   Widget _buildDropdown(FieldConfig field) {
     final scheme = Theme.of(context).colorScheme;
+    final selectedValue = _dropdownValues[field.key];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -272,6 +282,7 @@ class _FormPageState extends State<FormPage> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
+          initialValue: selectedValue,
           decoration: const InputDecoration(
             contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           ),
@@ -307,6 +318,16 @@ class _FormPageState extends State<FormPage> {
           decoration: InputDecoration(
             hintText: field.hint,
             hintStyle: const TextStyle(fontSize: 11),
+            suffixIcon: _controllers[field.key]!.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                    onPressed: () => setState(() {
+                      _controllers[field.key]!.text = field.type == FieldType.jsonList ? '[]' : '{}';
+                    }),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  )
+                : null,
           ),
           validator: field.required
               ? (v) {
@@ -330,6 +351,7 @@ class _FormPageState extends State<FormPage> {
                   }
                   return null;
                 },
+          onChanged: (_) => setState(() {}),
         ),
       ],
     );
@@ -517,6 +539,7 @@ Widget buildField({
           ),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
+            initialValue: dropdownValues[field.key],
             decoration: const InputDecoration(
               contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             ),
@@ -549,6 +572,12 @@ Widget buildField({
             decoration: InputDecoration(
               hintText: field.hint,
               hintStyle: const TextStyle(fontSize: 11),
+              suffixIcon: IconButton(
+                icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                onPressed: () => controllers[field.key]!.text = field.type == FieldType.jsonList ? '[]' : '{}',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
             ),
           ),
         ],
@@ -567,6 +596,12 @@ Widget buildField({
           labelText: field.label + (field.required ? '' : '  (optional)'),
           hintText: field.hint ?? _hintForType(field.type),
           alignLabelWithHint: isMultiline,
+          suffixIcon: IconButton(
+            icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+            onPressed: () => controllers[field.key]!.clear(),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
         ),
       );
   }

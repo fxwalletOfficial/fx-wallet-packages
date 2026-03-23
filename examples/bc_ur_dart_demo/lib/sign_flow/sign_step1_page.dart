@@ -48,7 +48,8 @@ class _SignStep1PageState extends State<SignStep1Page> {
   void initState() {
     super.initState();
     _initControllers();
-    _buildQR();
+    // 使用 addPostFrameCallback 避免在 build 阶段调用 setState
+    WidgetsBinding.instance.addPostFrameCallback((_) => _buildQR());
   }
 
   // ── 参数初始化（复用 FormPage 逻辑）─────────────────────────
