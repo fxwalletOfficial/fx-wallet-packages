@@ -11,7 +11,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../common/copy_helper.dart';
 import '../common/mock_data.dart';
 import '../common/session_store.dart';
-import '../encode/form_page.dart' show buildField; // 复用字段渲染
+import '../encode/form_page.dart' show buildField, TransactionBuilderSheet; // 复用字段渲染和交易构建器
 import '../encode/type_config.dart';
 import '../encode/ur_encoder.dart';
 
@@ -43,6 +43,16 @@ class _SignStep1PageState extends State<SignStep1Page> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String> _dropdownValues = {};
   bool _paramsExpanded = false; // 参数面板是否展开
+  
+  // 交易构建器参数
+  final Map<String, dynamic> _txBuilderParams = {};
+
+  /// 判断当前是否为 ETH transaction 类型
+  bool get _isEthTransactionType {
+    final dataType = _dropdownValues['dataType'];
+    return widget.config.type == 'eth-sign-request' &&
+        (dataType == 'ETH_TRANSACTION_DATA' || dataType == 'ETH_TYPED_TRANSACTION');
+  }
 
   @override
   void initState() {
@@ -71,6 +81,10 @@ class _SignStep1PageState extends State<SignStep1Page> {
   Map<String, dynamic> _collectParams() {
     final params = <String, dynamic>{};
     for (final field in widget.config.fields) {
+      // 跳过 signData 字段，使用交易构建器参数
+      if (field.key == 'signData' && _txBuilderParams.isNotEmpty) {
+        continue;
+      }
       if (field.type == FieldType.dropdown) {
         params[field.key] = _dropdownValues[field.key];
       } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
@@ -86,6 +100,10 @@ class _SignStep1PageState extends State<SignStep1Page> {
         final val = _controllers[field.key]!.text.trim();
         if (val.isNotEmpty) params[field.key] = val;
       }
+    }
+    // 添加交易构建器参数
+    if (_txBuilderParams.isNotEmpty) {
+      params.addAll(_txBuilderParams);
     }
     return params;
   }
@@ -103,6 +121,36 @@ class _SignStep1PageState extends State<SignStep1Page> {
         _controllers[field.key]?.text = mockVal.toString();
       }
     }
+    // 清除交易构建器参数
+    _txBuilderParams.clear();
+  }
+
+  /// 显示交易构建器弹窗 (复用 FormPage 的弹窗)
+  void _showTransactionBuilder() {
+    final chainId = int.tryParse(_controllers['chainId']?.text ?? '1') ?? 1;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (ctx) => TransactionBuilderSheet(
+        chainId: chainId,
+        initialParams: _txBuilderParams.isNotEmpty ? Map.from(_txBuilderParams) : null,
+        onComplete: (txParams) {
+          setState(() {
+            // 清空 signData，存储交易字段
+            _controllers['signData']?.text = '';
+            _txBuilderParams.clear();
+            _txBuilderParams.addAll(txParams);
+            // 自动设置正确的 dataType
+            if (_dropdownValues['dataType'] == null) {
+              _dropdownValues['dataType'] = 'ETH_TRANSACTION_DATA';
+            }
+          });
+          // 重新生成 QR
+          _buildQR();
+        },
+      ),
+    );
   }
 
   // ── QR 构建 ───────────────────────────────────────────────────
@@ -262,6 +310,9 @@ class _SignStep1PageState extends State<SignStep1Page> {
             onToggle: () => setState(() => _paramsExpanded = !_paramsExpanded),
             onDropdownChanged: (key, val) => setState(() => _dropdownValues[key] = val),
             onApply: _buildQR, // 用户点"应用"后重新生成 QR
+            isEthTransactionType: _isEthTransactionType,
+            txBuilderParams: _txBuilderParams,
+            onShowTransactionBuilder: _showTransactionBuilder,
           ),
 
           const SizedBox(height: 24),
@@ -386,6 +437,9 @@ class _ParamsPanel extends StatelessWidget {
     required this.onToggle,
     required this.onDropdownChanged,
     required this.onApply,
+    required this.isEthTransactionType,
+    required this.txBuilderParams,
+    required this.onShowTransactionBuilder,
   });
 
   final bool expanded;
@@ -395,6 +449,9 @@ class _ParamsPanel extends StatelessWidget {
   final VoidCallback onToggle;
   final void Function(String key, String val) onDropdownChanged;
   final VoidCallback onApply;
+  final bool isEthTransactionType;
+  final Map<String, dynamic> txBuilderParams;
+  final VoidCallback onShowTransactionBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -443,16 +500,22 @@ class _ParamsPanel extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Column(
                 children: [
-                  ...config.fields.map((field) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: buildField(
-                          context: context,
-                          field: field,
-                          controllers: controllers,
-                          dropdownValues: dropdownValues,
-                          onDropdownChanged: onDropdownChanged,
-                        ),
-                      )),
+                  ...config.fields.map((field) {
+                    // ETH transaction 类型使用交易构建器
+                    if (field.key == 'signData' && isEthTransactionType) {
+                      return _buildTransactionBuilderField(context, field);
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: buildField(
+                        context: context,
+                        field: field,
+                        controllers: controllers,
+                        dropdownValues: dropdownValues,
+                        onDropdownChanged: onDropdownChanged,
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 4),
                   SizedBox(
                     width: double.infinity,
@@ -466,6 +529,101 @@ class _ParamsPanel extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// 构建 ETH 交易字段 (与 FormPage 逻辑一致)
+  Widget _buildTransactionBuilderField(BuildContext context, FieldConfig field) {
+    final scheme = Theme.of(context).colorScheme;
+    final hasTxData = txBuilderParams.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            field.label,
+            style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 6),
+          if (hasTxData)
+            GestureDetector(
+              onTap: onShowTransactionBuilder,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 18, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Tx: ${txBuilderParams['txType']} - ${txBuilderParams['to']}',
+                        style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: scheme.onSurface),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.edit, size: 16, color: Colors.grey.shade400),
+                      onPressed: onShowTransactionBuilder,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                      onPressed: () {
+                        txBuilderParams.clear();
+                        onApply();
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: controllers[field.key],
+                    maxLines: 3,
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                    decoration: InputDecoration(
+                      hintText: field.hint,
+                      suffixIcon: controllers[field.key]!.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                              onPressed: () {
+                                controllers[field.key]!.clear();
+                                // 清除交易构建器参数并重新生成 QR
+                                txBuilderParams.clear();
+                                onApply();
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.build, size: 18, color: scheme.primary),
+                  tooltip: 'Build Transaction',
+                  onPressed: onShowTransactionBuilder,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+              ],
+            ),
         ],
       ),
     );

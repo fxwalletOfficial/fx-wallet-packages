@@ -61,6 +61,8 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Ethereum',
     isSignRequest: true,
     fields: [
+      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown, 
+          options: ['ETH_TRANSACTION_DATA', 'ETH_TYPED_DATA', 'ETH_RAW_BYTES', 'ETH_TYPED_TRANSACTION']),
       FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex,
           hint: 'Complete RLP-encoded transaction hex, or message hex'),
       FieldConfig(key: 'address', label: 'Address', type: FieldType.address),
@@ -69,8 +71,6 @@ const List<UrTypeConfig> kUrTypeConfigs = [
           hint: '4 bytes, e.g. f23f9fd2'),
       FieldConfig(key: 'chainId', label: 'Chain ID', type: FieldType.integer,
           hint: '1=Mainnet, 5=Goerli'),
-      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown,
-          options: ['ETH_TRANSACTION_DATA', 'ETH_TYPED_DATA', 'ETH_RAW_BYTES', 'ETH_TYPED_TRANSACTION']),
       FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
@@ -135,9 +135,8 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Alephium',
     isSignRequest: true,
     fields: [
+      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown, options: ['transaction', 'message']),
       FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
-      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown,
-          options: ['transaction', 'message']),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
       FieldConfig(key: 'outputs', label: 'Outputs (JSON)', type: FieldType.jsonList,
