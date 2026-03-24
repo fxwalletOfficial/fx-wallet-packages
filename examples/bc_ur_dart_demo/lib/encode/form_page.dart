@@ -243,20 +243,31 @@ class _FormPageState extends State<FormPage> {
       );
     }
     return Padding(
-      padding: EdgeInsets.only(bottom: field.type == FieldType.dropdown ? 6 : 14),
+      padding: EdgeInsets.only(bottom: field.type == FieldType.dropdown && _isEthSignRequest ? 6 : 14),
       child: switch (field.type) {
         FieldType.dropdown => _buildDropdown(field),
         FieldType.jsonList || FieldType.jsonMap => _buildJsonField(field),
         FieldType.chainList => _buildChainListField(field),
-        _ => _buildTextField(field),
+        _ => buildField(
+          context: context,
+          field: field,
+          controllers: _controllers,
+          dropdownValues: _dropdownValues,
+          onDropdownChanged: (key, val) => setState(() => _dropdownValues[key] = val),
+          onChanged: () => setState(() {}),
+        ),
       },
     );
+  }
+
+  bool get _isEthSignRequest {
+    return widget.config.type == 'eth-sign-request';
   }
 
   /// 判断当前是否为 ETH transaction 类型
   bool get _isEthTransactionType {
     final dataType = _dropdownValues['dataType'];
-    return widget.config.type == 'eth-sign-request' && (dataType == 'ETH_TRANSACTION_DATA' || dataType == 'ETH_TYPED_TRANSACTION');
+    return _isEthSignRequest && (dataType == 'ETH_TRANSACTION_DATA' || dataType == 'ETH_TYPED_TRANSACTION');
   }
 
   /// ETH 交易构建器字段
@@ -377,34 +388,6 @@ class _FormPageState extends State<FormPage> {
 
   // 存储交易构建器的参数
   final Map<String, dynamic> _txBuilderParams = {};
-
-  Widget _buildTextField(FieldConfig field) {
-    final isMultiline = field.type == FieldType.hex || field.type == FieldType.xpub;
-
-    return TextFormField(
-      controller: _controllers[field.key],
-      maxLines: isMultiline ? 3 : 1,
-      style: TextStyle(
-        fontSize: 13,
-        fontFamily: isMultiline ? 'monospace' : null,
-      ),
-      decoration: InputDecoration(
-        labelText: field.label + (field.required ? '' : '  (optional)'),
-        hintText: field.hint ?? _hintForType(field.type),
-        alignLabelWithHint: isMultiline,
-        suffixIcon: _controllers[field.key]!.text.isNotEmpty
-            ? IconButton(
-                icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
-                onPressed: () => setState(() => _controllers[field.key]!.clear()),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-              )
-            : null,
-      ),
-      validator: field.required ? (v) => (v == null || v.trim().isEmpty) ? '${field.label} is required' : null : null,
-      onChanged: (_) => setState(() {}), // 更新 clear button 状态
-    );
-  }
 
   Widget _buildDropdown(FieldConfig field) {
     final scheme = Theme.of(context).colorScheme;
@@ -661,6 +644,8 @@ Widget buildField({
   required Map<String, TextEditingController> controllers,
   required Map<String, String> dropdownValues,
   required void Function(String key, String val) onDropdownChanged,
+  String? Function(String?)? validator,
+  VoidCallback? onChanged, // 清除按钮状态更新回调
 }) {
   final scheme = Theme.of(context).colorScheme;
 
@@ -710,18 +695,24 @@ Widget buildField({
               hintStyle: const TextStyle(fontSize: 11),
               suffixIcon: IconButton(
                 icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
-                onPressed: () => controllers[field.key]!.text = field.type == FieldType.jsonList ? '[]' : '{}',
+                onPressed: () {
+                  controllers[field.key]!.text = field.type == FieldType.jsonList ? '[]' : '{}';
+                  onChanged?.call();
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
               ),
             ),
+            onChanged: (_) => onChanged?.call(),
           ),
         ],
       );
 
     default:
-      final isMultiline = field.type == FieldType.hex || field.type == FieldType.xpub;
-      return TextField(
+      final isMultiline = (field.type == FieldType.hex || field.type == FieldType.xpub) && field.label != 'Master Fingerprint';
+      final effectiveValidator = validator ??
+          (field.required ? (v) => (v == null || v.trim().isEmpty) ? '${field.label} is required' : null : null);
+      return TextFormField(
         controller: controllers[field.key],
         maxLines: isMultiline ? 3 : 1,
         style: TextStyle(
@@ -732,13 +723,20 @@ Widget buildField({
           labelText: field.label + (field.required ? '' : '  (optional)'),
           hintText: field.hint ?? _hintForType(field.type),
           alignLabelWithHint: isMultiline,
-          suffixIcon: IconButton(
-            icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
-            onPressed: () => controllers[field.key]!.clear(),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-          ),
+          suffixIcon: controllers[field.key]!.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                  onPressed: () {
+                    controllers[field.key]!.clear();
+                    onChanged?.call();
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                )
+              : null,
         ),
+        validator: effectiveValidator,
+        onChanged: (_) => onChanged?.call(),
       );
   }
 }
