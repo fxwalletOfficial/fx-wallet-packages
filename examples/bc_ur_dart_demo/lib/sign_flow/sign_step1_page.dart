@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../common/copy_helper.dart';
+import '../common/eth_tx_fields.dart';
 import '../common/mock_data.dart';
 import '../common/session_store.dart';
 import '../encode/form_page.dart' show buildField, TransactionBuilderSheet; // 复用字段渲染和交易构建器
@@ -81,56 +82,25 @@ class _SignStep1PageState extends State<SignStep1Page> {
   }
 
   Map<String, dynamic> _collectParams() {
-    final params = <String, dynamic>{};
-    for (final field in widget.config.fields) {
-      // 跳过 signData 字段，使用交易构建器参数
-      if (field.key == 'signData' && _txBuilderParams.isNotEmpty) {
-        continue;
-      }
-      if (field.type == FieldType.dropdown) {
-        params[field.key] = _dropdownValues[field.key];
-      } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
-        final text = _controllers[field.key]!.text.trim();
-        if (text.isNotEmpty && text != '[]' && text != '{}') {
-          try {
-            params[field.key] = jsonDecode(text);
-          } catch (_) {
-            params[field.key] = text;
-          }
-        }
-      } else {
-        final val = _controllers[field.key]!.text.trim();
-        if (val.isNotEmpty) params[field.key] = val;
-      }
-    }
-    // 添加交易构建器参数
-    if (_txBuilderParams.isNotEmpty) {
-      params.addAll(_txBuilderParams);
-    }
-    // 从 mock 数据获取默认私钥（用于 EIP-7702）
-    final mockData = kMockByType[widget.config.type];
-    final testPrivKey = mockData?['_testPrivKey'] as String?;
-    if (testPrivKey != null && testPrivKey.isNotEmpty && params['_testPrivKey'] == null) {
-      params['_testPrivKey'] = testPrivKey;
-    }
-    return params;
+    return collectEthTxParams(
+      type: widget.config.type,
+      fields: widget.config.fields,
+      controllers: _controllers,
+      dropdownValues: _dropdownValues,
+      txBuilderParams: _txBuilderParams,
+    );
   }
 
   void _resetToMock() {
-    final mock = kMockByType[widget.config.type] ?? {};
-    for (final field in widget.config.fields) {
-      final mockVal = mock[field.key];
-      if (mockVal == null) continue;
-      if (field.type == FieldType.dropdown) {
-        _dropdownValues[field.key] = mockVal.toString();
-      } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
-        _controllers[field.key]?.text = const JsonEncoder.withIndent('  ').convert(mockVal);
-      } else {
-        _controllers[field.key]?.text = mockVal.toString();
-      }
-    }
-    // 清除交易构建器参数
-    _txBuilderParams.clear();
+    setState(() {
+      fillMockToEthTxControllers(
+        type: widget.config.type,
+        fields: widget.config.fields,
+        controllers: _controllers,
+        dropdownValues: _dropdownValues,
+        clearTxBuilderParams: () => _txBuilderParams.clear(),
+      );
+    });
   }
 
   /// 显示交易构建器弹窗 (复用 FormPage 的弹窗)
@@ -639,6 +609,11 @@ class _ParamsPanel extends StatelessWidget {
                             )
                           : null,
                     ),
+                    validator: field.required
+                        ? (v) => (v == null || v.trim().isEmpty && txBuilderParams.isEmpty)
+                            ? '${field.label} is required (enter hex or build transaction)'
+                            : null
+                        : null,
                   ),
                 ),
                 IconButton(
