@@ -128,6 +128,14 @@ class _FormPageState extends State<FormPage> {
     if (_txBuilderParams.isNotEmpty) {
       params.addAll(_txBuilderParams);
     }
+    
+    // 从 mock 数据获取默认私钥（用于 EIP-7702）
+    final mockData = kMockByType[widget.config.type];
+    final testPrivKey = mockData?['_testPrivKey'] as String?;
+    if (testPrivKey != null && testPrivKey.isNotEmpty && params['_testPrivKey'] == null) {
+      params['_testPrivKey'] = testPrivKey;
+    }
+    
     return params;
   }
 
@@ -243,7 +251,7 @@ class _FormPageState extends State<FormPage> {
       );
     }
     return Padding(
-      padding: EdgeInsets.only(bottom: field.type == FieldType.dropdown && _isEthSignRequest ? 6 : 14),
+      padding: EdgeInsets.only(bottom: field.type == FieldType.dropdown && _isEthTransactionType ? 6 : 14),
       child: switch (field.type) {
         FieldType.dropdown => _buildDropdown(field),
         FieldType.jsonList || FieldType.jsonMap => _buildJsonField(field),
@@ -362,6 +370,10 @@ class _FormPageState extends State<FormPage> {
   /// 显示交易构建器弹窗
   void _showTransactionBuilder(FieldConfig field) {
     final chainId = int.tryParse(_controllers['chainId']?.text ?? '1') ?? 1;
+    // 从 mock 数据获取默认测试私钥
+    final mockData = kMockByType[widget.config.type];
+    final testPrivKey = mockData?['_testPrivKey'] as String?;
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -369,6 +381,7 @@ class _FormPageState extends State<FormPage> {
       builder: (ctx) => TransactionBuilderSheet(
         chainId: chainId,
         initialParams: _txBuilderParams.isNotEmpty ? Map.from(_txBuilderParams) : null,
+        testPrivKey: testPrivKey,
         onComplete: (txParams) {
           setState(() {
             // 清空 signData，改为存储交易字段
@@ -759,10 +772,15 @@ class TransactionBuilderSheet extends StatefulWidget {
   final Map<String, dynamic>? initialParams;
   final void Function(Map<String, dynamic> txParams) onComplete;
 
+  /// 测试私钥，仅用于 EIP-7702 demo 签名
+  /// ⚠️ Demo 用途，生产环境不应使用
+  final String? testPrivKey;
+
   const TransactionBuilderSheet({
     required this.chainId,
     this.initialParams,
     required this.onComplete,
+    this.testPrivKey,
   });
 
   @override
@@ -779,6 +797,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
   final _nonceController = TextEditingController();
   final _dataController = TextEditingController();
   final _eip7702ContractController = TextEditingController(); // EIP7702 合约地址
+  final _testPrivKeyController = TextEditingController(); // Demo 私钥
 
   String _txType = 'legacy'; // legacy, eip1559, eip7702
 
@@ -790,6 +809,10 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
 
   void _initFromParams() {
     final params = widget.initialParams;
+
+    // 始终初始化私钥（从 params 或 widget 属性）
+    _testPrivKeyController.text = (params?['_testPrivKey'] as String?) ?? widget.testPrivKey ?? '';
+
     if (params == null || params.isEmpty) return;
 
     _txType = params['txType'] as String? ?? 'legacy';
@@ -823,6 +846,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
     _nonceController.dispose();
     _dataController.dispose();
     _eip7702ContractController.dispose();
+    _testPrivKeyController.dispose();
     super.dispose();
   }
 
@@ -860,6 +884,11 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
       txParams['maxFee'] = int.tryParse(_maxFeeController.text) ?? 0;
       txParams['maxPriority'] = int.tryParse(_maxPriorityController.text) ?? 0;
       txParams['eip7702Contract'] = _eip7702ContractController.text.trim();
+      // 传入私钥用于签名 authorization (Demo 模式)
+      final privKey = _testPrivKeyController.text.trim();
+      if (privKey.isNotEmpty) {
+        txParams['_testPrivKey'] = privKey;
+      }
     }
 
     widget.onComplete(txParams);
@@ -911,7 +940,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                 // To Address
                 _buildTextFieldWithClear(
                   controller: _toController,
-                  label: 'To Address',
+                  label: 'To Address/Token Contract Address',
                   hint: '0x...',
                 ),
                 const SizedBox(height: 12),
@@ -937,33 +966,33 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                 if (_txType == 'legacy') ...[
                   _buildTextFieldWithClear(
                     controller: _gasPriceController,
-                    label: 'Gas Price (Gwei)',
+                    label: 'Gas Price (wei)',
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
                 ] else if (_txType == 'eip1559') ...[
                   _buildTextFieldWithClear(
                     controller: _maxFeeController,
-                    label: 'Max Fee (Gwei)',
+                    label: 'Max Fee (wei)',
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
                   _buildTextFieldWithClear(
                     controller: _maxPriorityController,
-                    label: 'Max Priority (Gwei)',
+                    label: 'Max Priority (wei)',
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
                 ] else if (_txType == 'eip7702') ...[
                   _buildTextFieldWithClear(
                     controller: _maxFeeController,
-                    label: 'Max Fee (Gwei)',
+                    label: 'Max Fee (wei)',
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
                   _buildTextFieldWithClear(
                     controller: _maxPriorityController,
-                    label: 'Max Priority (Gwei)',
+                    label: 'Max Priority (wei)',
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
@@ -971,6 +1000,58 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                     controller: _eip7702ContractController,
                     label: 'EIP-7702 Contract',
                     hint: '0x... (authorization contract)',
+                  ),
+                  const SizedBox(height: 12),
+                  // Demo: 私钥输入（仅用于签名 authorization）
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '⚠️ Demo Mode - Authorization Signing',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange.shade700),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'EIP-7702 requires signing the authorization. Enter a private key (hex) to sign it.',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _testPrivKeyController,
+                          maxLines: 2,
+                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                          decoration: InputDecoration(
+                            labelText: 'Private Key (hex)',
+                            hintText: widget.testPrivKey?.isNotEmpty == true 
+                                ? 'Using default test key (0xac09...)' 
+                                : '0x...',
+                            hintStyle: const TextStyle(fontSize: 11),
+                            isDense: true,
+                            suffixIcon: _testPrivKeyController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16),
+                                    onPressed: () {
+                                      _testPrivKeyController.clear();
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -987,9 +1068,41 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                 _buildTextFieldWithClear(
                   controller: _dataController,
                   label: 'Data (hex, optional)',
+                  hint: 'Token transfer: 0xa9059cbb + recipient(32bytes) + amount(32bytes)',
                   maxLines: 2,
                 ),
                 const SizedBox(height: 20),
+
+                // Token 转账提示
+                if (_dataController.text.isNotEmpty && _dataController.text.toLowerCase().startsWith('0xa9059cbb'))
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                            const SizedBox(width: 6),
+                            Text(
+                              'ERC-20 Token Transfer Detected',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blue.shade700),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '• Set Value = 0\n• To Address = Token Contract Address\n• Data contains transfer(recipient, amount)',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade700, height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

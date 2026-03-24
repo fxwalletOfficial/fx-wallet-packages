@@ -5,19 +5,33 @@ const _kXfp = 'f23f9fd2';
 const _kOrigin = 'bc_ur_dart demo';
 const _kRequestId = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4';
 
+/// EIP7702 演示用测试私钥 (32 字节 hex)
+/// ⚠️ 仅用于演示用途，不要用于生产环境
+const _kTestPrivKey = '0x' + 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
 // ─────────────────────────────────────────────────────────────
 // SignRequest mock
 // ─────────────────────────────────────────────────────────────
 
 const kMockEthSignRequest = {
   'dataType': 'ETH_TRANSACTION_DATA',
+  'txType': 'eip7702', // 默认 EIP7702 交易模式
   'address': '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+  'to': '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+  'value': '1000000000000000000', // 1 ETH in wei
+  'nonce': '0',
+  'gasLimit': '21000',
+  'maxFee': '20000000000', // 20 gwei
+  'maxPriority': '2000000000', // 2 gwei
+  'data': '0x',
   'path': "m/44'/60'/0'/0/0",
   'xfp': _kXfp,
-  'signData': '0xef8085012a05f20082520894742d35cc6634c0532925a3b8d4c9db96c4b4d8b6'
-      '880de0b6b3a764000080018080',
   'chainId': '1',
   'origin': _kOrigin,
+  'eip7702Contract': '0x0000000000000000000000000000000000000000',
+  '_testPrivKey': _kTestPrivKey,
+  // 传统 signData 字段（交易模式下不需要，但需要有值）
+  'signData': '0x',
 };
 
 const kMockCosmosSignRequest = {
