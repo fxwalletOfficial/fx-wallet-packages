@@ -3,7 +3,8 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32;
-import 'package:crypto_wallet_util/transaction.dart' show GsplItem, GsplTxData, BtcSignDataType, Eip1559TxData, Eip7702TxData, Eip7702Authorization, LegacyTxData, EthTxDataRaw, TxNetwork;
+import 'package:crypto_wallet_util/transaction.dart'
+    show GsplItem, GsplTxData, BtcSignDataType, Eip1559TxData, Eip7702TxData, Eip7702Authorization, LegacyTxData, EthTxDataRaw, TxNetwork;
 
 /// 统一编码入口：接受类型字符串 + 参数 Map，返回可调用 next() 的 UR 对象。
 ///
@@ -15,20 +16,26 @@ UR buildUR(String type, Map<String, dynamic> params) {
     // ── ETH ──────────────────────────────────────────────────
     case 'eth-sign-request':
       // 检测是否传入交易字段，使用 fromTypedTransaction
-      if (params['txType'] != null || (params['to'] != null && params['value'] != null)) {
+      if (params['txType'] != null && (params['to'] != null && params['value'] != null)) {
         // 交易构建器模式：传入交易字段，由 encoder 构建 EthTxData
         return _buildEthTxRequest(params);
       }
-      // 传统模式：直接传入 hex
-      return EthSignRequestUR.fromMessage(
-        dataType: _ethDataType(params['dataType'] as String? ?? 'ETH_TRANSACTION_DATA'),
-        address: params['address'] as String? ?? '',
-        path: params['path'] as String? ?? "m/44'/60'/0'/0/0",
-        xfp: params['xfp'] as String? ?? '',
-        signData: params['signData'] as String? ?? '',
-        chainId: int.parse(params['chainId']?.toString() ?? '1'),
-        origin: params['origin'] as String? ?? '',
-      );
+      
+      final signData = params['signData'] as String? ?? '';
+      if (signData.isNotEmpty) {
+        // 传统模式：直接传入 hex
+        return EthSignRequestUR.fromMessage(
+          dataType: _ethDataType(params['dataType'] as String? ?? 'ETH_TRANSACTION_DATA'),
+          address: params['address'] as String? ?? '',
+          path: params['path'] as String? ?? "m/44'/60'/0'/0/0",
+          xfp: params['xfp'] as String? ?? '',
+          signData: params['signData'] as String? ?? '',
+          chainId: int.parse(params['chainId']?.toString() ?? '1'),
+          origin: params['origin'] as String? ?? '',
+        );
+      }
+
+      throw ArgumentError('Either signData or transaction fields must be provided');
 
     // ── Cosmos ────────────────────────────────────────────────
     case 'cosmos-sign-request':
@@ -316,7 +323,7 @@ UR _buildEthTxRequest(Map<String, dynamic> params) {
     txRaw.maxPriorityFeePerGas = maxPriority;
     final eip7702Contract = params['eip7702Contract'] as String? ?? '0x0000000000000000000000000000000000000000';
     final gasPayerAddress = to.isNotEmpty ? to : '0x0000000000000000000000000000000000000000';
-    
+
     // 构建 authorization
     final authorization = Eip7702Authorization(
       chainId: chainId,
@@ -351,4 +358,3 @@ UR _buildEthTxRequest(Map<String, dynamic> params) {
     xfp: xfp,
   );
 }
-
