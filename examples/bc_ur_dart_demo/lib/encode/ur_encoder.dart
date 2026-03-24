@@ -22,10 +22,10 @@ UR buildUR(String type, Map<String, dynamic> params) {
       // 传统模式：直接传入 hex
       return EthSignRequestUR.fromMessage(
         dataType: _ethDataType(params['dataType'] as String? ?? 'ETH_TRANSACTION_DATA'),
-        address: params['address'] as String,
-        path: params['path'] as String,
-        xfp: params['xfp'] as String,
-        signData: params['signData'] as String,
+        address: params['address'] as String? ?? '',
+        path: params['path'] as String? ?? "m/44'/60'/0'/0/0",
+        xfp: params['xfp'] as String? ?? '',
+        signData: params['signData'] as String? ?? '',
         chainId: int.parse(params['chainId']?.toString() ?? '1'),
         origin: params['origin'] as String? ?? '',
       );
@@ -282,7 +282,7 @@ UR _buildEthTxRequest(Map<String, dynamic> params) {
   final to = params['to'] as String? ?? '';
   final value = params['value'] as String? ?? '0';
   final gasLimit = int.tryParse(params['gasLimit']?.toString() ?? '21000') ?? 21000;
-  final nonce = int.tryParse(params['nonce']!.toString()) ?? 0;
+  final nonce = int.tryParse(params['nonce']?.toString() ?? '0') ?? 0;
   final data = params['data'] as String? ?? '';
   final origin = params['origin'] as String? ?? '';
   final path = params['path'] as String? ?? "m/44'/60'/0'/0/0";
@@ -314,15 +314,28 @@ UR _buildEthTxRequest(Map<String, dynamic> params) {
     final maxPriority = int.tryParse(params['maxPriority']?.toString() ?? '0') ?? 0;
     txRaw.maxFeePerGas = maxFee;
     txRaw.maxPriorityFeePerGas = maxPriority;
-    final eip7702Contract = params['eip7702Contract'] as String? ?? '';
+    final eip7702Contract = params['eip7702Contract'] as String? ?? '0x0000000000000000000000000000000000000000';
+    final gasPayerAddress = to.isNotEmpty ? to : '0x0000000000000000000000000000000000000000';
+    
+    // 构建 authorization
     final authorization = Eip7702Authorization(
       chainId: chainId,
       address: eip7702Contract,
-      gasPayerAddress: to.isNotEmpty ? to : '0x0000000000000000000000000000000000000000',
-      signerAddress: to.isNotEmpty ? to : '0x0000000000000000000000000000000000000000',
+      gasPayerAddress: gasPayerAddress,
+      signerAddress: gasPayerAddress,
       signerNonce: nonce,
     );
-    tx = Eip7702TxData(data: txRaw, network: network, authorization: authorization);
+
+    // 获取私钥进行签名（Demo 模式使用表单传入的私钥）
+    final privKey = params['_testPrivKey'] as String?;
+    if (privKey != null && privKey.isNotEmpty) {
+      // 有私钥：签名 authorization
+      final signedAuthorization = authorization.sign(privKey);
+      tx = Eip7702TxData(data: txRaw, network: network, authorization: signedAuthorization);
+    } else {
+      // 无私钥：使用未签名的 authorization（仅用于演示）
+      tx = Eip7702TxData(data: txRaw, network: network, authorization: authorization);
+    }
   } else {
     // Legacy 交易
     final gasPrice = int.tryParse(params['gasPrice']?.toString() ?? '0') ?? 0;

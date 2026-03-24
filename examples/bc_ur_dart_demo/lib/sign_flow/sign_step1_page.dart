@@ -43,18 +43,17 @@ class _SignStep1PageState extends State<SignStep1Page> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String> _dropdownValues = {};
   bool _paramsExpanded = false; // 参数面板是否展开
-  
+
   // 表单验证 key
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   // 交易构建器参数
   final Map<String, dynamic> _txBuilderParams = {};
 
   /// 判断当前是否为 ETH transaction 类型
   bool get _isEthTransactionType {
     final dataType = _dropdownValues['dataType'];
-    return widget.config.type == 'eth-sign-request' &&
-        (dataType == 'ETH_TRANSACTION_DATA' || dataType == 'ETH_TYPED_TRANSACTION');
+    return widget.config.type == 'eth-sign-request' && (dataType == 'ETH_TRANSACTION_DATA' || dataType == 'ETH_TYPED_TRANSACTION');
   }
 
   @override
@@ -108,6 +107,12 @@ class _SignStep1PageState extends State<SignStep1Page> {
     if (_txBuilderParams.isNotEmpty) {
       params.addAll(_txBuilderParams);
     }
+    // 从 mock 数据获取默认私钥（用于 EIP-7702）
+    final mockData = kMockByType[widget.config.type];
+    final testPrivKey = mockData?['_testPrivKey'] as String?;
+    if (testPrivKey != null && testPrivKey.isNotEmpty && params['_testPrivKey'] == null) {
+      params['_testPrivKey'] = testPrivKey;
+    }
     return params;
   }
 
@@ -131,6 +136,10 @@ class _SignStep1PageState extends State<SignStep1Page> {
   /// 显示交易构建器弹窗 (复用 FormPage 的弹窗)
   void _showTransactionBuilder() {
     final chainId = int.tryParse(_controllers['chainId']?.text ?? '1') ?? 1;
+    // 从 mock 数据获取默认测试私钥
+    final mockData = kMockByType[widget.config.type];
+    final testPrivKey = mockData?['_testPrivKey'] as String?;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -138,6 +147,7 @@ class _SignStep1PageState extends State<SignStep1Page> {
       builder: (ctx) => TransactionBuilderSheet(
         chainId: chainId,
         initialParams: _txBuilderParams.isNotEmpty ? Map.from(_txBuilderParams) : null,
+        testPrivKey: testPrivKey,
         onComplete: (txParams) {
           setState(() {
             // 清空 signData，存储交易字段
@@ -245,7 +255,6 @@ class _SignStep1PageState extends State<SignStep1Page> {
     }
     super.dispose();
   }
-
 
   // ── UI ────────────────────────────────────────────────────────
   @override
