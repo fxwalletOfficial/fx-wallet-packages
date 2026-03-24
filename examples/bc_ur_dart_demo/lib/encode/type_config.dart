@@ -99,9 +99,8 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Solana',
     isSignRequest: true,
     fields: [
+      FieldConfig(key: 'signType', label: 'Sign Type', type: FieldType.dropdown, options: ['transaction', 'message']),
       FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
-      FieldConfig(key: 'signType', label: 'Sign Type', type: FieldType.dropdown,
-          options: ['transaction', 'message']),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
       FieldConfig(key: 'outputAddress', label: 'Output Address', type: FieldType.address,
@@ -135,10 +134,10 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Alephium',
     isSignRequest: true,
     fields: [
-      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown, options: ['transaction', 'message']),
       FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
+      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown, options: ['transaction', 'message']),
       FieldConfig(key: 'outputs', label: 'Outputs (JSON)', type: FieldType.jsonList,
           required: false,
           hint: '[{"address":"...","amount":"1000000"}]'),

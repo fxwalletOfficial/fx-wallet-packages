@@ -44,6 +44,9 @@ class _SignStep1PageState extends State<SignStep1Page> {
   final Map<String, String> _dropdownValues = {};
   bool _paramsExpanded = false; // 参数面板是否展开
   
+  // 表单验证 key
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  
   // 交易构建器参数
   final Map<String, dynamic> _txBuilderParams = {};
 
@@ -303,13 +306,18 @@ class _SignStep1PageState extends State<SignStep1Page> {
 
           // ── 参数编辑面板 ──────────────────────────────────────
           _ParamsPanel(
+            formKey: _formKey,
             expanded: _paramsExpanded,
             config: widget.config,
             controllers: _controllers,
             dropdownValues: _dropdownValues,
             onToggle: () => setState(() => _paramsExpanded = !_paramsExpanded),
             onDropdownChanged: (key, val) => setState(() => _dropdownValues[key] = val),
-            onApply: _buildQR, // 用户点"应用"后重新生成 QR
+            onApply: () {
+              if (_formKey.currentState!.validate()) {
+                _buildQR();
+              }
+            },
             isEthTransactionType: _isEthTransactionType,
             txBuilderParams: _txBuilderParams,
             onShowTransactionBuilder: _showTransactionBuilder,
@@ -430,6 +438,7 @@ class _QrSection extends StatelessWidget {
 
 class _ParamsPanel extends StatelessWidget {
   const _ParamsPanel({
+    required this.formKey,
     required this.expanded,
     required this.config,
     required this.controllers,
@@ -442,6 +451,7 @@ class _ParamsPanel extends StatelessWidget {
     required this.onShowTransactionBuilder,
   });
 
+  final GlobalKey<FormState> formKey;
   final bool expanded;
   final UrTypeConfig config;
   final Map<String, TextEditingController> controllers;
@@ -498,34 +508,41 @@ class _ParamsPanel extends StatelessWidget {
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Column(
-                children: [
-                  ...config.fields.map((field) {
-                    // ETH transaction 类型使用交易构建器
-                    if (field.key == 'signData' && isEthTransactionType) {
-                      return _buildTransactionBuilderField(context, field);
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: buildField(
-                        context: context,
-                        field: field,
-                        controllers: controllers,
-                        dropdownValues: dropdownValues,
-                        onDropdownChanged: onDropdownChanged,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  children: [
+                    ...config.fields.map((field) {
+                      // ETH transaction 类型使用交易构建器
+                      if (field.key == 'signData' && isEthTransactionType) {
+                        return _buildTransactionBuilderField(context, field);
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: buildField(
+                          context: context,
+                          field: field,
+                          controllers: controllers,
+                          dropdownValues: dropdownValues,
+                          onDropdownChanged: onDropdownChanged,
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonal(
+                        onPressed: () {
+                          if (formKey.currentState!.validate()) {
+                            onApply();
+                          }
+                        },
+                        child: const Text('Apply → Regenerate QR'),
                       ),
-                    );
-                  }),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonal(
-                      onPressed: onApply,
-                      child: const Text('Apply → Regenerate QR'),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
+                    const SizedBox(height: 12),
+                  ],
+                ),
               ),
             ),
           ],
