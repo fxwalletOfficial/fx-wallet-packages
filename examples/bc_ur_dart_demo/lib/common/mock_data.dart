@@ -30,8 +30,8 @@ const kMockEthSignRequest = {
   'origin': _kOrigin,
   'eip7702Contract': '0x0000000000000000000000000000000000000000',
   '_testPrivKey': _kTestPrivKey,
-  // 传统 signData 字段（交易模式下不需要，但需要有值）
-  'signData': '0x',
+  'signData': '0xef8085012a05f20082520894742d35cc6634c0532925a3b8d4c9db96c4b4d8b6'
+      '880de0b6b3a764000080018080',
 };
 
 const kMockCosmosSignRequest = {
