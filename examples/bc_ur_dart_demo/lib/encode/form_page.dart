@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../common/eth_tx_fields.dart';
 import '../common/mock_data.dart';
 import 'type_config.dart';
 
@@ -88,55 +89,13 @@ class _FormPageState extends State<FormPage> {
   }
 
   Map<String, dynamic> _collectParams() {
-    final params = <String, dynamic>{};
-    for (final field in widget.config.fields) {
-      // 跳过 signData 字段，使用交易构建器参数
-      if (field.key == 'signData' && _txBuilderParams.isNotEmpty) {
-        continue;
-      }
-      if (field.type == FieldType.dropdown) {
-        params[field.key] = _dropdownValues[field.key];
-      } else if (field.type == FieldType.chainList) {
-        // 转换 chainList 为 [{path, chains: [...], xpub}, ...] 格式
-        final chainControllers = _chainControllers[field.key] ?? [];
-        final validChains = chainControllers
-            .where((c) => c['path']!.text.isNotEmpty && c['xpub']!.text.isNotEmpty)
-            .map((c) => {
-                  'path': c['path']!.text,
-                  'chains': c['chains']!.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
-                  'xpub': c['xpub']!.text,
-                })
-            .toList();
-        if (validChains.isNotEmpty) {
-          params[field.key] = validChains;
-        }
-      } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
-        final text = _controllers[field.key]!.text.trim();
-        if (text.isNotEmpty && text != '[]' && text != '{}') {
-          try {
-            params[field.key] = jsonDecode(text);
-          } catch (_) {
-            params[field.key] = text; // 让 encoder 层抛错
-          }
-        }
-      } else {
-        final val = _controllers[field.key]!.text.trim();
-        if (val.isNotEmpty) params[field.key] = val;
-      }
-    }
-    // 添加交易构建器参数
-    if (_txBuilderParams.isNotEmpty) {
-      params.addAll(_txBuilderParams);
-    }
-    
-    // 从 mock 数据获取默认私钥（用于 EIP-7702）
-    final mockData = kMockByType[widget.config.type];
-    final testPrivKey = mockData?['_testPrivKey'] as String?;
-    if (testPrivKey != null && testPrivKey.isNotEmpty && params['_testPrivKey'] == null) {
-      params['_testPrivKey'] = testPrivKey;
-    }
-    
-    return params;
+    return collectEthTxParams(
+      type: widget.config.type,
+      fields: widget.config.fields,
+      controllers: _controllers,
+      dropdownValues: _dropdownValues,
+      txBuilderParams: _txBuilderParams,
+    );
   }
 
   void _onGenerate() {
@@ -149,38 +108,14 @@ class _FormPageState extends State<FormPage> {
   }
 
   void _onFillMock() {
-    final mock = kMockByType[widget.config.type] ?? {};
     setState(() {
-      for (final field in widget.config.fields) {
-        final mockVal = mock[field.key];
-        if (mockVal == null) continue;
-        if (field.type == FieldType.dropdown) {
-          _dropdownValues[field.key] = mockVal.toString();
-        } else if (field.type == FieldType.chainList) {
-          final chains = (mockVal as List? ?? []).map((c) {
-            final chainsList = (c as Map)['chains'];
-            final chainsStr = chainsList is List ? chainsList.join(', ') : chainsList?.toString() ?? '';
-            return {
-              'path': (c)['path']?.toString() ?? '',
-              'chains': chainsStr,
-              'xpub': (c)['xpub']?.toString() ?? '',
-            };
-          }).toList();
-          _chainLists[field.key] = chains;
-          // 更新 controllers
-          _chainControllers[field.key] = chains.map((c) {
-            return {
-              'path': TextEditingController(text: c['path'] ?? ''),
-              'chains': TextEditingController(text: c['chains'] ?? ''),
-              'xpub': TextEditingController(text: c['xpub'] ?? ''),
-            };
-          }).toList();
-        } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
-          _controllers[field.key]?.text = const JsonEncoder.withIndent('  ').convert(mockVal);
-        } else {
-          _controllers[field.key]?.text = mockVal.toString();
-        }
-      }
+      fillMockToEthTxControllers(
+        type: widget.config.type,
+        fields: widget.config.fields,
+        controllers: _controllers,
+        dropdownValues: _dropdownValues,
+        clearTxBuilderParams: () => _txBuilderParams.clear(),
+      );
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
