@@ -1,8 +1,9 @@
 import 'dart:typed_data';
+
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32;
-import 'package:crypto_wallet_util/transaction.dart' show GsplItem, GsplTxData, BtcSignDataType;
+import 'package:crypto_wallet_util/transaction.dart' show GsplItem, GsplTxData, BtcSignDataType, Eip1559TxData, Eip7702TxData, Eip7702Authorization, LegacyTxData, EthTxDataRaw, TxNetwork;
 
 /// 统一编码入口：接受类型字符串 + 参数 Map，返回可调用 next() 的 UR 对象。
 ///
@@ -13,6 +14,12 @@ UR buildUR(String type, Map<String, dynamic> params) {
   switch (type.toLowerCase()) {
     // ── ETH ──────────────────────────────────────────────────
     case 'eth-sign-request':
+      // 检测是否传入交易字段，使用 fromTypedTransaction
+      if (params['txType'] != null || (params['to'] != null && params['value'] != null)) {
+        // 交易构建器模式：传入交易字段，由 encoder 构建 EthTxData
+        return _buildEthTxRequest(params);
+      }
+      // 传统模式：直接传入 hex
       return EthSignRequestUR.fromMessage(
         dataType: _ethDataType(params['dataType'] as String? ?? 'ETH_TRANSACTION_DATA'),
         address: params['address'] as String,
@@ -265,6 +272,70 @@ GsplDataType _gsplDataType(String name) {
   return GsplDataType.values.firstWhere(
     (e) => e.name == name,
     orElse: () => GsplDataType.transaction,
+  );
+}
+
+/// 使用 fromTypedTransaction 构建 ETH 交易请求
+UR _buildEthTxRequest(Map<String, dynamic> params) {
+  final chainId = int.parse(params['chainId']?.toString() ?? '1');
+  final txType = params['txType'] as String? ?? 'legacy';
+  final to = params['to'] as String? ?? '';
+  final value = params['value'] as String? ?? '0';
+  final gasLimit = int.tryParse(params['gasLimit']?.toString() ?? '21000') ?? 21000;
+  final nonce = int.tryParse(params['nonce']!.toString()) ?? 0;
+  final data = params['data'] as String? ?? '';
+  final origin = params['origin'] as String? ?? '';
+  final path = params['path'] as String? ?? "m/44'/60'/0'/0/0";
+  final xfp = (params['xfp'] as String?) ?? '';
+
+  // 构建网络配置
+  final network = TxNetwork(chainId: chainId);
+
+  // 构建交易原始数据 - data 保持为 String，让库内部处理
+  final txRaw = EthTxDataRaw(
+    to: to.isNotEmpty ? to : '0x0000000000000000000000000000000000000000',
+    value: BigInt.tryParse(value) ?? BigInt.zero,
+    data: data, // String 类型，库内部会处理
+    nonce: nonce,
+    gasLimit: gasLimit,
+  );
+
+  EthTxData tx;
+  if (txType == 'eip1559') {
+    // EIP-1559 交易
+    final maxFee = int.tryParse(params['maxFee']?.toString() ?? '0') ?? 0;
+    final maxPriority = int.tryParse(params['maxPriority']?.toString() ?? '0') ?? 0;
+    txRaw.maxFeePerGas = maxFee;
+    txRaw.maxPriorityFeePerGas = maxPriority;
+    tx = Eip1559TxData(data: txRaw, network: network);
+  } else if (txType == 'eip7702') {
+    // EIP-7702 交易
+    final maxFee = int.tryParse(params['maxFee']?.toString() ?? '0') ?? 0;
+    final maxPriority = int.tryParse(params['maxPriority']?.toString() ?? '0') ?? 0;
+    txRaw.maxFeePerGas = maxFee;
+    txRaw.maxPriorityFeePerGas = maxPriority;
+    final eip7702Contract = params['eip7702Contract'] as String? ?? '';
+    final authorization = Eip7702Authorization(
+      chainId: chainId,
+      address: eip7702Contract,
+      gasPayerAddress: to.isNotEmpty ? to : '0x0000000000000000000000000000000000000000',
+      signerAddress: to.isNotEmpty ? to : '0x0000000000000000000000000000000000000000',
+      signerNonce: nonce,
+    );
+    tx = Eip7702TxData(data: txRaw, network: network, authorization: authorization);
+  } else {
+    // Legacy 交易
+    final gasPrice = int.tryParse(params['gasPrice']?.toString() ?? '0') ?? 0;
+    txRaw.gasPrice = gasPrice;
+    tx = LegacyTxData(data: txRaw, network: network);
+  }
+
+  return EthSignRequestUR.fromTypedTransaction(
+    tx: tx,
+    address: params['address'] as String? ?? to,
+    path: path,
+    origin: origin,
+    xfp: xfp,
   );
 }
 

@@ -18,7 +18,7 @@ class _FormPageState extends State<FormPage> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String> _dropdownValues = {};
-  
+
   // chainList 专用状态
   final Map<String, List<Map<String, String>>> _chainLists = {}; // fieldKey -> list of chain data
   // chainList 的 TextEditingController：fieldKey -> [{path, chains, xpub}]
@@ -42,9 +42,7 @@ class _FormPageState extends State<FormPage> {
         // 初始化 chainList：每个 chain 有 path, chains, xpub 三个字段
         final chains = (mockVal as List? ?? []).map((c) {
           final chainsList = (c as Map)['chains'];
-          final chainsStr = chainsList is List
-              ? chainsList.join(', ')
-              : chainsList?.toString() ?? '';
+          final chainsStr = chainsList is List ? chainsList.join(', ') : chainsList?.toString() ?? '';
           return {
             'path': (c)['path']?.toString() ?? '',
             'chains': chainsStr,
@@ -92,6 +90,10 @@ class _FormPageState extends State<FormPage> {
   Map<String, dynamic> _collectParams() {
     final params = <String, dynamic>{};
     for (final field in widget.config.fields) {
+      // 跳过 signData 字段，使用交易构建器参数
+      if (field.key == 'signData' && _txBuilderParams.isNotEmpty) {
+        continue;
+      }
       if (field.type == FieldType.dropdown) {
         params[field.key] = _dropdownValues[field.key];
       } else if (field.type == FieldType.chainList) {
@@ -122,6 +124,10 @@ class _FormPageState extends State<FormPage> {
         if (val.isNotEmpty) params[field.key] = val;
       }
     }
+    // 添加交易构建器参数
+    if (_txBuilderParams.isNotEmpty) {
+      params.addAll(_txBuilderParams);
+    }
     return params;
   }
 
@@ -145,9 +151,7 @@ class _FormPageState extends State<FormPage> {
         } else if (field.type == FieldType.chainList) {
           final chains = (mockVal as List? ?? []).map((c) {
             final chainsList = (c as Map)['chains'];
-            final chainsStr = chainsList is List
-                ? chainsList.join(', ')
-                : chainsList?.toString() ?? '';
+            final chainsStr = chainsList is List ? chainsList.join(', ') : chainsList?.toString() ?? '';
             return {
               'path': (c)['path']?.toString() ?? '',
               'chains': chainsStr,
@@ -231,8 +235,15 @@ class _FormPageState extends State<FormPage> {
   }
 
   Widget _buildField(FieldConfig field) {
+    // ETH transaction 类型显示交易构建器
+    if (field.key == 'signData' && _isEthTransactionType) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: _buildTransactionBuilderField(field),
+      );
+    }
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: EdgeInsets.only(bottom: field.type == FieldType.dropdown ? 6 : 14),
       child: switch (field.type) {
         FieldType.dropdown => _buildDropdown(field),
         FieldType.jsonList || FieldType.jsonMap => _buildJsonField(field),
@@ -241,6 +252,131 @@ class _FormPageState extends State<FormPage> {
       },
     );
   }
+
+  /// 判断当前是否为 ETH transaction 类型
+  bool get _isEthTransactionType {
+    final dataType = _dropdownValues['dataType'];
+    return widget.config.type == 'eth-sign-request' && (dataType == 'ETH_TRANSACTION_DATA' || dataType == 'ETH_TYPED_TRANSACTION');
+  }
+
+  /// ETH 交易构建器字段
+  Widget _buildTransactionBuilderField(FieldConfig field) {
+    final hasTxData = _txBuilderParams.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          field.label,
+          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 6),
+        // 有交易数据时显示状态，可点击重新编辑
+        if (hasTxData)
+          GestureDetector(
+            onTap: () => _showTransactionBuilder(field),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tx: ${_txBuilderParams['txType']} - ${_txBuilderParams['to']}',
+                      style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: Theme.of(context).colorScheme.onSurface),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.edit, size: 16, color: Colors.grey.shade400),
+                    onPressed: () => _showTransactionBuilder(field),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                    onPressed: () => setState(() => _txBuilderParams.clear()),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _controllers[field.key],
+                  maxLines: 3,
+                  style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    hintText: field.hint ?? _hintForType(field.type),
+                    suffixIcon: _controllers[field.key]!.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                            onPressed: () => setState(() {
+                              _controllers[field.key]!.clear();
+                              _txBuilderParams.clear();
+                            }),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                          )
+                        : null,
+                  ),
+                  validator: field.required
+                      ? (v) => (v == null || v.trim().isEmpty && _txBuilderParams.isEmpty) ? '${field.label} is required (enter hex or build transaction)' : null
+                      : null,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.build, size: 18, color: Theme.of(context).colorScheme.primary),
+                tooltip: 'Build Transaction',
+                onPressed: () => _showTransactionBuilder(field),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  /// 显示交易构建器弹窗
+  void _showTransactionBuilder(FieldConfig field) {
+    final chainId = int.tryParse(_controllers['chainId']?.text ?? '1') ?? 1;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (ctx) => TransactionBuilderSheet(
+        chainId: chainId,
+        initialParams: _txBuilderParams.isNotEmpty ? Map.from(_txBuilderParams) : null,
+        onComplete: (txParams) {
+          setState(() {
+            // 清空 signData，改为存储交易字段
+            _controllers[field.key]!.text = '';
+            // 将交易字段存入 _txBuilderParams
+            _txBuilderParams.clear();
+            _txBuilderParams.addAll(txParams);
+            // 自动设置正确的 dataType
+            if (_dropdownValues['dataType'] == null) {
+              _dropdownValues['dataType'] = 'ETH_TRANSACTION_DATA';
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  // 存储交易构建器的参数
+  final Map<String, dynamic> _txBuilderParams = {};
 
   Widget _buildTextField(FieldConfig field) {
     final isMultiline = field.type == FieldType.hex || field.type == FieldType.xpub;
@@ -615,3 +751,289 @@ String _hintForType(FieldType type) => switch (type) {
       FieldType.xpub => 'xpub6...',
       _ => '',
     };
+
+// ─────────────────────────────────────────────────────────────
+// ETH 交易构建器弹窗 (公开供复用)
+// ─────────────────────────────────────────────────────────────
+
+class TransactionBuilderSheet extends StatefulWidget {
+  final int chainId;
+  final Map<String, dynamic>? initialParams;
+  final void Function(Map<String, dynamic> txParams) onComplete;
+
+  const TransactionBuilderSheet({
+    required this.chainId,
+    this.initialParams,
+    required this.onComplete,
+  });
+
+  @override
+  State<TransactionBuilderSheet> createState() => TransactionBuilderSheetState();
+}
+
+class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
+  final _toController = TextEditingController();
+  final _valueController = TextEditingController();
+  final _gasLimitController = TextEditingController(text: '21000');
+  final _gasPriceController = TextEditingController();
+  final _maxFeeController = TextEditingController();
+  final _maxPriorityController = TextEditingController();
+  final _nonceController = TextEditingController();
+  final _dataController = TextEditingController();
+  final _eip7702ContractController = TextEditingController(); // EIP7702 合约地址
+
+  String _txType = 'legacy'; // legacy, eip1559, eip7702
+
+  @override
+  void initState() {
+    super.initState();
+    _initFromParams();
+  }
+
+  void _initFromParams() {
+    final params = widget.initialParams;
+    if (params == null || params.isEmpty) return;
+
+    _txType = params['txType'] as String? ?? 'legacy';
+    _toController.text = params['to'] as String? ?? '';
+    final value = params['value'] as String? ?? '0';
+    // 将 wei 转换为 ETH 显示
+    try {
+      final wei = BigInt.parse(value);
+      final eth = wei ~/ BigInt.from(10).pow(18);
+      _valueController.text = eth.toString();
+    } catch (_) {
+      _valueController.text = '0';
+    }
+    _gasLimitController.text = (params['gasLimit'] ?? 21000).toString();
+    _gasPriceController.text = (params['gasPrice'] ?? '').toString();
+    _maxFeeController.text = (params['maxFee'] ?? '').toString();
+    _maxPriorityController.text = (params['maxPriority'] ?? '').toString();
+    _nonceController.text = (params['nonce'] ?? '').toString();
+    _dataController.text = params['data'] as String? ?? '';
+    _eip7702ContractController.text = params['eip7702Contract'] as String? ?? '';
+  }
+
+  @override
+  void dispose() {
+    _toController.dispose();
+    _valueController.dispose();
+    _gasLimitController.dispose();
+    _gasPriceController.dispose();
+    _maxFeeController.dispose();
+    _maxPriorityController.dispose();
+    _nonceController.dispose();
+    _dataController.dispose();
+    _eip7702ContractController.dispose();
+    super.dispose();
+  }
+
+  void _build() {
+    final to = _toController.text.trim();
+    final value = _valueController.text.trim();
+    if (to.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('To address is required')),
+      );
+      return;
+    }
+
+    final chainId = widget.chainId;
+    final gasLimit = int.tryParse(_gasLimitController.text) ?? 21000;
+    final valueWei = (BigInt.tryParse(value) ?? BigInt.zero) * BigInt.from(10).pow(18);
+
+    // 返回交易参数，而不是 hex
+    final txParams = <String, dynamic>{
+      'txType': _txType,
+      'to': to,
+      'value': valueWei.toString(),
+      'gasLimit': gasLimit,
+      'nonce': int.tryParse(_nonceController.text) ?? 0,
+      'data': _dataController.text.trim(),
+      'chainId': chainId,
+    };
+
+    if (_txType == 'legacy') {
+      txParams['gasPrice'] = int.tryParse(_gasPriceController.text) ?? 0;
+    } else if (_txType == 'eip1559') {
+      txParams['maxFee'] = int.tryParse(_maxFeeController.text) ?? 0;
+      txParams['maxPriority'] = int.tryParse(_maxPriorityController.text) ?? 0;
+    } else if (_txType == 'eip7702') {
+      txParams['maxFee'] = int.tryParse(_maxFeeController.text) ?? 0;
+      txParams['maxPriority'] = int.tryParse(_maxPriorityController.text) ?? 0;
+      txParams['eip7702Contract'] = _eip7702ContractController.text.trim();
+    }
+
+    widget.onComplete(txParams);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).viewInsets.bottom + 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Text('Build Transaction', style: theme.textTheme.titleMedium),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Transaction Type Toggle
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'legacy', label: Text('Legacy')),
+              ButtonSegment(value: 'eip1559', label: Text('EIP-1559')),
+              ButtonSegment(value: 'eip7702', label: Text('EIP-7702')),
+            ],
+            selected: {_txType},
+            onSelectionChanged: (v) => setState(() => _txType = v.first),
+          ),
+          const SizedBox(height: 12),
+
+          // 使用 ListView 实现滚动
+          Expanded(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                const SizedBox(height: 16),
+                // To Address
+                _buildTextFieldWithClear(
+                  controller: _toController,
+                  label: 'To Address',
+                  hint: '0x...',
+                ),
+                const SizedBox(height: 12),
+
+                // Value
+                _buildTextFieldWithClear(
+                  controller: _valueController,
+                  label: 'Value (ETH)',
+                  hint: '0.0',
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+
+                // Gas Limit
+                _buildTextFieldWithClear(
+                  controller: _gasLimitController,
+                  label: 'Gas Limit',
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+
+                // Conditional fields
+                if (_txType == 'legacy') ...[
+                  _buildTextFieldWithClear(
+                    controller: _gasPriceController,
+                    label: 'Gas Price (Gwei)',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (_txType == 'eip1559') ...[
+                  _buildTextFieldWithClear(
+                    controller: _maxFeeController,
+                    label: 'Max Fee (Gwei)',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextFieldWithClear(
+                    controller: _maxPriorityController,
+                    label: 'Max Priority (Gwei)',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (_txType == 'eip7702') ...[
+                  _buildTextFieldWithClear(
+                    controller: _maxFeeController,
+                    label: 'Max Fee (Gwei)',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextFieldWithClear(
+                    controller: _maxPriorityController,
+                    label: 'Max Priority (Gwei)',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextFieldWithClear(
+                    controller: _eip7702ContractController,
+                    label: 'EIP-7702 Contract',
+                    hint: '0x... (authorization contract)',
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // Nonce
+                _buildTextFieldWithClear(
+                  controller: _nonceController,
+                  label: 'Nonce (optional)',
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+
+                // Data
+                _buildTextFieldWithClear(
+                  controller: _dataController,
+                  label: 'Data (hex, optional)',
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+
+          FilledButton(
+            onPressed: _build,
+            child: const Text('Generate Sign Data'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 复用表单清除按钮逻辑
+  Widget _buildTextFieldWithClear({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        isDense: true,
+        suffixIcon: controller.text.isNotEmpty
+            ? IconButton(
+                icon: Icon(Icons.clear, size: 16, color: Colors.grey.shade400),
+                onPressed: () {
+                  controller.clear();
+                  setState(() {});
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              )
+            : null,
+      ),
+      onChanged: (_) => setState(() {}),
+    );
+  }
+}
