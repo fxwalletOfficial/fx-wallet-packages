@@ -14,20 +14,29 @@ class CryptoHDKeyUR extends UR {
   final String path;
   final String name;
   final String? xfp;
+  final String? sourceFingerprint;
+  final String? childrenPath;
+  final String? note;
 
   CryptoHDKeyUR({
     required UR ur,
     required this.path,
     required this.name,
     required this.wallet,
-    this.xfp
+    this.xfp,
+    this.sourceFingerprint,
+    this.childrenPath,
+    this.note,
   }) : super(payload: ur.payload, type: ur.type);
 
   CryptoHDKeyUR.fromWallet({
     required this.name,
     required this.path,
     required this.wallet,
-    this.xfp
+    this.xfp,
+    this.sourceFingerprint,
+    this.childrenPath,
+    this.note,
   }) : super.fromCBOR(
     type: CRYPTO_HD_KEY,
     value: CborMap({
@@ -50,39 +59,80 @@ class CryptoHDKeyUR extends UR {
     final publicKey = Uint8List.fromList((data[CborSmallInt(3)] as CborBytes).bytes);
     final chainCode = Uint8List.fromList((data[CborSmallInt(4)] as CborBytes).bytes);
     final parentFingerprint = (data[CborSmallInt(8)] as CborInt).toInt();
-    final components = (data[CborSmallInt(6)] as CborMap)[CborSmallInt(1)] as CborList;
+    final origin = data[CborSmallInt(6)] as CborMap;
+    final components = origin[CborSmallInt(1)] as CborList;
     final name = (data[CborSmallInt(9)] as CborString).toString();
+    final note = (data[CborSmallInt(10)] as CborString?)?.toString();
 
-    String path = 'm';
-    int index = 0;
-    for (final item in components) {
-      if (item is CborSmallInt) {
-        path += '/${item.value}';
-        index = item.value;
-      }
-
-      if (item is CborBool && item.value) {
-        path += "'";
-        index += HIGHEST_BIT;
-      }
-    }
+    final path = _parseKeyPath(components);
+    final children = data[CborSmallInt(7)] as CborMap?;
+    final childrenComponents = children?[CborSmallInt(1)] as CborList?;
+    final childrenPath = childrenComponents == null
+        ? null
+        : _parseKeyPath(childrenComponents, includeRoot: false);
+    final sourceFingerprint = _parseSourceFingerprint(origin[CborSmallInt(2)]);
+    final index = _lastIndex(components);
 
     final wallet = BIP32.fromPublicKey(publicKey, chainCode);
     wallet.parentFingerprint = parentFingerprint;
     wallet.depth = (components.length / 2).round();
     wallet.index = index;
 
-    return CryptoHDKeyUR(ur: ur, wallet: wallet, path: path, name: name);
+    return CryptoHDKeyUR(
+      ur: ur,
+      wallet: wallet,
+      path: path,
+      name: name,
+      sourceFingerprint: sourceFingerprint,
+      childrenPath: childrenPath,
+      note: note,
+    );
   }
 
   @override
   String toString() => '''
 {
 "derivationPath":"$path",
+"childrenPath":"${childrenPath ?? ''}",
+"sourceFingerprint":"${sourceFingerprint ?? ''}",
 "masterFingerprint":"${hex.encode(wallet.fingerprint)}",
 "extendedPublicKey": "${wallet.toBase58()}",
 "chainCode": "${hex.encode(wallet.chainCode)}",
-"walletName":"$name"
+"walletName":"$name",
+"note":"${note ?? ''}"
 }
   ''';
+
+  static String _parseKeyPath(CborList components, {bool includeRoot = true}) {
+    var path = includeRoot ? 'm' : '';
+    for (var i = 0; i < components.length; i += 2) {
+      final index = components[i];
+      final hardened = (components[i + 1] as CborBool).value;
+      final part = index is CborSmallInt
+          ? '${index.value}${hardened ? "'" : ''}'
+          : '*${hardened ? "'" : ''}';
+      path += includeRoot || path.isNotEmpty ? '/$part' : part;
+    }
+    return path;
+  }
+
+  static int _lastIndex(CborList components) {
+    var index = 0;
+    for (var i = 0; i < components.length; i += 2) {
+      final value = components[i];
+      final hardened = (components[i + 1] as CborBool).value;
+      if (value is CborSmallInt) {
+        index = value.value;
+        if (hardened) index += HIGHEST_BIT;
+      }
+    }
+    return index;
+  }
+
+  static String? _parseSourceFingerprint(CborValue? value) {
+    if (value is! CborInt) return null;
+    final bytes = Uint8List(4);
+    bytes.buffer.asByteData().setUint32(0, value.toInt(), Endian.little);
+    return hex.encode(bytes).toUpperCase();
+  }
 }

@@ -40,7 +40,16 @@ class LegacyTxData extends EthTxData {
   /// Returns the serialized encoding of the legacy transaction.
   @override
   Uint8List serialize({bool sig = true}) {
-    return rlp.encode(sig ? raw() : raw().sublist(0, 6));
+    final msg = raw();
+    if (!sig) {
+      msg.removeRange(6, msg.length);
+      msg.addAll([
+        intToBuffer(network.chainId),
+        Uint8List.fromList([]),
+        Uint8List.fromList([])
+      ]);
+    }
+    return rlp.encode(msg);
   }
 
   Uint8List txsMsg(int v, BigInt r, BigInt s) {

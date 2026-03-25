@@ -238,3 +238,8 @@
 ## Update
 
 - Update: Update export.
+
+## [1.2.4] - 2026-02-24
+## Fix
+
+- Add chain id in eth legacy tx unsigned serialized message.

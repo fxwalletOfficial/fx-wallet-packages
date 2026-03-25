@@ -30,8 +30,9 @@ class CryptoMultiAccountsUR extends UR {
       if (chainInfo != null) chainList.add(chainInfo);
     }
 
-    final name = data[CborSmallInt(3)].toString();
-    final walletName = data[CborSmallInt(6)].toString();
+    final name = data[CborSmallInt(3)]?.toString() ?? '';
+    final walletName = data[CborSmallInt(6)]?.toString() ?? '';
+    print('NAME - ${data[CborSmallInt(3)]} = ${data[CborSmallInt(3)] is CborString} - $name - $walletName');
 
     return CryptoMultiAccountsUR(ur: ur, chains: chainList, device: name, walletName: walletName, masterFingerprint: getXfp(masterFingerprint));
   }
@@ -129,20 +130,28 @@ class CryptoAccountItemUR extends UR {
 
     BIP32? wallet;
     if (data[CborSmallInt(4)] != null) {
-      final parentFingerprint = (data[CborSmallInt(8)] as CborInt).toInt();
       final chainCode = Uint8List.fromList((data[CborSmallInt(4)] as CborBytes).bytes);
 
-      // BIP32 wallet.
-      wallet = BIP32.fromPublicKey(publicKey, chainCode);
-      wallet.parentFingerprint = parentFingerprint;
-      wallet.depth = (components.length / 2).round();
-      wallet.index = index;
+      try {
+        // BIP32 wallet.
+        wallet = BIP32.fromPublicKey(publicKey, chainCode);
+        if (data[CborSmallInt(8)] != null) wallet.parentFingerprint = (data[CborSmallInt(8)] as CborInt).toInt();
+        wallet.depth = (components.length / 2).round();
+        wallet.index = index;
+      } catch (e) {
+
+      }
     }
 
     // Note.
     final note = data[CborSmallInt(10)].toString();
-    final chains = ((json.decode(note)['chain'] ?? []) as List).map((e) => e.toString()).toList();
-    if (chains.isEmpty) return null;
+    final chains = <String>[];
+    try {
+      final jsonData = json.decode(note);
+      chains.addAll(((jsonData['chain'] ?? []) as List).map((e) => e.toString()).toList());
+    } catch (e) {
+
+    }
 
     return CryptoAccountItemUR(path: path, wallet: wallet, chains: chains, publicKey: publicKey);
   }
