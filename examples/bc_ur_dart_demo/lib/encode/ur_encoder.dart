@@ -20,7 +20,7 @@ UR buildUR(String type, Map<String, dynamic> params) {
         // 交易构建器模式：传入交易字段，由 encoder 构建 EthTxData
         return _buildEthTxRequest(params);
       }
-      
+
       final signData = params['signData'] as String? ?? '';
       if (signData.isNotEmpty) {
         // 传统模式：直接传入 hex
@@ -45,7 +45,7 @@ UR buildUR(String type, Map<String, dynamic> params) {
         chain: params['chain'] as String,
         xfp: params['xfp'] as String,
         origin: params['origin'] as String?,
-        fee: params['fee'] != null ? int.tryParse(params['fee'].toString()) : null,
+        fee: _parseIntWithHex(params['fee']),
       );
 
     // ── Solana ────────────────────────────────────────────────
@@ -68,7 +68,7 @@ UR buildUR(String type, Map<String, dynamic> params) {
         path: params['path'] as String,
         xfp: params['xfp'] as String,
         origin: params['origin'] as String?,
-        fee: params['fee'] != null ? int.tryParse(params['fee'].toString()) : null,
+        fee: _parseIntWithHex(params['fee']),
       );
 
     // ── Aleo (Alph) ───────────────────────────────────────────
@@ -212,6 +212,24 @@ UR buildUR(String type, Map<String, dynamic> params) {
 Uint8List? _uuidBytes(String? requestId) {
   if (requestId == null || requestId.isEmpty) return null;
   return Uint8List.fromList(hex.decode(requestId.replaceAll('0x', '')));
+}
+
+/// Parse int from decimal text or 0x-prefixed hex text.
+int? _parseIntWithHex(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+
+  final raw = value.toString().trim();
+  if (raw.isEmpty) return null;
+
+  final normalized = raw.toLowerCase();
+  if (normalized.startsWith('0x')) {
+    final hexValue = normalized.substring(2);
+    if (hexValue.isEmpty) return null;
+    return int.tryParse(hexValue, radix: 16);
+  }
+
+  return int.tryParse(raw);
 }
 
 /// hex string → Uint8List，容忍 0x 前缀
