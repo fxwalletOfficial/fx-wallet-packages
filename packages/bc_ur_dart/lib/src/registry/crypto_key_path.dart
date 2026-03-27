@@ -42,13 +42,15 @@ class CryptoKeypath extends RegistryItem {
     this.depth,
   });
 
-  String? getPath() {
+  String? getPath({bool includeMaster = true}) {
     if (components.isEmpty) return null;
     final path = components.map((c) {
       return '${c.isWildcard() ? '*' : c.getIndex()}${c.isHardened() ? "'" : ''}';
     }).join('/');
-    return 'm/$path';
+    return includeMaster ? 'm/$path' : path;
   }
+
+  String? getRelativePath() => getPath(includeMaster: false);
 
   List<PathComponent> getComponents() => components;
   Uint8List? getSourceFingerprint() => sourceFingerprint;

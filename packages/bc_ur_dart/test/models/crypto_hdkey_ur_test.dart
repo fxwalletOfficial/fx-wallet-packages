@@ -6,7 +6,8 @@ import 'package:test/test.dart';
 void main() {
   group('CryptoHDKeyUR', () {
     test('should create from wallet correctly', () {
-      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final wallet = BIP32.fromBase58(
+          'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
       final path = "m/44'/60'/0'";
       final name = 'test-wallet';
 
@@ -17,13 +18,14 @@ void main() {
       );
 
       expect(hdkey, isNotNull);
-      expect(hdkey.wallet.toBase58(), wallet.toBase58());
+      expect(hdkey.wallet!.toBase58(), wallet.toBase58());
       expect(hdkey.path, path);
       expect(hdkey.name, name);
     });
 
     test('should create from UR correctly', () {
-      final code = 'UR:CRYPTO-HDKEY/ONAXHDCLAOMKGYVDNBDNBEBAAAUOTOGSETLOEEVASPBAHGPTEYNTAEROKGDTHTDSGLCMAAWMBDAAHDCXPECXAXDWAOVDSFHSATDNMYGUTPSPPEAYZEHYSTPSCKREBNIMGEBTLGSOBKPAKKWLAMTAADDYOEADLNCSDWYKCSFNYKAEYKAOCYZTVALKDYAYCYZTVALKDYASIEJTHSJNIHRPPAOTDM';
+      final code =
+          'UR:CRYPTO-HDKEY/ONAXHDCLAOMKGYVDNBDNBEBAAAUOTOGSETLOEEVASPBAHGPTEYNTAEROKGDTHTDSGLCMAAWMBDAAHDCXPECXAXDWAOVDSFHSATDNMYGUTPSPPEAYZEHYSTPSCKREBNIMGEBTLGSOBKPAKKWLAMTAADDYOEADLNCSDWYKCSFNYKAEYKAOCYZTVALKDYAYCYZTVALKDYASIEJTHSJNIHRPPAOTDM';
 
       final hdkey = CryptoHDKeyUR.fromUR(ur: UR.decode(code));
 
@@ -33,7 +35,8 @@ void main() {
     });
 
     test('should encode to UR correctly', () {
-      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final wallet = BIP32.fromBase58(
+          'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
       final path = "m/44'/60'/0'";
       final name = 'test-wallet';
 
