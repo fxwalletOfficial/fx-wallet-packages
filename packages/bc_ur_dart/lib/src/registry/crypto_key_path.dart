@@ -78,7 +78,7 @@ class CryptoKeypath extends RegistryItem {
 
     // sourceFingerprint：xfp uint32，字节序与 Keystone 基准一致
     if (sourceFingerprint != null) {
-      final fp = sourceFingerprint!.buffer.asByteData().getUint32(0, Endian.little);
+      final fp = sourceFingerprint!.buffer.asByteData().getUint32(0, Endian.big);
       innerMap[CborSmallInt(KeyPathKeys.sourceFingerprint.index)] = CborInt(BigInt.from(fp));
     }
 
@@ -116,7 +116,7 @@ class CryptoKeypath extends RegistryItem {
     if (RegistryItem.hasKey(map, KeyPathKeys.sourceFingerprint.index)) {
       final fp = RegistryItem.readInt(map, KeyPathKeys.sourceFingerprint.index);
       sourceFingerprint = Uint8List(4);
-      sourceFingerprint.buffer.asByteData().setUint32(0, fp, Endian.little);
+      sourceFingerprint.buffer.asByteData().setUint32(0, fp, Endian.big);
     }
 
     final depth = RegistryItem.readOptionalInt(map, KeyPathKeys.depth.index);

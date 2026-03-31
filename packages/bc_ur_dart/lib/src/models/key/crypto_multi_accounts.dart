@@ -31,8 +31,7 @@ class CryptoMultiAccountsUR extends UR {
 
     // field 1: masterFingerprint，按大端序读取（UInt32BE）
     final fpRaw = (data[CborSmallInt(1)] as CborInt).toInt();
-    final fpBytes = Uint8List(4)
-      ..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
+    final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
     final masterFingerprint = hex.encode(fpBytes);
 
     // field 2: keys 列表 (每个 key 是 CryptoHDKeyUR)
@@ -92,11 +91,9 @@ class CryptoMultiAccountsUR extends UR {
         CborSmallInt(1): CborInt(BigInt.from(fpInt)),
         CborSmallInt(2): CborList(chains.map((e) => e.decodeCBOR()).toList()),
         if (device.isNotEmpty) CborSmallInt(3): CborString(device),
-        if (deviceId != null && deviceId.isNotEmpty)
-          CborSmallInt(4): CborString(deviceId),
+        if (deviceId != null && deviceId.isNotEmpty) CborSmallInt(4): CborString(deviceId),
         CborSmallInt(5): CborString(version),
-        if (walletName != null && walletName.isNotEmpty)
-          CborSmallInt(6): CborString(walletName),
+        if (walletName != null && walletName.isNotEmpty) CborSmallInt(6): CborString(walletName),
       }),
     );
 
@@ -115,6 +112,7 @@ class CryptoMultiAccountsUR extends UR {
   String toString() => '''
 {
 "masterFingerprint":"$masterFingerprint",
+"walletName":"${walletName ?? ''}",
 "device":"$device",
 "deviceId":"${deviceId ?? ''}",
 "version":"${version ?? ''}",
