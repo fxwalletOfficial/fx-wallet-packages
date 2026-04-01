@@ -2,6 +2,8 @@ library bc_ur_dart;
 
 export 'package:bc_ur_dart/src/models/alph/alph_sign_request.dart';
 export 'package:bc_ur_dart/src/models/alph/alph_signature.dart';
+export 'package:bc_ur_dart/src/models/bch/bch_sign_request.dart';
+export 'package:bc_ur_dart/src/models/bch/bch_signature.dart';
 export 'package:bc_ur_dart/src/models/btc/crypto_psbt_signature.dart';
 export 'package:bc_ur_dart/src/models/btc/gspl_sign_request.dart';
 export 'package:bc_ur_dart/src/models/btc/gspl_signature.dart';
