@@ -80,7 +80,7 @@ class CryptoMultiAccountsUR extends UR {
     required List<CryptoHDKeyUR> chains,
     String? walletName,
   }) {
-    final xfp = getXfp(masterFingerprint);
+    final xfp = getXfp(masterFingerprint, reverseBytes: false);
 
     // BigInt 直接转 int，按大端序写入 CBOR（UInt32BE），与规范一致
     final fpInt = masterFingerprint.toInt();

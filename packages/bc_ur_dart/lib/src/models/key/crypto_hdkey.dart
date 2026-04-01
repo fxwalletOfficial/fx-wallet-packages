@@ -83,7 +83,7 @@ class CryptoHDKeyUR extends UR {
               if (wallet != null)
                 CborSmallInt(8): CborInt(xfp == null || xfp.isEmpty
                     ? BigInt.from(wallet.parentFingerprint)
-                    : toXfpCode(xfp, bigEndian: false)),
+                    : toXfpCode(xfp, reverseBytes: false)),
               CborSmallInt(9): CborString(name),
               if (note != null && note.isNotEmpty)
                 CborSmallInt(10): CborString(note),
@@ -165,7 +165,7 @@ class CryptoHDKeyUR extends UR {
 
     // sourceFingerprint from origin field 2
     final sourceFingerprint = keypath.sourceFingerprint != null
-        ? hex.encode(keypath.sourceFingerprint!).toUpperCase()
+        ? hex.encode(keypath.sourceFingerprint!)
         : null;
 
     final index = keypath.components.isNotEmpty

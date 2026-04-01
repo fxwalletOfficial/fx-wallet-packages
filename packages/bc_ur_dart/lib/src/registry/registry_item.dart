@@ -136,17 +136,21 @@ abstract class RegistryItem {
     return map.containsKey(CborSmallInt(key));
   }
 
-  static CryptoKeypath readKeypath(CborMap map, int key) {
+  static CryptoKeypath readKeypath(
+    CborMap map,
+    int key, {
+    Endian sourceFingerprintEndian = Endian.big,
+  }) {
     final value = map[CborSmallInt(key)];
 
     if (value is CborMap) {
       // 标准路径：tagged CborMap 内联嵌套
-      return CryptoKeypath().decodeFromCbor(value) as CryptoKeypath;
+      return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian).decodeFromCbor(value) as CryptoKeypath;
     }
 
     if (value is CborBytes) {
       // 防御路径：兼容旧版 CborBytes 格式
-      return CryptoKeypath.fromCBOR(Uint8List.fromList(value.bytes));
+      return CryptoKeypath.fromCBOR(Uint8List.fromList(value.bytes), sourceFingerprintEndian: sourceFingerprintEndian);
     }
 
     throw ArgumentError(

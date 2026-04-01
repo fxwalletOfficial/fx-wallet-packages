@@ -1,10 +1,12 @@
 import 'dart:typed_data';
-import 'package:bc_ur_dart/src/models/btc/gspl_tx_data.dart';
-import 'package:bc_ur_dart/src/utils/error.dart';
-import 'package:cbor/cbor.dart';
 
+import 'package:bc_ur_dart/src/models/btc/gspl_tx_data.dart';
+import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
+import 'package:cbor/cbor.dart';
+import 'package:convert/convert.dart';
 import 'package:crypto_wallet_util/transaction.dart' show GsplTxData, GsplItem, BtcSignDataType;
 
 const String BTC_SIGN_REQUEST = 'BTC-SIGN-REQUEST';
@@ -25,7 +27,7 @@ class GsplSignRequestUR extends UR {
     required List<GsplItem> inputs,
     GsplItem? change,
     Uint8List? uuid,
-    bool xfpReverse = true
+    bool xfpReverse = false
   }) {
     uuid ??= UR.generateUUid();
     final gspl = GsplTxData(dataType: BtcSignDataType.TRANSACTION, inputs: inputs, change: change, hex: hex);
@@ -37,7 +39,8 @@ class GsplSignRequestUR extends UR {
         CborSmallInt(2): gspl.toCbor(),
         CborSmallInt(3): CborMap({
           CborSmallInt(1): CborList(getPath(path)),
-          if (xfpReverse) CborSmallInt(2): CborInt(toXfpCode(xfp, bigEndian: xfpReverse))
+          if (xfp.isNotEmpty)
+            CborSmallInt(2): CborInt(toXfpCode(xfp, reverseBytes: xfpReverse))
         }, tags: [40304]),
         CborSmallInt(4): CborString(origin)
       })
@@ -55,20 +58,14 @@ class GsplSignRequestUR extends UR {
 
     final uuid = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
     final gsplTxData = getGsplTxDataFromCbor(data: data[CborSmallInt(2)] as CborMap);
-    final components = (data[CborSmallInt(3)] as CborMap)[CborSmallInt(1)] as CborList;
 
-    String path = 'm';
-    for (final item in components) {
-      if (item is CborSmallInt) path += '/${item.value}';
-      if (item is CborBool && item.value) path += "'";
-    }
-
-    String xfp = '';
-    try {
-      xfp = getXfp(((data[CborSmallInt(3)] as CborMap)[CborSmallInt(2)] as CborInt).toBigInt(), bigEndian: bigEndian);
-    } catch (e) {
-      xfp = '';
-    }
+    final keypath = RegistryItem.readKeypath(
+      data,
+      3,
+      sourceFingerprintEndian: bigEndian ? Endian.big : Endian.little,
+    );
+    final path = keypath.getPath() ?? 'm';
+    final xfp = keypath.sourceFingerprint != null ? hex.encode(keypath.sourceFingerprint!) : '';
 
     return GsplSignRequestUR(ur: ur, uuid: uuid, path: path, gsplTxData: gsplTxData, xfp: xfp);
   }

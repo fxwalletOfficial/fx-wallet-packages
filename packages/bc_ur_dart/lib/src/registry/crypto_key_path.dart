@@ -35,11 +35,13 @@ class CryptoKeypath extends RegistryItem {
   final List<PathComponent> components;
   final Uint8List? sourceFingerprint;
   final int? depth;
+  final Endian sourceFingerprintEndian;
 
   CryptoKeypath({
     this.components = const [],
     this.sourceFingerprint,
     this.depth,
+    this.sourceFingerprintEndian = Endian.big,
   });
 
   String? getPath({bool includeMaster = true}) {
@@ -78,7 +80,7 @@ class CryptoKeypath extends RegistryItem {
 
     // sourceFingerprint：xfp uint32，字节序与 Keystone 基准一致
     if (sourceFingerprint != null) {
-      final fp = sourceFingerprint!.buffer.asByteData().getUint32(0, Endian.big);
+      final fp = sourceFingerprint!.buffer.asByteData().getUint32(0, sourceFingerprintEndian);
       innerMap[CborSmallInt(KeyPathKeys.sourceFingerprint.index)] = CborInt(BigInt.from(fp));
     }
 
@@ -116,7 +118,7 @@ class CryptoKeypath extends RegistryItem {
     if (RegistryItem.hasKey(map, KeyPathKeys.sourceFingerprint.index)) {
       final fp = RegistryItem.readInt(map, KeyPathKeys.sourceFingerprint.index);
       sourceFingerprint = Uint8List(4);
-      sourceFingerprint.buffer.asByteData().setUint32(0, fp, Endian.big);
+      sourceFingerprint.buffer.asByteData().setUint32(0, fp, sourceFingerprintEndian);
     }
 
     final depth = RegistryItem.readOptionalInt(map, KeyPathKeys.depth.index);
@@ -125,10 +127,17 @@ class CryptoKeypath extends RegistryItem {
       components: pathComponents,
       sourceFingerprint: sourceFingerprint,
       depth: depth,
+      sourceFingerprintEndian: sourceFingerprintEndian,
     );
   }
 
-  static CryptoKeypath fromCBOR(Uint8List cborPayload) {
-    return RegistryItem.fromCBOR<CryptoKeypath>(cborPayload, CryptoKeypath());
+  static CryptoKeypath fromCBOR(
+    Uint8List cborPayload, {
+    Endian sourceFingerprintEndian = Endian.big,
+  }) {
+    return RegistryItem.fromCBOR<CryptoKeypath>(
+      cborPayload,
+      CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian),
+    );
   }
 }

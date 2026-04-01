@@ -2,24 +2,24 @@ import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('Get xfp - Big endian', () {
+  test('Get xfp - reverse bytes', () {
     final origin = 44262555;
     final result = getXfp(BigInt.from(origin));
     expect(result, '9b64a302');
   });
 
-  test('Get xfp - Little endian', () {
-    final xfp = getXfp(BigInt.from(4245356866), bigEndian: false);
+  test('Get xfp - unreverse bytes', () {
+    final xfp = getXfp(BigInt.from(4245356866), reverseBytes: false);
     expect(xfp, 'fd0b0142');
   });
 
-  test('Byte words decode', () {
+  test('Byte words decode - reverse bytes', () {
     final result = toXfpCode('9b64a302');
     expect(result, BigInt.from(44262555));
   });
 
-  test('Byte words decode - Little endian', () {
-    final result = toXfpCode('fd0b0142', bigEndian: false);
+  test('Byte words decode - unreverse bytes', () {
+    final result = toXfpCode('fd0b0142', reverseBytes: false);
     expect(result, BigInt.from(4245356866));
   });
 }
