@@ -1,0 +1,15 @@
+syntax = "proto3";
+package protoc;
+
+import "keystone/payload.proto";
+
+message Base {
+  int32 version = 1;
+  string description = 2;
+  Payload payload_data = 3;  // ← 避免与 Dart 保留字 data 冲突
+  oneof Content {
+    int32 hotVersion = 4;
+    int32 coldVersion = 5;
+  }
+  string deviceType = 6;
+}

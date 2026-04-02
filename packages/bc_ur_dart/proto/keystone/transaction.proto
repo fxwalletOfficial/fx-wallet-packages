@@ -1,0 +1,16 @@
+syntax = "proto3";
+package protoc;
+
+import "keystone/chains/bch_transaction.proto";
+
+message SignTransaction {
+  string coinCode = 1;
+  string signId = 2;
+  string hdPath = 3;
+  int64 timestamp = 4;
+  int32 decimal = 5;
+  oneof Transaction {
+    BchTx bchTx = 10;
+    // 其他链按需添加
+  }
+}

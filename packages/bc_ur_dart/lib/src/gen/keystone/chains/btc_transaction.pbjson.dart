@@ -19,14 +19,19 @@ const Output$json = {
   '2': [
     {'1': 'address', '3': 1, '4': 1, '5': 9, '10': 'address'},
     {'1': 'value', '3': 2, '4': 1, '5': 3, '10': 'value'},
-    {'1': 'isChange', '3': 3, '4': 1, '5': 8, '10': 'isChange'},
-    {'1': 'changeAddressPath', '3': 4, '4': 1, '5': 9, '10': 'changeAddressPath'},
+    {'1': 'isChange', '3': 3, '4': 1, '5': 8, '9': 0, '10': 'isChange', '17': true},
+    {'1': 'changeAddressPath', '3': 4, '4': 1, '5': 9, '9': 1, '10': 'changeAddressPath', '17': true},
+  ],
+  '8': [
+    {'1': '_isChange'},
+    {'1': '_changeAddressPath'},
   ],
 };
 
 /// Descriptor for `Output`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List outputDescriptor = $convert.base64Decode(
     'CgZPdXRwdXQSGAoHYWRkcmVzcxgBIAEoCVIHYWRkcmVzcxIUCgV2YWx1ZRgCIAEoA1IFdmFsdW'
-    'USGgoIaXNDaGFuZ2UYAyABKAhSCGlzQ2hhbmdlEiwKEWNoYW5nZUFkZHJlc3NQYXRoGAQgASgJ'
-    'UhFjaGFuZ2VBZGRyZXNzUGF0aA==');
+    'USHwoIaXNDaGFuZ2UYAyABKAhIAFIIaXNDaGFuZ2WIAQESMQoRY2hhbmdlQWRkcmVzc1BhdGgY'
+    'BCABKAlIAVIRY2hhbmdlQWRkcmVzc1BhdGiIAQFCCwoJX2lzQ2hhbmdlQhQKEl9jaGFuZ2VBZG'
+    'RyZXNzUGF0aA==');
 

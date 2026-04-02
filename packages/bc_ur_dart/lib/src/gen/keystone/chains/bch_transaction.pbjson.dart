@@ -31,10 +31,13 @@ const BchTx_Input$json = {
   '1': 'Input',
   '2': [
     {'1': 'hash', '3': 1, '4': 1, '5': 9, '10': 'hash'},
-    {'1': 'index', '3': 2, '4': 1, '5': 5, '10': 'index'},
+    {'1': 'index', '3': 2, '4': 1, '5': 5, '9': 0, '10': 'index', '17': true},
     {'1': 'value', '3': 3, '4': 1, '5': 3, '10': 'value'},
     {'1': 'pubkey', '3': 4, '4': 1, '5': 9, '10': 'pubkey'},
     {'1': 'ownerKeyPath', '3': 5, '4': 1, '5': 9, '10': 'ownerKeyPath'},
+  ],
+  '8': [
+    {'1': '_index'},
   ],
 };
 
@@ -43,7 +46,7 @@ final $typed_data.Uint8List bchTxDescriptor = $convert.base64Decode(
     'CgVCY2hUeBIQCgNmZWUYASABKANSA2ZlZRIkCg1kdXN0VGhyZXNob2xkGAIgASgFUg1kdXN0VG'
     'hyZXNob2xkEhIKBG1lbW8YAyABKAlSBG1lbW8SKwoGaW5wdXRzGAQgAygLMhMucHJvdG9jLkJj'
     'aFR4LklucHV0UgZpbnB1dHMSKAoHb3V0cHV0cxgFIAMoCzIOLnByb3RvYy5PdXRwdXRSB291dH'
-    'B1dHMagwEKBUlucHV0EhIKBGhhc2gYASABKAlSBGhhc2gSFAoFaW5kZXgYAiABKAVSBWluZGV4'
-    'EhQKBXZhbHVlGAMgASgDUgV2YWx1ZRIWCgZwdWJrZXkYBCABKAlSBnB1YmtleRIiCgxvd25lck'
-    'tleVBhdGgYBSABKAlSDG93bmVyS2V5UGF0aA==');
+    'B1dHMakgEKBUlucHV0EhIKBGhhc2gYASABKAlSBGhhc2gSGQoFaW5kZXgYAiABKAVIAFIFaW5k'
+    'ZXiIAQESFAoFdmFsdWUYAyABKANSBXZhbHVlEhYKBnB1YmtleRgEIAEoCVIGcHVia2V5EiIKDG'
+    '93bmVyS2V5UGF0aBgFIAEoCVIMb3duZXJLZXlQYXRoQggKBl9pbmRleA==');
 

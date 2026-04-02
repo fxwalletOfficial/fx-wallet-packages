@@ -1,0 +1,8 @@
+syntax = "proto3";
+package protoc;
+
+message SignTransactionResult {
+  string signId = 1;
+  string txId = 2;
+  string rawTx = 3;
+}

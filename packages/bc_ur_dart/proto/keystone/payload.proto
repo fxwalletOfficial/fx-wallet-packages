@@ -1,0 +1,19 @@
+syntax = "proto3";
+package protoc;
+
+import "keystone/transaction.proto";
+import "keystone/sign_transaction_result.proto";
+
+message Payload {
+  enum Type {
+    TYPE_RESERVE = 0;
+    TYPE_SIGN_TX = 2;
+    TYPE_SIGN_TX_RESULT = 9;
+  }
+  Type type = 1;
+  string xfp = 2;
+  oneof Content {
+    SignTransaction signTx = 4;
+    SignTransactionResult signTxResult = 7;
+  }
+}

@@ -1,30 +1,31 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:bc_ur_dart/src/ur.dart';
-import 'package:bc_ur_dart/src/utils/error.dart';
-import 'package:bc_ur_dart/src/registry/registry_type.dart';
-import 'package:cbor/cbor.dart';
-import 'package:uuid/uuid.dart';
-import 'package:fixnum/fixnum.dart';
-import 'package:bc_ur_dart/src/gen/keystone/payload.pb.dart';
-import 'package:bc_ur_dart/src/gen/keystone/transaction.pb.dart';
+import 'package:bc_ur_dart/src/gen/keystone/base.pb.dart';
 import 'package:bc_ur_dart/src/gen/keystone/chains/bch_transaction.pb.dart';
 import 'package:bc_ur_dart/src/gen/keystone/chains/btc_transaction.pb.dart';
+import 'package:bc_ur_dart/src/gen/keystone/payload.pb.dart';
+import 'package:bc_ur_dart/src/gen/keystone/transaction.pb.dart';
+import 'package:bc_ur_dart/src/registry/registry_type.dart';
+import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
+import 'package:cbor/cbor.dart';
+import 'package:fixnum/fixnum.dart';
+import 'package:uuid/uuid.dart';
 
 // CBOR field keys（来自官方 SDK）
 // BCH-SIGN-REQUEST: field 1 = signData(bytes), field 2 = origin(string)
 
 class BchInput {
   final String hash; // UTXO txid hex
-  final int index; // UTXO vout index
+  final int? index; // UTXO vout index
   final int value; // satoshis
   final String pubkey; // 压缩公钥 hex
   final String ownerKeyPath; // e.g. "m/44'/145'/0'/0/0"
 
   BchInput({
     required this.hash,
-    required this.index,
+    this.index,
     required this.value,
     required this.pubkey,
     required this.ownerKeyPath,
@@ -34,14 +35,14 @@ class BchInput {
 class BchOutput {
   final String address;
   final int value; // satoshis
-  final bool isChange;
-  final String changeAddressPath; // e.g. "M/44'/145'/0'/0/0"，空字符串表示非找零
+  final bool? isChange;
+  final String? changeAddressPath; // e.g. "M/44'/145'/0'/0/0"，空字符串表示非找零
 
   BchOutput({
     required this.address,
     required this.value,
-    this.isChange = false,
-    this.changeAddressPath = '',
+    this.isChange,
+    this.changeAddressPath,
   });
 }
 
@@ -83,8 +84,8 @@ class BchSignRequestUR extends UR {
     final signTransaction = SignTransaction()
       ..coinCode = 'BCH'
       ..signId = id
-      ..hdPath = hdPath
-      ..timestamp = Int64(DateTime.now().millisecondsSinceEpoch ~/ 1000)
+      // ..hdPath = hdPath
+      ..timestamp = Int64(DateTime.now().millisecondsSinceEpoch)
       ..decimal = 8
       ..bchTx = bchTx;
 
@@ -92,16 +93,21 @@ class BchSignRequestUR extends UR {
       ..type = Payload_Type.TYPE_SIGN_TX
       ..xfp = xfp
       ..signTx = signTransaction;
+    
+    // 外层包 Base
+    final base = Base()
+      ..version = 2
+      ..description = 'QrCode Protocol'
+      ..payloadData = payload;
 
-    // 3. gzip 压缩
-    final payloadBytes = payload.writeToBuffer();
-    final compressed = GZipCodec().encode(payloadBytes);
+    // 3. gzip 压缩 Base
+    final compressed = GZipCodec().encode(base.writeToBuffer());
     final signDataBytes = Uint8List.fromList(compressed);
-
+    
     // 4. 封装为 BCH-SIGN-REQUEST CBOR
     // field 1: signData(bytes), field 2: origin(string, optional)
     final ur = UR.fromCBOR(
-      type: RegistryType.BCH_SIGN_REQUEST.type,
+      type: RegistryType.KEYSTONE_SIGN_REQUEST.type,
       value: CborMap({
         CborSmallInt(1): CborBytes(signDataBytes),
         if (origin != null && origin.isNotEmpty) CborSmallInt(2): CborString(origin),
@@ -118,7 +124,7 @@ class BchSignRequestUR extends UR {
   }
 
   factory BchSignRequestUR.fromUR({required UR ur, bool bigEndian = true}) {
-    if (ur.type.toUpperCase() != RegistryType.BCH_SIGN_REQUEST.type.toUpperCase()) {
+    if (ur.type.toUpperCase() != RegistryType.KEYSTONE_SIGN_REQUEST.type.toUpperCase()) {
       throw Exception(URExceptionType.invalidType.toString());
     }
 
@@ -131,8 +137,9 @@ class BchSignRequestUR extends UR {
     // gzip 解压
     final decompressed = GZipCodec().decode(signDataBytes);
 
-    // 解析 Payload Protobuf
-    final payload = Payload.fromBuffer(decompressed);
+    // 解析 Base Protobuf
+    final base = Base.fromBuffer(decompressed);
+    final payload = base.payloadData;
 
     // 取出 signTx
     final signTx = payload.signTx;
@@ -158,24 +165,35 @@ class BchSignRequestUR extends UR {
     required int fee,
     required int dustThreshold,
   }) {
-    final bchInputs = inputs
-        .map((input) => BchTx_Input(
-              hash: input.hash,
-              index: input.index,
-              value: Int64(input.value),
-              pubkey: input.pubkey,
-              ownerKeyPath: input.ownerKeyPath,
-            ))
-        .toList();
+    final bchInputs = inputs.map((input) {
+      final protoInput = BchTx_Input(
+        hash: input.hash,
+        value: Int64(input.value),
+        pubkey: input.pubkey,
+        ownerKeyPath: input.ownerKeyPath,
+      );
+      // 只有 index 不为 null 时才设置
+      if (input.index != null) {
+        protoInput.index = input.index!;
+      }
+      return protoInput;
+    }).toList();
 
-    final bchOutputs = outputs
-        .map((output) => Output(
-              address: output.address,
-              value: Int64(output.value),
-              isChange: output.isChange,
-              changeAddressPath: output.changeAddressPath,
-            ))
-        .toList();
+    final bchOutputs = outputs.map((output) {
+      final protoOutput = Output(
+        address: output.address,
+        value: Int64(output.value),
+      );
+      // 只有 isChange 不为 null 且为 true 时才设置
+      if (output.isChange != null && output.isChange!) {
+        protoOutput.isChange = output.isChange!;
+      }
+      // 只有 changeAddressPath 不为 null 且非空时才设置
+      if (output.changeAddressPath != null && output.changeAddressPath!.isNotEmpty) {
+        protoOutput.changeAddressPath = output.changeAddressPath!;
+      }
+      return protoOutput;
+    }).toList();
 
     return BchTx(
       fee: Int64(fee),
