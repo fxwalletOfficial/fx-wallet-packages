@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 void main() {
   test('Get xfp - reverse bytes', () {
     final origin = 44262555;
-    final result = getXfp(BigInt.from(origin));
+    final result = getXfp(BigInt.from(origin), reverseBytes: true);
     expect(result, '9b64a302');
   });
 
@@ -14,7 +14,7 @@ void main() {
   });
 
   test('Byte words decode - reverse bytes', () {
-    final result = toXfpCode('9b64a302');
+    final result = toXfpCode('9b64a302', reverseBytes: true);
     expect(result, BigInt.from(44262555));
   });
 

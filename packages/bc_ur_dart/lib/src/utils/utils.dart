@@ -169,7 +169,7 @@ List<CborValue> getPath(String path) {
 }
 
 /// Xfp code to hex. [reverseBytes] decide whether reverse.
-String getXfp(BigInt xfpCode, {bool reverseBytes = true}) {
+String getXfp(BigInt xfpCode, {bool reverseBytes = false}) {
   String code = xfpCode.toRadixString(16);
   if (code.length < 8) {
     final len = code.length;
@@ -184,7 +184,7 @@ String getXfp(BigInt xfpCode, {bool reverseBytes = true}) {
 }
 
 /// Hex xfp to bigInt xfp. [reverseBytes] decide whether reverse.
-BigInt toXfpCode(String xfp, {bool reverseBytes = true}) {
+BigInt toXfpCode(String xfp, {bool reverseBytes = false}) {
   final reverse = reverseBytes ? Uint8List.fromList(hex.decode(xfp)).reversed.toList() : Uint8List.fromList(hex.decode(xfp)).toList();
   return BigInt.parse(hex.encode(reverse), radix: 16);
 }

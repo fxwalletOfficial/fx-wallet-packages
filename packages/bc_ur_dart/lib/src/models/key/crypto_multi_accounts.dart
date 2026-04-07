@@ -9,6 +9,8 @@ class CryptoMultiAccountsUR extends UR {
   final List<CryptoHDKeyUR> chains;
   final String masterFingerprint;
   final String device;
+  final String? xfpFormat;
+  final bool hasXfpFormatMarker;
   final String? deviceId; // field 4: Keystone 设备唯一 ID
   final String? version; // field 5: 固件版本
   final String? walletName; // field 6: 私有扩展字段，非 Keystone 标准
@@ -21,6 +23,8 @@ class CryptoMultiAccountsUR extends UR {
     this.deviceId,
     this.version,
     this.walletName,
+    this.xfpFormat,
+    this.hasXfpFormatMarker = false,
   }) : super(payload: ur.payload, type: ur.type);
 
   static CryptoMultiAccountsUR fromUR({required UR ur}) {
@@ -60,6 +64,8 @@ class CryptoMultiAccountsUR extends UR {
 
     // field 6: walletName（私有扩展，可选）
     final walletName = data[CborSmallInt(6)]?.toString();
+    final hasXfpFormatMarker = data.containsKey(CborSmallInt(7));
+    final xfpFormat = data[CborSmallInt(7)]?.toString() ?? 'canonical';
 
     return CryptoMultiAccountsUR(
       ur: ur,
@@ -69,6 +75,8 @@ class CryptoMultiAccountsUR extends UR {
       deviceId: deviceId,
       version: version,
       walletName: walletName,
+      xfpFormat: xfpFormat,
+      hasXfpFormatMarker: hasXfpFormatMarker,
     );
   }
 
@@ -79,6 +87,7 @@ class CryptoMultiAccountsUR extends UR {
     String version = '1.0.0',
     required List<CryptoHDKeyUR> chains,
     String? walletName,
+    String? xfpFormat,
   }) {
     final xfp = getXfp(masterFingerprint, reverseBytes: false);
 
@@ -94,6 +103,7 @@ class CryptoMultiAccountsUR extends UR {
         if (deviceId != null && deviceId.isNotEmpty) CborSmallInt(4): CborString(deviceId),
         CborSmallInt(5): CborString(version),
         if (walletName != null && walletName.isNotEmpty) CborSmallInt(6): CborString(walletName),
+        if (xfpFormat != null && xfpFormat.isNotEmpty) CborSmallInt(7): CborString(xfpFormat),
       }),
     );
 
@@ -105,6 +115,8 @@ class CryptoMultiAccountsUR extends UR {
       deviceId: deviceId,
       version: version,
       walletName: walletName,
+      xfpFormat: xfpFormat,
+      hasXfpFormatMarker: xfpFormat != null && xfpFormat.isNotEmpty,
     );
   }
 
@@ -116,6 +128,7 @@ class CryptoMultiAccountsUR extends UR {
 "device":"$device",
 "deviceId":"${deviceId ?? ''}",
 "version":"${version ?? ''}",
+"xfpFormat":"${xfpFormat ?? ''}",
 "chains":${chains.map((e) => e.toString()).join(',')}
 }
   ''';

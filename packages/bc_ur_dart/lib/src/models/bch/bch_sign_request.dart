@@ -84,7 +84,7 @@ class BchSignRequestUR extends UR {
     final signTransaction = SignTransaction()
       ..coinCode = 'BCH'
       ..signId = id
-      // ..hdPath = hdPath
+      ..hdPath = hdPath
       ..timestamp = Int64(DateTime.now().millisecondsSinceEpoch)
       ..decimal = 8
       ..bchTx = bchTx;

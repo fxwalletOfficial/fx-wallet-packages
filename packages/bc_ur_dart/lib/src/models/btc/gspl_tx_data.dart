@@ -10,7 +10,7 @@ extension GsplTxDataWithCbor on GsplTxData {
     final cborData = CborMap({
       CborSmallInt(1): CborBytes(fromHex(hex)),
       CborSmallInt(2): CborSmallInt(dataType.index),
-      CborSmallInt(3): CborList(inputs.map((e) => e.toCbor()).toList())
+      CborSmallInt(3): CborList(inputs.map((e) => e.toCbor()).toList()),
     }, tags: [6111]);
     if (change != null) cborData[CborSmallInt(4)] = change!.toCbor(change: true);
 
@@ -41,21 +41,21 @@ GsplTxData getGsplTxDataFromCbor({required CborMap data}) {
 GsplItem getGsplItemFromCbor({required CborMap data}) {
   final pathList = data[CborSmallInt(1)] != null ? (data[CborSmallInt(1)] as CborList) : null;
   final path = cborPathToString(pathList);
-  final amount = (data[CborSmallInt(2)] as CborInt).toInt();
+  final amountValue = data[CborSmallInt(2)];
+  final amount = amountValue is CborInt ? amountValue.toInt() : null;
   final signature = data[CborSmallInt(3)] != null ? Uint8List.fromList((data[CborSmallInt(3)] as CborBytes).bytes) : null;
   final address = data[CborSmallInt(4)] != null ? (data[CborSmallInt(4)] as CborString).toString() : null;
+  final signHashTypeValue = data[CborSmallInt(5)];
   int? signHashType;
   try {
-    signHashType = data[CborSmallInt(5)] != null ? int.parse((data[CborSmallInt(5)] as CborString).toString()) : null;
+    if (signHashTypeValue is CborInt) {
+      signHashType = signHashTypeValue.toInt();
+    } else if (signHashTypeValue is CborString) {
+      signHashType = int.tryParse(signHashTypeValue.toString());
+    }
   } catch (_) {
     signHashType = null;
   }
 
-  return GsplItem(
-    path: path,
-    address: address,
-    amount: amount,
-    signHashType: signHashType,
-    signature: signature
-  );
+  return GsplItem(path: path, address: address, amount: amount, signHashType: signHashType, signature: signature);
 }
