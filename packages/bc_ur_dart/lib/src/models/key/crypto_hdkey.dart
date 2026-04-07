@@ -7,12 +7,15 @@ import 'package:convert/convert.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32;
 
 final hdType = RegistryType.CRYPTO_HDKEY.type;
+
 class CryptoHDKeyUR extends UR {
   final BIP32? wallet; // 可选，Solana 等公钥场景可能没有 BIP32 wallet
   final String path;
   final String name;
   final String? xfp;
   final String? sourceFingerprint;
+  final String? xfpFormat;
+  final bool hasXfpFormatMarker;
   final String? childrenPath;
   final String? note;
   final bool? isMaster; // field 1: 是否为主密钥 (m/)
@@ -28,6 +31,8 @@ class CryptoHDKeyUR extends UR {
     this.wallet,
     this.xfp,
     this.sourceFingerprint,
+    this.xfpFormat,
+    this.hasXfpFormatMarker = false,
     this.childrenPath,
     this.note,
     this.isMaster,
@@ -45,12 +50,15 @@ class CryptoHDKeyUR extends UR {
     this.chainCode, // 直接提供链码（当 wallet 为 null 时必须提供）
     this.xfp,
     this.sourceFingerprint,
+    this.xfpFormat,
+    bool? hasXfpFormatMarker,
     this.childrenPath,
     this.note,
     this.isMaster,
     this.isPrivateKey,
     this.useInfo,
-  }) : super.fromCBOR(
+  })  : hasXfpFormatMarker = hasXfpFormatMarker ?? (xfpFormat != null && xfpFormat.isNotEmpty),
+        super.fromCBOR(
           type: hdType,
           value: CborMap(
             {
@@ -61,18 +69,11 @@ class CryptoHDKeyUR extends UR {
               // field 3: public key (优先使用 wallet，否则使用提供的 publicKey)
               CborSmallInt(3): CborBytes(wallet?.publicKey ?? publicKey!),
               // field 4: chain code (优先使用 wallet，否则使用提供的 chainCode)
-              if (wallet?.chainCode != null || chainCode != null)
-                CborSmallInt(4): CborBytes(wallet?.chainCode ?? chainCode!),
+              if (wallet?.chainCode != null || chainCode != null) CborSmallInt(4): CborBytes(wallet?.chainCode ?? chainCode!),
               // field 5: use_info (币种信息)
               if (useInfo != null) CborSmallInt(5): useInfo.toCborValue(),
               // field 6: origin keypath
-              CborSmallInt(6): CborMap({
-                CborSmallInt(1): CborList(getPath(path)),
-                CborSmallInt(2):
-                    CborInt(BigInt.from(wallet?.parentFingerprint ?? 0))
-              }, tags: [
-                304
-              ]),
+              CborSmallInt(6): CborMap({CborSmallInt(1): CborList(getPath(path)), CborSmallInt(2): CborInt(BigInt.from(wallet?.parentFingerprint ?? 0))}, tags: [304]),
               // field 7: children path
               if (childrenPath != null && childrenPath.isNotEmpty)
                 CborSmallInt(7): CborMap(
@@ -80,13 +81,10 @@ class CryptoHDKeyUR extends UR {
                   tags: [304],
                 ),
               // field 8: parent_fingerprint / xfp
-              if (wallet != null)
-                CborSmallInt(8): CborInt(xfp == null || xfp.isEmpty
-                    ? BigInt.from(wallet.parentFingerprint)
-                    : toXfpCode(xfp, reverseBytes: false)),
+              if (wallet != null) CborSmallInt(8): CborInt(xfp == null || xfp.isEmpty ? BigInt.from(wallet.parentFingerprint) : toXfpCode(xfp, reverseBytes: false)),
               CborSmallInt(9): CborString(name),
-              if (note != null && note.isNotEmpty)
-                CborSmallInt(10): CborString(note),
+              if (note != null && note.isNotEmpty) CborSmallInt(10): CborString(note),
+              if (xfpFormat != null && xfpFormat!.isNotEmpty) CborSmallInt(11): CborString(xfpFormat!),
             },
           ),
         );
@@ -97,14 +95,10 @@ class CryptoHDKeyUR extends UR {
     final data = ur.decodeCBOR() as CborMap;
 
     // field 1: is_master
-    final isMaster = data[CborSmallInt(1)] != null
-        ? (data[CborSmallInt(1)] as CborBool).value
-        : null;
+    final isMaster = data[CborSmallInt(1)] != null ? (data[CborSmallInt(1)] as CborBool).value : null;
 
     // field 2: is_private
-    final isPrivateKey = data[CborSmallInt(2)] != null
-        ? (data[CborSmallInt(2)] as CborBool).value
-        : null;
+    final isPrivateKey = data[CborSmallInt(2)] != null ? (data[CborSmallInt(2)] as CborBool).value : null;
 
     // field 3: public key (required)
     if (!RegistryItem.hasKey(data, 3)) {
@@ -128,8 +122,7 @@ class CryptoHDKeyUR extends UR {
       try {
         final useInfoValue = data[CborSmallInt(5)];
         if (useInfoValue is CborMap) {
-          useInfo = CryptoCoinInfo.empty().decodeFromCbor(useInfoValue)
-              as CryptoCoinInfo;
+          useInfo = CryptoCoinInfo.empty().decodeFromCbor(useInfoValue) as CryptoCoinInfo;
         }
       } catch (_) {}
     }
@@ -140,10 +133,7 @@ class CryptoHDKeyUR extends UR {
 
     // field 7: children path
     final childrenRaw = data[CborSmallInt(7)] as CborMap?;
-    final childrenPath = childrenRaw == null
-        ? null
-        : (CryptoKeypath().decodeFromCbor(childrenRaw) as CryptoKeypath)
-            .getRelativePath();
+    final childrenPath = childrenRaw == null ? null : (CryptoKeypath().decodeFromCbor(childrenRaw) as CryptoKeypath).getRelativePath();
 
     // field 8: parent_fingerprint (optional - 当无 wallet 时可能没有)
     int? parentFingerprint;
@@ -163,14 +153,14 @@ class CryptoHDKeyUR extends UR {
       note = (data[CborSmallInt(10)] as CborString).toString();
     }
 
-    // sourceFingerprint from origin field 2
-    final sourceFingerprint = keypath.sourceFingerprint != null
-        ? hex.encode(keypath.sourceFingerprint!)
-        : null;
+    // field 11: xfp format marker (private extension)
+    final hasXfpFormatMarker = RegistryItem.hasKey(data, 11);
+    final xfpFormat = data[CborSmallInt(11)]?.toString() ?? 'canonical';
 
-    final index = keypath.components.isNotEmpty
-        ? keypath.components.last.getIndex() ?? 0
-        : 0;
+    // sourceFingerprint from origin field 2
+    final sourceFingerprint = keypath.sourceFingerprint != null ? hex.encode(keypath.sourceFingerprint!) : null;
+
+    final index = keypath.components.isNotEmpty ? keypath.components.last.getIndex() ?? 0 : 0;
 
     // Build BIP32 wallet (仅当有 chainCode 时才构建)
     BIP32? wallet;
@@ -190,6 +180,8 @@ class CryptoHDKeyUR extends UR {
       path: path,
       name: keyName,
       sourceFingerprint: sourceFingerprint,
+      xfpFormat: xfpFormat,
+      hasXfpFormatMarker: hasXfpFormatMarker,
       childrenPath: childrenPath,
       note: note,
       isMaster: isMaster,
@@ -214,6 +206,7 @@ class CryptoHDKeyUR extends UR {
 "derivationPath":"$path",
 "childrenPath":"${childrenPath ?? ''}",
 "sourceFingerprint":"${sourceFingerprint ?? ''}",
+"xfpFormat":"${xfpFormat ?? ''}",
 "masterFingerprint":"${wallet != null ? hex.encode(wallet!.fingerprint) : ''}",
 "extendedPublicKey": "${wallet?.toBase58() ?? ''}",
 "publicKey": "${pubKey != null ? hex.encode(pubKey) : ''}",
