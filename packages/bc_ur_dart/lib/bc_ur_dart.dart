@@ -18,6 +18,7 @@ export 'package:bc_ur_dart/src/models/cosmos/keystone_cosmos_sign_request.dart';
 export 'package:bc_ur_dart/src/models/cosmos/keystone_cosmos_signature.dart';
 export 'package:bc_ur_dart/src/models/eth/eth_sign_request.dart';
 export 'package:bc_ur_dart/src/models/eth/eth_signature.dart';
+export 'package:bc_ur_dart/src/models/key/crypto_account.dart';
 export 'package:bc_ur_dart/src/models/key/crypto_coin_info.dart';
 export 'package:bc_ur_dart/src/models/key/crypto_hdkey.dart';
 export 'package:bc_ur_dart/src/models/key/crypto_multi_accounts.dart';

@@ -171,14 +171,11 @@ class CryptoHDKeyUR extends UR {
       wallet.index = index;
     }
 
-    // name 是必填字段，如果为空则使用默认名称
-    final keyName = name ?? 'unknown';
-
     return CryptoHDKeyUR(
       ur: ur,
       wallet: wallet,
       path: path,
-      name: keyName,
+      name: name ?? '',
       sourceFingerprint: sourceFingerprint,
       xfpFormat: xfpFormat,
       hasXfpFormatMarker: hasXfpFormatMarker,

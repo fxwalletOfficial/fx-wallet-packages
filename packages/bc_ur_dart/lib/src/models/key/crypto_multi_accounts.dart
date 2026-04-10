@@ -38,7 +38,7 @@ class CryptoMultiAccountsUR extends UR {
     final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
     final masterFingerprint = hex.encode(fpBytes);
 
-    // field 2: keys 列表 (每个 key 是 CryptoHDKeyUR)
+    // field 2: keys 列表
     final keysRaw = data[CborSmallInt(2)] as CborList;
     final chainList = <CryptoHDKeyUR>[];
     for (final item in keysRaw) {
