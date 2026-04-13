@@ -17,7 +17,7 @@ dependencies:
   crypto_wallet_util:
     git:
       url: https://github.com/fxwalletOfficial/fx-wallet-packages.git
-      ref: 6814be560d6abb27f859135b59ac3f92a99a8f55
+      ref: 9e4279188ebd2c150b61f05986c5c11815db1403
       path: packages/crypto_wallet_util
   protobuf: ^4.2.0
   uuid: ^4.4.0
