@@ -22,6 +22,7 @@ const SignTransaction$json = {
     {'1': 'hdPath', '3': 3, '4': 1, '5': 9, '10': 'hdPath'},
     {'1': 'timestamp', '3': 4, '4': 1, '5': 3, '10': 'timestamp'},
     {'1': 'decimal', '3': 5, '4': 1, '5': 5, '10': 'decimal'},
+    {'1': 'tronTx', '3': 8, '4': 1, '5': 11, '6': '.protoc.TronTx', '9': 0, '10': 'tronTx'},
     {'1': 'bchTx', '3': 10, '4': 1, '5': 11, '6': '.protoc.BchTx', '9': 0, '10': 'bchTx'},
   ],
   '8': [
@@ -33,6 +34,7 @@ const SignTransaction$json = {
 final $typed_data.Uint8List signTransactionDescriptor = $convert.base64Decode(
     'Cg9TaWduVHJhbnNhY3Rpb24SGgoIY29pbkNvZGUYASABKAlSCGNvaW5Db2RlEhYKBnNpZ25JZB'
     'gCIAEoCVIGc2lnbklkEhYKBmhkUGF0aBgDIAEoCVIGaGRQYXRoEhwKCXRpbWVzdGFtcBgEIAEo'
-    'A1IJdGltZXN0YW1wEhgKB2RlY2ltYWwYBSABKAVSB2RlY2ltYWwSJQoFYmNoVHgYCiABKAsyDS'
-    '5wcm90b2MuQmNoVHhIAFIFYmNoVHhCDQoLVHJhbnNhY3Rpb24=');
+    'A1IJdGltZXN0YW1wEhgKB2RlY2ltYWwYBSABKAVSB2RlY2ltYWwSKAoGdHJvblR4GAggASgLMg'
+    '4ucHJvdG9jLlRyb25UeEgAUgZ0cm9uVHgSJQoFYmNoVHgYCiABKAsyDS5wcm90b2MuQmNoVHhI'
+    'AFIFYmNoVHhCDQoLVHJhbnNhY3Rpb24=');
 

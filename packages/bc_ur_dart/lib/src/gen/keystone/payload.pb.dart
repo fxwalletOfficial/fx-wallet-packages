@@ -14,8 +14,8 @@ import 'dart:core' as $core;
 import 'package:protobuf/protobuf.dart' as $pb;
 
 import 'payload.pbenum.dart';
-import 'sign_transaction_result.pb.dart' as $3;
-import 'transaction.pb.dart' as $2;
+import 'sign_transaction_result.pb.dart' as $4;
+import 'transaction.pb.dart' as $3;
 
 export 'payload.pbenum.dart';
 
@@ -29,8 +29,8 @@ class Payload extends $pb.GeneratedMessage {
   factory Payload({
     Payload_Type? type,
     $core.String? xfp,
-    $2.SignTransaction? signTx,
-    $3.SignTransactionResult? signTxResult,
+    $3.SignTransaction? signTx,
+    $4.SignTransactionResult? signTxResult,
   }) {
     final $result = create();
     if (type != null) {
@@ -60,8 +60,8 @@ class Payload extends $pb.GeneratedMessage {
     ..oo(0, [4, 7])
     ..e<Payload_Type>(1, _omitFieldNames ? '' : 'type', $pb.PbFieldType.OE, defaultOrMaker: Payload_Type.TYPE_RESERVE, valueOf: Payload_Type.valueOf, enumValues: Payload_Type.values)
     ..aOS(2, _omitFieldNames ? '' : 'xfp')
-    ..aOM<$2.SignTransaction>(4, _omitFieldNames ? '' : 'signTx', protoName: 'signTx', subBuilder: $2.SignTransaction.create)
-    ..aOM<$3.SignTransactionResult>(7, _omitFieldNames ? '' : 'signTxResult', protoName: 'signTxResult', subBuilder: $3.SignTransactionResult.create)
+    ..aOM<$3.SignTransaction>(4, _omitFieldNames ? '' : 'signTx', protoName: 'signTx', subBuilder: $3.SignTransaction.create)
+    ..aOM<$4.SignTransactionResult>(7, _omitFieldNames ? '' : 'signTxResult', protoName: 'signTxResult', subBuilder: $4.SignTransactionResult.create)
     ..hasRequiredFields = false
   ;
 
@@ -108,26 +108,26 @@ class Payload extends $pb.GeneratedMessage {
   void clearXfp() => clearField(2);
 
   @$pb.TagNumber(4)
-  $2.SignTransaction get signTx => $_getN(2);
+  $3.SignTransaction get signTx => $_getN(2);
   @$pb.TagNumber(4)
-  set signTx($2.SignTransaction v) { setField(4, v); }
+  set signTx($3.SignTransaction v) { setField(4, v); }
   @$pb.TagNumber(4)
   $core.bool hasSignTx() => $_has(2);
   @$pb.TagNumber(4)
   void clearSignTx() => clearField(4);
   @$pb.TagNumber(4)
-  $2.SignTransaction ensureSignTx() => $_ensure(2);
+  $3.SignTransaction ensureSignTx() => $_ensure(2);
 
   @$pb.TagNumber(7)
-  $3.SignTransactionResult get signTxResult => $_getN(3);
+  $4.SignTransactionResult get signTxResult => $_getN(3);
   @$pb.TagNumber(7)
-  set signTxResult($3.SignTransactionResult v) { setField(7, v); }
+  set signTxResult($4.SignTransactionResult v) { setField(7, v); }
   @$pb.TagNumber(7)
   $core.bool hasSignTxResult() => $_has(3);
   @$pb.TagNumber(7)
   void clearSignTxResult() => clearField(7);
   @$pb.TagNumber(7)
-  $3.SignTransactionResult ensureSignTxResult() => $_ensure(3);
+  $4.SignTransactionResult ensureSignTxResult() => $_ensure(3);
 }
 
 

@@ -1,0 +1,26 @@
+syntax = "proto3";
+package protoc;
+
+message LatestBlock {
+  string hash = 1;
+  int32 number = 2;
+  int64 timestamp = 3;
+}
+
+message Override {
+  string tokenShortName = 1;
+  string tokenFullName = 2;
+  int32 decimals = 3;
+}
+
+message TronTx {
+  string token = 1;
+  string contractAddress = 2;
+  string from = 3;
+  string to = 4;
+  string memo = 5;
+  string value = 6;
+  LatestBlock latestBlock = 7;
+  Override override = 8;
+  int32 fee = 9;
+}

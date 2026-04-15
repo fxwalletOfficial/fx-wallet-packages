@@ -14,9 +14,11 @@ import 'dart:core' as $core;
 import 'package:fixnum/fixnum.dart' as $fixnum;
 import 'package:protobuf/protobuf.dart' as $pb;
 
-import 'chains/bch_transaction.pb.dart' as $1;
+import 'chains/bch_transaction.pb.dart' as $2;
+import 'chains/tron_transaction.pb.dart' as $1;
 
 enum SignTransaction_Transaction {
+  tronTx, 
   bchTx, 
   notSet
 }
@@ -28,7 +30,8 @@ class SignTransaction extends $pb.GeneratedMessage {
     $core.String? hdPath,
     $fixnum.Int64? timestamp,
     $core.int? decimal,
-    $1.BchTx? bchTx,
+    $1.TronTx? tronTx,
+    $2.BchTx? bchTx,
   }) {
     final $result = create();
     if (coinCode != null) {
@@ -46,6 +49,9 @@ class SignTransaction extends $pb.GeneratedMessage {
     if (decimal != null) {
       $result.decimal = decimal;
     }
+    if (tronTx != null) {
+      $result.tronTx = tronTx;
+    }
     if (bchTx != null) {
       $result.bchTx = bchTx;
     }
@@ -56,17 +62,19 @@ class SignTransaction extends $pb.GeneratedMessage {
   factory SignTransaction.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
 
   static const $core.Map<$core.int, SignTransaction_Transaction> _SignTransaction_TransactionByTag = {
+    8 : SignTransaction_Transaction.tronTx,
     10 : SignTransaction_Transaction.bchTx,
     0 : SignTransaction_Transaction.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SignTransaction', package: const $pb.PackageName(_omitMessageNames ? '' : 'protoc'), createEmptyInstance: create)
-    ..oo(0, [10])
+    ..oo(0, [8, 10])
     ..aOS(1, _omitFieldNames ? '' : 'coinCode', protoName: 'coinCode')
     ..aOS(2, _omitFieldNames ? '' : 'signId', protoName: 'signId')
     ..aOS(3, _omitFieldNames ? '' : 'hdPath', protoName: 'hdPath')
     ..aInt64(4, _omitFieldNames ? '' : 'timestamp')
     ..a<$core.int>(5, _omitFieldNames ? '' : 'decimal', $pb.PbFieldType.O3)
-    ..aOM<$1.BchTx>(10, _omitFieldNames ? '' : 'bchTx', protoName: 'bchTx', subBuilder: $1.BchTx.create)
+    ..aOM<$1.TronTx>(8, _omitFieldNames ? '' : 'tronTx', protoName: 'tronTx', subBuilder: $1.TronTx.create)
+    ..aOM<$2.BchTx>(10, _omitFieldNames ? '' : 'bchTx', protoName: 'bchTx', subBuilder: $2.BchTx.create)
     ..hasRequiredFields = false
   ;
 
@@ -139,16 +147,27 @@ class SignTransaction extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearDecimal() => clearField(5);
 
+  @$pb.TagNumber(8)
+  $1.TronTx get tronTx => $_getN(5);
+  @$pb.TagNumber(8)
+  set tronTx($1.TronTx v) { setField(8, v); }
+  @$pb.TagNumber(8)
+  $core.bool hasTronTx() => $_has(5);
+  @$pb.TagNumber(8)
+  void clearTronTx() => clearField(8);
+  @$pb.TagNumber(8)
+  $1.TronTx ensureTronTx() => $_ensure(5);
+
   @$pb.TagNumber(10)
-  $1.BchTx get bchTx => $_getN(5);
+  $2.BchTx get bchTx => $_getN(6);
   @$pb.TagNumber(10)
-  set bchTx($1.BchTx v) { setField(10, v); }
+  set bchTx($2.BchTx v) { setField(10, v); }
   @$pb.TagNumber(10)
-  $core.bool hasBchTx() => $_has(5);
+  $core.bool hasBchTx() => $_has(6);
   @$pb.TagNumber(10)
   void clearBchTx() => clearField(10);
   @$pb.TagNumber(10)
-  $1.BchTx ensureBchTx() => $_ensure(5);
+  $2.BchTx ensureBchTx() => $_ensure(6);
 }
 
 

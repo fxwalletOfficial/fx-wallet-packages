@@ -13,7 +13,7 @@ import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
 
-import 'payload.pb.dart' as $4;
+import 'payload.pb.dart' as $5;
 
 enum Base_Content {
   hotVersion, 
@@ -25,7 +25,7 @@ class Base extends $pb.GeneratedMessage {
   factory Base({
     $core.int? version,
     $core.String? description,
-    $4.Payload? payloadData,
+    $5.Payload? payloadData,
     $core.int? hotVersion,
     $core.int? coldVersion,
     $core.String? deviceType,
@@ -64,7 +64,7 @@ class Base extends $pb.GeneratedMessage {
     ..oo(0, [4, 5])
     ..a<$core.int>(1, _omitFieldNames ? '' : 'version', $pb.PbFieldType.O3)
     ..aOS(2, _omitFieldNames ? '' : 'description')
-    ..aOM<$4.Payload>(3, _omitFieldNames ? '' : 'payloadData', subBuilder: $4.Payload.create)
+    ..aOM<$5.Payload>(3, _omitFieldNames ? '' : 'payloadData', subBuilder: $5.Payload.create)
     ..a<$core.int>(4, _omitFieldNames ? '' : 'hotVersion', $pb.PbFieldType.O3, protoName: 'hotVersion')
     ..a<$core.int>(5, _omitFieldNames ? '' : 'coldVersion', $pb.PbFieldType.O3, protoName: 'coldVersion')
     ..aOS(6, _omitFieldNames ? '' : 'deviceType', protoName: 'deviceType')
@@ -114,15 +114,15 @@ class Base extends $pb.GeneratedMessage {
   void clearDescription() => clearField(2);
 
   @$pb.TagNumber(3)
-  $4.Payload get payloadData => $_getN(2);
+  $5.Payload get payloadData => $_getN(2);
   @$pb.TagNumber(3)
-  set payloadData($4.Payload v) { setField(3, v); }
+  set payloadData($5.Payload v) { setField(3, v); }
   @$pb.TagNumber(3)
   $core.bool hasPayloadData() => $_has(2);
   @$pb.TagNumber(3)
   void clearPayloadData() => clearField(3);
   @$pb.TagNumber(3)
-  $4.Payload ensurePayloadData() => $_ensure(2);
+  $5.Payload ensurePayloadData() => $_ensure(2);
 
   @$pb.TagNumber(4)
   $core.int get hotVersion => $_getIZ(3);

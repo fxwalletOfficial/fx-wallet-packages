@@ -25,6 +25,8 @@ export 'package:bc_ur_dart/src/models/key/crypto_multi_accounts.dart';
 export 'package:bc_ur_dart/src/models/sol/sol_sign_request.dart';
 export 'package:bc_ur_dart/src/models/sol/sol_signature.dart';
 export 'package:bc_ur_dart/src/models/sol/keystone_sol_sign_request.dart';
+export 'package:bc_ur_dart/src/models/tron/keystone_tron_sign_request.dart';
+export 'package:bc_ur_dart/src/models/tron/keystone_tron_sign_result.dart';
 export 'package:bc_ur_dart/src/models/tron/tron_sign_request.dart';
 export 'package:bc_ur_dart/src/models/tron/tron_signature.dart';
 export 'package:bc_ur_dart/src/models/xrp/keystone_xrp_account_bytes.dart';
