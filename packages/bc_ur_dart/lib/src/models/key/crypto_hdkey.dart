@@ -197,8 +197,6 @@ class CryptoHDKeyUR extends UR {
 
     return '''
 {
-"isMaster":${isMaster ?? 'null'},
-"isPrivateKey":${isPrivateKey ?? 'null'},
 "useInfo":${useInfo?.toString() ?? 'null'},
 "derivationPath":"$path",
 "childrenPath":"${childrenPath ?? ''}",

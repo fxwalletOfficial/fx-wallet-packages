@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/gen/keystone/base.pb.dart';
 import 'package:bc_ur_dart/src/gen/keystone/payload.pb.dart';
-import 'package:bc_ur_dart/src/gen/keystone/payload.pbenum.dart';
 import 'package:bc_ur_dart/src/gen/keystone/sign_transaction_result.pb.dart';
 import 'package:bc_ur_dart/src/gen/keystone/transaction.pb.dart';
 import 'package:convert/convert.dart';
@@ -59,7 +58,7 @@ void main() {
       expect(tronTx.fee, equals(0));
       expect(tronTx.latestBlock.hash, equals('0000000000000000dd448d6e1f3946c500000000000000000000000000000000'));
       expect(tronTx.latestBlock.number, equals(0x3220));
-      expect(tronTx.latestBlock.timestamp.toInt(), equals(1684397925000));
+      expect(tronTx.latestBlock.timestamp.toInt(), equals(1684400868222));
       expect(tronTx.hasOverride(), isFalse);
     });
 
@@ -259,8 +258,8 @@ String _buildTransactionRawHex({
     _bytesField(4, fromHex('dd448d6e1f3946c5')),
     _varintField(8, expiration),
     _bytesField(11, contract),
-    _varintField(18, timestamp),
-    _varintField(20, feeLimit),
+    _varintField(14, timestamp),
+    _varintField(18, feeLimit),
   ]);
   return hex.encode(raw);
 }

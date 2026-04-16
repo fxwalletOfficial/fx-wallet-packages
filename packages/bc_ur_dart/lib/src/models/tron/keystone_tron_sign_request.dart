@@ -145,10 +145,8 @@ class _TronRawDataParser {
         ...raw.refBlockHash,
         ...Uint8List(16),
       ]),
-      number: raw.refBlockBytes.length >= 2
-          ? int.parse(hex.encode(raw.refBlockBytes.sublist(0, 2)), radix: 16)
-          : 0,
-      timestamp: Int64(raw.expiration - 600 * 5 * 1000),
+      number: raw.refBlockBytes.length >= 2 ? int.parse(hex.encode(raw.refBlockBytes.sublist(0, 2)), radix: 16) : 0,
+      timestamp: Int64(raw.timestamp),
     );
     final memo = raw.data.isEmpty ? '' : utf8.decode(raw.data);
 
@@ -238,10 +236,10 @@ class _TronRawDataParser {
         case 11:
           contractBytes = reader.readLengthDelimited();
           break;
-        case 18:
+        case 14:
           timestamp = reader.readVarint();
           break;
-        case 20:
+        case 18:
           feeLimit = reader.readVarint();
           break;
         default:
@@ -546,9 +544,7 @@ class _TronAddressCodec {
   static const _alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
   static String toBase58(Uint8List addressBytes) {
-    final payload = addressBytes.length == 21 && addressBytes.first == 0x41
-        ? addressBytes
-        : Uint8List.fromList([0x41, ...addressBytes]);
+    final payload = addressBytes.length == 21 && addressBytes.first == 0x41 ? addressBytes : Uint8List.fromList([0x41, ...addressBytes]);
     final checksum = sha256(sha256(payload)).sublist(0, 4);
     return _base58Encode(Uint8List.fromList([...payload, ...checksum]));
   }
