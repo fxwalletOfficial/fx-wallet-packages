@@ -29,28 +29,46 @@ class CryptoMultiAccountsUR extends UR {
 
   static CryptoMultiAccountsUR fromUR({required UR ur}) {
     if (ur.type.toLowerCase() != mtiType) {
-      throw Exception('Invalid type');
+      throw FormatException('Invalid crypto-multi-accounts UR type: ${ur.type}');
     }
-    final data = ur.decodeCBOR() as CborMap;
+    final CborMap data;
+    try {
+      data = ur.decodeCBOR() as CborMap;
+    } catch (e) {
+      throw FormatException('Invalid crypto-multi-accounts CBOR payload: $e');
+    }
 
-    // field 1: masterFingerprint，按大端序读取（UInt32BE）
-    final fpRaw = (data[CborSmallInt(1)] as CborInt).toInt();
+    // field 1: masterFingerprint
+    final fpValue = data[CborSmallInt(1)];
+    if (fpValue is! CborInt) {
+      throw const FormatException('Invalid crypto-multi-accounts master fingerprint field');
+    }
+    final fpRaw = fpValue.toInt();
     final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
     final masterFingerprint = hex.encode(fpBytes);
 
     // field 2: keys 列表
-    final keysRaw = data[CborSmallInt(2)] as CborList;
+    final keysValue = data[CborSmallInt(2)];
+    if (keysValue is! CborList) {
+      throw const FormatException('Invalid crypto-multi-accounts keys field');
+    }
     final chainList = <CryptoHDKeyUR>[];
-    for (final item in keysRaw) {
-      // 每个 key 是一个带有 CRYPTO_HDKEY tag 的 CborMap
-      final keyMap = item as CborMap;
-      // 创建临时 UR 用于解析 CryptoHDKeyUR
+
+    for (var index = 0; index < keysValue.length; index++) {
+      final item = keysValue[index];
+      if (item is! CborMap) {
+        throw FormatException('Invalid crypto-multi-accounts key entry at index $index');
+      }
       final keyUr = UR(
         type: hdType,
-        payload: Uint8List.fromList(cbor.encode(keyMap)),
+        payload: Uint8List.fromList(cbor.encode(item)),
       );
-      final chainInfo = CryptoHDKeyUR.fromUR(ur: keyUr);
-      chainList.add(chainInfo);
+      try {
+        final chainInfo = CryptoHDKeyUR.fromUR(ur: keyUr);
+        chainList.add(chainInfo);
+      } catch (e) {
+        throw FormatException('Invalid crypto-multi-accounts key entry at index $index: $e');
+      }
     }
 
     // field 3: device（可选）
@@ -90,8 +108,6 @@ class CryptoMultiAccountsUR extends UR {
     String? xfpFormat,
   }) {
     final xfp = getXfp(masterFingerprint, reverseBytes: false);
-
-    // BigInt 直接转 int，按大端序写入 CBOR（UInt32BE），与规范一致
     final fpInt = masterFingerprint.toInt();
 
     final ur = UR.fromCBOR(

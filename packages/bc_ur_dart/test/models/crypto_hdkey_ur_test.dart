@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:bc_ur_dart/src/models/key/crypto_hdkey.dart';
 import 'package:bc_ur_dart/src/ur.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32;
@@ -6,8 +8,7 @@ import 'package:test/test.dart';
 void main() {
   group('CryptoHDKeyUR', () {
     test('should create from wallet correctly', () {
-      final wallet = BIP32.fromBase58(
-          'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
       final path = "m/44'/60'/0'";
       final name = 'test-wallet';
 
@@ -38,8 +39,7 @@ void main() {
     });
 
     test('should encode to UR correctly', () {
-      final wallet = BIP32.fromBase58(
-          'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
       final path = "m/44'/60'/0'";
       final name = 'test-wallet';
 
@@ -55,9 +55,28 @@ void main() {
       expect(urString, isNotEmpty);
     });
 
+    test('should wrap invalid public key errors as format exceptions', () {
+      final ur = CryptoHDKeyUR.fromWallet(
+        name: 'invalid-wallet',
+        path: "m/44'/60'/0'",
+        publicKey: Uint8List(33),
+        chainCode: Uint8List(32),
+      );
+
+      expect(
+        () => CryptoHDKeyUR.fromUR(ur: UR.decode(ur.encode())),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('Invalid crypto-hdkey public key or chain code'),
+          ),
+        ),
+      );
+    });
+
     test('should preserve xfp format marker', () {
-      final wallet = BIP32.fromBase58(
-          'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
       final hdkey = CryptoHDKeyUR.fromWallet(
         name: 'test-wallet',
         path: "m/44'/60'/0'",
