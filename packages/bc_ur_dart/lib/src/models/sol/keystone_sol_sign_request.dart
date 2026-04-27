@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
@@ -118,7 +119,7 @@ class KeystoneSolSignRequest extends RegistryItem {
       signData: fromHex(txHex),
       signType: SignType.transaction,
       derivationPath: _buildKeypath(path, xfp),
-      addressBytes: _decodeAddress(address),
+      addressBytes: _encodeAddress(address),
       origin: origin,
     ).toUR();
   }
@@ -140,7 +141,7 @@ class KeystoneSolSignRequest extends RegistryItem {
       signData: fromHex(messageHex),
       signType: SignType.message,
       derivationPath: _buildKeypath(path, xfp),
-      addressBytes: _decodeAddress(address),
+      addressBytes: _encodeAddress(address),
       origin: origin,
     ).toUR();
   }
@@ -152,12 +153,10 @@ class KeystoneSolSignRequest extends RegistryItem {
     );
   }
 
-  /// Follows the current Keystone npm implementation, which treats `address`
-  /// as optional raw hex bytes and strips a leading `0x` if present.
-  static Uint8List? _decodeAddress(String? address) {
+  /// Keystone 文档里的 `address` 是可选字符串字段。
+  static Uint8List? _encodeAddress(String? address) {
     if (address == null || address.isEmpty) return null;
-    final normalized = address.startsWith('0x') ? address.substring(2) : address;
-    return fromHex(normalized);
+    return Uint8List.fromList(utf8.encode(address));
   }
 
   @override
