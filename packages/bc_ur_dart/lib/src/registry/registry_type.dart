@@ -15,14 +15,14 @@ class RegistryType {
   // =========================
   static const RegistryType UUID = RegistryType('uuid', 37);
   static const RegistryType BYTES = RegistryType('bytes', null);
-  static const RegistryType CRYPTO_HDKEY = RegistryType('crypto-hdkey', 40303);
-  static const RegistryType CRYPTO_KEYPATH = RegistryType('crypto-keypath', 40304);
-  static const RegistryType CRYPTO_COIN_INFO = RegistryType('crypto-coin-info', 40305);
-  static const RegistryType CRYPTO_ECKEY = RegistryType('crypto-eckey', 40306);
+  static const RegistryType CRYPTO_HDKEY = RegistryType('crypto-hdkey', 303);
+  static const RegistryType CRYPTO_KEYPATH = RegistryType('crypto-keypath', 304);
+  static const RegistryType CRYPTO_COIN_INFO = RegistryType('crypto-coin-info', 305);
+  static const RegistryType CRYPTO_ECKEY = RegistryType('crypto-eckey', 306);
   static const RegistryType CRYPTO_ADDRESS = RegistryType('crypto-address', 40307);
-  static const RegistryType CRYPTO_OUTPUT = RegistryType('crypto-output', 40308);
-  static const RegistryType CRYPTO_PSBT = RegistryType('crypto-psbt', 40310);
-  static const RegistryType CRYPTO_ACCOUNT = RegistryType('crypto-account', 40311);
+  static const RegistryType CRYPTO_OUTPUT = RegistryType('crypto-output', 308);
+  static const RegistryType CRYPTO_PSBT = RegistryType('crypto-psbt', 310);
+  static const RegistryType CRYPTO_ACCOUNT = RegistryType('crypto-account', 311);
   static const RegistryType CRYPTO_MULTI_ACCOUNTS = RegistryType("crypto-multi-accounts", 1103);
 
   // =========================
@@ -40,6 +40,9 @@ class RegistryType {
 
   static const RegistryType BTC_SIGN_REQUEST = RegistryType('btc-sign-request', 601);
   static const RegistryType BTC_SIGNATURE = RegistryType('btc-signature', 602);
+
+  static const RegistryType KEYSTONE_SIGN_REQUEST = RegistryType('keystone-sign-request', 6101);
+  static const RegistryType KEYSTONE_SIGNATURE = RegistryType('keystone-sign-result', 6102);
 
   static const RegistryType SOL_SIGN_REQUEST = RegistryType("sol-sign-request", 1101);
   static const RegistryType SOL_SIGNATURE = RegistryType("sol-signature", 1102);

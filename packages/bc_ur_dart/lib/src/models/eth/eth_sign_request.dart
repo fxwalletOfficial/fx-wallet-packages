@@ -40,7 +40,7 @@ class EthSignRequestUR extends UR {
       required String path,
       required String origin,
       required String xfp,
-      bool xfpReverse = true,
+      bool xfpReverse = false,
       Uint8List? uuid}) {
     uuid ??= UR.generateUUid();
     final dataType = tx.txType == EthTxType.legacy
@@ -59,7 +59,7 @@ class EthSignRequestUR extends UR {
           CborSmallInt(5): CborMap({
             CborSmallInt(1): CborList(getPath(path)),
             if (xfp.isNotEmpty)
-              CborSmallInt(2): CborInt(toXfpCode(xfp, bigEndian: xfpReverse))
+              CborSmallInt(2): CborInt(toXfpCode(xfp, reverseBytes: xfpReverse))
           }, tags: [
             304
           ]),
@@ -90,7 +90,7 @@ class EthSignRequestUR extends UR {
       required String xfp,
       required String signData,
       required int chainId,
-      bool xfpReverse = true,
+      bool xfpReverse = false,
       Uint8List? uuid}) {
     uuid ??= UR.generateUUid();
     final addr = address.isEmpty ? Uint8List(0) : dynamicToUint8List(address);
@@ -106,7 +106,7 @@ class EthSignRequestUR extends UR {
           CborSmallInt(5): CborMap({
             CborSmallInt(1): CborList(getPath(path)),
             if (xfp.isNotEmpty)
-              CborSmallInt(2): CborInt(toXfpCode(xfp, bigEndian: xfpReverse))
+              CborSmallInt(2): CborInt(toXfpCode(xfp, reverseBytes: xfpReverse))
           }, tags: [
             304
           ]),
@@ -149,7 +149,7 @@ class EthSignRequestUR extends UR {
       xfp = getXfp(
           ((data[CborSmallInt(5)] as CborMap)[CborSmallInt(2)] as CborInt)
               .toBigInt(),
-          bigEndian: bigEndian);
+          reverseBytes: !bigEndian);
     } catch (e) {
       xfp = '';
     }

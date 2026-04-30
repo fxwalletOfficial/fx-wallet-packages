@@ -62,7 +62,7 @@ class TronSignRequest extends RegistryItem {
     return TronSignRequest(
       uuid: RegistryItem.readBytes(map, TronSignRequestKeys.uuid.index),
       signData: RegistryItem.readBytes(map, TronSignRequestKeys.signData.index),
-      derivationPath: RegistryItem.readKeypath(map, SolSignRequestKeys.derivationPath.index),
+      derivationPath: RegistryItem.readKeypath(map, TronSignRequestKeys.derivationPath.index),
       fee: RegistryItem.readOptionalInt(map, TronSignRequestKeys.fee.index),
       origin: RegistryItem.readOptionalText(map, TronSignRequestKeys.origin.index),
     );

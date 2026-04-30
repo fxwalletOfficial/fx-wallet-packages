@@ -1,0 +1,20 @@
+syntax = "proto3";
+package protoc;
+
+import "keystone/chains/btc_transaction.proto";
+
+message BchTx {
+  int64 fee = 1;
+  int32 dustThreshold = 2;
+  string memo = 3;
+  repeated Input inputs = 4;
+  repeated Output outputs = 5;
+
+  message Input {
+    string hash = 1;
+    optional int32 index = 2;
+    int64 value = 3;
+    string pubkey = 4;
+    string ownerKeyPath = 5;
+  }
+}

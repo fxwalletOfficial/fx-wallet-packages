@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crypto_wallet_util/src/forked_lib/psbt/model/origin.dart';
+import 'package:convert/convert.dart';
 
 import '../../bitcoin_flutter/bitcoin_flutter.dart' as bitcoin;
 import 'package:crypto_wallet_util/config.dart';
@@ -389,7 +390,9 @@ class PSBT {
         String toxonlypub = child.pubKey!.length == 64
             ? child.pubKey!
             : child.pubKey!.substring(2);
-        Uint8List fingerPrint = hdWallet.fingerprint!;
+        Uint8List fingerPrint = btcInfo.masterFingerprint.isNotEmpty
+            ? Uint8List.fromList(hex.decode(btcInfo.masterFingerprint)) // Keystone: 21d0ae26
+            : hdWallet.fingerprint!; 
         if (btcInfo.txType != fx.BtcTxType.TAPROOT) {
           inputData[bip32DerivationKeyType + publicKey] = Converter.bytesToHex(
                   fingerPrint) +
@@ -455,7 +458,9 @@ class PSBT {
         final List<int> pathList = getHDPath(derivationPath);
         final child = hdWallet.derive(pathList[3]).derive(pathList[4]);
         String publicKey = child.pubKey!;
-        Uint8List fingerPrint = hdWallet.fingerprint!;
+        Uint8List fingerPrint = btcInfo.masterFingerprint.isNotEmpty
+            ? Uint8List.fromList(hex.decode(btcInfo.masterFingerprint)) // Keystone: 21d0ae26
+            : hdWallet.fingerprint!; // 其他钱包: 7cbee5b5 / e9405c69
         outputData[bip32DerivationKeyType + publicKey] =
             Converter.bytesToHex(fingerPrint) +
                 Converter.bytesToHex(_serializeDerivationPath(derivationPath));

@@ -243,3 +243,9 @@
 ## Fix
 
 - Add chain id in eth legacy tx unsigned serialized message.
+
+## [1.2.5] - 2026-04-29
+## Fix
+
+- Fix xrpl transaction export.
+- Fix fromTransferPsbt fingerPrint.

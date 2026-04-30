@@ -9,6 +9,8 @@ export 'src/transaction/kas/tx_signer.dart';
 export 'src/transaction/kas/tx_data.dart';
 export 'src/transaction/xrp/tx_signer.dart';
 export 'src/transaction/xrp/tx_data.dart';
+export 'src/forked_lib/xrpl_dart/src/xrpl/models/base/transaction.dart'
+    show XRPTransaction;
 export 'src/transaction/ckb/tx_signer.dart';
 export 'src/transaction/ckb/tx_data.dart';
 export 'src/transaction/sol/tx_signer.dart';

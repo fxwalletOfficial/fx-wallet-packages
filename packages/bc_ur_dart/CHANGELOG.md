@@ -93,3 +93,12 @@
 
 * Feature: Support ALPH & TRON.
 * Refactor: Refactor \`RegistryItem\` .
+
+## [0.1.24] - 2026-04-29
+
+* Feature: Add Keystone-compatible BCH, Cosmos, Solana, TRON and XRP sign request/result UR support.
+* Feature: Add CryptoAccount model and registry support.
+* Feature: Support crypto-psbt signature.
+* Update: Align CryptoHDKeyUR, canonical xfp and source fingerprint handling with Keystone spec.
+* Fix: Wrap invalid HDKey and multi-account parse errors.
+* Fix: Align BCH, Solana and TRON sign request encoding with Keystone protocol.

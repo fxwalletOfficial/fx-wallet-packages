@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:bc_ur_dart/src/models/key/crypto_hdkey.dart';
 import 'package:bc_ur_dart/src/ur.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32;
@@ -17,19 +19,23 @@ void main() {
       );
 
       expect(hdkey, isNotNull);
-      expect(hdkey.wallet.toBase58(), wallet.toBase58());
+      expect(hdkey.wallet!.toBase58(), wallet.toBase58());
       expect(hdkey.path, path);
       expect(hdkey.name, name);
+      expect(hdkey.hasXfpFormatMarker, isFalse);
     });
 
     test('should create from UR correctly', () {
-      final code = 'UR:CRYPTO-HDKEY/ONAXHDCLAOMKGYVDNBDNBEBAAAUOTOGSETLOEEVASPBAHGPTEYNTAEROKGDTHTDSGLCMAAWMBDAAHDCXPECXAXDWAOVDSFHSATDNMYGUTPSPPEAYZEHYSTPSCKREBNIMGEBTLGSOBKPAKKWLAMTAADDYOEADLNCSDWYKCSFNYKAEYKAOCYZTVALKDYAYCYZTVALKDYASIEJTHSJNIHRPPAOTDM';
+      final code =
+          'UR:CRYPTO-HDKEY/ONAXHDCLAOMKGYVDNBDNBEBAAAUOTOGSETLOEEVASPBAHGPTEYNTAEROKGDTHTDSGLCMAAWMBDAAHDCXPECXAXDWAOVDSFHSATDNMYGUTPSPPEAYZEHYSTPSCKREBNIMGEBTLGSOBKPAKKWLAMTAADDYOEADLNCSDWYKCSFNYKAEYKAOCYZTVALKDYAYCYZTVALKDYASIEJTHSJNIHRPPAOTDM';
 
       final hdkey = CryptoHDKeyUR.fromUR(ur: UR.decode(code));
 
       expect(hdkey, isNotNull);
       expect(hdkey.path, "m/44'/60'/0'");
       expect(hdkey.name, 'name');
+      expect(hdkey.xfpFormat, 'canonical');
+      expect(hdkey.hasXfpFormatMarker, isFalse);
     });
 
     test('should encode to UR correctly', () {
@@ -47,6 +53,42 @@ void main() {
 
       expect(urString, startsWith('UR:CRYPTO-HDKEY/'));
       expect(urString, isNotEmpty);
+    });
+
+    test('should wrap invalid public key errors as format exceptions', () {
+      final ur = CryptoHDKeyUR.fromWallet(
+        name: 'invalid-wallet',
+        path: "m/44'/60'/0'",
+        publicKey: Uint8List(33),
+        chainCode: Uint8List(32),
+      );
+
+      expect(
+        () => CryptoHDKeyUR.fromUR(ur: UR.decode(ur.encode())),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('Invalid crypto-hdkey public key or chain code'),
+          ),
+        ),
+      );
+    });
+
+    test('should preserve xfp format marker', () {
+      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final hdkey = CryptoHDKeyUR.fromWallet(
+        name: 'test-wallet',
+        path: "m/44'/60'/0'",
+        wallet: wallet,
+        xfpFormat: 'canonical',
+      );
+
+      final parsed = CryptoHDKeyUR.fromUR(ur: UR.decode(hdkey.encode()));
+
+      expect(hdkey.hasXfpFormatMarker, isTrue);
+      expect(parsed.xfpFormat, 'canonical');
+      expect(parsed.hasXfpFormatMarker, isTrue);
     });
   });
 }
