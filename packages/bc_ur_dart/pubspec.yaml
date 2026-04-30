@@ -17,6 +17,7 @@ dependencies:
   protobuf: ^4.2.0
   uuid: ^4.4.0
   xrandom: ^0.7.2
+  fixnum: ^1.1.1
 
 dev_dependencies:
 
