@@ -81,7 +81,7 @@ void main() {
       );
 
       final decoded = KeystoneSolSignRequest.fromUR(ur);
-      expect(decoded.addressBytes, equals(fromHex(testAddressHex.substring(2))));
+      expect(decoded.addressBytes, equals(testAddressHex.codeUnits));
     });
 
     test('uses official cbor key ordering', () {
