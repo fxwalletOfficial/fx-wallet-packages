@@ -11,6 +11,7 @@ import 'package:convert/convert.dart';
 /// This model intentionally stays separate from [SolSignRequest], which is
 /// retained for the existing GoldShell flow.
 enum _KeystoneSolKeys {
+  // ignore: unused_field
   zero,
   requestId,
   signData,
