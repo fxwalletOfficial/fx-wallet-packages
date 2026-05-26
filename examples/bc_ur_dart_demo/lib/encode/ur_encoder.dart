@@ -1,10 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32;
-import 'package:crypto_wallet_util/transaction.dart'
-    show GsplItem, GsplTxData, BtcSignDataType, Eip1559TxData, Eip7702TxData, Eip7702Authorization, LegacyTxData, EthTxDataRaw, TxNetwork;
+import 'package:crypto_wallet_util/transaction.dart' show GsplItem, GsplTxData, BtcSignDataType, Eip1559TxData, Eip7702TxData, Eip7702Authorization, LegacyTxData, EthTxDataRaw, TxNetwork;
 
 /// 统一编码入口：接受类型字符串 + 参数 Map，返回可调用 next() 的 UR 对象。
 ///
@@ -48,6 +49,9 @@ UR buildUR(String type, Map<String, dynamic> params) {
         fee: _parseIntWithHex(params['fee']),
       );
 
+    case 'keystone-cosmos-sign-request':
+      return _buildKeystoneCosmosSignRequest(params);
+
     // ── Solana ────────────────────────────────────────────────
     case 'sol-sign-request':
       return SolSignRequest.generateSignRequest(
@@ -61,6 +65,26 @@ UR buildUR(String type, Map<String, dynamic> params) {
         fee: params['fee'] != null ? int.tryParse(params['fee'].toString()) : null,
       );
 
+    case 'keystone-sol-sign-request':
+      final signType = params['signType'] as String? ?? 'transaction';
+      final signDataHex = params['signDataHex'] as String? ?? params['signData'] as String;
+      if (signType == 'message') {
+        return KeystoneSolSignRequest.buildMessageRequest(
+          messageHex: signDataHex,
+          path: params['path'] as String,
+          xfp: params['xfp'] as String,
+          address: params['address'] as String?,
+          origin: params['origin'] as String?,
+        );
+      }
+      return KeystoneSolSignRequest.buildTransactionRequest(
+        txHex: signDataHex,
+        path: params['path'] as String,
+        xfp: params['xfp'] as String,
+        address: params['address'] as String?,
+        origin: params['origin'] as String?,
+      );
+
     // ── Tron ──────────────────────────────────────────────────
     case 'tron-sign-request':
       return TronSignRequest.generateSignRequest(
@@ -69,6 +93,23 @@ UR buildUR(String type, Map<String, dynamic> params) {
         xfp: params['xfp'] as String,
         origin: params['origin'] as String?,
         fee: _parseIntWithHex(params['fee']),
+      );
+
+    case 'keystone-tron-sign-request':
+      final tokenInfo = params['tokenInfo'] is Map ? Map<String, dynamic>.from(params['tokenInfo'] as Map) : null;
+      return KeystoneTronSignRequest.buildUR(
+        requestId: params['requestId'] as String,
+        signDataHex: params['signDataHex'] as String,
+        path: params['path'] as String,
+        xfp: params['xfp'] as String,
+        tokenInfo: tokenInfo == null
+            ? null
+            : KeystoneTronTokenInfo(
+                name: tokenInfo['name'] as String? ?? '',
+                symbol: tokenInfo['symbol'] as String? ?? '',
+                decimals: int.tryParse(tokenInfo['decimals']?.toString() ?? '') ?? 0,
+              ),
+        origin: params['origin'] as String?,
       );
 
     // ── Aleo (Alph) ───────────────────────────────────────────
@@ -123,15 +164,39 @@ UR buildUR(String type, Map<String, dynamic> params) {
         change: change,
       );
 
+    case 'bch-sign-request':
+      final inputs = (params['inputs'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .map((e) => BchInput(
+                hash: e['hash'] as String,
+                index: e['index'] != null ? int.tryParse(e['index'].toString()) : null,
+                value: int.parse(e['value'].toString()),
+                pubkey: e['pubkey'] as String,
+                ownerKeyPath: e['ownerKeyPath'] as String,
+              ))
+          .toList();
+      final outputs = (params['outputs'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .map((e) => BchOutput(
+                address: e['address'] as String,
+                value: int.parse(e['value'].toString()),
+                isChange: e['isChange'] == true || e['isChange']?.toString() == 'true',
+                changeAddressPath: e['changeAddressPath'] as String?,
+              ))
+          .toList();
+      return BchSignRequestUR.fromTransaction(
+        inputs: inputs,
+        outputs: outputs,
+        fee: int.parse(params['fee'].toString()),
+        xfp: params['xfp'] as String,
+        hdPath: params['hdPath'] as String,
+        requestId: params['requestId'] as String?,
+        origin: params['origin'] as String?,
+      );
+
     // ── CryptoHDKey ───────────────────────────────────────────
     case 'crypto-hdkey':
-      final wallet = BIP32.fromBase58(params['xpub'] as String);
-      return CryptoHDKeyUR.fromWallet(
-        name: params['name'] as String? ?? 'wallet',
-        path: params['path'] as String,
-        wallet: wallet,
-        xfp: params['xfp'] as String?,
-      );
+      return _buildCryptoHDKey(params);
 
     // ── CryptoMultiAccounts ───────────────────────────────────
     case 'crypto-multi-accounts':
@@ -140,20 +205,15 @@ UR buildUR(String type, Map<String, dynamic> params) {
 
       final rawChains = (params['chains'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
-      final chains = rawChains.map((c) {
-        final wallet = BIP32.fromBase58(c['xpub'] as String);
-        return CryptoAccountItemUR.fromAccount(
-          path: c['path'] as String,
-          chains: List<String>.from(c['chains'] as List),
-          publicKey: wallet.publicKey,
-          wallet: wallet,
-        );
-      }).toList();
+      final chains = rawChains.map(_buildCryptoHDKey).toList();
 
       return CryptoMultiAccountsUR.fromWallet(
         masterFingerprint: masterFp,
         device: params['device'] as String? ?? 'FxWallet',
-        walletName: params['walletName'] as String? ?? 'Demo',
+        deviceId: params['deviceId'] as String?,
+        version: params['version'] as String? ?? '1.0.0',
+        walletName: params['walletName'] as String?,
+        xfpFormat: params['xfpFormat'] as String?,
         chains: chains,
       );
 
@@ -201,8 +261,168 @@ UR buildUR(String type, Map<String, dynamic> params) {
     case 'btc-signature':
       return _buildGsplSignature(params);
 
+    case 'bch-signature':
+      return BchSignatureUR.fromSignature(
+        requestId: params['requestId'] as String,
+        rawTx: params['rawTx'] as String,
+      );
+
+    case 'keystone-tron-sign-result':
+      return _buildKeystoneTronSignResult(params);
+
+    case 'xrp-sign-request':
+      return KeystoneXrpSignRequestBytes.buildUR(
+        transaction: Map<String, dynamic>.from(params['transaction'] as Map),
+      );
+
+    case 'xrp-signature':
+      return _buildBytesJson({
+        'signature': params['signature'] as String? ?? '',
+        'publicKey': params['publicKey'] as String? ?? '',
+        'signedBlob': params['signedBlob'] as String? ?? '',
+        'txHash': params['txHash'] as String? ?? '',
+      });
+
+    case 'xrp-account':
+      return _buildBytesJson({
+        'address': params['address'] as String,
+        'pubkey': params['publicKey'] as String,
+      });
+
     default:
       throw UnsupportedError('Unknown UR type: $type');
+  }
+}
+
+CryptoHDKeyUR _buildCryptoHDKey(Map<String, dynamic> params) {
+  final xpub = params['xpub'] as String? ?? '';
+  final wallet = xpub.isEmpty ? null : BIP32.fromBase58(xpub);
+  final publicKey = params['publicKey'] as String? ?? '';
+  final chainCode = params['chainCode'] as String? ?? '';
+
+  if (wallet == null && publicKey.isEmpty) {
+    throw ArgumentError('crypto-hdkey requires either xpub or publicKey');
+  }
+
+  final name = params['name'] as String? ?? '';
+  return CryptoHDKeyUR.fromWallet(
+    name: name.isEmpty ? 'account' : name,
+    path: params['path'] as String,
+    wallet: wallet,
+    publicKey: wallet == null ? _hex(publicKey) : null,
+    chainCode: wallet == null && chainCode.isNotEmpty ? _hex(chainCode) : null,
+    xfp: params['xfp'] as String?,
+    sourceFingerprint: params['sourceFingerprint'] as String?,
+    xfpFormat: params['xfpFormat'] as String?,
+    childrenPath: params['childrenPath'] as String?,
+    note: params['note'] as String?,
+  );
+}
+
+UR _buildKeystoneCosmosSignRequest(Map<String, dynamic> params) {
+  final dataType = params['dataType'] as String? ?? 'amino';
+  final signDataHex = params['signDataHex'] as String? ?? params['signData'] as String;
+  switch (dataType) {
+    case 'direct':
+      return KeystoneCosmosSignRequest.buildDirectRequest(
+        signDataHex: signDataHex,
+        path: params['path'] as String,
+        xfp: params['xfp'] as String,
+        address: params['address'] as String?,
+        origin: params['origin'] as String?,
+      );
+    case 'textual':
+      return KeystoneCosmosSignRequest.buildTextualRequest(
+        signDataHex: signDataHex,
+        path: params['path'] as String,
+        xfp: params['xfp'] as String,
+        address: params['address'] as String?,
+        origin: params['origin'] as String?,
+      );
+    case 'message':
+      return KeystoneCosmosSignRequest.buildMessageRequest(
+        signDataHex: signDataHex,
+        path: params['path'] as String,
+        xfp: params['xfp'] as String,
+        address: params['address'] as String?,
+        origin: params['origin'] as String?,
+      );
+    case 'amino':
+    default:
+      return KeystoneCosmosSignRequest.buildAminoRequest(
+        signDataHex: signDataHex,
+        path: params['path'] as String,
+        xfp: params['xfp'] as String,
+        address: params['address'] as String?,
+        origin: params['origin'] as String?,
+      );
+  }
+}
+
+UR _buildKeystoneTronSignResult(Map<String, dynamic> params) {
+  final result = _protoMessage([
+    _protoString(1, params['requestId'] as String),
+    _protoString(2, params['txId'] as String? ?? ''),
+    _protoString(3, params['rawTx'] as String),
+  ]);
+  final payload = _protoMessage([
+    _protoVarintField(1, 9),
+    _protoBytesField(7, result),
+  ]);
+  final base = _protoMessage([
+    _protoVarintField(1, 2),
+    _protoString(2, 'QrCode Protocol'),
+    _protoBytesField(3, payload),
+  ]);
+
+  return UR.fromCBOR(
+    type: RegistryType.KEYSTONE_SIGNATURE.type,
+    value: CborMap({
+      CborSmallInt(1): CborBytes(Uint8List.fromList(GZipCodec().encode(base))),
+    }),
+  );
+}
+
+UR _buildBytesJson(Map<String, dynamic> payload) {
+  return UR.fromCBOR(
+    type: RegistryType.BYTES.type,
+    value: CborBytes(utf8.encode(jsonEncode(payload))),
+  );
+}
+
+Uint8List _protoMessage(List<Uint8List> fields) {
+  return Uint8List.fromList(fields.expand((field) => field).toList());
+}
+
+Uint8List _protoString(int fieldNumber, String value) {
+  return _protoBytesField(fieldNumber, utf8.encode(value));
+}
+
+Uint8List _protoBytesField(int fieldNumber, List<int> value) {
+  return Uint8List.fromList([
+    ..._encodeVarint((fieldNumber << 3) | 2),
+    ..._encodeVarint(value.length),
+    ...value,
+  ]);
+}
+
+Uint8List _protoVarintField(int fieldNumber, int value) {
+  return Uint8List.fromList([
+    ..._encodeVarint((fieldNumber << 3) | 0),
+    ..._encodeVarint(value),
+  ]);
+}
+
+List<int> _encodeVarint(int value) {
+  final result = <int>[];
+  var current = value;
+  while (true) {
+    if ((current & ~0x7f) == 0) {
+      result.add(current);
+      return result;
+    }
+    result.add((current & 0x7f) | 0x80);
+    current >>= 7;
   }
 }
 

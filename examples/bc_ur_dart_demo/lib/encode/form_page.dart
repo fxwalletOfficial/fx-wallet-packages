@@ -22,7 +22,7 @@ class _FormPageState extends State<FormPage> {
 
   // chainList 专用状态
   final Map<String, List<Map<String, String>>> _chainLists = {}; // fieldKey -> list of chain data
-  // chainList 的 TextEditingController：fieldKey -> [{path, chains, xpub}]
+  // chainList 的 TextEditingController：fieldKey -> account rows
   final Map<String, List<Map<String, TextEditingController>>> _chainControllers = {};
 
   @override
@@ -40,28 +40,32 @@ class _FormPageState extends State<FormPage> {
       if (field.type == FieldType.dropdown) {
         _dropdownValues[field.key] = mockVal?.toString() ?? field.options!.first;
       } else if (field.type == FieldType.chainList) {
-        // 初始化 chainList：每个 chain 有 path, chains, xpub 三个字段
+        // 初始化 chainList：每个 chain 支持 xpub 或 publicKey/chainCode 两种形态
         final chains = (mockVal as List? ?? []).map((c) {
-          final chainsList = (c as Map)['chains'];
+          final map = c as Map;
+          final chainsList = map['chains'];
           final chainsStr = chainsList is List ? chainsList.join(', ') : chainsList?.toString() ?? '';
           return {
-            'path': (c)['path']?.toString() ?? '',
+            'path': map['path']?.toString() ?? '',
             'chains': chainsStr,
-            'xpub': (c)['xpub']?.toString() ?? '',
+            'xpub': map['xpub']?.toString() ?? '',
+            'childrenPath': map['childrenPath']?.toString() ?? '',
+            'sourceFingerprint': map['sourceFingerprint']?.toString() ?? '',
+            'xfpFormat': map['xfpFormat']?.toString() ?? '',
+            'publicKey': map['publicKey']?.toString() ?? '',
+            'chainCode': map['chainCode']?.toString() ?? '',
+            'name': map['name']?.toString() ?? '',
+            'note': map['note']?.toString() ?? '',
           };
         }).toList();
         if (chains.isEmpty) {
           // 默认添加一个空 chain
-          chains.add({'path': '', 'chains': '', 'xpub': ''});
+          chains.add(_emptyChainRow());
         }
         _chainLists[field.key] = chains;
         // 同步初始化 controllers
         _chainControllers[field.key] = chains.map((c) {
-          return {
-            'path': TextEditingController(text: c['path'] ?? ''),
-            'chains': TextEditingController(text: c['chains'] ?? ''),
-            'xpub': TextEditingController(text: c['xpub'] ?? ''),
-          };
+          return _chainControllersFromValues(c);
         }).toList();
       } else if (field.type == FieldType.jsonList || field.type == FieldType.jsonMap) {
         final encoded = mockVal != null ? const JsonEncoder.withIndent('  ').convert(mockVal) : (field.type == FieldType.jsonList ? '[]' : '{}');
@@ -79,23 +83,87 @@ class _FormPageState extends State<FormPage> {
     }
     // 清理 chain controllers
     for (final fieldControllers in _chainControllers.values) {
-      for (final c in fieldControllers) {
-        c['path']?.dispose();
-        c['chains']?.dispose();
-        c['xpub']?.dispose();
+      for (final rowControllers in fieldControllers) {
+        for (final controller in rowControllers.values) {
+          controller.dispose();
+        }
       }
     }
     super.dispose();
   }
 
+  Map<String, String> _emptyChainRow() => const {
+        'path': '',
+        'chains': '',
+        'xpub': '',
+        'childrenPath': '',
+        'sourceFingerprint': '',
+        'xfpFormat': '',
+        'publicKey': '',
+        'chainCode': '',
+        'name': '',
+        'note': '',
+      };
+
+  Map<String, TextEditingController> _chainControllersFromValues(
+    Map<String, String> values,
+  ) {
+    return {
+      for (final entry in _emptyChainRow().entries) entry.key: TextEditingController(text: values[entry.key] ?? ''),
+    };
+  }
+
   Map<String, dynamic> _collectParams() {
-    return collectEthTxParams(
-      type: widget.config.type,
-      fields: widget.config.fields,
-      controllers: _controllers,
-      dropdownValues: _dropdownValues,
-      txBuilderParams: _txBuilderParams,
-    );
+    if (_isEthSignRequest) {
+      return collectEthTxParams(
+        type: widget.config.type,
+        fields: widget.config.fields,
+        controllers: _controllers,
+        dropdownValues: _dropdownValues,
+        txBuilderParams: _txBuilderParams,
+      );
+    }
+
+    final params = <String, dynamic>{};
+    for (final field in widget.config.fields) {
+      switch (field.type) {
+        case FieldType.dropdown:
+          params[field.key] = _dropdownValues[field.key];
+        case FieldType.jsonList:
+        case FieldType.jsonMap:
+          final text = _controllers[field.key]?.text.trim() ?? '';
+          if (text.isNotEmpty && text != '[]' && text != '{}') {
+            try {
+              params[field.key] = jsonDecode(text);
+            } catch (_) {
+              params[field.key] = text;
+            }
+          }
+        case FieldType.chainList:
+          params[field.key] = (_chainControllers[field.key] ?? [])
+              .map((item) {
+                final chains = item['chains']!.text.split(',').map((chain) => chain.trim()).where((chain) => chain.isNotEmpty).toList();
+                return {
+                  'path': item['path']!.text.trim(),
+                  'chains': chains,
+                  'xpub': item['xpub']!.text.trim(),
+                  'childrenPath': item['childrenPath']!.text.trim(),
+                  'sourceFingerprint': item['sourceFingerprint']!.text.trim(),
+                  'xfpFormat': item['xfpFormat']!.text.trim(),
+                  'publicKey': item['publicKey']!.text.trim(),
+                  'chainCode': item['chainCode']!.text.trim(),
+                  'name': item['name']!.text.trim(),
+                  'note': item['note']!.text.trim(),
+                };
+              })
+              .where((item) => (item['path'] as String).isNotEmpty || (item['xpub'] as String).isNotEmpty || (item['publicKey'] as String).isNotEmpty || (item['chainCode'] as String).isNotEmpty || (item['chains'] as List).isNotEmpty)
+              .toList();
+        default:
+          final val = _controllers[field.key]?.text.trim() ?? '';
+          if (val.isNotEmpty) params[field.key] = val;
+      }
+    }
+    return params;
   }
 
   void _onGenerate() {
@@ -192,13 +260,13 @@ class _FormPageState extends State<FormPage> {
         FieldType.jsonList || FieldType.jsonMap => _buildJsonField(field),
         FieldType.chainList => _buildChainListField(field),
         _ => buildField(
-          context: context,
-          field: field,
-          controllers: _controllers,
-          dropdownValues: _dropdownValues,
-          onDropdownChanged: (key, val) => setState(() => _dropdownValues[key] = val),
-          onChanged: () => setState(() {}),
-        ),
+            context: context,
+            field: field,
+            controllers: _controllers,
+            dropdownValues: _dropdownValues,
+            onDropdownChanged: (key, val) => setState(() => _dropdownValues[key] = val),
+            onChanged: () => setState(() {}),
+          ),
       },
     );
   }
@@ -284,9 +352,7 @@ class _FormPageState extends State<FormPage> {
                           )
                         : null,
                   ),
-                  validator: field.required
-                      ? (v) => (v == null || v.trim().isEmpty && _txBuilderParams.isEmpty) ? '${field.label} is required (enter hex or build transaction)' : null
-                      : null,
+                  validator: field.required ? (v) => (v == null || v.trim().isEmpty && _txBuilderParams.isEmpty) ? '${field.label} is required (enter hex or build transaction)' : null : null,
                 ),
               ),
               IconButton(
@@ -308,7 +374,7 @@ class _FormPageState extends State<FormPage> {
     // 从 mock 数据获取默认测试私钥
     final mockData = kMockByType[widget.config.type];
     final testPrivKey = mockData?['_testPrivKey'] as String?;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -442,13 +508,9 @@ class _FormPageState extends State<FormPage> {
               onPressed: () {
                 setState(() {
                   _chainLists[field.key] ??= [];
-                  _chainLists[field.key]!.add({'path': '', 'chains': '', 'xpub': ''});
+                  _chainLists[field.key]!.add(_emptyChainRow());
                   _chainControllers[field.key] ??= [];
-                  _chainControllers[field.key]!.add({
-                    'path': TextEditingController(),
-                    'chains': TextEditingController(),
-                    'xpub': TextEditingController(),
-                  });
+                  _chainControllers[field.key]!.add(_chainControllersFromValues(_emptyChainRow()));
                 });
               },
               icon: const Icon(Icons.add, size: 16),
@@ -472,9 +534,9 @@ class _FormPageState extends State<FormPage> {
                 ? () {
                     setState(() {
                       // 清理被删除项的 controllers
-                      _chainControllers[field.key]![index]['path']!.dispose();
-                      _chainControllers[field.key]![index]['chains']!.dispose();
-                      _chainControllers[field.key]![index]['xpub']!.dispose();
+                      for (final controller in _chainControllers[field.key]![index].values) {
+                        controller.dispose();
+                      }
                       _chainControllers[field.key]!.removeAt(index);
                       _chainLists[field.key]!.removeAt(index);
                     });
@@ -550,7 +612,55 @@ class _ChainItem extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          // Chains field
+          // Name field
+          TextField(
+            controller: controllers['name'],
+            style: const TextStyle(fontSize: 12),
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              hintText: 'Keystone',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Children path field
+          TextField(
+            controller: controllers['childrenPath'],
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              labelText: 'Children Path (optional)',
+              hintText: '0/*',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Source fingerprint field
+          TextField(
+            controller: controllers['sourceFingerprint'],
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              labelText: 'Source Fingerprint (optional)',
+              hintText: '21d0ae26',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // XFP format field
+          TextField(
+            controller: controllers['xfpFormat'],
+            style: const TextStyle(fontSize: 12),
+            decoration: const InputDecoration(
+              labelText: 'XFP Format (optional)',
+              hintText: 'canonical',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Chains field (legacy helper metadata)
           TextField(
             controller: controllers['chains'],
             style: const TextStyle(fontSize: 12),
@@ -562,14 +672,52 @@ class _ChainItem extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          // Xpub field
+          // Xpub field. When empty, public key / chain code fields are used.
           TextField(
             controller: controllers['xpub'],
             maxLines: 3,
             style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
             decoration: const InputDecoration(
-              labelText: 'Extended Public Key (xpub)',
+              labelText: 'Extended Public Key (xpub, optional)',
               hintText: 'xpub6...',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Public key field
+          TextField(
+            controller: controllers['publicKey'],
+            maxLines: 2,
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              labelText: 'Public Key (hex)',
+              hintText: '03...',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Chain code field
+          TextField(
+            controller: controllers['chainCode'],
+            maxLines: 2,
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              labelText: 'Chain Code (hex, optional)',
+              hintText: '32-byte hex',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Note field
+          TextField(
+            controller: controllers['note'],
+            style: const TextStyle(fontSize: 12),
+            decoration: const InputDecoration(
+              labelText: 'Note (optional)',
+              hintText: 'account.standard',
               isDense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
@@ -658,8 +806,7 @@ Widget buildField({
 
     default:
       final isMultiline = (field.type == FieldType.hex || field.type == FieldType.xpub) && field.label != 'Master Fingerprint';
-      final effectiveValidator = validator ??
-          (field.required ? (v) => (v == null || v.trim().isEmpty) ? '${field.label} is required' : null : null);
+      final effectiveValidator = validator ?? (field.required ? (v) => (v == null || v.trim().isEmpty) ? '${field.label} is required' : null : null);
       return TextFormField(
         controller: controllers[field.key],
         maxLines: isMultiline ? 3 : 1,
@@ -968,9 +1115,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                           style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                           decoration: InputDecoration(
                             labelText: 'Private Key (hex)',
-                            hintText: widget.testPrivKey?.isNotEmpty == true 
-                                ? 'Using default test key (0xac09...)' 
-                                : '0x...',
+                            hintText: widget.testPrivKey?.isNotEmpty == true ? 'Using default test key (0xac09...)' : '0x...',
                             hintStyle: const TextStyle(fontSize: 11),
                             isDense: true,
                             suffixIcon: _testPrivKeyController.text.isNotEmpty

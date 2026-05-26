@@ -48,12 +48,12 @@ const kMockCosmosSignRequest = {
 const kMockSolSignRequest = {
   // Valid Solana transaction message format:
   // [header=01][sigCompact=00][blockhash32bytes][acctCompact=01][instrCompact=00]
-  'signData': '01'  // header: 1 sig, 1 ro-signed, 1 ro-unsigned
-      '00'  // 0 signatures (compact)
-      '0000000000000000000000000000000000000000000000000000000000000000'  // blockhash
-      '01'  // 1 account (compact)
-      '0000000000000000000000000000000000000000000000000000000000000000'  // account
-      '00',  // 0 instructions (compact)
+  'signData': '01' // header: 1 sig, 1 ro-signed, 1 ro-unsigned
+      '00' // 0 signatures (compact)
+      '0000000000000000000000000000000000000000000000000000000000000000' // blockhash
+      '01' // 1 account (compact)
+      '0000000000000000000000000000000000000000000000000000000000000000' // account
+      '00', // 0 instructions (compact)
   'signType': 'transaction',
   'path': "m/44'/501'/0'/0'",
   'xfp': _kXfp,
@@ -117,6 +117,59 @@ const kMockGsplSignRequest = {
   },
 };
 
+const kMockBchSignRequest = {
+  'requestId': 'bch-request-id',
+  'xfp': _kXfp,
+  'hdPath': "m/44'/145'/0'",
+  'origin': _kOrigin,
+  'fee': '500',
+  'inputs': [
+    {
+      'hash': '4d3c2b1a09080706050403020100ffeeddccbbaa99887766554433221100ffeeddcc',
+      'index': 0,
+      'value': '100000',
+      'pubkey': '02c6047f9441ed7d6d3045406e95c07cd85a2d2a3d1e73d0b8f8f0d6d4a86f8f6a',
+      'ownerKeyPath': "m/44'/145'/0'/0/0",
+    },
+  ],
+  'outputs': [
+    {
+      'address': 'bitcoincash:qq07g6kz8zqauyn9f0rqpxnrsyvz2xy3xqyqj8xq2n',
+      'value': '99500',
+      'isChange': false,
+    },
+  ],
+};
+
+const kMockKeystoneCosmosSignRequest = {
+  'dataType': 'amino',
+  'signDataHex': '7b22636861696e5f6964223a22636f736d6f736875622d34227d',
+  'path': "m/44'/118'/0'/0/0",
+  'xfp': _kXfp,
+  'address': 'cosmos1qnk2n4nlkpw9xfqntladh74er2xa62wgas5vdz',
+  'origin': _kOrigin,
+};
+
+const kMockKeystoneSolSignRequest = {
+  'signType': 'transaction',
+  'signDataHex': 'deadbeef01020304',
+  'path': "m/44'/501'/0'/0'",
+  'xfp': _kXfp,
+  'address': 'FDr2JQnmDRUNaX3qiuqwbQEbPoMPJScQi5VWgJJxVkAb',
+  'origin': _kOrigin,
+};
+
+const kMockKeystoneTronSignRequest = {
+  'requestId': 'trx-request-id',
+  'signDataHex': '0a0232202208dd448d6e1f3946c540c8d2f9f082315a67080112630a2d74797065'
+      '2e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f'
+      '6e747261637412320a1541a9569efd62152d36adbd577a9bc6deab09d0d462121541'
+      '2a4d2fe3ce100a12b1626aa5aab8393d2e60a13c18c0843d70fe96f6f08231',
+  'path': "m/44'/195'/0'",
+  'xfp': '21d0ae26',
+  'origin': _kOrigin,
+};
+
 // ─────────────────────────────────────────────────────────────
 // Signature mock（模拟硬件钱包返回）
 // ─────────────────────────────────────────────────────────────
@@ -175,34 +228,99 @@ const kMockGsplSignature = {
   'origin': _kOrigin,
 };
 
+const kMockBchSignature = {
+  'requestId': 'bch-request-id',
+  'rawTx': '0100000001ccddeeff00112233445566778899aabbccddeeff000102030405060708090a1b2c3d'
+      '4d000000006a47304402201234567890abcdef1234567890abcdef1234567890abcdef123456'
+      '7890abcdef02201234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+      '412102c6047f9441ed7d6d3045406e95c07cd85a2d2a3d1e73d0b8f8f0d6d4a86f8f6affffffff'
+      '01ac850100000000001976a91400112233445566778899aabbccddeeff0011223388ac00000000',
+};
+
+const kMockKeystoneTronSignResult = {
+  'requestId': 'trx-request-id',
+  'txId': '0x1234abcd',
+  'rawTx': '0xdeadbeefcafe',
+};
+
+const kMockXrpSignRequest = {
+  'transaction': {
+    'Account': 'rSource',
+    'TransactionType': 'Payment',
+    'Destination': 'rDest',
+    'Amount': '1000',
+  },
+};
+
+const kMockXrpSignature = {
+  'signature': 'ABC123',
+  'publicKey': '02ABCD',
+  'signedBlob': '120000228000000024000000012E0000000C6140000000000003E8',
+  'txHash': 'DEADBEEF',
+};
+
+const kMockXrpAccount = {
+  'address': 'rAccount',
+  'publicKey': '02ABCD',
+};
+
 // ─────────────────────────────────────────────────────────────
 // 账户类 mock
 // ─────────────────────────────────────────────────────────────
 
 const kMockCryptoHDKey = {
-  'xpub': 'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu'
-      '24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB',
   'path': "m/44'/60'/0'",
-  'name': 'FxWallet Demo',
-  'xfp': _kXfp,
+  'childrenPath': '0/*',
+  'sourceFingerprint': '21d0ae26',
+  'xfp': '21d0ae26',
+  'xfpFormat': 'canonical',
+  'xpub': 'xpub6BxsQ7ydwv2jJdLfcyHkgViz7GzFRSxvnCRvnXezMoxsMNvfoQYyHtEcW5r9X3wh7Q3nomYt4rV7E2yLU7S161ZHT83W5nUxEGKqSd3aXo4',
+  'publicKey': '03d0f77d063d2c645803dcf7c203a9bafb9af221ffd95777d6d61b3b4d6b390224',
+  'chainCode': '9bdef1bfdaebd9f35327f20cae76e76f62cc687e8f38d93cb2d7a160d638834c',
+  'name': 'Keystone',
+  'note': 'account.standard',
 };
 
 const kMockCryptoMultiAccounts = {
-  'masterFingerprint': _kXfp,
-  'device': 'FxWallet',
-  'walletName': 'Demo Wallet',
+  'masterFingerprint': '21d0ae26',
+  'device': 'Keystone 3 Pro',
+  'deviceId': '5d4a7f01b9225db8d1f510e0ee682c47b0c585d1',
+  'version': '2.0.4',
+  'walletName': '',
+  'xfpFormat': 'canonical',
   'chains': [
     {
       'path': "m/44'/60'/0'",
-      'chains': ['ETH'],
-      'xpub': 'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu'
-          '24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB',
+      'childrenPath': '0/*',
+      'sourceFingerprint': '21d0ae26',
+      'xfpFormat': 'canonical',
+      'xpub': 'xpub6BxsQ7ydwv2jJdLfcyHkgViz7GzFRSxvnCRvnXezMoxsMNvfoQYyHtEcW5r9X3wh7Q3nomYt4rV7E2yLU7S161ZHT83W5nUxEGKqSd3aXo4',
+      'publicKey': '03d0f77d063d2c645803dcf7c203a9bafb9af221ffd95777d6d61b3b4d6b390224',
+      'chainCode': '9bdef1bfdaebd9f35327f20cae76e76f62cc687e8f38d93cb2d7a160d638834c',
+      'name': 'Keystone',
+      'note': 'account.standard',
     },
     {
-      'path': "m/44'/0'/0'",
-      'chains': ['BTC'],
-      'xpub': 'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu'
-          '24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB',
+      'path': "m/44'/60'/0'/0",
+      'childrenPath': '',
+      'sourceFingerprint': '21d0ae26',
+      'xfpFormat': 'canonical',
+      'xpub': '',
+      'publicKey': '03bbc64f4b1a2b16c3539e71963dec71435f3065d6b0f36c8ae4762f1203416c6d',
+      'chainCode': '',
+      'name': 'Keystone',
+      'note': 'account.ledger_legacy',
+    },
+    {
+      'path': "m/44'/60'/0'/0/0",
+      'childrenPath': '',
+      'sourceFingerprint': '21d0ae26',
+      'xfpFormat': 'canonical',
+      'xpub': '',
+      'publicKey': '038e047b017db4fce26fd07f2cdcc26c39a0742e6fd8936932557367b68cc9c814',
+      'chainCode': '',
+      'name': 'Keystone',
+      'note': 'account.ledger_live',
     },
   ],
 };
@@ -220,6 +338,10 @@ const Map<String, Map<String, dynamic>> kMockByType = {
   'alph-sign-request': kMockAlphSignRequest,
   'psbt-sign-request': kMockPsbtSignRequest,
   'btc-sign-request': kMockGsplSignRequest,
+  'bch-sign-request': kMockBchSignRequest,
+  'keystone-cosmos-sign-request': kMockKeystoneCosmosSignRequest,
+  'keystone-sol-sign-request': kMockKeystoneSolSignRequest,
+  'keystone-tron-sign-request': kMockKeystoneTronSignRequest,
   // Signature
   'eth-signature': kMockEthSignature,
   'cosmos-signature': kMockCosmosSignature,
@@ -228,6 +350,11 @@ const Map<String, Map<String, dynamic>> kMockByType = {
   'alph-signature': kMockAlphSignature,
   'psbt-signature': kMockPsbtSignature,
   'btc-signature': kMockGsplSignature,
+  'bch-signature': kMockBchSignature,
+  'keystone-tron-sign-result': kMockKeystoneTronSignResult,
+  'xrp-signature': kMockXrpSignature,
+  'xrp-sign-request': kMockXrpSignRequest,
+  'xrp-account': kMockXrpAccount,
   // Account
   'crypto-hdkey': kMockCryptoHDKey,
   'crypto-multi-accounts': kMockCryptoMultiAccounts,

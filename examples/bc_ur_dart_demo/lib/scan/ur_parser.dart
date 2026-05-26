@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:convert/convert.dart';
 
@@ -41,18 +45,35 @@ Map<String, dynamic> parseUR(UR ur) {
 
       // ── Cosmos ─────────────────────────────────────────
       case 'cosmos-sign-request':
-        final req = CosmosSignRequest.fromCBOR(ur.payload);
-        return {
-          'type': ur.type,
-          'fields': {
-            'requestId': hex.encode(req.getRequestId()),
-            'signData': hex.encode(req.signData),
-            'chain': req.chain,
-            'derivationPath': req.derivationPath.getPath() ?? '—',
-            'origin': req.origin ?? '—',
-            'fee': req.fee?.toString() ?? '—',
-          },
-        };
+        try {
+          final req = KeystoneCosmosSignRequest.fromUR(ur);
+          return {
+            'type': ur.type,
+            'fields': {
+              'variant': 'Keystone',
+              'requestId': hex.encode(req.getRequestId()),
+              'signData': hex.encode(req.signData),
+              'dataType': req.dataType.name,
+              'derivationPaths': req.getDerivationPaths().join(', '),
+              'addresses': req.addresses?.join(', ') ?? '—',
+              'origin': req.origin ?? '—',
+            },
+          };
+        } catch (_) {
+          final req = CosmosSignRequest.fromCBOR(ur.payload);
+          return {
+            'type': ur.type,
+            'fields': {
+              'variant': 'GoldShell',
+              'requestId': hex.encode(req.getRequestId()),
+              'signData': hex.encode(req.signData),
+              'chain': req.chain,
+              'derivationPath': req.derivationPath.getPath() ?? '—',
+              'origin': req.origin ?? '—',
+              'fee': req.fee?.toString() ?? '—',
+            },
+          };
+        }
 
       case 'cosmos-signature':
         final sig = CosmosSignature.fromCBOR(ur.payload);
@@ -67,20 +88,37 @@ Map<String, dynamic> parseUR(UR ur) {
 
       // ── Solana ─────────────────────────────────────────
       case 'sol-sign-request':
-        final req = SolSignRequest.fromCBOR(ur.payload);
-        return {
-          'type': ur.type,
-          'fields': {
-            'requestId': hex.encode(req.getRequestId()),
-            'signData': hex.encode(req.signData),
-            'signType': req.signType.name,
-            'derivationPath': req.derivationPath.getPath() ?? '—',
-            'outputAddress': req.outputAddress ?? '—',
-            'contractAddress': req.contractAddress ?? '—',
-            'origin': req.origin ?? '—',
-            'fee': req.fee?.toString() ?? '—',
-          },
-        };
+        try {
+          final req = KeystoneSolSignRequest.fromUR(ur);
+          return {
+            'type': ur.type,
+            'fields': {
+              'variant': 'Keystone',
+              'requestId': hex.encode(req.getRequestId()),
+              'signData': hex.encode(req.signData),
+              'signType': req.signType.name,
+              'derivationPath': req.derivationPath.getPath() ?? '—',
+              'address': req.addressBytes == null ? '—' : utf8.decode(req.addressBytes!),
+              'origin': req.origin ?? '—',
+            },
+          };
+        } catch (_) {
+          final req = SolSignRequest.fromCBOR(ur.payload);
+          return {
+            'type': ur.type,
+            'fields': {
+              'variant': 'GoldShell',
+              'requestId': hex.encode(req.getRequestId()),
+              'signData': hex.encode(req.signData),
+              'signType': req.signType.name,
+              'derivationPath': req.derivationPath.getPath() ?? '—',
+              'outputAddress': req.outputAddress ?? '—',
+              'contractAddress': req.contractAddress ?? '—',
+              'origin': req.origin ?? '—',
+              'fee': req.fee?.toString() ?? '—',
+            },
+          };
+        }
 
       case 'sol-signature':
         final sig = SolSignature.fromCBOR(ur.payload);
@@ -195,44 +233,52 @@ Map<String, dynamic> parseUR(UR ur) {
           },
         };
 
+      case 'keystone-sign-request':
+        return _parseKeystoneSignRequest(ur);
+
+      case 'keystone-sign-result':
+        return _parseKeystoneSignResult(ur);
+
+      case 'bytes':
+        return _parseBytes(ur);
+
       // ── HD Key ─────────────────────────────────────────
       case 'crypto-hdkey':
         final key = CryptoHDKeyUR.fromUR(ur: ur);
+        final publicKey = key.wallet?.publicKey ?? key.publicKey;
+        final chainCode = key.wallet?.chainCode ?? key.chainCode;
         return {
           'type': ur.type,
           'fields': {
-            'publicKey': hex.encode(key.wallet.publicKey),
-            'chainCode': hex.encode(key.wallet.chainCode),
+            'publicKey': publicKey == null ? '—' : hex.encode(publicKey),
+            'chainCode': chainCode == null ? '—' : hex.encode(chainCode),
             'path': key.path,
             'name': key.name,
-            'xfp': key.xfp ?? '—',
-            'parentFingerprint': key.wallet.parentFingerprint.toRadixString(16),
+            'xfp': key.xfp ?? key.sourceFingerprint ?? '—',
+            'parentFingerprint': key.wallet?.parentFingerprint.toRadixString(16) ?? '—',
           },
         };
 
       // ── Multi Accounts ─────────────────────────────────
       case 'crypto-multi-accounts':
         final accounts = CryptoMultiAccountsUR.fromUR(ur: ur);
-        
-        // Build detailed chain info for each CryptoAccountItemUR
+
+        // Build detailed key info for each CryptoHDKeyUR.
         final chainDetails = accounts.chains.map((chain) {
           final wallet = chain.wallet;
-          // wallet.fingerprint is Uint8List, need to convert to hex
-          final xfp = wallet != null 
-              ? hex.encode(wallet.fingerprint)
-              : '';
-          
+          final publicKey = wallet?.publicKey ?? chain.publicKey;
+          final chainCode = wallet?.chainCode ?? chain.chainCode;
+
           return {
             'derivationPath': chain.path,
-            'chains': chain.chains.join(', '),
-            'coin': chain.coin.isNotEmpty ? chain.coin : chain.chains.first,
-            'publicKey': hex.encode(chain.publicKey),
-            'chainCode': wallet != null ? hex.encode(wallet.chainCode) : '',
+            'name': chain.name,
+            'publicKey': publicKey == null ? '' : hex.encode(publicKey),
+            'chainCode': chainCode == null ? '' : hex.encode(chainCode),
             'extendedPublicKey': wallet?.toBase58() ?? '',
-            'masterFingerprint': xfp,
+            'sourceFingerprint': chain.sourceFingerprint ?? '',
           };
         }).toList();
-        
+
         return {
           'type': ur.type,
           'fields': {
@@ -264,6 +310,210 @@ Map<String, dynamic> parseUR(UR ur) {
       },
       'isError': true,
     };
+  }
+}
+
+Map<String, dynamic> _parseKeystoneSignRequest(UR ur) {
+  try {
+    final req = KeystoneTronSignRequest.fromUR(ur);
+    return {
+      'type': ur.type,
+      'fields': {
+        'variant': 'Keystone Tron',
+        'requestId': req.requestId,
+        'path': req.path,
+        'xfp': req.xfp,
+        'from': req.tronTx.from,
+        'to': req.tronTx.to,
+        'value': req.tronTx.value,
+        'token': req.tronTx.token.isEmpty ? '—' : req.tronTx.token,
+        'contractAddress': req.tronTx.contractAddress.isEmpty ? '—' : req.tronTx.contractAddress,
+        'fee': req.tronTx.fee.toString(),
+        'origin': req.origin ?? '—',
+      },
+    };
+  } catch (_) {
+    final req = BchSignRequestUR.fromUR(ur: ur);
+    return {
+      'type': ur.type,
+      'fields': {
+        'variant': 'BCH',
+        'requestId': req.requestId,
+        'xfp': req.xfp,
+        'hdPath': req.hdPath,
+        'origin': req.origin ?? '—',
+      },
+    };
+  }
+}
+
+Map<String, dynamic> _parseKeystoneSignResult(UR ur) {
+  try {
+    final result = KeystoneTronSignResult.fromUR(ur);
+    return {
+      'type': ur.type,
+      'fields': {
+        'variant': 'Keystone Tron',
+        'requestId': result.requestId,
+        'txId': result.txId,
+        'rawTx': result.rawTx,
+      },
+    };
+  } catch (_) {
+    try {
+      final sig = BchSignatureUR.fromUR(ur: ur);
+      return {
+        'type': ur.type,
+        'fields': {
+          'variant': 'BCH',
+          'requestId': sig.requestId,
+          'txId': sig.txId,
+          'rawTx': sig.rawTx,
+        },
+      };
+    } catch (_) {
+      final data = ur.decodeCBOR() as CborMap;
+      final bytes = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
+      final payload = _readMessageField(Uint8List.fromList(GZipCodec().decode(bytes)), 7);
+      final result = _readStringFields(payload, {1, 2, 3});
+      return {
+        'type': ur.type,
+        'fields': {
+          'variant': 'BCH',
+          'requestId': result[1] ?? '',
+          'txId': result[2] ?? '',
+          'rawTx': result[3] ?? '',
+        },
+      };
+    }
+  }
+}
+
+Map<String, dynamic> _parseBytes(UR ur) {
+  try {
+    final account = KeystoneXrpAccountBytes.fromUR(ur);
+    return {
+      'type': ur.type,
+      'fields': {
+        'variant': 'XRP Account',
+        'address': account.address,
+        'publicKey': account.publicKey,
+        'payload': const JsonEncoder.withIndent('  ').convert(account.payload),
+      },
+    };
+  } catch (_) {}
+
+  try {
+    final signature = KeystoneXrpSignatureBytes.fromUR(ur);
+    return {
+      'type': ur.type,
+      'fields': {
+        'variant': 'XRP Signature',
+        'signature': signature.signature.isEmpty ? '—' : signature.signature,
+        'publicKey': signature.publicKey.isEmpty ? '—' : signature.publicKey,
+        'signedBlob': signature.signedBlob.isEmpty ? '—' : signature.signedBlob,
+        'txHash': signature.txHash.isEmpty ? '—' : signature.txHash,
+        'payload': signature.payload == null ? '—' : const JsonEncoder.withIndent('  ').convert(signature.payload),
+      },
+    };
+  } catch (_) {}
+
+  try {
+    final request = KeystoneXrpSignRequestBytes.fromUR(ur);
+    return {
+      'type': ur.type,
+      'fields': {
+        'variant': 'XRP Sign Request',
+        'transaction': const JsonEncoder.withIndent('  ').convert(request.transaction),
+        'payloadBytes': hex.encode(request.payloadBytes),
+      },
+    };
+  } catch (_) {
+    return {
+      'type': ur.type,
+      'fields': {
+        'payload_hex': hex.encode(ur.payload),
+        'note': 'Unknown bytes payload, showing raw payload',
+      },
+    };
+  }
+}
+
+Uint8List _readMessageField(Uint8List message, int targetField) {
+  final reader = _ProtoReader(message);
+  while (reader.hasMore()) {
+    final tag = reader.readVarint();
+    final fieldNumber = tag >> 3;
+    final wireType = tag & 0x7;
+    if (fieldNumber == targetField && wireType == 2) {
+      return reader.readLengthDelimited();
+    }
+    reader.skipField(wireType);
+  }
+  return Uint8List(0);
+}
+
+Map<int, String> _readStringFields(Uint8List message, Set<int> fields) {
+  final values = <int, String>{};
+  final reader = _ProtoReader(message);
+  while (reader.hasMore()) {
+    final tag = reader.readVarint();
+    final fieldNumber = tag >> 3;
+    final wireType = tag & 0x7;
+    if (fields.contains(fieldNumber) && wireType == 2) {
+      values[fieldNumber] = utf8.decode(reader.readLengthDelimited());
+    } else {
+      reader.skipField(wireType);
+    }
+  }
+  return values;
+}
+
+class _ProtoReader {
+  final Uint8List _data;
+  int _offset = 0;
+
+  _ProtoReader(this._data);
+
+  bool hasMore() => _offset < _data.length;
+
+  int readVarint() {
+    var result = 0;
+    var shift = 0;
+    while (_offset < _data.length) {
+      final value = _data[_offset++];
+      result |= (value & 0x7f) << shift;
+      if ((value & 0x80) == 0) return result;
+      shift += 7;
+    }
+    return result;
+  }
+
+  Uint8List readLengthDelimited() {
+    final length = readVarint();
+    final end = (_offset + length).clamp(0, _data.length);
+    final bytes = _data.sublist(_offset, end);
+    _offset = end;
+    return Uint8List.fromList(bytes);
+  }
+
+  void skipField(int wireType) {
+    switch (wireType) {
+      case 0:
+        readVarint();
+        return;
+      case 1:
+        _offset = (_offset + 8).clamp(0, _data.length);
+        return;
+      case 2:
+        _offset = (_offset + readVarint()).clamp(0, _data.length);
+        return;
+      case 5:
+        _offset = (_offset + 4).clamp(0, _data.length);
+        return;
+      default:
+        _offset = _data.length;
+    }
   }
 }
 

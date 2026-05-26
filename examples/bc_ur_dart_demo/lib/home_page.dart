@@ -36,8 +36,7 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 12),
-                Text('Supported Chains',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                Text('Supported Chains', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -152,11 +151,9 @@ class _InfoBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('bc_ur_dart debugging tool',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: scheme.primary, fontSize: 14)),
+                Text('bc_ur_dart debugging tool', style: TextStyle(fontWeight: FontWeight.w600, color: scheme.primary, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text('Mock data only · No real on-chain transactions',
-                    style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.55))),
+                Text('Mock data only · No real on-chain transactions', style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.55))),
               ],
             ),
           ),
@@ -234,14 +231,12 @@ class _ModuleCard extends StatelessWidget {
                             color: scheme.secondaryContainer,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(badge!,
-                              style: TextStyle(fontSize: 10, color: scheme.onSecondaryContainer, fontWeight: FontWeight.w500)),
+                          child: Text(badge!, style: TextStyle(fontSize: 10, color: scheme.onSecondaryContainer, fontWeight: FontWeight.w500)),
                         ),
                       ]
                     ]),
                     const SizedBox(height: 3),
-                    Text(subtitle,
-                        style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.55), height: 1.4)),
+                    Text(subtitle, style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.55), height: 1.4)),
                   ],
                 ),
               ),
@@ -253,4 +248,3 @@ class _ModuleCard extends StatelessWidget {
     );
   }
 }
-
