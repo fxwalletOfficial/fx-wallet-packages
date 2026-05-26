@@ -1,0 +1,77 @@
+{
+    "requests": [
+      {
+        "signer": "aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn",
+        "network": "3u16",
+        "program": "credits.aleo",
+        "function": "transfer_private",
+        "input_ids": [
+          {
+            "type": "record",
+            "commitment": "283057687719381847490177081798039915620166858724323919132683109652372141149field",
+            "gamma": "2173378732183153813613829342714849547489617679581238957971070384032181452257group",
+            "serial_number": "2843557642139952723040972426496619162525614204970885458217405033075308643657field",
+            "tag": "2989689674114543099206452696657979125758760620414279961908030086750267592623field"
+          },
+          {
+            "type": "private",
+            "id": "8406072114372346082348427424287537437555449082264611666090095346625844684427field"
+          },
+          {
+            "type": "private",
+            "id": "4814080573730389954169403769439651455336237946577874621732916004532673627423field"
+          }
+        ],
+        "inputs": [
+          "{\n  owner: aleo127c79p7k4jj9e2c8kwwqsn5qkavun07etkyqpr795eyrdnyh3uzqnf8nfn.private,\n  microcredits: 10000000u64.private,\n  _nonce: 4471757360166065460731748398729308049118640231469946714800968731390992856380group.public\n}",
+          "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px",
+          "1000000u64"
+        ],
+        "signature": "sign1t9z8elt09lrds86szqpuhypmxwhc5r8cwm8lmj9ds4hvpkuweqpsqnu375hlrt8ntzscw0z3z22htzz4neu0hv02efs0uynv2u3sgqndtl7lkehl0xyhjrhqz3v6ymkm73gs9vvj4t7sv673nhm50pj8p0xa895ta843wlh9wekyuqgwade9z5r0chfzp8ckud8ymt969j8ss0x2h2u",
+        "sk_tag": "2210501611762349384477809348272483653058575833933970706301707267071425322164field",
+        "tvk": "6364324642899068858167559204190411295912072264419997584504842072121094524464field",
+        "tcm": "4640556946394118525796297064486890483106149103523856579048835835949649692575field"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "au1hwcljua8pv9hraaw8xry07ghjsgvp4p3uz553wa0vwgsw5fuk5zq7dv7fn",
+        "program": "credits.aleo",
+        "function": "transfer_private",
+        "inputs": [
+          {
+            "type": "record",
+            "id": "2843557642139952723040972426496619162525614204970885458217405033075308643657field",
+            "tag": "2989689674114543099206452696657979125758760620414279961908030086750267592623field"
+          },
+          {
+            "type": "private",
+            "id": "8406072114372346082348427424287537437555449082264611666090095346625844684427field",
+            "value": "ciphertext1qgqt0hmtf9tmltrx2q7pc7yfg5wprn4kj8t386gurd8kwmanw7wcyrp5ewvzgjktfn992dcarfft67hk9svk82nh55ygth97mrwwfhppp5rulmqa"
+          },
+          {
+            "type": "private",
+            "id": "4814080573730389954169403769439651455336237946577874621732916004532673627423field",
+            "value": "ciphertext1qyqwe6vmvav28w5hhky0gmzz6yk9aysxsepmacgrutc3ptslthfvupcz9l75l"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "record",
+            "id": "3663522652505013649969829263349656101474542754464995828502189470213495914729field",
+            "checksum": "3340525737623989131540862640396878907028717113247710047217105562200588978808field",
+            "value": "record1qyqspw0uctmj3l36447e0jngc9w20upwq4eczhj7ehkd3vw6eg0whxs8qyxx66trwfhkxun9v35hguerqqpqzqxr4qch9r66nhmxy8fvs570kqjx68n5fka99gtxs2zmfrd78m9dp70d89ah6ksam0k3pxy6y6kmyqj9tc6z8q6tshc0s5l25z8yertscensat4"
+          },
+          {
+            "type": "record",
+            "id": "3361236566636561224208557743476145447761428830581848438518836644856866080958field",
+            "checksum": "7763573588696649483066544128926638263123288162210283384483332229215014292619field",
+            "value": "record1qyqsq4uc5m0v5had7w6skt9nwcfccxa65fe5ndrvt29f3qu5kjfze9sxqyxx66trwfhkxun9v35hguerqqpqzqxx5857j0f86pkdtpaasplm250mjd944lr2nfeun84ufqsgtxtvp6t5c6ruuf27r2pm98tav9plvegs8rh7pte03u367nuk7tv2m8fs5lw4ygd"
+          }
+        ],
+        "tpk": "3624240564738153548754908189926287620413125560007381359702311505610436313641group",
+        "tcm": "4640556946394118525796297064486890483106149103523856579048835835949649692575field"
+      }
+    ]
+  }
+  
