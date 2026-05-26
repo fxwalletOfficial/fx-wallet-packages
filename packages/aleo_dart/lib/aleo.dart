@@ -1,4 +1,4 @@
-library aleo;
+library aleo_dart;
 
 export 'package:aleo_dart/src/aleo_account.dart';
 export 'package:aleo_dart/src/aleo_programs.dart';
