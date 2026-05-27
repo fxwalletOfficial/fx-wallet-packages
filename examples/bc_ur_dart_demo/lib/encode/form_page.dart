@@ -7,6 +7,11 @@ import '../common/eth_tx_fields.dart';
 import '../common/mock_data.dart';
 import 'type_config.dart';
 
+const double _fieldSpacing = 20;
+const double _fieldLabelSpacing = 8;
+const double _chainInputSpacing = 14;
+const double _sheetInputSpacing = 16;
+
 class FormPage extends StatefulWidget {
   const FormPage({super.key, required this.config});
   final UrTypeConfig config;
@@ -249,12 +254,12 @@ class _FormPageState extends State<FormPage> {
     // ETH transaction 类型显示交易构建器
     if (field.key == 'signData' && _isEthTransactionType) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.only(bottom: _fieldSpacing),
         child: _buildTransactionBuilderField(field),
       );
     }
     return Padding(
-      padding: EdgeInsets.only(bottom: field.type == FieldType.dropdown && _isEthTransactionType ? 6 : 14),
+      padding: EdgeInsets.only(bottom: field.type == FieldType.dropdown && _isEthTransactionType ? 10 : _fieldSpacing),
       child: switch (field.type) {
         FieldType.dropdown => _buildDropdown(field),
         FieldType.jsonList || FieldType.jsonMap => _buildJsonField(field),
@@ -291,7 +296,7 @@ class _FormPageState extends State<FormPage> {
           field.label,
           style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: _fieldLabelSpacing),
         // 有交易数据时显示状态，可点击重新编辑
         if (hasTxData)
           GestureDetector(
@@ -413,7 +418,7 @@ class _FormPageState extends State<FormPage> {
           field.label,
           style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: _fieldLabelSpacing),
         DropdownButtonFormField<String>(
           initialValue: selectedValue,
           decoration: const InputDecoration(
@@ -443,7 +448,7 @@ class _FormPageState extends State<FormPage> {
           const Spacer(),
           Text('JSON', style: TextStyle(fontSize: 10, color: scheme.primary, fontWeight: FontWeight.w500)),
         ]),
-        const SizedBox(height: 6),
+        const SizedBox(height: _fieldLabelSpacing),
         TextFormField(
           controller: _controllers[field.key],
           maxLines: 5,
@@ -523,7 +528,7 @@ class _FormPageState extends State<FormPage> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         ...chains.asMap().entries.map((entry) {
           final index = entry.key;
           final controllers = _chainControllers[field.key]![index];
@@ -565,7 +570,7 @@ class _ChainItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
@@ -599,7 +604,7 @@ class _ChainItem extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Path field
           TextField(
             controller: controllers['path'],
@@ -611,7 +616,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Name field
           TextField(
             controller: controllers['name'],
@@ -623,7 +628,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Children path field
           TextField(
             controller: controllers['childrenPath'],
@@ -635,7 +640,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Source fingerprint field
           TextField(
             controller: controllers['sourceFingerprint'],
@@ -647,7 +652,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // XFP format field
           TextField(
             controller: controllers['xfpFormat'],
@@ -659,7 +664,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Chains field (legacy helper metadata)
           TextField(
             controller: controllers['chains'],
@@ -671,7 +676,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Xpub field. When empty, public key / chain code fields are used.
           TextField(
             controller: controllers['xpub'],
@@ -684,7 +689,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Public key field
           TextField(
             controller: controllers['publicKey'],
@@ -697,7 +702,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Chain code field
           TextField(
             controller: controllers['chainCode'],
@@ -710,7 +715,7 @@ class _ChainItem extends StatelessWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: _chainInputSpacing),
           // Note field
           TextField(
             controller: controllers['note'],
@@ -754,7 +759,7 @@ Widget buildField({
             field.label,
             style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: _fieldLabelSpacing),
           DropdownButtonFormField<String>(
             initialValue: dropdownValues[field.key],
             decoration: const InputDecoration(
@@ -781,7 +786,7 @@ Widget buildField({
             const Spacer(),
             Text('JSON', style: TextStyle(fontSize: 10, color: scheme.primary, fontWeight: FontWeight.w500)),
           ]),
-          const SizedBox(height: 6),
+          const SizedBox(height: _fieldLabelSpacing),
           TextField(
             controller: controllers[field.key],
             maxLines: 4,
@@ -1025,7 +1030,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                   label: 'To Address/Token Contract Address',
                   hint: '0x...',
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: _sheetInputSpacing),
 
                 // Value
                 _buildTextFieldWithClear(
@@ -1034,7 +1039,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                   hint: '0.0',
                   keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: _sheetInputSpacing),
 
                 // Gas Limit
                 _buildTextFieldWithClear(
@@ -1042,7 +1047,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                   label: 'Gas Limit',
                   keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: _sheetInputSpacing),
 
                 // Conditional fields
                 if (_txType == 'legacy') ...[
@@ -1051,39 +1056,39 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                     label: 'Gas Price (wei)',
                     keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: _sheetInputSpacing),
                 ] else if (_txType == 'eip1559') ...[
                   _buildTextFieldWithClear(
                     controller: _maxFeeController,
                     label: 'Max Fee (wei)',
                     keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: _sheetInputSpacing),
                   _buildTextFieldWithClear(
                     controller: _maxPriorityController,
                     label: 'Max Priority (wei)',
                     keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: _sheetInputSpacing),
                 ] else if (_txType == 'eip7702') ...[
                   _buildTextFieldWithClear(
                     controller: _maxFeeController,
                     label: 'Max Fee (wei)',
                     keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: _sheetInputSpacing),
                   _buildTextFieldWithClear(
                     controller: _maxPriorityController,
                     label: 'Max Priority (wei)',
                     keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: _sheetInputSpacing),
                   _buildTextFieldWithClear(
                     controller: _eip7702ContractController,
                     label: 'EIP-7702 Contract',
                     hint: '0x... (authorization contract)',
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: _sheetInputSpacing),
                   // Demo: 私钥输入（仅用于签名 authorization）
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -1133,7 +1138,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: _sheetInputSpacing),
                 ],
 
                 // Nonce
@@ -1142,7 +1147,7 @@ class TransactionBuilderSheetState extends State<TransactionBuilderSheet> {
                   label: 'Nonce (optional)',
                   keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: _sheetInputSpacing),
 
                 // Data
                 _buildTextFieldWithClear(

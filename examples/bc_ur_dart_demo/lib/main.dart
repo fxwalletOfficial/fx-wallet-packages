@@ -125,7 +125,15 @@ final _router = GoRouter(
     GoRoute(
       path: '/sign_flow/step1',
       name: 'sign_step1',
-      builder: (_, state) => SignStep1Page(config: state.extra as UrTypeConfig),
+      builder: (_, state) {
+        final config = state.extra as UrTypeConfig?;
+        if (config == null) {
+          return const Scaffold(
+            body: Center(child: Text('Error: Missing sign flow config')),
+          );
+        }
+        return SignStep1Page(config: config);
+      },
     ),
     GoRoute(
       path: '/sign_flow/step2',
@@ -135,7 +143,15 @@ final _router = GoRouter(
     GoRoute(
       path: '/sign_flow/result',
       name: 'sign_result',
-      builder: (_, state) => SignResultPage(data: state.extra as Map<String, dynamic>),
+      builder: (_, state) {
+        final data = state.extra as Map<String, dynamic>?;
+        if (data == null) {
+          return const Scaffold(
+            body: Center(child: Text('Error: Missing sign result data')),
+          );
+        }
+        return SignResultPage(data: data);
+      },
     ),
   ],
 );
