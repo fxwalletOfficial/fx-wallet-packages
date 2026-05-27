@@ -15,6 +15,8 @@ class ResultPage extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final type = urData['type'] as String? ?? 'unknown';
     final fields = (urData['fields'] as Map<String, dynamic>?) ?? {};
+    final chainDetails =
+        (urData['chainDetails'] as List?)?.cast<Map<String, dynamic>>();
     final isError = urData['isError'] == true;
 
     return Scaffold(
@@ -27,6 +29,13 @@ class ResultPage extends StatelessWidget {
             onPressed: () {
               final buf = StringBuffer('UR Type: $type\n\n');
               fields.forEach((k, v) => buf.writeln('$k: $v'));
+              if (chainDetails != null && chainDetails.isNotEmpty) {
+                buf.writeln('\n${_detailsTitle(type)}:');
+                for (var i = 0; i < chainDetails.length; i++) {
+                  buf.writeln('#${i + 1}');
+                  chainDetails[i].forEach((k, v) => buf.writeln('$k: $v'));
+                }
+              }
               CopyHelper.copy(context, buf.toString(), label: 'All fields');
             },
           ),
@@ -42,7 +51,9 @@ class ResultPage extends StatelessWidget {
               const Spacer(),
               Text(
                 '${fields.length} fields',
-                style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.45)),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurface.withValues(alpha: 0.45)),
               ),
             ],
           ),
@@ -52,13 +63,15 @@ class ResultPage extends StatelessWidget {
           if (isError)
             _ErrorSection(fields: fields)
           else ...[
-            ...fields.entries.map((e) => CopyableField(label: e.key, value: e.value?.toString() ?? '—')),
-            
+            ...fields.entries.map((e) =>
+                CopyableField(label: e.key, value: e.value?.toString() ?? '—')),
+
             // ── Chain Details Section ─────────────────────────
-            if (urData['chainDetails'] != null) ...[
+            if (chainDetails != null && chainDetails.isNotEmpty) ...[
               const SizedBox(height: 24),
               _ChainDetailsSection(
-                chains: (urData['chainDetails'] as List).cast<Map<String, dynamic>>(),
+                title: _detailsTitle(type),
+                chains: chainDetails,
               ),
             ],
           ],
@@ -83,6 +96,17 @@ class ResultPage extends StatelessWidget {
   }
 }
 
+String _detailsTitle(String type) {
+  switch (type.toLowerCase()) {
+    case 'crypto-account':
+      return 'Account Outputs';
+    case 'crypto-multi-accounts':
+      return 'Chain Accounts';
+    default:
+      return 'Key Details';
+  }
+}
+
 class _TypeBadge extends StatelessWidget {
   const _TypeBadge({required this.type, required this.isError});
   final String type;
@@ -97,7 +121,8 @@ class _TypeBadge extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -105,7 +130,11 @@ class _TypeBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             type,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg, fontFamily: 'monospace'),
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: fg,
+                fontFamily: 'monospace'),
           ),
         ],
       ),
@@ -133,10 +162,13 @@ class _ErrorSection extends StatelessWidget {
           Row(children: [
             Icon(Icons.warning_amber_rounded, color: scheme.error, size: 18),
             const SizedBox(width: 8),
-            Text('Parse Failed', style: TextStyle(fontWeight: FontWeight.w600, color: scheme.error)),
+            Text('Parse Failed',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600, color: scheme.error)),
           ]),
           const SizedBox(height: 12),
-          ...fields.entries.map((e) => CopyableField(label: e.key, value: e.value.toString())),
+          ...fields.entries.map(
+              (e) => CopyableField(label: e.key, value: e.value.toString())),
         ],
       ),
     );
@@ -145,13 +177,14 @@ class _ErrorSection extends StatelessWidget {
 
 /// Displays crypto-multi-accounts chain details with expandable cards
 class _ChainDetailsSection extends StatelessWidget {
-  const _ChainDetailsSection({required this.chains});
+  const _ChainDetailsSection({required this.title, required this.chains});
+  final String title;
   final List<Map<String, dynamic>> chains;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -161,10 +194,10 @@ class _ChainDetailsSection extends StatelessWidget {
             Icon(Icons.account_tree_rounded, size: 18, color: scheme.primary),
             const SizedBox(width: 8),
             Text(
-              'Chain Accounts',
+              title,
               style: TextStyle(
-                fontSize: 14, 
-                fontWeight: FontWeight.w600, 
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
               ),
             ),
@@ -177,13 +210,16 @@ class _ChainDetailsSection extends StatelessWidget {
               ),
               child: Text(
                 '${chains.length}',
-                style: TextStyle(fontSize: 12, color: scheme.onPrimaryContainer, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w600),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        
+
         // Chain list
         ...chains.asMap().entries.map((entry) {
           final index = entry.key;
@@ -212,8 +248,12 @@ class _ChainCardState extends State<_ChainCard> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final data = widget.data;
-    final coin = data['coin'] ?? 'Unknown';
-    
+    final badge = (data['coin'] ?? data['name'] ?? 'Key ${widget.index}')
+        .toString()
+        .trim();
+    final subtitle =
+        (data['derivationPath'] ?? data['path'] ?? '').toString().trim();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -233,16 +273,19 @@ class _ChainCardState extends State<_ChainCard> {
                 children: [
                   // Coin badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: scheme.primaryContainer,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      coin.toUpperCase(),
+                      badge.isEmpty
+                          ? 'KEY ${widget.index}'
+                          : badge.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 11, 
-                        fontWeight: FontWeight.w700, 
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
                         color: scheme.onPrimaryContainer,
                       ),
                     ),
@@ -251,18 +294,24 @@ class _ChainCardState extends State<_ChainCard> {
                   // Derivation path
                   Expanded(
                     child: Text(
-                      data['derivationPath'] ?? '',
-                      style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                      subtitle.isEmpty ? 'Output ${widget.index}' : subtitle,
+                      style: const TextStyle(
+                          fontSize: 13, fontFamily: 'monospace'),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 6),
                   // Copy derivation path
                   GestureDetector(
-                    onTap: () => CopyHelper.copy(context, data['derivationPath'] ?? '', label: 'Derivation Path'),
+                    onTap: () => CopyHelper.copy(
+                      context,
+                      subtitle,
+                      label: 'Derivation Path',
+                    ),
                     child: Tooltip(
                       message: 'Copy',
-                      child: Icon(Icons.copy_rounded, size: 17, color: scheme.primary),
+                      child: Icon(Icons.copy_rounded,
+                          size: 17, color: scheme.primary),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -270,13 +319,14 @@ class _ChainCardState extends State<_ChainCard> {
                   AnimatedRotation(
                     turns: _expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.expand_more, size: 20, color: scheme.onSurfaceVariant),
+                    child: Icon(Icons.expand_more,
+                        size: 20, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // Expanded details
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
@@ -287,25 +337,69 @@ class _ChainCardState extends State<_ChainCard> {
                 children: [
                   const Divider(height: 1),
                   const SizedBox(height: 10),
-                  // Chains label
-                  _DetailRow(label: 'Chains', value: data['chains'] ?? ''),
-                  _DetailRow(label: 'Public Key', value: data['publicKey'] ?? ''),
-                  if ((data['chainCode'] as String?)?.isNotEmpty ?? false)
-                    _DetailRow(label: 'Chain Code', value: data['chainCode'] ?? ''),
-                  if ((data['extendedPublicKey'] as String?)?.isNotEmpty ?? false)
-                    _DetailRow(label: 'Extended Public Key', value: data['extendedPublicKey'] ?? ''),
-                  if ((data['masterFingerprint'] as String?)?.isNotEmpty ?? false)
-                    _DetailRow(label: 'Master Fingerprint', value: data['masterFingerprint'] ?? ''),
+                  ..._detailEntries(data).map(
+                    (entry) => _DetailRow(
+                      label: _formatLabel(entry.key),
+                      value: entry.value.toString(),
+                    ),
+                  ),
                 ],
               ),
             ),
-            crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 200),
           ),
         ],
       ),
     );
   }
+}
+
+List<MapEntry<String, dynamic>> _detailEntries(Map<String, dynamic> data) {
+  const preferredOrder = [
+    'derivationPath',
+    'path',
+    'name',
+    'chains',
+    'publicKey',
+    'chainCode',
+    'extendedPublicKey',
+    'masterFingerprint',
+    'sourceFingerprint',
+    'xfpFormat',
+  ];
+
+  final entries = <MapEntry<String, dynamic>>[];
+  for (final key in preferredOrder) {
+    if (data.containsKey(key) && data[key].toString().isNotEmpty) {
+      entries.add(MapEntry(key, data[key]));
+    }
+  }
+  for (final entry in data.entries) {
+    if (!preferredOrder.contains(entry.key) &&
+        entry.value.toString().isNotEmpty) {
+      entries.add(entry);
+    }
+  }
+  return entries;
+}
+
+String _formatLabel(String key) {
+  const labels = {
+    'derivationPath': 'Derivation Path',
+    'path': 'Path',
+    'name': 'Name',
+    'chains': 'Chains',
+    'publicKey': 'Public Key',
+    'chainCode': 'Chain Code',
+    'extendedPublicKey': 'Extended Public Key',
+    'masterFingerprint': 'Master Fingerprint',
+    'sourceFingerprint': 'Source Fingerprint',
+    'xfpFormat': 'XFP Format',
+  };
+  return labels[key] ?? key;
 }
 
 /// Single detail row with label and copyable value
@@ -318,7 +412,7 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final valueColor = scheme.onSurface.withValues(alpha: 0.8);
-    
+
     return CopyableField(
       label: label,
       value: value,

@@ -198,6 +198,20 @@ UR buildUR(String type, Map<String, dynamic> params) {
     case 'crypto-hdkey':
       return _buildCryptoHDKey(params);
 
+    // ── CryptoAccount ────────────────────────────────────────
+    case 'crypto-account':
+      final xfpHex = params['masterFingerprint'] as String;
+      final masterFp = BigInt.parse(xfpHex, radix: 16);
+
+      final rawOutputs = (params['outputs'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final outputs = rawOutputs.map(_buildCryptoHDKey).toList();
+
+      return CryptoAccountUR.fromWallet(
+        masterFingerprint: masterFp,
+        outputs: outputs,
+        xfpFormat: params['xfpFormat'] as String?,
+      );
+
     // ── CryptoMultiAccounts ───────────────────────────────────
     case 'crypto-multi-accounts':
       final xfpHex = params['masterFingerprint'] as String;
@@ -256,6 +270,12 @@ UR buildUR(String type, Map<String, dynamic> params) {
     // ── PSBT Signature ────────────────────────────────────────
     case 'psbt-signature':
       return _buildPsbtSignature(params);
+
+    case 'crypto-psbt':
+      return UR.fromCBOR(
+        type: RegistryType.CRYPTO_PSBT.type,
+        value: CborBytes(_hex(params['signature'] as String)),
+      );
 
     // ── GSPL Signature ────────────────────────────────────────
     case 'btc-signature':

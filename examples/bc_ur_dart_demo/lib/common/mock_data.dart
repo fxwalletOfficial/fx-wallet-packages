@@ -218,6 +218,14 @@ const kMockPsbtSignature = {
   'origin': _kOrigin,
 };
 
+const kMockCryptoPsbt = {
+  'signature': '70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757'
+      '924f545887bb2abdd7500000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c'
+      '071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85'
+      'c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f'
+      '876a588df5546e8742d1b657441000000',
+};
+
 const kMockGsplSignature = {
   'requestId': _kRequestId,
   'signedHex': '0100000001a4c91916bdfba16cd79f9bb3a91e6a0fd49f1ec0a49c9f4ee4685abe5c'
@@ -325,6 +333,35 @@ const kMockCryptoMultiAccounts = {
   ],
 };
 
+const kMockCryptoAccount = {
+  'masterFingerprint': '21d0ae26',
+  'xfpFormat': 'canonical',
+  'outputs': [
+    {
+      'path': "m/44'/60'/0'",
+      'childrenPath': '0/*',
+      'sourceFingerprint': '21d0ae26',
+      'xfpFormat': 'canonical',
+      'xpub': 'xpub6BxsQ7ydwv2jJdLfcyHkgViz7GzFRSxvnCRvnXezMoxsMNvfoQYyHtEcW5r9X3wh7Q3nomYt4rV7E2yLU7S161ZHT83W5nUxEGKqSd3aXo4',
+      'publicKey': '03d0f77d063d2c645803dcf7c203a9bafb9af221ffd95777d6d61b3b4d6b390224',
+      'chainCode': '9bdef1bfdaebd9f35327f20cae76e76f62cc687e8f38d93cb2d7a160d638834c',
+      'name': 'Keystone',
+      'note': 'account.standard',
+    },
+    {
+      'path': "m/84'/0'/0'",
+      'childrenPath': '0/*',
+      'sourceFingerprint': '21d0ae26',
+      'xfpFormat': 'canonical',
+      'xpub': '',
+      'publicKey': '02bbc64f4b1a2b16c3539e71963dec71435f3065d6b0f36c8ae4762f1203416c6d',
+      'chainCode': '7bdef1bfdaebd9f35327f20cae76e76f62cc687e8f38d93cb2d7a160d638834d',
+      'name': 'Keystone',
+      'note': 'bitcoin.native_segwit',
+    },
+  ],
+};
+
 // ─────────────────────────────────────────────────────────────
 // 注册表：type → mock
 // ─────────────────────────────────────────────────────────────
@@ -349,6 +386,7 @@ const Map<String, Map<String, dynamic>> kMockByType = {
   'tron-signature': kMockTronSignature,
   'alph-signature': kMockAlphSignature,
   'psbt-signature': kMockPsbtSignature,
+  'crypto-psbt': kMockCryptoPsbt,
   'btc-signature': kMockGsplSignature,
   'bch-signature': kMockBchSignature,
   'keystone-tron-sign-result': kMockKeystoneTronSignResult,
@@ -357,5 +395,6 @@ const Map<String, Map<String, dynamic>> kMockByType = {
   'xrp-account': kMockXrpAccount,
   // Account
   'crypto-hdkey': kMockCryptoHDKey,
+  'crypto-account': kMockCryptoAccount,
   'crypto-multi-accounts': kMockCryptoMultiAccounts,
 };

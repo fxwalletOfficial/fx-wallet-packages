@@ -61,38 +61,13 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Ethereum',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'dataType',
-          label: 'Data Type',
-          type: FieldType.dropdown,
-          options: [
-            'ETH_TRANSACTION_DATA',
-            'ETH_TYPED_DATA',
-            'ETH_RAW_BYTES',
-            'ETH_TYPED_TRANSACTION'
-          ]),
-      FieldConfig(
-          key: 'signData',
-          label: 'Sign Data (hex)',
-          type: FieldType.hex,
-          hint: 'Complete RLP-encoded transaction hex, or message hex'),
+      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown, options: ['ETH_TRANSACTION_DATA', 'ETH_TYPED_DATA', 'ETH_RAW_BYTES', 'ETH_TYPED_TRANSACTION']),
+      FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex, hint: 'Complete RLP-encoded transaction hex, or message hex'),
       FieldConfig(key: 'address', label: 'Address', type: FieldType.address),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
-      FieldConfig(
-          key: 'xfp',
-          label: 'Master Fingerprint',
-          type: FieldType.hex,
-          hint: '4 bytes, e.g. f23f9fd2'),
-      FieldConfig(
-          key: 'chainId',
-          label: 'Chain ID',
-          type: FieldType.integer,
-          hint: '1=Mainnet, 5=Goerli'),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex, hint: '4 bytes, e.g. f23f9fd2'),
+      FieldConfig(key: 'chainId', label: 'Chain ID', type: FieldType.integer, hint: '1=Mainnet, 5=Goerli'),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -103,13 +78,8 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Cosmos',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'chain',
-          label: 'Chain ID',
-          type: FieldType.text,
-          hint: 'e.g. cosmoshub, osmosis'),
+      FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
+      FieldConfig(key: 'chain', label: 'Chain ID', type: FieldType.text, hint: 'e.g. cosmoshub, osmosis'),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
       FieldConfig(
@@ -119,11 +89,7 @@ const List<UrTypeConfig> kUrTypeConfigs = [
         required: false,
         hint: 'e.g. 1000 or 0x3e8',
       ),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -134,35 +100,14 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Solana',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'signType',
-          label: 'Sign Type',
-          type: FieldType.dropdown,
-          options: ['transaction', 'message']),
-      FieldConfig(
-          key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signType', label: 'Sign Type', type: FieldType.dropdown, options: ['transaction', 'message']),
+      FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
-      FieldConfig(
-          key: 'outputAddress',
-          label: 'Output Address',
-          type: FieldType.address,
-          required: false),
-      FieldConfig(
-          key: 'contractAddress',
-          label: 'Contract Address',
-          type: FieldType.address,
-          required: false),
-      FieldConfig(
-          key: 'fee',
-          label: 'Fee (lamports)',
-          type: FieldType.integer,
-          required: false),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'outputAddress', label: 'Output Address', type: FieldType.address, required: false),
+      FieldConfig(key: 'contractAddress', label: 'Contract Address', type: FieldType.address, required: false),
+      FieldConfig(key: 'fee', label: 'Fee (lamports)', type: FieldType.integer, required: false),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -173,8 +118,7 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Tron',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
       FieldConfig(
@@ -184,11 +128,7 @@ const List<UrTypeConfig> kUrTypeConfigs = [
         required: false,
         hint: 'e.g. 1000 or 0x3e8',
       ),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -199,26 +139,12 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Alephium',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signData', label: 'Sign Data (hex)', type: FieldType.hex),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
-      FieldConfig(
-          key: 'dataType',
-          label: 'Data Type',
-          type: FieldType.dropdown,
-          options: ['transaction', 'message']),
-      FieldConfig(
-          key: 'outputs',
-          label: 'Outputs (JSON)',
-          type: FieldType.jsonList,
-          required: false,
-          hint: '[{"address":"...","amount":"1000000"}]'),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown, options: ['transaction', 'message']),
+      FieldConfig(key: 'outputs', label: 'Outputs (JSON)', type: FieldType.jsonList, required: false, hint: '[{"address":"...","amount":"1000000"}]'),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -229,18 +155,10 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Bitcoin',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'psbt',
-          label: 'PSBT (hex)',
-          type: FieldType.hex,
-          hint: 'Partially Signed Bitcoin Transaction hex'),
+      FieldConfig(key: 'psbt', label: 'PSBT (hex)', type: FieldType.hex, hint: 'Partially Signed Bitcoin Transaction hex'),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -254,24 +172,9 @@ const List<UrTypeConfig> kUrTypeConfigs = [
       FieldConfig(key: 'hex', label: 'Raw TX Hex', type: FieldType.hex),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
-      FieldConfig(
-          key: 'inputs',
-          label: 'Inputs (JSON)',
-          type: FieldType.jsonList,
-          hint:
-              '[{"path":"m/44\'/0\'...","address":"1A...","amount":"60000000"}]'),
-      FieldConfig(
-          key: 'change',
-          label: 'Change (JSON)',
-          type: FieldType.jsonMap,
-          required: false,
-          hint:
-              '{"path":"m/44\'/0\'...","address":"1C...","amount":"10000000"}'),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'inputs', label: 'Inputs (JSON)', type: FieldType.jsonList, hint: '[{"path":"m/44\'/0\'...","address":"1A...","amount":"60000000"}]'),
+      FieldConfig(key: 'change', label: 'Change (JSON)', type: FieldType.jsonMap, required: false, hint: '{"path":"m/44\'/0\'...","address":"1C...","amount":"10000000"}'),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -282,18 +185,12 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     isSignRequest: true,
     fields: [
       FieldConfig(key: 'requestId', label: 'Request ID', type: FieldType.text),
-      FieldConfig(
-          key: 'inputs', label: 'Inputs (JSON)', type: FieldType.jsonList),
-      FieldConfig(
-          key: 'outputs', label: 'Outputs (JSON)', type: FieldType.jsonList),
+      FieldConfig(key: 'inputs', label: 'Inputs (JSON)', type: FieldType.jsonList),
+      FieldConfig(key: 'outputs', label: 'Outputs (JSON)', type: FieldType.jsonList),
       FieldConfig(key: 'fee', label: 'Fee (sats)', type: FieldType.integer),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
       FieldConfig(key: 'hdPath', label: 'HD Path', type: FieldType.path),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -303,25 +200,12 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Cosmos',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'dataType',
-          label: 'Data Type',
-          type: FieldType.dropdown,
-          options: ['amino', 'direct', 'textual', 'message']),
-      FieldConfig(
-          key: 'signDataHex', label: 'Sign Data (hex)', type: FieldType.hex),
+      FieldConfig(key: 'dataType', label: 'Data Type', type: FieldType.dropdown, options: ['amino', 'direct', 'textual', 'message']),
+      FieldConfig(key: 'signDataHex', label: 'Sign Data (hex)', type: FieldType.hex),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
-      FieldConfig(
-          key: 'address',
-          label: 'Address',
-          type: FieldType.address,
-          required: false),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'address', label: 'Address', type: FieldType.address, required: false),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -331,25 +215,12 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'Solana',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'signType',
-          label: 'Sign Type',
-          type: FieldType.dropdown,
-          options: ['transaction', 'message']),
-      FieldConfig(
-          key: 'signDataHex', label: 'Sign Data (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signType', label: 'Sign Type', type: FieldType.dropdown, options: ['transaction', 'message']),
+      FieldConfig(key: 'signDataHex', label: 'Sign Data (hex)', type: FieldType.hex),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
-      FieldConfig(
-          key: 'address',
-          label: 'Address',
-          type: FieldType.address,
-          required: false),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'address', label: 'Address', type: FieldType.address, required: false),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -360,20 +231,11 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     isSignRequest: true,
     fields: [
       FieldConfig(key: 'requestId', label: 'Request ID', type: FieldType.text),
-      FieldConfig(
-          key: 'signDataHex', label: 'Raw Data (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signDataHex', label: 'Raw Data (hex)', type: FieldType.hex),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
       FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
-      FieldConfig(
-          key: 'tokenInfo',
-          label: 'Token Info (JSON)',
-          type: FieldType.jsonMap,
-          required: false),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'tokenInfo', label: 'Token Info (JSON)', type: FieldType.jsonMap, required: false),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -383,21 +245,9 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'ETH Signature',
     group: 'Ethereum',
     fields: [
-      FieldConfig(
-          key: 'requestId',
-          label: 'Request ID (hex)',
-          type: FieldType.hex,
-          hint: 'UUID from SignRequest, 16 bytes hex'),
-      FieldConfig(
-          key: 'signature',
-          label: 'Signature (hex)',
-          type: FieldType.hex,
-          hint: 'r(32) + s(32) + v(1) = 65 bytes'),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex, hint: 'UUID from SignRequest, 16 bytes hex'),
+      FieldConfig(key: 'signature', label: 'Signature (hex)', type: FieldType.hex, hint: 'r(32) + s(32) + v(1) = 65 bytes'),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -407,15 +257,9 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'Cosmos Signature',
     group: 'Cosmos',
     fields: [
-      FieldConfig(
-          key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'signature', label: 'Signature (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signature', label: 'Signature (hex)', type: FieldType.hex),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -425,18 +269,9 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'Solana Signature',
     group: 'Solana',
     fields: [
-      FieldConfig(
-          key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'signature',
-          label: 'Signature (hex)',
-          type: FieldType.hex,
-          hint: '64 bytes Ed25519 signature'),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signature', label: 'Signature (hex)', type: FieldType.hex, hint: '64 bytes Ed25519 signature'),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -446,19 +281,9 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'Tron Signature',
     group: 'Tron',
     fields: [
-      FieldConfig(
-          key: 'requestId',
-          label: 'Request ID (hex)',
-          type: FieldType.hex,
-          required: false,
-          hint: 'Tron allows omitting requestId'),
-      FieldConfig(
-          key: 'signature', label: 'Signature (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex, required: false, hint: 'Tron allows omitting requestId'),
+      FieldConfig(key: 'signature', label: 'Signature (hex)', type: FieldType.hex),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -468,15 +293,9 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'ALPH Signature',
     group: 'Alephium',
     fields: [
-      FieldConfig(
-          key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'signature', label: 'Signature (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signature', label: 'Signature (hex)', type: FieldType.hex),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -486,18 +305,18 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'PSBT Signature',
     group: 'Bitcoin',
     fields: [
-      FieldConfig(
-          key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'signature',
-          label: 'Signature (hex)',
-          type: FieldType.hex,
-          hint: 'DER-encoded signature hex'),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signature', label: 'Signature (hex)', type: FieldType.hex, hint: 'DER-encoded signature hex'),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
+    ],
+  ),
+
+  UrTypeConfig(
+    type: 'crypto-psbt',
+    label: 'Crypto PSBT',
+    group: 'Bitcoin',
+    fields: [
+      FieldConfig(key: 'signature', label: 'Signed PSBT (hex)', type: FieldType.hex, hint: 'Complete signed PSBT bytes hex'),
     ],
   ),
 
@@ -507,18 +326,9 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'GSPL Signature',
     group: 'Bitcoin',
     fields: [
-      FieldConfig(
-          key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
-      FieldConfig(
-          key: 'signedHex',
-          label: 'Signed TX Hex',
-          type: FieldType.hex,
-          hint: 'Complete signed BTC transaction hex'),
-      FieldConfig(
-          key: 'origin',
-          label: 'Origin',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
+      FieldConfig(key: 'signedHex', label: 'Signed TX Hex', type: FieldType.hex, hint: 'Complete signed BTC transaction hex'),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),
 
@@ -549,10 +359,7 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     group: 'XRP',
     isSignRequest: true,
     fields: [
-      FieldConfig(
-          key: 'transaction',
-          label: 'Transaction (JSON)',
-          type: FieldType.jsonMap),
+      FieldConfig(key: 'transaction', label: 'Transaction (JSON)', type: FieldType.jsonMap),
     ],
   ),
 
@@ -561,26 +368,10 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'XRP Signature Bytes',
     group: 'XRP',
     fields: [
-      FieldConfig(
-          key: 'signature',
-          label: 'Signature',
-          type: FieldType.text,
-          required: false),
-      FieldConfig(
-          key: 'publicKey',
-          label: 'Public Key',
-          type: FieldType.hex,
-          required: false),
-      FieldConfig(
-          key: 'signedBlob',
-          label: 'Signed Blob',
-          type: FieldType.hex,
-          required: false),
-      FieldConfig(
-          key: 'txHash',
-          label: 'TX Hash',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'signature', label: 'Signature', type: FieldType.text, required: false),
+      FieldConfig(key: 'publicKey', label: 'Public Key', type: FieldType.hex, required: false),
+      FieldConfig(key: 'signedBlob', label: 'Signed Blob', type: FieldType.hex, required: false),
+      FieldConfig(key: 'txHash', label: 'TX Hash', type: FieldType.text, required: false),
     ],
   ),
 
@@ -600,79 +391,42 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     label: 'Crypto HD Key',
     group: 'Account',
     fields: [
-      FieldConfig(
-          key: 'xpub',
-          label: 'Extended Public Key (xpub)',
-          type: FieldType.xpub,
-          required: false),
+      FieldConfig(key: 'xpub', label: 'Extended Public Key (xpub)', type: FieldType.xpub, required: false),
       FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
-      FieldConfig(
-          key: 'childrenPath',
-          label: 'Children Path',
-          type: FieldType.path,
-          required: false),
-      FieldConfig(
-          key: 'sourceFingerprint',
-          label: 'Source Fingerprint',
-          type: FieldType.hex,
-          required: false),
-      FieldConfig(
-          key: 'xfp',
-          label: 'Master Fingerprint',
-          type: FieldType.hex,
-          required: false),
-      FieldConfig(
-          key: 'xfpFormat',
-          label: 'XFP Format',
-          type: FieldType.text,
-          required: false),
-      FieldConfig(
-          key: 'publicKey',
-          label: 'Public Key',
-          type: FieldType.hex,
-          required: false),
-      FieldConfig(
-          key: 'chainCode',
-          label: 'Chain Code',
-          type: FieldType.hex,
-          required: false),
+      FieldConfig(key: 'childrenPath', label: 'Children Path', type: FieldType.path, required: false),
+      FieldConfig(key: 'sourceFingerprint', label: 'Source Fingerprint', type: FieldType.hex, required: false),
+      FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex, required: false),
+      FieldConfig(key: 'xfpFormat', label: 'XFP Format', type: FieldType.text, required: false),
+      FieldConfig(key: 'publicKey', label: 'Public Key', type: FieldType.hex, required: false),
+      FieldConfig(key: 'chainCode', label: 'Chain Code', type: FieldType.hex, required: false),
       FieldConfig(key: 'name', label: 'Wallet Name', type: FieldType.text),
-      FieldConfig(
-          key: 'note', label: 'Note', type: FieldType.text, required: false),
+      FieldConfig(key: 'note', label: 'Note', type: FieldType.text, required: false),
     ],
   ),
 
   // ── Multi Accounts ────────────────────────────────────────
   UrTypeConfig(
+    type: 'crypto-account',
+    label: 'Crypto Account',
+    group: 'Account',
+    fields: [
+      FieldConfig(key: 'masterFingerprint', label: 'Master Fingerprint', type: FieldType.hex),
+      FieldConfig(key: 'xfpFormat', label: 'XFP Format', type: FieldType.text, required: false),
+      FieldConfig(key: 'outputs', label: 'Outputs', type: FieldType.chainList),
+    ],
+  ),
+
+  UrTypeConfig(
     type: 'crypto-multi-accounts',
     label: 'Crypto Multi Accounts',
     group: 'Account',
     fields: [
-      FieldConfig(
-          key: 'masterFingerprint',
-          label: 'Master Fingerprint',
-          type: FieldType.hex),
+      FieldConfig(key: 'masterFingerprint', label: 'Master Fingerprint', type: FieldType.hex),
       FieldConfig(key: 'device', label: 'Device Name', type: FieldType.text),
-      FieldConfig(
-          key: 'deviceId',
-          label: 'Device ID',
-          type: FieldType.text,
-          required: false),
-      FieldConfig(
-          key: 'version',
-          label: 'Version',
-          type: FieldType.text,
-          required: false),
-      FieldConfig(
-          key: 'walletName',
-          label: 'Wallet Name',
-          type: FieldType.text,
-          required: false),
-      FieldConfig(
-          key: 'xfpFormat',
-          label: 'XFP Format',
-          type: FieldType.text,
-          required: false),
+      FieldConfig(key: 'deviceId', label: 'Device ID', type: FieldType.text, required: false),
+      FieldConfig(key: 'version', label: 'Version', type: FieldType.text, required: false),
+      FieldConfig(key: 'walletName', label: 'Wallet Name', type: FieldType.text, required: false),
+      FieldConfig(key: 'xfpFormat', label: 'XFP Format', type: FieldType.text, required: false),
       FieldConfig(key: 'chains', label: 'Chains', type: FieldType.chainList),
     ],
   ),

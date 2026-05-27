@@ -208,6 +208,16 @@ Map<String, dynamic> parseUR(UR ur) {
           },
         };
 
+      case 'crypto-psbt':
+        final sig = BtcSignature.fromUR(ur: ur);
+        return {
+          'type': ur.type,
+          'fields': {
+            'signature': hex.encode(sig.signature),
+            'bytesLength': sig.signature.length.toString(),
+          },
+        };
+
       // ── GSPL (Bitcoin variant) ─────────────────────────
       case 'btc-sign-request':
         final req = GsplSignRequestUR.fromUR(ur: ur);
@@ -257,6 +267,35 @@ Map<String, dynamic> parseUR(UR ur) {
             'xfp': key.xfp ?? key.sourceFingerprint ?? '—',
             'parentFingerprint': key.wallet?.parentFingerprint.toRadixString(16) ?? '—',
           },
+        };
+
+      // ── Crypto Account ────────────────────────────────────
+      case 'crypto-account':
+        final account = CryptoAccountUR.fromUR(ur: ur);
+        final outputDetails = account.outputs.map((output) {
+          final wallet = output.wallet;
+          final publicKey = wallet?.publicKey ?? output.publicKey;
+          final chainCode = wallet?.chainCode ?? output.chainCode;
+
+          return {
+            'derivationPath': output.path,
+            'name': output.name,
+            'publicKey': publicKey == null ? '' : hex.encode(publicKey),
+            'chainCode': chainCode == null ? '' : hex.encode(chainCode),
+            'extendedPublicKey': wallet?.toBase58() ?? '',
+            'sourceFingerprint': output.sourceFingerprint ?? '',
+            'xfpFormat': output.xfpFormat ?? '',
+          };
+        }).toList();
+
+        return {
+          'type': ur.type,
+          'fields': {
+            'masterFingerprint': account.masterFingerprint,
+            'xfpFormat': account.xfpFormat ?? '—',
+            'outputsCount': account.outputs.length.toString(),
+          },
+          'chainDetails': outputDetails,
         };
 
       // ── Multi Accounts ─────────────────────────────────
