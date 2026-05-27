@@ -249,3 +249,11 @@
 
 - Fix xrpl transaction export.
 - Fix fromTransferPsbt fingerPrint.
+
+
+## [1.2.6] - 2026-05-27
+## Update
+
+- SC transaction assembly with WASM integration (`package:wasm_run`).
+- SC transaction signer (Ed25519) and builder.
+- SC send example.
