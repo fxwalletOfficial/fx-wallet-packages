@@ -7,6 +7,8 @@ export 'src/transaction/cosmos/tx_signer.dart';
 export 'src/transaction/cosmos/tx_data.dart';
 export 'src/transaction/kas/tx_signer.dart';
 export 'src/transaction/kas/tx_data.dart';
+export 'src/transaction/sc/tx_signer.dart';
+export 'src/transaction/sc/tx_data.dart';
 export 'src/transaction/xrp/tx_signer.dart';
 export 'src/transaction/xrp/tx_data.dart';
 export 'src/forked_lib/xrpl_dart/src/xrpl/models/base/transaction.dart'
@@ -52,6 +54,9 @@ export 'src/transaction/kas/kas_lib.dart';
 export 'src/transaction/near/near_lib.dart';
 export 'src/transaction/xrp/xrp_lib.dart';
 export 'src/transaction/filecoin/fil_lib.dart';
+export 'src/transaction/sc/sc_lib.dart';
+export 'src/transaction/sc/sc_wasm_bridge.dart';
+export 'src/transaction/sc/sc_wasm_run_bridge.dart';
 
 /// export btc psbt
 export 'src/transaction/btc/psbt.dart';
