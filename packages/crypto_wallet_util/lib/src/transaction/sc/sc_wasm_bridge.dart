@@ -1,13 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/transaction/sc/sc_lib.dart';
+import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_run_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/tx_data.dart';
 
 /// Bridge for calling the SC WASM module (`sc.wasm`).
 ///
-/// Platform implementations:
-/// - **Native**: [ScWasmRunBridge] backed by `package:wasm_run` (wasmtime)
-/// - **Web**: implement with `package:wasm_interop`
+/// The built-in [ScWasmRunBridge] uses `package:wasm_run` (wasmtime / wasmi).
+/// Web platforms can implement this with `package:wasm_interop`.
 abstract class ScWasmBridge {
   Future<ScWasmResult> processUnsignedTransaction(
     ScUnsignedTransaction unsignedTx,
@@ -34,17 +37,44 @@ abstract class ScWasmBridgeBase implements ScWasmBridge {
   Future<String> processJson(String jsonString);
 }
 
-/// Assembles an SC transaction from raw UTXO data through the WASM pipeline.
+/// Assembles an SC transaction through the WASM pipeline.
 ///
-/// Flow:
-///   1. Build a [ScUnsignedTransaction] from utxo / recipient data
-///   2. Call [build] to run it through the WASM bridge, producing [ScTxData]
-///   3. Sign with [ScTxSigner]
-///   4. Broadcast via [ScTxData.toBroadcast]
+/// The default factory [ScTransactionBuilder.create] auto-loads `sc.wasm`
+/// from the package bundle and uses [ScWasmRunBridge] under the hood.
+///
+/// ```dart
+/// final txData = await ScTransactionBuilder.create().build(unsignedTx);
+/// ```
 class ScTransactionBuilder {
   final ScWasmBridge wasmBridge;
 
   ScTransactionBuilder({required this.wasmBridge});
+
+  /// Creates a builder with `sc.wasm` auto-loaded from the package bundle.
+  static Future<ScTransactionBuilder> create() async {
+    final wasmBytes = await _loadPackageWasm();
+    return ScTransactionBuilder(wasmBridge: ScWasmRunBridge(wasmBytes));
+  }
+
+  static Future<Uint8List> _loadPackageWasm() async {
+    final pkgUri = await Isolate.resolvePackageUri(
+      Uri.parse('package:crypto_wallet_util/src/transaction/sc/sc.wasm'),
+    );
+    if (pkgUri != null && pkgUri.scheme == 'file') {
+      return File.fromUri(pkgUri).readAsBytes();
+    }
+
+    // Fallback: walk relative paths.
+    for (final path in [
+      'lib/src/transaction/sc/sc.wasm',
+      'packages/crypto_wallet_util/lib/src/transaction/sc/sc.wasm',
+    ]) {
+      final file = File(path);
+      if (file.existsSync()) return file.readAsBytesSync();
+    }
+
+    throw StateError('Cannot locate sc.wasm in the package bundle.');
+  }
 
   Future<ScTxData> build(ScUnsignedTransaction unsignedTx) async {
     final result = await wasmBridge.processUnsignedTransaction(unsignedTx);
