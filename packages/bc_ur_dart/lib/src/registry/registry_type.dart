@@ -56,4 +56,7 @@ class RegistryType {
 
   static const RegistryType ALPH_SIGN_REQUEST = RegistryType("alph-sign-request", 8110);
   static const RegistryType ALPH_SIGNATURE = RegistryType("alph-signature", 8111);
+
+  static const RegistryType SC_SIGN_REQUEST = RegistryType("sc-sign-request", 8120);
+  static const RegistryType SC_SIGNATURE = RegistryType("sc-signature", 8121);
 }
