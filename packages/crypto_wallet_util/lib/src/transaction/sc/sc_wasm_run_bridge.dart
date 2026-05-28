@@ -1,88 +1,76 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:wasm_run/wasm_run.dart';
+import 'package:wasd/wasd.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_bridge.dart';
 
-/// Concrete WASM bridge backed by [wasm_run](https://pub.dev/packages/wasm_run).
-///
-/// Uses [wasmtime](https://wasmtime.dev/) (native) or [wasmi](https://github.com/paritytech/wasmi)
-/// to execute [sc.wasm] for processing unsigned transactions with signing
-/// digests.
-///
-/// Construction:
-/// ```dart
-/// final wasmBytes = await rootBundle.load('assets/sc.wasm');
-/// final bridge = ScWasmRunBridge(wasmBytes.buffer.asUint8List());
-/// final builder = ScTransactionBuilder(wasmBridge: bridge);
-/// ```
 class ScWasmRunBridge extends ScWasmBridgeBase {
   final Uint8List _wasmBytes;
 
-  /// Cached WASM instance; lazily compiled & instantiated on first use.
-  WasmInstance? _instance;
-  WasmMemory? _memory;
+  Instance? _instance;
+  Memory? _memory;
+  WASI? _wasi;
 
   ScWasmRunBridge(this._wasmBytes);
 
-  Future<void> _ensureInitialized() async {
+  void _ensureInitialized() {
     if (_instance != null) return;
 
-    final module = await compileWasmModule(_wasmBytes);
-    final builder = module.builder(
-      wasiConfig: WasiConfig(
-        preopenedDirs: const [],
-        webBrowserFileSystem: const {},
-      ),
-    );
-    _instance = await builder.build();
-    _memory = _instance!.getMemory('memory');
+    final module = Module(_wasmBytes.buffer);
+    final wasi = WASI(preopens: {});
+    final instance = Instance(module, wasi.imports);
+    wasi.initialize(instance);
+    _instance = instance;
+    _wasi = wasi;
 
-    if (_memory == null) {
-      throw StateError('WASM module does not export a "memory" instance');
-    }
+    final memExport = _instance!.exports['memory']! as MemoryImportExportValue;
+    _memory = memExport.ref;
+  }
+
+  WasmFunction _getFunc(String name) =>
+      (_instance!.exports[name]! as FunctionImportExportValue).ref;
+
+  int _toInt(Object? value) {
+    return switch (value) {
+      int v => v,
+      BigInt v => v.toInt(),
+      num v => v.toInt(),
+      _ => throw StateError(
+          'Expected WASM integer result, got ${value.runtimeType}.',
+        ),
+    };
   }
 
   @override
   Future<String> processJson(String jsonString) async {
-    await _ensureInitialized();
-    final instance = _instance!;
+    _ensureInitialized();
     final memory = _memory!;
-
     final bytes = utf8.encode(jsonString);
 
-    // 1. Allocate WASM memory and write the input JSON
-    final alloc = instance.getFunction('alloc')!;
-    final ptr = alloc.inner(bytes.length) as int;
-    memory.view.setRange(ptr, ptr + bytes.length, bytes);
+    final alloc = _getFunc('alloc');
+    final ptr = _toInt(alloc([bytes.length]));
+    memory.buffer.asUint8List().setRange(ptr, ptr + bytes.length, bytes);
 
     try {
-      // 2. Call the main processing function
-      final getUnsignedV2 = instance.getFunction('getUnsignedV2Transaction')!;
-      final packedResult = getUnsignedV2.inner(ptr, bytes.length) as int;
+      final packed = _toInt(
+        _getFunc('getUnsignedV2Transaction')([ptr, bytes.length]),
+      );
+      final resultPtr = _toInt(_getFunc('resultPtr')([packed]));
+      final resultLen = _toInt(_getFunc('resultLen')([packed]));
 
-      // 3. Extract the result pointer and length
-      final resultPtrFn = instance.getFunction('resultPtr')!;
-      final resultLenFn = instance.getFunction('resultLen')!;
-      final resultPtr = resultPtrFn.inner(packedResult) as int;
-      final resultLen = resultLenFn.inner(packedResult) as int;
-
-      // 4. Read the result bytes, decode, and release the result memory
-      final resultBytes = memory.view.sublist(resultPtr, resultPtr + resultLen);
-      instance.getFunction('release')!.inner(resultPtr);
+      final resultBytes =
+          memory.buffer.asUint8List().sublist(resultPtr, resultPtr + resultLen);
+      _getFunc('release')([resultPtr]);
 
       return utf8.decode(resultBytes);
     } finally {
-      // 5. Always release the input memory
-      instance.getFunction('release')!.inner(ptr);
+      _getFunc('release')([ptr]);
     }
   }
 
-  /// Release the underlying WASM instance resources.
-  /// Call when the bridge is no longer needed.
   void dispose() {
-    _instance?.dispose();
     _instance = null;
     _memory = null;
+    _wasi = null;
   }
 }

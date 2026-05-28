@@ -22,6 +22,7 @@ void main() async {
 
   group('sc wasm digest', () {
     test('produces the expected digest from FIXED_UNSIGNED_TX', () async {
+      final watch = Stopwatch()..start();
       final bridge = ScWasmRunBridge(wasmBytes);
       final result = await bridge.processUnsignedTransaction(unsignedTx);
 
@@ -32,11 +33,15 @@ void main() async {
           'c191c3f2478833e66eb8911038f7fbe4f1810ec16cb3f0628c0ccfe7a4bc2f4d');
 
       bridge.dispose();
+      watch.stop();
+      print(
+          '[sc_test] produces the expected digest from FIXED_UNSIGNED_TX: ${watch.elapsedMilliseconds} ms');
     });
   });
 
   group('sc sign & verify', () {
     test('signs the WASM digests and verifies', () async {
+      final watch = Stopwatch()..start();
       final bridge = ScWasmRunBridge(wasmBytes);
       final builder = ScTransactionBuilder(wasmBridge: bridge);
       final txData = await builder.build(unsignedTx);
@@ -52,9 +57,13 @@ void main() async {
       expect(sigs.first, isNotEmpty);
 
       bridge.dispose();
+      watch.stop();
+      print(
+          '[sc_test] signs the WASM digests and verifies: ${watch.elapsedMilliseconds} ms');
     });
 
     test('throws when siacoinInputs count != toSign count', () async {
+      final watch = Stopwatch()..start();
       final bridge = ScWasmRunBridge(wasmBytes);
       final builder = ScTransactionBuilder(wasmBridge: bridge);
       final txData = await builder.build(unsignedTx);
@@ -63,6 +72,9 @@ void main() async {
       expect(() => ScTxSigner(wallet, txData).sign(), throwsStateError);
 
       bridge.dispose();
+      watch.stop();
+      print(
+          '[sc_test] throws when siacoinInputs count != toSign count: ${watch.elapsedMilliseconds} ms');
     });
   });
 }

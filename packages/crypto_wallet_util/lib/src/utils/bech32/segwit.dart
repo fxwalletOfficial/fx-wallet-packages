@@ -71,7 +71,7 @@ class SegwitDecoder extends Converter<SegwitInput, Segwit> with SegwitValidation
 }
 
 /// Generic validations for a Segwit class.
-class SegwitValidations {
+mixin class SegwitValidations {
   bool isInvalidHrp(String hrp, String validHrp) => hrp != validHrp;
 
   bool isEmptyProgram(List<int> data) => data.isEmpty;

@@ -70,7 +70,7 @@ class Bech32Decoder extends Converter<String, Bech32> with Bech32Validations {
 }
 
 /// Generic validations for Bech32 standard.
-class Bech32Validations {
+mixin class Bech32Validations {
   static const int maxInputLength = 90;
   static const checksumLength = 6;
 
@@ -237,4 +237,3 @@ Uint8List convertBit(Uint8List buff) {
   arr.insert(0, 0);
   return dynamicToUint8List(arr);
 }
-
