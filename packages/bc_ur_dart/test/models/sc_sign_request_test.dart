@@ -41,7 +41,6 @@ void main() {
         outputs: [
           {'address': 'receiver-address', 'amount': '123456789012345678901234'}
         ],
-        subtractFee: false,
         origin: 'fxwallet',
         chain: 'scp',
       );
@@ -57,7 +56,6 @@ void main() {
       expect(request.signingPayloadData['siacoinOutputs'][0]['value'], '123456789012345678901234');
       expect(request.fee, '1000000000000000000000');
       expect(request.outputs?.first['amount'], '123456789012345678901234');
-      expect(request.subtractFee, isFalse);
       expect(request.origin, 'fxwallet');
       expect(request.chain, 'scp');
     });

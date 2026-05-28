@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
@@ -130,6 +131,28 @@ abstract class RegistryItem {
     final v = map[CborSmallInt(key)];
     if (v is CborString) return v.toString();
     throw ArgumentError("Invalid text at key $key");
+  }
+
+  static Uint8List jsonBytes(Object? value) {
+    return Uint8List.fromList(utf8.encode(jsonEncode(value)));
+  }
+
+  static dynamic readJson(CborMap map, int key) {
+    final bytes = readBytes(map, key);
+    return jsonDecode(utf8.decode(bytes));
+  }
+
+  static Map<String, dynamic> readJsonMap(CborMap map, int key) {
+    final value = readJson(map, key);
+    if (value is Map) return Map<String, dynamic>.from(value);
+    throw ArgumentError('Invalid json map at key $key');
+  }
+
+  static List<dynamic>? readOptionalJsonList(CborMap map, int key) {
+    if (!hasKey(map, key)) return null;
+    final value = readJson(map, key);
+    if (value is List<dynamic>) return value;
+    throw ArgumentError('Invalid json list at key $key');
   }
 
   static bool hasKey(CborMap map, int key) {

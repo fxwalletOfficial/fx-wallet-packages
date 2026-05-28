@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/src/models/sc/sc_sign_request.dart';
@@ -42,7 +41,7 @@ class ScSignature extends RegistryItem {
         getRequestId(),
         tags: [RegistryType.UUID.tag],
       ),
-      CborSmallInt(ScSignatureKeys.broadcastTx.index): cborBytes(_jsonBytes(broadcastTx)),
+      CborSmallInt(ScSignatureKeys.broadcastTx.index): cborBytes(RegistryItem.jsonBytes(broadcastTx)),
     };
 
     if (origin != null) {
@@ -56,7 +55,7 @@ class ScSignature extends RegistryItem {
   RegistryItem decodeFromCbor(CborMap map) {
     return ScSignature(
       uuid: RegistryItem.readBytes(map, ScSignatureKeys.uuid.index),
-      broadcastTx: _readJsonMap(map, ScSignatureKeys.broadcastTx.index),
+      broadcastTx: RegistryItem.readJsonMap(map, ScSignatureKeys.broadcastTx.index),
       origin: RegistryItem.readOptionalText(map, ScSignatureKeys.origin.index),
     );
   }
@@ -98,18 +97,4 @@ class ScSignature extends RegistryItem {
     );
   }
 
-  static Uint8List _jsonBytes(Object? value) {
-    return Uint8List.fromList(utf8.encode(jsonEncode(value)));
-  }
-
-  static Map<String, dynamic> _readJsonMap(CborMap map, int key) {
-    final value = _readJson(map, key);
-    if (value is Map) return Map<String, dynamic>.from(value);
-    throw ArgumentError('Invalid json map at key $key');
-  }
-
-  static dynamic _readJson(CborMap map, int key) {
-    final bytes = RegistryItem.readBytes(map, key);
-    return jsonDecode(utf8.decode(bytes));
-  }
 }

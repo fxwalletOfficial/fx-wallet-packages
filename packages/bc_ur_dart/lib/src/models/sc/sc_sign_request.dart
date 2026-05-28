@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
@@ -17,7 +16,6 @@ enum ScSignRequestKeys {
   signingPayloadData,
   fee,
   outputs,
-  subtractFee,
   origin,
   chain,
 }
@@ -38,7 +36,6 @@ class ScSignRequest extends RegistryItem {
   /// Optional display metadata from the hot side; not used to build the SC tx.
   final String? fee;
   final List<dynamic>? outputs;
-  final bool? subtractFee;
   final String? origin;
   final String chain;
 
@@ -51,7 +48,6 @@ class ScSignRequest extends RegistryItem {
     required this.signingPayloadData,
     this.fee,
     this.outputs,
-    this.subtractFee,
     this.origin,
     this.chain = '',
   });
@@ -73,7 +69,7 @@ class ScSignRequest extends RegistryItem {
       CborSmallInt(ScSignRequestKeys.path.index): CborString(path),
       CborSmallInt(ScSignRequestKeys.address.index): CborString(address),
       CborSmallInt(ScSignRequestKeys.publicKey.index): CborString(publicKey),
-      CborSmallInt(ScSignRequestKeys.signingPayloadData.index): cborBytes(_jsonBytes(signingPayloadData)),
+      CborSmallInt(ScSignRequestKeys.signingPayloadData.index): cborBytes(RegistryItem.jsonBytes(signingPayloadData)),
     };
 
     if (origin != null) {
@@ -83,10 +79,7 @@ class ScSignRequest extends RegistryItem {
       map[CborSmallInt(ScSignRequestKeys.fee.index)] = CborString(fee!);
     }
     if (outputs != null) {
-      map[CborSmallInt(ScSignRequestKeys.outputs.index)] = cborBytes(_jsonBytes(outputs));
-    }
-    if (subtractFee != null) {
-      map[CborSmallInt(ScSignRequestKeys.subtractFee.index)] = CborBool(subtractFee!);
+      map[CborSmallInt(ScSignRequestKeys.outputs.index)] = cborBytes(RegistryItem.jsonBytes(outputs));
     }
     if (chain.isNotEmpty) {
       map[CborSmallInt(ScSignRequestKeys.chain.index)] = CborString(chain);
@@ -103,10 +96,9 @@ class ScSignRequest extends RegistryItem {
       path: _readText(map, ScSignRequestKeys.path.index),
       address: _readText(map, ScSignRequestKeys.address.index),
       publicKey: _readText(map, ScSignRequestKeys.publicKey.index),
-      signingPayloadData: _readJsonMap(map, ScSignRequestKeys.signingPayloadData.index),
+      signingPayloadData: RegistryItem.readJsonMap(map, ScSignRequestKeys.signingPayloadData.index),
       fee: RegistryItem.readOptionalText(map, ScSignRequestKeys.fee.index),
-      outputs: _readOptionalJsonList(map, ScSignRequestKeys.outputs.index),
-      subtractFee: _readOptionalBool(map, ScSignRequestKeys.subtractFee.index),
+      outputs: RegistryItem.readOptionalJsonList(map, ScSignRequestKeys.outputs.index),
       origin: RegistryItem.readOptionalText(map, ScSignRequestKeys.origin.index),
       chain: RegistryItem.readOptionalText(map, ScSignRequestKeys.chain.index) ?? '',
     );
@@ -141,7 +133,6 @@ class ScSignRequest extends RegistryItem {
     required Map<String, dynamic> signingPayloadData,
     String? fee,
     List<dynamic>? outputs,
-    bool? subtractFee,
     String? origin,
     String chain = '',
   }) {
@@ -154,44 +145,14 @@ class ScSignRequest extends RegistryItem {
       signingPayloadData: signingPayloadData,
       fee: fee,
       outputs: outputs,
-      subtractFee: subtractFee,
       origin: origin,
       chain: chain,
     ).toUR();
-  }
-
-  static Uint8List _jsonBytes(Object? value) {
-    return Uint8List.fromList(utf8.encode(jsonEncode(value)));
   }
 
   static String _readText(CborMap map, int key) {
     final value = map[CborSmallInt(key)];
     if (value is CborString) return value.toString();
     throw ArgumentError('Invalid text at key $key');
-  }
-
-  static Map<String, dynamic> _readJsonMap(CborMap map, int key) {
-    final value = _readJson(map, key);
-    if (value is Map) return Map<String, dynamic>.from(value);
-    throw ArgumentError('Invalid json map at key $key');
-  }
-
-  static List<dynamic>? _readOptionalJsonList(CborMap map, int key) {
-    if (!RegistryItem.hasKey(map, key)) return null;
-    final value = _readJson(map, key);
-    if (value is List<dynamic>) return value;
-    throw ArgumentError('Invalid json list at key $key');
-  }
-
-  static dynamic _readJson(CborMap map, int key) {
-    final bytes = RegistryItem.readBytes(map, key);
-    return jsonDecode(utf8.decode(bytes));
-  }
-
-  static bool? _readOptionalBool(CborMap map, int key) {
-    if (!RegistryItem.hasKey(map, key)) return null;
-    final value = map[CborSmallInt(key)];
-    if (value is CborBool) return value.value;
-    throw ArgumentError('Invalid bool at key $key');
   }
 }
