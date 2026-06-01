@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
+import 'package:bc_ur_dart/src/models/key/to_string_fields.dart';
 import 'package:convert/convert.dart';
 
 final mtiType = RegistryType.CRYPTO_MULTI_ACCOUNTS.type;
@@ -137,15 +138,16 @@ class CryptoMultiAccountsUR extends UR {
   }
 
   @override
-  String toString() => '''
-{
-"masterFingerprint":"$masterFingerprint",
-"walletName":"${walletName ?? ''}",
-"device":"$device",
-"deviceId":"${deviceId ?? ''}",
-"version":"${version ?? ''}",
-"xfpFormat":"${xfpFormat ?? ''}",
-"chains":${chains.map((e) => e.toString()).join(',')}
-}
-  ''';
+  String toString() {
+    final fields = CompactToStringFields();
+
+    fields.addString('masterFingerprint', masterFingerprint);
+    fields.addString('walletName', walletName);
+    fields.addString('device', device);
+    fields.addString('deviceId', deviceId);
+    fields.addString('version', version);
+    fields.addString('xfpFormat', xfpFormat);
+    if (chains.isNotEmpty) fields.addRaw('chains', chains.map((e) => e.toString()).join(','));
+    return fields.toString();
+  }
 }

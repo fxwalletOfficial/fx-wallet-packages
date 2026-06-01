@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
+import 'package:bc_ur_dart/src/models/key/to_string_fields.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:convert/convert.dart';
 
@@ -87,12 +88,11 @@ class CryptoAccountUR extends UR {
 
   @override
   String toString() {
-    return '''
-{
-"masterFingerprint":"$masterFingerprint",
-"xfpFormat":"${xfpFormat ?? ''}",
-"outputs":[${outputs.map((e) => e.toString()).join(',')}]
-}
-  ''';
+    final fields = CompactToStringFields();
+
+    fields.addString('masterFingerprint', masterFingerprint);
+    fields.addString('xfpFormat', xfpFormat);
+    if (outputs.isNotEmpty) fields.addRaw('outputs', '[${outputs.map((e) => e.toString()).join(',')}]');
+    return fields.toString();
   }
 }

@@ -55,24 +55,20 @@ void main() {
       expect(urString, isNotEmpty);
     });
 
-    test('should wrap invalid public key errors as format exceptions', () {
+    test('should preserve non secp256k1 public keys with chain code', () {
       final ur = CryptoHDKeyUR.fromWallet(
-        name: 'invalid-wallet',
-        path: "m/44'/60'/0'",
+        name: 'ed25519-wallet',
+        path: "m/44'/501'/0'",
         publicKey: Uint8List(33),
         chainCode: Uint8List(32),
       );
 
-      expect(
-        () => CryptoHDKeyUR.fromUR(ur: UR.decode(ur.encode())),
-        throwsA(
-          isA<FormatException>().having(
-            (e) => e.message,
-            'message',
-            contains('Invalid crypto-hdkey public key or chain code'),
-          ),
-        ),
-      );
+      final parsed = CryptoHDKeyUR.fromUR(ur: UR.decode(ur.encode()));
+
+      expect(parsed.wallet, isNull);
+      expect(parsed.publicKey, Uint8List(33));
+      expect(parsed.chainCode, Uint8List(32));
+      expect(parsed.path, "m/44'/501'/0'");
     });
 
     test('should preserve xfp format marker', () {
