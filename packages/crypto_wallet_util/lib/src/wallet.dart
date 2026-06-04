@@ -10,6 +10,7 @@ enum Wallet {
   XRP,
   SUI,
   SC,
+  SCP,
   CKB,
   HNS,
   ALPH,
@@ -47,6 +48,8 @@ Future<WalletType> getMnemonicWallet(String coin, String mnemonic) async {
     case Wallet.SUI:
       return SuiCoin.fromMnemonic(mnemonic, setting);
     case Wallet.SC:
+      return SiaCoin.fromMnemonic(mnemonic, setting);
+    case Wallet.SCP:
       return SiaCoin.fromMnemonic(mnemonic, setting);
     case Wallet.CKB:
       return CkbCoin.fromMnemonic(mnemonic, setting);
@@ -107,6 +110,8 @@ WalletType getPrivateKeyWallet(String coin, String privateKey) {
       return SuiCoin.fromPrivateKey(privateKey, setting);
     case Wallet.SC:
       return SiaCoin.fromPrivateKey(privateKey, setting);
+    case Wallet.SCP:
+      return SiaCoin.fromPrivateKey(privateKey, setting);
     case Wallet.CKB:
       return CkbCoin.fromPrivateKey(privateKey, setting);
     case Wallet.HNS:
@@ -155,7 +160,7 @@ WalletType getPrivateKeyWallet(String coin, String privateKey) {
 Wallet getWallet(coin) {
   if (coin == 'kaspa') return Wallet.KAS;
   if (coin == 'karlsen') return Wallet.KLS;
-  if (coin == 'scp') return Wallet.SC;
+  if (coin == 'scp') return Wallet.SCP;
   return Wallet.values.firstWhere(
       (element) => (element.toString().split(".").last) == coin.toUpperCase(),
       orElse: () => Wallet.NONE);

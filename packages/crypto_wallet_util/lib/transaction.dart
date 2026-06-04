@@ -58,6 +58,12 @@ export 'src/transaction/sc/sc_lib.dart';
 export 'src/transaction/sc/sc_wasm_bridge.dart';
 export 'src/transaction/sc/sc_wasm_run_bridge.dart';
 
+/// export scp module
+export 'src/transaction/scp/tx_signer.dart';
+export 'src/transaction/scp/tx_data.dart';
+export 'src/transaction/scp/scp_lib.dart';
+export 'src/transaction/scp/scp_sig_hash.dart';
+
 /// export btc psbt
 export 'src/transaction/btc/psbt.dart';
 export 'src/transaction/btc/psbt_tx_data.dart';
