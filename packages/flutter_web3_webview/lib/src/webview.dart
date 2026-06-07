@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
@@ -11,6 +10,8 @@ import 'package:flutter_web3_webview/src/config/params.dart';
 import 'package:flutter_web3_webview/src/models/js_callback_data.dart';
 import 'package:flutter_web3_webview/src/models/settings.dart';
 import 'package:flutter_web3_webview/src/utils/provider.dart';
+import 'package:flutter_web3_webview/src/utils/request_dispatcher.dart';
+import 'package:flutter_web3_webview/src/utils/serial_event_queue.dart';
 
 /// Webview to support wallet connect to web3 DApp. Use webview supported by Flutter_inappwebview.
 class Web3Webview extends StatefulWidget {
@@ -285,11 +286,7 @@ class Web3Webview extends StatefulWidget {
 
 class Web3WebviewState extends State<Web3Webview> {
   bool get isWeb3 => widget.isWeb3;
-  /// Event from dapp.
-  final List<Function> _eventQueue = [];
-  /// Completers match with every event.
-  final List<Completer<dynamic>> _completers = [];
-  bool _isProcessing = false;
+  final SerialEventQueue _eventQueue = SerialEventQueue();
 
   @override
   Widget build(BuildContext context) {
@@ -384,198 +381,35 @@ class Web3WebviewState extends State<Web3Webview> {
 
     if (controller.hasJavaScriptHandler(handlerName: 'FxWalletHandler')) return;
     controller.addJavaScriptHandler(
-      handlerName: 'FxWalletHandler',
-      callback: (args) async {
-        final item = JsCallBackData.fromData(args);
+        handlerName: 'FxWalletHandler',
+        callback: (args) async {
+          final item = JsCallBackData.fromData(args);
+          final dispatcher = _createDispatcher(controller);
 
-        // If the event is getting accounts or chain id, execute immediately.
-        if (checkMethod(item.method)) return _onHandleCallback(item, controller)();
+          // If the event is getting accounts or chain id, execute immediately.
+          if (dispatcher.isImmediate(item.method)) {
+            return dispatcher.dispatch(item);
+          }
 
-        // Else add it to event queue.
-        try {
-          final results = await Future.wait([_addEvent(_onHandleCallback(item, controller)), getLastCompleter()], eagerError: true);
-          return results.last;
-        } catch (e) {
-          rethrow;
-        }
-      }
+          return _eventQueue.add(() => dispatcher.dispatch(item));
+        });
+  }
+
+  Web3RequestDispatcher _createDispatcher(InAppWebViewController controller) {
+    return Web3RequestDispatcher(
+      ethAccounts: widget.ethAccounts,
+      ethChainId: widget.ethChainId,
+      ethSendTransaction: widget.ethSendTransaction,
+      ethSign: widget.ethSign,
+      ethPersonalSign: widget.ethPersonalSign,
+      ethSignTypedData: widget.ethSignTypedData,
+      walletSwitchEthereumChain: widget.walletSwitchEthereumChain,
+      solAccount: widget.solAccount,
+      solSignTransaction: widget.solSignTransaction,
+      solSignMessage: widget.solSignMessage,
+      onDefaultCallback: widget.onDefaultCallback,
+      evaluateJavascript: (source) =>
+          controller.evaluateJavascript(source: source),
     );
-  }
-
-  /// Get the last completer.
-  Future<dynamic> getLastCompleter() async {
-    final completer = _completers.last;
-    final result = await completer.future;
-    return result;
-  }
-
-  /// Event queueing method.
-  Future<void> _addEvent(Function event) async {
-    _eventQueue.insert(0, event);
-    _completers.insert(0, Completer<dynamic>());
-
-    if (_isProcessing) return;
-    _isProcessing = true;
-
-    while (_eventQueue.isNotEmpty && _completers.isNotEmpty) {
-      try {
-        final completer = _completers.last;
-        final result = await _eventQueue.last();
-        completer.complete(result);
-      } catch (e) {
-        _isProcessing = false;
-        rethrow;
-      } finally {
-        _eventQueue.removeLast();
-        _completers.removeLast();
-      }
-    }
-
-    _isProcessing = false;
-  }
-
-  /// Handle handler callback from DApp.
-  Function _onHandleCallback(JsCallBackData args, InAppWebViewController controller) {
-    try {
-      switch (args.method) {
-        case 'eth_accounts':
-        case 'eth_requestAccounts':
-        return _ethAccounts;
-
-      case 'eth_chainId':
-        return _ethChainId;
-
-      case 'wallet_switchEthereumChain':
-      case 'wallet_addEthereumChain':
-        return () => _walletSwitchEthereumChain(args, controller);
-
-      case 'solana_account':
-        return _solAccount;
-
-      case 'eth_sendTransaction':
-        return () => _ethSendTransaction(args);
-
-      case 'eth_sign':
-        return () => _ethSign(args);
-
-      case 'personal_sign':
-        return () => _personalSign(args);
-
-      case 'eth_signTypedData':
-      case 'eth_signTypedData_v3':
-      case 'eth_signTypedData_v4':
-        return () => _ethSignTypedData(args);
-
-      case 'solana_signTransaction':
-        return () => _solSignTransaction(args);
-
-      case 'solana_signMessage':
-        return () => _solSignMessage(args);
-
-      default:
-        return () => _onDefaultCallback(args);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Get eth account.
-  Future<List<String>> _ethAccounts() async {
-    if (widget.ethAccounts == null) throw Exception('Invalid wallet');
-    return widget.ethAccounts!();
-  }
-
-  /// Get eth chain id.
-  Future<String> _ethChainId() async {
-    if (widget.ethChainId == null) throw Exception('Invalid wallet');
-
-    final id = await widget.ethChainId!();
-    return '0x${id.toRadixString(16)}';
-  }
-
-  /// Sign and broadcast eth transaction.
-  Future<String> _ethSendTransaction(JsCallBackData data) async {
-    if (widget.ethSendTransaction == null) throw Exception('Invalid wallet');
-
-    final params = data.getTxParams();
-    return widget.ethSendTransaction!(params);
-  }
-
-  /// Eth sign.
-  Future<String> _ethSign(JsCallBackData data) async {
-    if (widget.ethSign == null) throw Exception('Invalid wallet');
-
-    final params = data.getEthSignMsg();
-    return widget.ethSign!(params);
-  }
-
-  /// Eth personal sign.
-  Future<String> _personalSign(JsCallBackData data) async {
-    if (widget.ethPersonalSign == null) throw Exception('Invalid wallet');
-
-    final params = data.getPersonalSignMsg();
-    return widget.ethPersonalSign!(params);
-  }
-
-  /// Eth sign typed data.
-  Future<String> _ethSignTypedData(JsCallBackData data) async {
-    if (widget.ethSignTypedData == null) throw Exception('Invalid wallet');
-
-    final params = data.getSignTypedDataParams();
-    return widget.ethSignTypedData!(params);
-  }
-
-  /// Switch or add eth chain.
-  Future<String> _walletSwitchEthereumChain(
-      JsCallBackData data, InAppWebViewController controller) async {
-    if (widget.walletSwitchEthereumChain == null) {
-      throw Exception('Invalid wallet');
-    }
-
-    final params = data.getChainParams();
-    final result = await widget.walletSwitchEthereumChain!(params);
-    if (!result) throw Exception({'code': 4092});
-
-    await controller.evaluateJavascript(
-        source: 'window.ethereum.emitChainChanged(${params.chainId})');
-    return _ethChainId();
-  }
-
-  /// Get sol account.
-  Future<String> _solAccount() async {
-    if (widget.solAccount == null) throw Exception('Invalid wallet');
-    return widget.solAccount!();
-  }
-
-  /// Sign sol transaction.
-  Future<String> _solSignTransaction(JsCallBackData data) async {
-    if (widget.solSignTransaction == null) throw Exception('Invalid wallet');
-    return widget.solSignTransaction!(data);
-  }
-
-  /// Sign sol message.
-  Future<String> _solSignMessage(JsCallBackData data) async {
-    if (widget.solSignMessage == null) throw Exception('Invalid wallet');
-    return widget.solSignMessage!(data);
-  }
-
-  /// Handle other callback.
-  Future<dynamic> _onDefaultCallback(JsCallBackData data) async {
-    if (widget.onDefaultCallback == null) throw Exception('Invalid wallet');
-    return widget.onDefaultCallback!(data);
-  }
-
-  bool checkMethod(String method) {
-    const List<String> accountMethods = [
-      'eth_accounts',
-      'eth_requestAccounts',
-      'eth_chainId',
-      'wallet_switchEthereumChain',
-      'wallet_addEthereumChain',
-      'solana_account'
-    ];
-
-    return accountMethods.contains(method);
   }
 }

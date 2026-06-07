@@ -3,6 +3,7 @@
 * SECURITY: Deny WebView permission requests by default unless the caller provides an explicit permission handler.
 * FIX: JSON-encode wallet metadata before injecting it into JavaScript.
 * FIX: Share provider asset loading across concurrent initialization calls.
+* FIX: Serialize user-confirmed Web3 requests and safely encode chain change events.
 
 ## [0.1.0]
 
