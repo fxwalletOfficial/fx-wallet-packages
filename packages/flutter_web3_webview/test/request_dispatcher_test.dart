@@ -12,7 +12,6 @@ void main() {
       for (final method in const [
         'eth_accounts',
         'eth_chainId',
-        'solana_account',
       ]) {
         expect(dispatcher.isImmediate(method), isTrue, reason: method);
       }
@@ -25,6 +24,7 @@ void main() {
         'eth_signTypedData_v4',
         'wallet_switchEthereumChain',
         'wallet_addEthereumChain',
+        'solana_account',
         'solana_signTransaction',
         'unknown_method',
       ]) {

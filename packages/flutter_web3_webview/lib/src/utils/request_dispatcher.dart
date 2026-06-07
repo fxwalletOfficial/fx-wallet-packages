@@ -37,7 +37,6 @@ class Web3RequestDispatcher {
   bool isImmediate(String method) => const {
         'eth_accounts',
         'eth_chainId',
-        'solana_account',
       }.contains(method);
 
   Future<dynamic> dispatch(JsCallBackData data) {
