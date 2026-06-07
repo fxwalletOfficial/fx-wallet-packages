@@ -8,10 +8,10 @@ void main() {
 
       expect(chain.chainId, isNull);
       expect(chain.data, isNull);
-      expect(chain.toJson(), {'chainId': null});
+      expect(chain.toJson(), {'chainId': null, 'data': null});
     });
 
-    test('preserves all chain fields when parsed and serialized', () {
+    test('preserves the existing toJson structure', () {
       final chain = JsAddEthereumChain.fromJson({
         'chainId': '0x89',
         'chainName': 'Polygon',
@@ -21,8 +21,11 @@ void main() {
       expect(chain.chainId, '0x89');
       expect(chain.toJson(), {
         'chainId': '0x89',
-        'chainName': 'Polygon',
-        'rpcUrls': ['https://polygon-rpc.example'],
+        'data': {
+          'chainId': '0x89',
+          'chainName': 'Polygon',
+          'rpcUrls': ['https://polygon-rpc.example'],
+        },
       });
     });
 
@@ -35,7 +38,10 @@ void main() {
       expect(chain.chainId, isNull);
       expect(chain.toJson(), {
         'chainId': null,
-        'chainName': 'Polygon',
+        'data': {
+          'chainId': 137,
+          'chainName': 'Polygon',
+        },
       });
     });
 

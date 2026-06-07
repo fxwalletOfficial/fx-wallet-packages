@@ -10,8 +10,9 @@ class JsAddEthereumChain {
   }
 
   Map<String, dynamic> toJson() {
-    final item = Map<String, dynamic>.from(data ?? {});
-    item['chainId'] = chainId;
-    return item;
+    return <String, dynamic>{
+      'chainId': chainId,
+      'data': data,
+    };
   }
 }
