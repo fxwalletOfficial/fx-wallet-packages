@@ -1,4 +1,7 @@
-import 'package:flutter/services.dart' show rootBundle;
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 import 'package:uuid/uuid.dart';
 
 import 'package:flutter_web3_webview/src/config/params.dart';
@@ -10,20 +13,43 @@ class Providers {
   Providers({this.settings}) : uuid = const Uuid().v4();
 
   static String _js = '';
+  static Future<void>? _initializing;
   static String get js => _js;
 
-  static Future<void> init() async {
+  static Future<void> init({AssetBundle? bundle}) async {
     if (_js.isNotEmpty) return;
+    if (_initializing != null) return _initializing;
 
+    _initializing = _load(bundle ?? rootBundle);
     try {
-      _js = await rootBundle
+      await _initializing;
+    } finally {
+      _initializing = null;
+    }
+  }
+
+  @visibleForTesting
+  static void resetForTesting() {
+    _js = '';
+    _initializing = null;
+  }
+
+  static Future<void> _load(AssetBundle bundle) async {
+    try {
+      _js = await bundle
           .loadString('packages/flutter_web3_webview/js/provider.min.js');
-    } catch (e) {
+    } catch (_) {
       return;
     }
   }
 
   String getInitJs() {
+    final walletName = jsonEncode(settings?.name ?? WALLET_NAME);
+    final solanaIcon = jsonEncode(settings?.sol?.icon ?? WALLET_ICON);
+    final ethereumIcon = jsonEncode(settings?.eth?.icon ?? '');
+    final rdns = jsonEncode(settings?.eth?.rdns ?? '');
+    final providerUuid = jsonEncode(uuid);
+
     return '''
       (function() {
         if (window.ethereum != null) return;
@@ -35,8 +61,8 @@ class Providers {
           },
           solana: {
             cluster: 'mainnet-beta',
-            icon: '${settings?.sol?.icon ?? WALLET_ICON}',
-            name: '${settings?.name ?? WALLET_NAME}'
+            icon: $solanaIcon,
+            name: $walletName
           },
           isDebug: false
         };
@@ -48,10 +74,10 @@ class Providers {
         const event = new CustomEvent('eip6963:announceProvider', {
           detail: {
             info: {
-              uuid: '$uuid',
-              name: '${settings?.name ?? WALLET_NAME}',
-              icon: '${settings?.eth?.icon ?? ''}',
-              rdns: '${settings?.eth?.rdns ?? ''}'
+              uuid: $providerUuid,
+              name: $walletName,
+              icon: $ethereumIcon,
+              rdns: $rdns
             },
             provider: fxwallet.ethereum
           }

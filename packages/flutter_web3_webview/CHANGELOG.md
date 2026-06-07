@@ -1,3 +1,9 @@
+## Unreleased
+
+* SECURITY: Deny WebView permission requests by default unless the caller provides an explicit permission handler.
+* FIX: JSON-encode wallet metadata before injecting it into JavaScript.
+* FIX: Share provider asset loading across concurrent initialization calls.
+
 ## [0.1.0]
 
 * NEW: Initial Release.
