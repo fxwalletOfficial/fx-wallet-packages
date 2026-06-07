@@ -300,14 +300,19 @@ class Web3WebviewState extends State<Web3Webview> {
         layoutDirection: widget.layoutDirection,
         initialData: widget.initialData,
         initialFile: widget.initialFile,
-        initialUserScripts: UnmodifiableListView([
-              UserScript(
-                  source: Providers.js,
-                  injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
-              UserScript(
-                  source: Providers(settings: widget.settings).getInitJs(),
-                  injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START)
-            ] +
+        initialUserScripts: UnmodifiableListView((isWeb3
+                ? [
+                    UserScript(
+                        source: Providers.js,
+                        injectionTime:
+                            UserScriptInjectionTime.AT_DOCUMENT_START),
+                    UserScript(
+                        source:
+                            Providers(settings: widget.settings).getInitJs(),
+                        injectionTime:
+                            UserScriptInjectionTime.AT_DOCUMENT_START)
+                  ]
+                : <UserScript>[]) +
             (widget.initialUserScripts ?? [])),
         contextMenu: widget.contextMenu,
         gestureRecognizers: widget.gestureRecognizers,
@@ -327,6 +332,7 @@ class Web3WebviewState extends State<Web3Webview> {
         shouldOverrideUrlLoading: widget.shouldOverrideUrlLoading,
         onPageCommitVisible: widget.onPageCommitVisible,
         onAjaxProgress: widget.onAjaxProgress,
+        onAjaxReadyStateChange: widget.onAjaxReadyStateChange,
         onCloseWindow: widget.onCloseWindow,
         onWindowFocus: widget.onWindowFocus,
         onWindowBlur: widget.onWindowBlur,

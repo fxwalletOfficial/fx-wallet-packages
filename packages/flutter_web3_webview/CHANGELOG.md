@@ -4,6 +4,7 @@
 * FIX: JSON-encode wallet metadata before injecting it into JavaScript.
 * FIX: Share provider asset loading across concurrent initialization calls.
 * FIX: Serialize user-confirmed EVM and Solana requests and safely encode chain change events.
+* FIX: Respect `isWeb3` when injecting provider scripts and forward Ajax ready-state callbacks.
 
 ## [0.1.0]
 
