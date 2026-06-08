@@ -3,6 +3,7 @@ import 'rpc-websockets/dist/lib/client';
 import {
   BaseProvider,
   IRequestArguments,
+  callFlutterHandler,
 } from '@fxwallet/web3-provider-core';
 import type ISolanaProvider from './types/SolanaProvider';
 import type { ISolanaProviderConfig } from './types/SolanaProvider';
@@ -35,6 +36,8 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
   connection!: Connection;
 
   publicKey!: PublicKey | null;
+
+  isConnected: boolean = false;
 
   isFxWallet: boolean = true;
 
@@ -97,25 +100,46 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
     return new FxWallet(this);
   }
 
+  /**
+   * Resolve the active wallet account via the Flutter bridge.
+   *
+   * The Dart `Web3RequestDispatcher` handles the `solana_account` method
+   * by returning the base58 public-key string of the currently selected
+   * wallet (see `lib/src/utils/request_dispatcher.dart`). We wrap it back
+   * into a `PublicKey`, flag `isConnected`, and emit the EIP-1193-style
+   * `connect` event so the wallet-standard adapter and listening DApps
+   * pick up the state change.
+   */
   async connect(
-    options?: { onlyIfTrusted?: boolean | undefined } | undefined,
+    _options?: { onlyIfTrusted?: boolean | undefined } | undefined,
   ): Promise<{ publicKey: PublicKey }> {
-    const res = await this.#privateRequest<{ publicKey: PublicKey }>({
-      method: 'connect',
-      params: { options },
+    const address = await callFlutterHandler<string>({
+      method: 'solana_account',
     });
 
-    this.publicKey = res.publicKey;
+    this.publicKey = new PublicKey(address);
+    this.isConnected = true;
+    this.emit('connect');
 
-    return res;
+    return { publicKey: this.publicKey };
   }
 
   disconnect(): Promise<void> {
     return new Promise((resolve) => {
       this.publicKey = null;
+      this.isConnected = false;
       this.emit('disconnect');
       resolve();
     });
+  }
+
+  /**
+   * Notify listeners that the active Solana account changed. The Flutter
+   * side calls this from `provider.dart` after the user switches wallets
+   * so DApps subscribed via the wallet standard refresh their state.
+   */
+  emitAccountChanged(): void {
+    this.emit('accountChanged', this.publicKey);
   }
 
   async signAndSendTransaction<T extends Transaction | VersionedTransaction>(
@@ -132,10 +156,30 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
     return { signature: signature };
   }
 
-  signTransaction<T extends Transaction | VersionedTransaction>(
+  /**
+   * Serialise the transaction's *message* (the signed-over bytes, not the
+   * full transaction) and ask the Flutter side to sign it. The wallet
+   * receives both a hex (`raw`) and base64 (`message`) encoding of the
+   * same bytes so it can pick whichever its native signer expects, and
+   * replies with the base58-encoded signature, which `mapSignedTransaction`
+   * attaches back to the original transaction object.
+   */
+  async signTransaction<T extends Transaction | VersionedTransaction>(
     tx: T,
   ): Promise<T> {
-    return this.#privateRequest({ method: 'signTransaction', params: tx });
+    const message = isVersionedTransaction(tx)
+      ? Buffer.from(tx.message.serialize())
+      : tx.serializeMessage();
+
+    const signature = await callFlutterHandler<string>({
+      method: 'solana_signTransaction',
+      params: {
+        raw: message.toString('hex'),
+        message: message.toString('base64'),
+      },
+    });
+
+    return this.mapSignedTransaction(tx, signature);
   }
 
   signAllTransactions<T extends Transaction | VersionedTransaction>(
@@ -183,14 +227,11 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
   async signMessage(
     message: Uint8Array,
   ): Promise<{ signature: Uint8Array; publicKey: string | undefined }> {
-    const data = SolanaProvider.bufferToHex(message);
+    const hex = SolanaProvider.bufferToHex(message);
 
-    const res = await this.#privateRequest<string>({
-      method: 'signMessage',
-      params: {
-        data,
-        originalMethod: 'signMessage'
-      },
+    const res = await callFlutterHandler<string>({
+      method: 'solana_signMessage',
+      params: { raw: hex },
     });
 
     return {
@@ -237,11 +278,13 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
   }
 
   /**
-   * Call request handler directly
-   * @param args
-   * @returns
+   * Generic Solana bridge for callers that aren't covered by the bespoke
+   * `connect` / `signMessage` / `signTransaction` overrides above. The
+   * Dart side dispatches on the un-prefixed method name when it falls
+   * through to `onDefaultCallback`, so we keep `args` intact rather than
+   * synthesising a `solana_` prefix here.
    */
   internalRequest<T>(args: IRequestArguments): Promise<T> {
-    return super.request<T>(args);
+    return callFlutterHandler<T>(args);
   }
 }

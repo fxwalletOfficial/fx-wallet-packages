@@ -2,7 +2,7 @@ import type IEthereumProvider from './types/EthereumProvider';
 
 import type { IPermissionRes, IRequestArguments } from './types';
 
-import { BaseProvider } from '@fxwallet/web3-provider-core';
+import { BaseProvider, callFlutterHandler } from '@fxwallet/web3-provider-core';
 import type { IEthereumProviderConfig } from './types/EthereumProvider';
 import { RPCError } from './exceptions/RPCError';
 import { MobileAdapter } from './MobileAdapter';
@@ -80,6 +80,31 @@ export class EthereumProvider
    */
   private connect() {
     this.emit('connect', { chainId: this.#chainId });
+  }
+
+  /**
+   * Forward a wallet-initiated chain switch to subscribed DApps.
+   *
+   * `lib/src/utils/request_dispatcher.dart` calls
+   * `window.ethereum.emitChainChanged(chainId)` from
+   * `_walletSwitchEthereumChain` so DApps that listen via EIP-1193's
+   * `chainChanged` event (or the legacy `networkChanged` alias still used
+   * by older libraries) refresh their state immediately. The Dart side
+   * passes a `0x`-prefixed hex chain id, matching the EIP-1193 contract.
+   */
+  public emitChainChanged(chainId: string) {
+    this.#chainId = chainId;
+    this.emit('chainChanged', chainId);
+    this.emit('networkChanged', chainId);
+  }
+
+  /**
+   * Emit the EIP-1193 `accountsChanged` event for the currently selected
+   * accounts. Exposed publicly so the Flutter side can notify DApps when
+   * the user switches wallets without reloading the page.
+   */
+  public emitAccountsChanged(accounts: string[]) {
+    this.emit('accountsChanged', accounts);
   }
 
   /**
@@ -180,8 +205,17 @@ export class EthereumProvider
     return this._send(methodOrPayload as IRequestArguments);
   }
 
+  /**
+   * Hand the (already EIP-1193 → mobile-rewritten) request to the Flutter
+   * side of the WebView. The upstream `MobileAdapter` has either mapped the
+   * DApp method to its mobile equivalent (`eth_requestAccounts` →
+   * `requestAccounts`, `eth_sendTransaction` → `signTransaction`, etc.) or
+   * fallen through to the JSON-RPC server; everything else flows through
+   * here unchanged. The Dart `Web3RequestDispatcher` switches on the
+   * method name we forward.
+   */
   internalRequest<T>(args: IRequestArguments): Promise<T> {
-    return super.request<T>(args);
+    return callFlutterHandler<T>(args);
   }
 
   /**
