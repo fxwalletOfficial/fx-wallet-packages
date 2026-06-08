@@ -62,3 +62,10 @@ export class Web3Provider {
 }
 
 export * from './Provider';
+export {
+  FLUTTER_HANDLER_NAME,
+  callFlutterHandler,
+  type FlutterCallHandler,
+  type FlutterWebViewWindow,
+  type IFlutterBridgeArgs,
+} from './adapter/FlutterBridge';
