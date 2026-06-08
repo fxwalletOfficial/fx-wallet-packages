@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_web3_webview/src/models/js_callback_data.dart';
 import 'package:flutter_web3_webview/src/utils/request_dispatcher.dart';
+import 'package:flutter_web3_webview/src/utils/web3_rpc_error.dart';
 
 void main() {
   group('Web3RequestDispatcher.isImmediate', () {
@@ -176,7 +177,15 @@ void main() {
     });
 
     test('JSON-encodes chain id before emitting the chain event', () async {
-      const unsafeChainId = '0x1); window.compromised = true; //';
+      // The chain-id validator now rejects anything that is not a `0x`-
+      // prefixed hex string, so the historic injection vector ("0x1); …//")
+      // never reaches `evaluateJavascript`. Keep the round-trip assertion
+      // for the well-formed case as defence-in-depth: even though valid hex
+      // cannot break out of the call expression, the injected source must
+      // still wrap the value in JSON quotes so a future change to the
+      // upstream payload cannot regress into emitting `emitChainChanged(0x1)`
+      // (an undefined identifier in JavaScript).
+      const chainId = '0xa';
       final scripts = <String>[];
       final dispatcher = _dispatcher(
         ethChainId: () async => 1,
@@ -186,15 +195,15 @@ void main() {
 
       await dispatcher.dispatch(
         _data('wallet_switchEthereumChain', [
-          {'chainId': unsafeChainId}
+          {'chainId': chainId}
         ]),
       );
 
       expect(
         scripts.single,
-        'window.ethereum.emitChainChanged(${jsonEncode(unsafeChainId)})',
+        'window.ethereum.emitChainChanged(${jsonEncode(chainId)})',
       );
-      expect(scripts.single, isNot(contains('emitChainChanged(0x1)')));
+      expect(scripts.single, isNot(contains('emitChainChanged($chainId)')));
     });
 
     test('does not emit chain event when switch is rejected', () async {
@@ -212,14 +221,93 @@ void main() {
           ]),
         ),
         throwsA(
-          isA<Exception>().having(
-            (error) => error.toString(),
-            'message',
-            contains('4092'),
-          ),
+          isA<Web3RpcError>()
+              .having((error) => error.code, 'code', 4001)
+              .having(
+                (error) => error.toString(),
+                'toString',
+                allOf(
+                  startsWith(Web3RpcError.sentinel),
+                  contains('"code":4001'),
+                ),
+              ),
         ),
       );
       expect(scripts, isEmpty);
+    });
+
+    test('rejects switchEthereumChain without a usable chain id', () async {
+      final scripts = <String>[];
+      var callbackInvocations = 0;
+      final dispatcher = _dispatcher(
+        ethChainId: () async => 1,
+        walletSwitchEthereumChain: (_) async {
+          callbackInvocations += 1;
+          return true;
+        },
+        evaluateJavascript: (source) async => scripts.add(source),
+      );
+
+      for (final params in <dynamic>[
+        // Missing entirely.
+        const <dynamic>[],
+        [<String, dynamic>{}],
+        [
+          {'chainId': null}
+        ],
+        // Wrong shape.
+        [
+          {'chainId': ''}
+        ],
+        [
+          {'chainId': 1}
+        ],
+        // Wrong format — these are the cases the previous null-or-empty
+        // guard let through to the wallet callback.
+        [
+          {'chainId': '1'} // decimal, no 0x prefix
+        ],
+        [
+          {'chainId': '0x'} // prefix only, no payload
+        ],
+        [
+          {'chainId': '0xzz'} // non-hex characters
+        ],
+        [
+          {'chainId': ' 0x1 '} // whitespace around the value
+        ],
+        [
+          {'chainId': '0x1g'} // mixed valid + invalid hex
+        ],
+      ]) {
+        await expectLater(
+          dispatcher.dispatch(_data('wallet_switchEthereumChain', params)),
+          throwsA(
+            isA<Web3RpcError>().having((error) => error.code, 'code', 4902),
+          ),
+          reason: params.toString(),
+        );
+      }
+
+      expect(callbackInvocations, 0);
+      expect(scripts, isEmpty);
+    });
+
+    test('accepts upper-case hex chain ids', () async {
+      final scripts = <String>[];
+      final dispatcher = _dispatcher(
+        ethChainId: () async => 1,
+        walletSwitchEthereumChain: (_) async => true,
+        evaluateJavascript: (source) async => scripts.add(source),
+      );
+
+      await dispatcher.dispatch(
+        _data('wallet_switchEthereumChain', [
+          {'chainId': '0X1A'}
+        ]),
+      );
+
+      expect(scripts, ['window.ethereum.emitChainChanged("0X1A")']);
     });
 
     test('throws Invalid wallet when the routed callback is missing', () async {
