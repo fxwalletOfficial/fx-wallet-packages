@@ -108,13 +108,19 @@ class Web3RequestDispatcher {
     return callback(data.getSignTypedDataParams());
   }
 
+  /// EIP-3326 requires the chain id to be a `0x`-prefixed hexadecimal string.
+  /// Accept upper or lower case `x` plus at least one hex digit; reject
+  /// decimal strings (e.g. `'1'`), malformed hex (e.g. `'0xzz'`), surrounding
+  /// whitespace, and `'0x'` with no payload.
+  static final RegExp _chainIdPattern = RegExp(r'^0[xX][0-9a-fA-F]+$');
+
   Future<String> _walletSwitchEthereumChain(JsCallBackData data) async {
     final callback = walletSwitchEthereumChain;
     if (callback == null) throw Exception('Invalid wallet');
 
     final params = data.getChainParams();
     final chainId = params.chainId;
-    if (chainId == null || chainId.isEmpty) {
+    if (chainId == null || !_chainIdPattern.hasMatch(chainId)) {
       throw Web3RpcError.unrecognizedChain();
     }
 

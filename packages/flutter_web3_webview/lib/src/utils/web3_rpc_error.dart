@@ -2,10 +2,32 @@ import 'dart:convert';
 
 /// Provider-side error that mirrors EIP-1193 / EIP-3326 error semantics.
 ///
-/// The wallet bridge funnels Dart exceptions back to the in-page provider as
-/// strings, so the message is serialised as JSON to give DApps a stable way to
-/// recover the structured `code` and `message` fields when they need them.
+/// ## Scope
+///
+/// `Web3RpcError` standardises how the Flutter layer signals provider-level
+/// failures (`code` + `message`) instead of using opaque `Exception` strings.
+/// Down-stream wallet code can `catch (e) { if (e is Web3RpcError) … }` and
+/// reason about the failure structurally.
+///
+/// **What this class does _not_ do today:** it does not, on its own, surface a
+/// structured `error.code` to the in-page DApp. The `flutter_inappwebview`
+/// bridge re-wraps the exception (see
+/// `flutter_inappwebview_ios/in_app_webview_controller.dart:onCallJsHandler`),
+/// so the JavaScript side receives a `string` message of roughly the form
+/// `Error: …, Exception: Web3RpcError: {"code":4001,...}`. The injected
+/// provider must therefore parse the trailing JSON before it can hand the
+/// DApp a real `ProviderRpcError`. That parsing belongs in the provider
+/// JavaScript bundle (see the parked `feature/web3-provider-js-tooling`
+/// branch); until it lands, DApps still only see the wrapped string.
+///
+/// The [toString] output prefixes the JSON with a stable `Web3RpcError: `
+/// sentinel so the future bridge code can match it with a single regex even
+/// after the platform layer has wrapped the message further.
 class Web3RpcError implements Exception {
+  /// Sentinel that prefixes [toString] output so the provider bridge can
+  /// reliably locate the JSON payload inside the wrapped exception string.
+  static const String sentinel = 'Web3RpcError: ';
+
   /// EIP-1193 / EIP-3326 numeric error code.
   ///
   /// Common values:
@@ -41,5 +63,5 @@ class Web3RpcError implements Exception {
       };
 
   @override
-  String toString() => jsonEncode(toJson());
+  String toString() => '$sentinel${jsonEncode(toJson())}';
 }

@@ -97,5 +97,60 @@ void main() {
 
       expect(transaction.toJson()['nonce'], '0x1');
     });
+
+    test('typed setters update toJson, including clearing via null', () {
+      final transaction = JsTransactionObject.fromJson({
+        'gas': '0x5208',
+        'value': '0x1',
+        'from': '0xfrom',
+        'to': '0xto',
+        'data': '0xdata',
+        'nonce': '0x1',
+      });
+
+      transaction.gas = '0xabcd';
+      transaction.to = null;
+      transaction.data = null;
+
+      expect(transaction.gas, '0xabcd');
+      expect(transaction.to, isNull);
+      expect(transaction.data, isNull);
+      expect(transaction.toJson(), {
+        'gas': '0xabcd',
+        'value': '0x1',
+        'from': '0xfrom',
+        'nonce': '0x1',
+      });
+    });
+
+    test('typed setters replace non-string raw values', () {
+      final transaction = JsTransactionObject.fromJson({
+        'gas': 21000,
+        'from': '0xfrom',
+      });
+
+      expect(transaction.gas, isNull);
+      expect(transaction.toJson()['gas'], 21000);
+
+      transaction.gas = '0x5208';
+
+      expect(transaction.gas, '0x5208');
+      expect(transaction.toJson(), {
+        'gas': '0x5208',
+        'from': '0xfrom',
+      });
+    });
+
+    test('default constructor only emits provided fields', () {
+      final transaction = JsTransactionObject(
+        from: '0xfrom',
+        to: '0xto',
+      );
+
+      expect(transaction.toJson(), {
+        'from': '0xfrom',
+        'to': '0xto',
+      });
+    });
   });
 }
