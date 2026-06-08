@@ -22,14 +22,15 @@ import initialize from './adapter/initialize';
 import { FxWallet } from './adapter/wallet';
 import { isVersionedTransaction } from './adapter/solana';
 import * as bs58 from 'bs58';
-import { MobileAdapter } from './MobileAdapter';
+// `MobileAdapter` is still vendored in `./MobileAdapter.ts` for reference
+// but is not on the request hot path — `connect` / `signMessage` /
+// `signTransaction` go straight through `callFlutterHandler`, so importing
+// the adapter here would only force esbuild to keep its
+// `method:"requestAccounts"` / similar dead-code case literals in the
+// final bundle.
 
 export class SolanaProvider extends BaseProvider implements ISolanaProvider {
   static NETWORK = 'solana';
-
-  private mobileAdapter!: MobileAdapter;
-
-  #disableMobileAdapter: boolean = false;
 
   #enableAdapter = true;
 
@@ -40,8 +41,6 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
   isConnected: boolean = false;
 
   isFxWallet: boolean = true;
-
-  #useLegacySign = false;
 
   static bufferToHex(buffer: Buffer | Uint8Array | string) {
     return '0x' + Buffer.from(buffer).toString('hex');
@@ -74,14 +73,6 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
         this.connection = new Connection(config.cluster, 'confirmed');
       }
 
-      if (typeof config.disableMobileAdapter !== 'undefined') {
-        this.#disableMobileAdapter = config.disableMobileAdapter;
-      }
-
-      if (typeof config.useLegacySign !== 'undefined') {
-        this.#useLegacySign = config.useLegacySign;
-      }
-
       if (typeof config.isFxWallet !== 'undefined') {
         this.isFxWallet = config.isFxWallet;
       }
@@ -89,10 +80,6 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
 
     if (this.#enableAdapter) {
       initialize(this);
-    }
-
-    if (!this.#disableMobileAdapter) {
-      this.mobileAdapter = new MobileAdapter(this, this.#useLegacySign);
     }
   }
 
@@ -188,41 +175,13 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
     return Promise.all(transactions.map((tx) => this.signTransaction(tx)));
   }
 
-  async signRawTransactionMulti<T extends Transaction | VersionedTransaction>(
-    transactions: T[],
-  ) {
-    const signaturesEncoded = await this.#privateRequest<string[]>({
-      method: 'signRawTransactionMulti',
-      params: {
-        transactions: transactions.map((tx) => {
-          const data = JSON.stringify(tx);
-
-          let version: string | number = 'legacy';
-          let rawMessage: string;
-
-          if (isVersionedTransaction(tx)) {
-            version = tx.version;
-            rawMessage = Buffer.from(tx.message.serialize()).toString('base64');
-          } else {
-            rawMessage = Buffer.from(tx.serializeMessage()).toString('base64');
-          }
-
-          const raw = Buffer.from(
-            tx.serialize({
-              requireAllSignatures: false,
-              verifySignatures: false,
-            }),
-          ).toString('base64');
-
-          return { data, raw, rawMessage, version };
-        }),
-      },
-    });
-
-    return signaturesEncoded.map((signature, i) =>
-      this.mapSignedTransaction(transactions[i], signature),
-    );
-  }
+  // `signRawTransactionMulti` was present upstream but the legacy
+  // `provider.min.js` did not ship it and the Dart `Web3RequestDispatcher`
+  // has no matching case, so calls would silently fall through to
+  // `_defaultCallback`. Removed here to keep the typed API honest; DApps
+  // that need batch signing should call `signAllTransactions` (composed
+  // from `signTransaction`) instead, which is what the upstream and the
+  // legacy fork both wired up.
 
   async signMessage(
     message: Uint8Array,
@@ -261,18 +220,13 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
     return transaction;
   }
 
-  #privateRequest<T>(args: IRequestArguments): Promise<T> {
-    const next = () => {
-      return this.internalRequest(args) as Promise<T>;
-    };
-
-    if (this.mobileAdapter) {
-      return this.mobileAdapter.request(args, next);
-    }
-
-    return next();
-  }
-
+  /**
+   * `SolanaProvider` exposes its bridged methods directly (`connect`,
+   * `signMessage`, `signTransaction`, …) — the generic `request` /
+   * `internalRequest` are reserved for any future un-bridged method and
+   * deliberately throw, mirroring the upstream which never finalised a
+   * Solana `request` contract.
+   */
   request<T>(_args: IRequestArguments): Promise<T> {
     throw new Error('Not implemented');
   }
