@@ -109,6 +109,23 @@ const REPLACEMENTS = [
   //    shape compatible. The regex relies on word boundaries so common
   //    English vocabulary like `onlyIfTrusted` is left untouched.
   [/\btrust\b/g, 'fx'],
+
+  // 9. Upstream declares two aliased provider flags — `isTrust` and
+  //    `isTrustWallet` — and mirrors both in the constructor config
+  //    plumbing. Both collapse to `isFxWallet`, producing duplicate field
+  //    declarations and assignments that TypeScript rejects with TS2300.
+  //    Collapse the resulting redundant lines back to a single one. The
+  //    pattern is anchored on the exact upstream indentation; if upstream
+  //    reformats, the patterns need to be updated, which is intentionally
+  //    explicit so a silent regression is visible.
+  [
+    /(\n[ \t]*isFxWallet: boolean = true;)\s*\1\s*\n/g,
+    '$1\n\n',
+  ],
+  [
+    /(\n[ \t]*this\.isFxWallet = config\.isFxWallet;)\s*\1\s*\n/g,
+    '$1\n',
+  ],
 ];
 
 const args = new Set(process.argv.slice(2));

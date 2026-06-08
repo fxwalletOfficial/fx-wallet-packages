@@ -37,8 +37,6 @@ export class EthereumProvider
 
   isFxWallet: boolean = true;
 
-  isFxWallet: boolean = true;
-
   providers: object[] | undefined;
 
   constructor(config?: IEthereumProviderConfig) {
@@ -63,7 +61,6 @@ export class EthereumProvider
       }
 
       if (typeof config.isFxWallet !== 'undefined') {
-        this.isFxWallet = config.isFxWallet;
         this.isFxWallet = config.isFxWallet;
       }
 

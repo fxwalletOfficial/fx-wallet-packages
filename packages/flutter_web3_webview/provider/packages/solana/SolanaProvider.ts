@@ -38,8 +38,6 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
 
   isFxWallet: boolean = true;
 
-  isFxWallet: boolean = true;
-
   #useLegacySign = false;
 
   static bufferToHex(buffer: Buffer | Uint8Array | string) {
@@ -82,7 +80,6 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
       }
 
       if (typeof config.isFxWallet !== 'undefined') {
-        this.isFxWallet = config.isFxWallet;
         this.isFxWallet = config.isFxWallet;
       }
     }
