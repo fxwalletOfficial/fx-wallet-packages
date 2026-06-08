@@ -43,6 +43,7 @@ void main() {
         ],
         origin: 'fxwallet',
         chain: 'scp',
+        crossChainFee: '0.3',
       );
 
       expect(ur.type, RegistryType.SC_SIGN_REQUEST.type);
@@ -58,6 +59,20 @@ void main() {
       expect(request.outputs?.first['amount'], '123456789012345678901234');
       expect(request.origin, 'fxwallet');
       expect(request.chain, 'scp');
+      expect(request.crossChainFee, '0.3');
+    });
+
+    test('cross-chain fee is omitted when not provided', () {
+      final ur = ScSignRequest.buildUR(
+        xfp: 'A1B2C3D4',
+        path: "m/44'/1991'/0'",
+        address: 'sender-address',
+        publicKey: 'ed25519-public-key',
+        signingPayloadData: const {'siacoinInputs': []},
+      );
+
+      final request = ScSignRequest.fromUR(ur);
+      expect(request.crossChainFee, isNull);
     });
 
     test('round trips signature payload', () {

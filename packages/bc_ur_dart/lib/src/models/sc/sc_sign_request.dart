@@ -18,6 +18,8 @@ enum ScSignRequestKeys {
   outputs,
   origin,
   chain,
+  // Appended at the end to keep existing CBOR key indices stable / backward compatible.
+  crossChainFee,
 }
 
 class ScSignRequest extends RegistryItem {
@@ -39,6 +41,10 @@ class ScSignRequest extends RegistryItem {
   final String? origin;
   final String chain;
 
+  /// Bridge platform service fee (display units, e.g. `0.3`). Display metadata
+  /// only; the cold side must still verify it against the signed `siacoinOutputs`.
+  final String? crossChainFee;
+
   ScSignRequest({
     this.uuid,
     required this.xfp,
@@ -50,6 +56,7 @@ class ScSignRequest extends RegistryItem {
     this.outputs,
     this.origin,
     this.chain = '',
+    this.crossChainFee,
   });
 
   Uint8List getRequestId() => uuid ??= generateUuid();
@@ -84,6 +91,9 @@ class ScSignRequest extends RegistryItem {
     if (chain.isNotEmpty) {
       map[CborSmallInt(ScSignRequestKeys.chain.index)] = CborString(chain);
     }
+    if (crossChainFee != null) {
+      map[CborSmallInt(ScSignRequestKeys.crossChainFee.index)] = CborString(crossChainFee!);
+    }
 
     return CborMap(map);
   }
@@ -101,6 +111,7 @@ class ScSignRequest extends RegistryItem {
       outputs: RegistryItem.readOptionalJsonList(map, ScSignRequestKeys.outputs.index),
       origin: RegistryItem.readOptionalText(map, ScSignRequestKeys.origin.index),
       chain: RegistryItem.readOptionalText(map, ScSignRequestKeys.chain.index) ?? '',
+      crossChainFee: RegistryItem.readOptionalText(map, ScSignRequestKeys.crossChainFee.index),
     );
   }
 
@@ -135,6 +146,7 @@ class ScSignRequest extends RegistryItem {
     List<dynamic>? outputs,
     String? origin,
     String chain = '',
+    String? crossChainFee,
   }) {
     return ScSignRequest(
       uuid: requestId != null ? Uint8List.fromList(uuidParse(requestId)) : null,
@@ -147,6 +159,7 @@ class ScSignRequest extends RegistryItem {
       outputs: outputs,
       origin: origin,
       chain: chain,
+      crossChainFee: crossChainFee,
     ).toUR();
   }
 
