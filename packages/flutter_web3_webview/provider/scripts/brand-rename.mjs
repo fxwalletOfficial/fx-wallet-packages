@@ -32,12 +32,15 @@ const SKIP_DIRS = new Set([
   'coverage',
 ]);
 
-// Files / extensions to leave alone. `UPSTREAM.md` documents what was
-// renamed and intentionally references the upstream repository name; it
-// must survive future re-runs of this script.
+// Files / extensions to leave alone. `UPSTREAM.md` and `RECOVERY.md`
+// document what was renamed / still needs to be ported and intentionally
+// reference the upstream repository names; they must survive future re-runs
+// of this script.
 const SKIP_FILES = new Set([
   'brand-rename.mjs',
   'UPSTREAM.md',
+  'RECOVERY.md',
+  'bun.lock',
   'bun.lockb',
   'yarn.lock',
   'package-lock.json',

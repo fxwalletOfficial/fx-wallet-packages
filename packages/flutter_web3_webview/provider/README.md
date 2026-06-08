@@ -48,12 +48,26 @@ every brand substitution is captured in one place.
 
 ## Build workflow
 
-The bundle entry point and esbuild configuration that produce
-`../lib/js/provider.min.js` land in a follow-up commit (Phase 2 of the
-provider import). Until then this tree only contains source and the
-upstream per-package rollup configs; running `bun install && bun run
-build:packages` produces one `dist/` per sub-package but does **not** yet
-refresh the Flutter asset.
+```bash
+bun install
+bun run build:packages   # validate the upstream per-package rollup builds
+bun run build:flutter    # generate ../lib/js/provider.min.js via esbuild
+```
+
+`bundle/index.ts` is the aggregator entry point; it imports
+`EthereumProvider` and `SolanaProvider` straight from the workspace source
+and assigns them to `window.fxwallet`. `bundle/build.mjs` invokes esbuild
+with Node-builtin polyfills (Buffer / events / crypto / http / https /
+stream / url / util / zlib) and writes the IIFE bundle to the
+`flutter_web3_webview` asset path so a successful build refreshes the
+Flutter package in place.
+
+> ⚠️ The build pipeline is wired up, but the resulting bundle is **not yet
+> functionally equivalent** to the legacy `provider.min.js`. The legacy
+> asset was produced by a now-lost fork that added a custom WebView bridge
+> on top of the upstream source. See [RECOVERY.md](./RECOVERY.md) for the
+> complete inventory of what still needs to be ported back into the
+> vendored packages before the build can replace the legacy artifact.
 
 ## Requirements
 
