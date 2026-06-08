@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_web3_webview/src/models/js_callback_data.dart';
+import 'package:flutter_web3_webview/src/utils/web3_rpc_error.dart';
 
 typedef EvaluateJavascript = Future<dynamic> Function(String source);
 
@@ -112,10 +113,15 @@ class Web3RequestDispatcher {
     if (callback == null) throw Exception('Invalid wallet');
 
     final params = data.getChainParams();
-    if (!await callback(params)) throw Exception({'code': 4092});
+    final chainId = params.chainId;
+    if (chainId == null || chainId.isEmpty) {
+      throw Web3RpcError.unrecognizedChain();
+    }
+
+    if (!await callback(params)) throw Web3RpcError.userRejected();
 
     await evaluateJavascript(
-      'window.ethereum.emitChainChanged(${jsonEncode(params.chainId)})',
+      'window.ethereum.emitChainChanged(${jsonEncode(chainId)})',
     );
     return _ethChainId();
   }

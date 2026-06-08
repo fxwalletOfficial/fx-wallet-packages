@@ -8,13 +8,7 @@ void main() {
     test('creates an empty transaction', () {
       final transaction = JsTransactionObject();
 
-      expect(transaction.toJson(), {
-        'gas': null,
-        'value': null,
-        'from': null,
-        'to': null,
-        'data': null,
-      });
+      expect(transaction.toJson(), <String, dynamic>{});
     });
 
     test('parses and serializes every transaction field', () {
@@ -38,17 +32,33 @@ void main() {
       expect(jsonEncode(json), contains('"data":"0xdata"'));
     });
 
-    test('ignores fields with invalid types', () {
-      final transaction = JsTransactionObject.fromJson({
-        'gas': 21000,
-        'value': true,
-        'from': const [],
-        'to': const {},
-        'data': 1,
-      });
+    test(
+      'exposes null typed getters for non-string values but preserves the '
+      'raw payload so downstream wallets still see the DApp data',
+      () {
+        final transaction = JsTransactionObject.fromJson({
+          'gas': 21000,
+          'value': true,
+          'from': const [],
+          'to': const {},
+          'data': 1,
+        });
 
-      expect(transaction.toJson().values, everyElement(isNull));
-    });
+        expect(transaction.gas, isNull);
+        expect(transaction.value, isNull);
+        expect(transaction.from, isNull);
+        expect(transaction.to, isNull);
+        expect(transaction.data, isNull);
+
+        expect(transaction.toJson(), {
+          'gas': 21000,
+          'value': true,
+          'from': const [],
+          'to': const {},
+          'data': 1,
+        });
+      },
+    );
 
     test('preserves EIP-1559 and unknown transaction fields', () {
       final transaction = JsTransactionObject.fromJson({
@@ -73,9 +83,6 @@ void main() {
         'type': '0x2',
         'accessList': const [],
         'customField': 'custom-value',
-        'gas': null,
-        'value': null,
-        'data': null,
       });
     });
 

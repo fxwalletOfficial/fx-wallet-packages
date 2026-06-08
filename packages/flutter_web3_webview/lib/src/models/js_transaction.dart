@@ -18,11 +18,18 @@ class JsTransactionObject {
   }
 
   Map<String, dynamic> toJson() {
-    return Map<String, dynamic>.from(_rawData)
-      ..['gas'] = gas
-      ..['value'] = value
-      ..['from'] = from
-      ..['to'] = to
-      ..['data'] = data;
+    final json = Map<String, dynamic>.from(_rawData);
+
+    // Only surface the strongly-typed values when we successfully parsed them
+    // as strings; otherwise keep whatever the DApp originally sent so the
+    // downstream wallet can still see fields like nonce / maxFeePerGas / a
+    // numerically-encoded `gas`.
+    if (gas != null) json['gas'] = gas;
+    if (value != null) json['value'] = value;
+    if (from != null) json['from'] = from;
+    if (to != null) json['to'] = to;
+    if (data != null) json['data'] = data;
+
+    return json;
   }
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_web3_webview/src/models/js_callback_data.dart';
 import 'package:flutter_web3_webview/src/utils/request_dispatcher.dart';
+import 'package:flutter_web3_webview/src/utils/web3_rpc_error.dart';
 
 void main() {
   group('Web3RequestDispatcher.isImmediate', () {
@@ -212,13 +213,53 @@ void main() {
           ]),
         ),
         throwsA(
-          isA<Exception>().having(
-            (error) => error.toString(),
-            'message',
-            contains('4092'),
-          ),
+          isA<Web3RpcError>()
+              .having((error) => error.code, 'code', 4001)
+              .having(
+                (error) => error.toString(),
+                'toString',
+                contains('"code":4001'),
+              ),
         ),
       );
+      expect(scripts, isEmpty);
+    });
+
+    test('rejects switchEthereumChain without a usable chain id', () async {
+      final scripts = <String>[];
+      var callbackInvocations = 0;
+      final dispatcher = _dispatcher(
+        ethChainId: () async => 1,
+        walletSwitchEthereumChain: (_) async {
+          callbackInvocations += 1;
+          return true;
+        },
+        evaluateJavascript: (source) async => scripts.add(source),
+      );
+
+      for (final params in <dynamic>[
+        const <dynamic>[],
+        [<String, dynamic>{}],
+        [
+          {'chainId': null}
+        ],
+        [
+          {'chainId': ''}
+        ],
+        [
+          {'chainId': 1}
+        ],
+      ]) {
+        await expectLater(
+          dispatcher.dispatch(_data('wallet_switchEthereumChain', params)),
+          throwsA(
+            isA<Web3RpcError>().having((error) => error.code, 'code', 4902),
+          ),
+          reason: params.toString(),
+        );
+      }
+
+      expect(callbackInvocations, 0);
       expect(scripts, isEmpty);
     });
 
