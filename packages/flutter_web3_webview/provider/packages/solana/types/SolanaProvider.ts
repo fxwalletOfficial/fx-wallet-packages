@@ -9,7 +9,7 @@ import {
   SendOptions,
   TransactionSignature,
 } from '@solana/web3.js';
-import { TrustEventEmitter } from '../adapter/window';
+import { FxWalletEventEmitter } from '../adapter/window';
 import { FxWallet } from '../adapter/wallet';
 
 export interface ISolanaProviderConfig {
@@ -24,7 +24,7 @@ export interface ConnectOptions {
   onlyIfTrusted?: boolean | undefined;
 }
 
-export default interface ISolanaProvider extends TrustEventEmitter {
+export default interface ISolanaProvider extends FxWalletEventEmitter {
   publicKey: PublicKey | null;
   connect(options?: {
     onlyIfTrusted?: boolean;

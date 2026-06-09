@@ -1,0 +1,9 @@
+# Files kept in git but excluded from the package published to pub.dev.
+# (A .pubignore replaces .gitignore for publishing, but the publish file set
+# starts from git-tracked files, so build artefacts already ignored by
+# .gitignore — build/, .dart_tool/, … — are never included anyway.)
+
+# TypeScript build source for the injected provider bundle. Only the
+# pre-built asset (lib/js/provider.min.js) ships; the source and its large
+# vendored dependency tree are for maintainers and stay in the repo.
+provider/
