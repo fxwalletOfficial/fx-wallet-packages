@@ -46,8 +46,11 @@ class Providers {
   String getInitJs() {
     final walletName = jsonEncode(settings?.name ?? WALLET_NAME);
     final solanaIcon = jsonEncode(settings?.sol?.icon ?? WALLET_ICON);
-    final ethereumIcon = jsonEncode(settings?.eth?.icon ?? '');
-    final rdns = jsonEncode(settings?.eth?.rdns ?? '');
+    // EIP-6963 requires a valid data-URI icon and a reverse-DNS rdns, so we
+    // default to the built-in icon / rdns when the host app doesn't supply
+    // them — an empty string makes strict DApps ignore the announcement.
+    final ethereumIcon = jsonEncode(settings?.eth?.icon ?? WALLET_ICON);
+    final rdns = jsonEncode(settings?.eth?.rdns ?? WALLET_RDNS);
     final providerUuid = jsonEncode(uuid);
     final overwriteMetamask = settings?.eth?.overwriteMetamask ?? false;
 

@@ -102,8 +102,10 @@ void main() {
       expect(script, contains('icon: ${jsonEncode(WALLET_ICON)}'));
       expect(script, contains('name: ${jsonEncode(WALLET_NAME)}'));
       expect(script, contains('uuid: ${jsonEncode(provider.uuid)}'));
-      expect(script, contains('icon: ""'));
-      expect(script, contains('rdns: ""'));
+      // EIP-6963 metadata defaults to valid values — no empty icon / rdns.
+      expect(script, isNot(contains('icon: ""')));
+      expect(script, isNot(contains('rdns: ""')));
+      expect(script, contains('rdns: ${jsonEncode(WALLET_RDNS)}'));
       expect(script, contains("new CustomEvent('eip6963:announceProvider'"));
       expect(script,
           contains("window.addEventListener('eip6963:requestProvider'"));

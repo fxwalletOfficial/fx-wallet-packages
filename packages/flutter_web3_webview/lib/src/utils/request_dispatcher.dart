@@ -118,7 +118,7 @@ class Web3RequestDispatcher {
   /// whitespace, and `'0x'` with no payload.
   static final RegExp _chainIdPattern = RegExp(r'^0[xX][0-9a-fA-F]+$');
 
-  Future<String> _walletSwitchEthereumChain(JsCallBackData data) async {
+  Future<dynamic> _walletSwitchEthereumChain(JsCallBackData data) async {
     final callback = walletSwitchEthereumChain;
     if (callback == null) throw Exception('Invalid wallet');
 
@@ -133,20 +133,21 @@ class Web3RequestDispatcher {
     await evaluateJavascript(
       'window.ethereum.emitChainChanged(${jsonEncode(chainId)})',
     );
-    return _ethChainId();
+    // EIP-3326: a successful switch resolves with null, not the chain id.
+    return null;
   }
 
   /// EIP-3085 `wallet_addEthereumChain`: register the chain with the wallet
   /// and return `null` on success. Unlike a switch it must NOT change the
   /// active chain, so no `chainChanged` event is emitted here.
   ///
-  /// When no dedicated [walletAddEthereumChain] handler is supplied we fall
-  /// back to [walletSwitchEthereumChain] so existing integrations keep
-  /// working — previously add and switch shared a single handler and add
-  /// always switched.
+  /// With no dedicated [walletAddEthereumChain] handler the wallet does not
+  /// support adding chains, so we reject with an unsupported-method error
+  /// (EIP-1193 `4200`) rather than falling back to a switch — a fallback
+  /// would let an add request silently change the active network.
   Future<dynamic> _walletAddEthereumChain(JsCallBackData data) async {
     final callback = walletAddEthereumChain;
-    if (callback == null) return _walletSwitchEthereumChain(data);
+    if (callback == null) throw Web3RpcError.unsupportedMethod();
 
     final params = data.getChainParams();
     final chainId = params.chainId;

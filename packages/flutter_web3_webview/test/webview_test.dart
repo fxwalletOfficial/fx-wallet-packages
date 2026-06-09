@@ -188,7 +188,9 @@ void main() {
       ]),
     );
 
-    expect(result, '0xa');
+    // EIP-3326: a successful switch resolves with null but still emits the
+    // chainChanged event into the page.
+    expect(result, isNull);
     expect(
       controller.evaluatedScripts,
       ['window.ethereum.emitChainChanged("0xa")'],

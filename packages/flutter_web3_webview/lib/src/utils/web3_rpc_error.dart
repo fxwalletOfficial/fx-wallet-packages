@@ -9,16 +9,15 @@ import 'dart:convert';
 /// Down-stream wallet code can `catch (e) { if (e is Web3RpcError) … }` and
 /// reason about the failure structurally.
 ///
-/// **What this class does _not_ do today:** it does not, on its own, surface a
-/// structured `error.code` to the in-page DApp. The `flutter_inappwebview`
-/// bridge re-wraps the exception (see
+/// **Reaching the in-page DApp:** the `flutter_inappwebview` bridge re-wraps
+/// the exception (see
 /// `flutter_inappwebview_ios/in_app_webview_controller.dart:onCallJsHandler`),
-/// so the JavaScript side receives a `string` message of roughly the form
+/// so the JavaScript side receives a `string` of roughly the form
 /// `Error: …, Exception: Web3RpcError: {"code":4001,...}`. The injected
-/// provider must therefore parse the trailing JSON before it can hand the
-/// DApp a real `ProviderRpcError`. That parsing belongs in the provider
-/// JavaScript bundle (see the parked `feature/web3-provider-js-tooling`
-/// branch); until it lands, DApps still only see the wrapped string.
+/// provider bridge (`provider/packages/core/adapter/FlutterBridge.ts`) matches
+/// the [sentinel] below, parses the trailing JSON, and re-throws a real
+/// EIP-1193 `ProviderRpcError` carrying `code` / `message` / `data`, so DApps
+/// can branch on `error.code` (e.g. `4902` → `wallet_addEthereumChain`).
 ///
 /// The [toString] output prefixes the JSON with a stable `Web3RpcError: `
 /// sentinel so the future bridge code can match it with a single regex even
@@ -55,6 +54,12 @@ class Web3RpcError implements Exception {
     String message = 'Unrecognized chain ID',
   ]) =>
       Web3RpcError(4902, message);
+
+  /// The wallet does not support the requested method (EIP-1193 `4200`).
+  factory Web3RpcError.unsupportedMethod([
+    String message = 'Unsupported method',
+  ]) =>
+      Web3RpcError(4200, message);
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'code': code,

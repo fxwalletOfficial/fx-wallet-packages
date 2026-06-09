@@ -145,39 +145,56 @@ void main() {
       expect(received, [transaction, message, unknown]);
     });
 
-    test(
-        'switches a chain, and falls back to switch for add without a '
-        'dedicated handler', () async {
-      // With no `walletAddEthereumChain` handler supplied, add falls back to
-      // the switch handler for backwards compatibility — so both methods
-      // emit `chainChanged` and return the chain id here.
+    test('switches a chain, emits the event, and resolves with null',
+        () async {
+      // EIP-3326: a successful switch emits chainChanged and resolves with
+      // null (not the chain id).
       final scripts = <String>[];
-      final receivedChainIds = <String?>[];
+      String? receivedChainId;
       final dispatcher = _dispatcher(
         ethChainId: () async => 10,
         walletSwitchEthereumChain: (chain) async {
-          receivedChainIds.add(chain.chainId);
+          receivedChainId = chain.chainId;
           return true;
         },
         evaluateJavascript: (source) async => scripts.add(source),
       );
-      final params = [
-        {'chainId': '0xa'}
-      ];
 
       expect(
-        await dispatcher.dispatch(_data('wallet_switchEthereumChain', params)),
-        '0xa',
+        await dispatcher.dispatch(_data('wallet_switchEthereumChain', [
+          {'chainId': '0xa'}
+        ])),
+        isNull,
       );
-      expect(
-        await dispatcher.dispatch(_data('wallet_addEthereumChain', params)),
-        '0xa',
+      expect(receivedChainId, '0xa');
+      expect(scripts, ['window.ethereum.emitChainChanged("0xa")']);
+    });
+
+    test(
+        'wallet_addEthereumChain without an add handler rejects with 4200 '
+        'and never switches', () async {
+      // EIP-3085: with no dedicated add handler the wallet doesn't support
+      // adding chains. It must NOT fall back to a switch (which would change
+      // the active network), so the switch handler is never touched.
+      final scripts = <String>[];
+      var switchCalls = 0;
+      final dispatcher = _dispatcher(
+        ethChainId: () async => 10,
+        walletSwitchEthereumChain: (_) async {
+          switchCalls++;
+          return true;
+        },
+        evaluateJavascript: (source) async => scripts.add(source),
       );
-      expect(receivedChainIds, ['0xa', '0xa']);
-      expect(scripts, [
-        'window.ethereum.emitChainChanged("0xa")',
-        'window.ethereum.emitChainChanged("0xa")',
-      ]);
+
+      await expectLater(
+        dispatcher.dispatch(_data('wallet_addEthereumChain', [
+          {'chainId': '0xa'}
+        ])),
+        throwsA(isA<Web3RpcError>().having((error) => error.code, 'code', 4200)),
+      );
+      expect(switchCalls, 0);
+      expect(scripts, isEmpty);
     });
 
     test(
