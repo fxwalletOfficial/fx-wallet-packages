@@ -22,8 +22,8 @@ reviewable.
 
 | Phase | What it adds | Status |
 |------:|--------------|--------|
-| **1** | App shell + zero-dep state mgmt + bookmark grid + chain / account pickers (placeholders for signing / approval / log) | ✅ this commit |
-| 2 | Bookmark grid polish, custom-URL entry, recent-DApp memory | ☐ |
+| **1** | App shell + zero-dep state mgmt + bookmark grid + chain / account pickers (placeholders for signing / approval / log) | ✅ |
+| **2** | Custom-URL bar, live bookmark search, in-memory recent-visit row | ✅ this commit |
 | 3 | Full `Web3Webview` callback wiring + approval bottom-sheet + bridge log capture | ☐ |
 | 4 | EVM signing (`web3dart`): `personal_sign`, `eth_signTypedData_v3/v4`, `eth_sendTransaction` (mock hash by default, real broadcast on toggle) | ☐ |
 | 5 | Solana signing (`cryptography` + `bs58`): `solana_signMessage`, `solana_signTransaction` | ☐ |
@@ -63,14 +63,18 @@ lib/
 ├── data/
 │   ├── chains.dart      # EVM chains + Solana clusters catalogue
 │   └── dapps.dart       # bookmark catalogue grouped by category
+├── data/
+│   └── url_utils.dart   # custom-URL normalisation + host labelling
 ├── services/
-│   ├── wallet_state.dart # ChangeNotifier — active account / chain / settings
-│   └── bridge_log.dart   # ring-buffer log of bridge round-trips
+│   ├── wallet_state.dart   # ChangeNotifier — active account / chain / settings
+│   ├── bridge_log.dart     # ring-buffer log of bridge round-trips
+│   └── recent_visits.dart  # in-memory MRU of opened DApps
 ├── pages/
-│   ├── home_page.dart   # bookmark grid + active-identity card
+│   ├── home_page.dart   # URL bar + search + recent row + bookmark grid
 │   ├── browser_page.dart # Web3Webview + AppBar chain / account chips
 │   └── settings_page.dart # account / chain picker + (pending) toggles
-└── widgets/             # filled in by Phase 3+
+└── widgets/
+    └── dapp_bookmark_grid.dart # reusable grid + tile + filter helper
 ```
 
 State propagates through `InheritedNotifier`-backed scopes
