@@ -5,7 +5,12 @@ import type { IPermissionRes, IRequestArguments } from './types';
 import { BaseProvider, callFlutterHandler } from '@fxwallet/web3-provider-core';
 import type { IEthereumProviderConfig } from './types/EthereumProvider';
 import { RPCError } from './exceptions/RPCError';
-import { MobileAdapter } from './MobileAdapter';
+// `MobileAdapter` is still vendored in `./MobileAdapter.ts` for reference
+// but is not on the request hot path — see the `internalRequest` /
+// `request` doc-block below. Importing it would force esbuild to keep the
+// adapter's `method:"signTransaction"` / `method:"signPersonalMessage"` /
+// etc. case literals in the final bundle, which is misleading because the
+// Dart `Web3RequestDispatcher` switches on the original `eth_*` names.
 import { RPCServer } from './RPCServer';
 
 export class EthereumProvider
@@ -19,13 +24,9 @@ export class EthereumProvider
 
   #rpcUrl!: string;
 
-  #disableMobileAdapter: boolean = false;
-
   #overwriteMetamask = false;
 
   #address!: string;
-
-  private mobileAdapter!: MobileAdapter;
 
   #rpc!: RPCServer;
 
@@ -56,19 +57,11 @@ export class EthereumProvider
         this.#overwriteMetamask = config.overwriteMetamask;
       }
 
-      if (typeof config.disableMobileAdapter !== 'undefined') {
-        this.#disableMobileAdapter = config.disableMobileAdapter;
-      }
-
       if (typeof config.isFxWallet !== 'undefined') {
         this.isFxWallet = config.isFxWallet;
       }
 
       this.#rpc = new RPCServer(this.#rpcUrl);
-    }
-
-    if (!this.#disableMobileAdapter) {
-      this.mobileAdapter = new MobileAdapter(this);
     }
 
     super.on('onResponseReady', this.onResponseReady.bind(this));
@@ -206,46 +199,38 @@ export class EthereumProvider
   }
 
   /**
-   * Hand the (already EIP-1193 → mobile-rewritten) request to the Flutter
-   * side of the WebView. The upstream `MobileAdapter` has either mapped the
-   * DApp method to its mobile equivalent (`eth_requestAccounts` →
-   * `requestAccounts`, `eth_sendTransaction` → `signTransaction`, etc.) or
-   * fallen through to the JSON-RPC server; everything else flows through
-   * here unchanged. The Dart `Web3RequestDispatcher` switches on the
-   * method name we forward.
+   * Forward the request to the Flutter side untouched.
+   *
+   * Both `request` and `internalRequest` are single-step pass-throughs:
+   * the Dart `Web3RequestDispatcher` (see
+   * `lib/src/utils/request_dispatcher.dart`) is the source of truth for
+   * which EIP-1193 method names are supported and how their params are
+   * parsed, so the JS layer is intentionally a thin transport that does
+   * **not** rewrite the DApp's `{ method, params }` payload.
+   *
+   * The upstream design routed every request through `MobileAdapter`,
+   * which renames `eth_sendTransaction → signTransaction`, `personal_sign
+   * → signPersonalMessage`, `wallet_switchEthereumChain →
+   * switchEthereumChain`, and similar; the Dart dispatcher switches on
+   * the original `eth_*` / `personal_*` / `wallet_*` names, so those
+   * renames would otherwise fall through to `_defaultCallback`. The
+   * upstream's `handleStaticRequests` (which short-circuits
+   * `eth_chainId` / `eth_accounts` against cached state) is also skipped
+   * here so the wallet remains the authoritative source for both — this
+   * matches the legacy `provider.min.js` exactly, and the Dart
+   * dispatcher already marks those two methods `isImmediate` so the
+   * round-trip is cheap.
+   *
+   * `MobileAdapter` is left vendored under `provider/packages/ethereum/`
+   * for reference and possible future use, but is intentionally off the
+   * hot path.
    */
   internalRequest<T>(args: IRequestArguments): Promise<T> {
     return callFlutterHandler<T>(args);
   }
 
-  /**
-   * request order is
-   *
-   *  mobileAdapter (if enabled)
-   *      -----> staticHandler
-   *                -----> client handler (internalRequest)
-   *
-   * @param args
-   * @returns
-   */
   request<T>(args: IRequestArguments): Promise<T> {
-    const next = () => {
-      return this.internalRequest(args) as Promise<T>;
-    };
-
-    if (this.mobileAdapter) {
-      const req = this.handleStaticRequests(args, () =>
-        this.mobileAdapter.request(args),
-      );
-
-      if (req instanceof Promise) {
-        return req;
-      } else {
-        return Promise.resolve(req) as Promise<T>;
-      }
-    }
-
-    return this.handleStaticRequests(args, next) as Promise<T>;
+    return this.internalRequest<T>(args);
   }
 
   /**

@@ -5,16 +5,19 @@ fork of `trust-web3-provider`. Those source modifications were lost, so this
 document tracks what was inferred from the minified bundle and what has /
 has not been ported back into `provider/packages/`.
 
-> **Status update (Phase 3 in progress):** the Flutter bridge layer described
-> below has now been restored in source (`packages/core/adapter/FlutterBridge.ts`
-> plus the per-package overrides). `bun run build:flutter` produces a bundle
-> that contains every legacy surface token (`FxWalletHandler`,
-> `emitChainChanged`, `solana_account`, `solana_signTransaction`,
-> `solana_signMessage`, `Not init finished`, the `wallet-standard:register-wallet`
-> events, …). The asset of record is still the legacy `provider.min.js`
-> until **Phase 5** signs off the regenerated bundle against a real DApp
-> regression set. Run `bun run build:flutter` locally to refresh
-> `lib/js/provider.min.js` when you are ready to swap.
+> **Status update (resolved):** `lib/js/provider.min.js` is now built from
+> this source tree — `bun run build:flutter` produces a **321 KB** esbuild
+> bundle that replaced the legacy ~1.46 MB fork artifact. The Flutter
+> bridge layer is restored in source
+> (`packages/core/adapter/FlutterBridge.ts` plus the per-package
+> overrides), the unreachable `MobileAdapter` is off the request hot path
+> (so the `@metamask/eth-sig-util` chain is no longer pulled in), and
+> Solana `signTransaction` is serialised through an instance-level queue.
+> Surface was diffed against the legacy bundle (every `FxWalletHandler` /
+> `emitChainChanged` / `solana_*` / `wallet-standard:register-wallet` /
+> `Not init finished` token present; no `MobileAdapter` EVM-rename
+> literals leak in). To refresh after a source change, re-run
+> `bun run build:flutter`.
 
 ## What's in the legacy bundle but not in upstream source
 
