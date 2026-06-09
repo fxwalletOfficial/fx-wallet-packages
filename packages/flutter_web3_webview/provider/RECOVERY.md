@@ -1,9 +1,9 @@
 # Provider bundle recovery notes
 
 The current `lib/js/provider.min.js` was generated from a previously-modified
-fork of `trust-web3-provider`. Those source modifications were lost, so this
-document tracks what was inferred from the minified bundle and what has /
-has not been ported back into `provider/packages/`.
+provider fork whose source modifications were lost, so this document tracks
+what was inferred from the minified bundle and what has / has not been
+ported back into `provider/packages/`.
 
 > **Status update (Phase 3 in progress):** the Flutter bridge layer described
 > below has now been restored in source (`packages/core/adapter/FlutterBridge.ts`

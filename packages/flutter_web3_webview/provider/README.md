@@ -5,9 +5,6 @@ This directory holds the TypeScript source for the JavaScript bundle that
 the `window.fxwallet` global so DApps can talk to the wallet through
 EIP-1193 and the Solana wallet standard.
 
-See [UPSTREAM.md](./UPSTREAM.md) for where the source originated and a
-complete list of local divergences.
-
 ## Layout
 
 ```
@@ -20,12 +17,11 @@ scripts/
   packages.ts          # list of allowed sub-packages
 ```
 
-The source is already rebranded to FxWallet in place (the `window.fxwallet`
+The source carries the FxWallet brand throughout (the `window.fxwallet`
 global, the `'fxwallet:'` Solana wallet-standard namespace, the `isFxWallet`
 feature flag, …). The chains we don't expose through the WebView, the native
-wrappers, and the upstream npm-publishing / chain-scaffolding tooling have
-been removed. See [UPSTREAM.md](./UPSTREAM.md) for the full inventory of
-local divergences from upstream.
+wrappers, and the npm-publishing / chain-scaffolding tooling we don't use
+have been removed.
 
 ## Build workflow
 
