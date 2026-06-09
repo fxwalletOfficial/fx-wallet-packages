@@ -19,7 +19,7 @@ class DemoApp extends StatefulWidget {
     WalletState? walletState,
     BridgeLog? bridgeLog,
     RecentVisits? recentVisits,
-    this.ethSigner = const MockEthSigner(),
+    this.ethSigner = const Web3DartEthSigner(),
     this.solSigner = const MockSolSigner(),
   })  : _walletState = walletState,
         _bridgeLog = bridgeLog,
