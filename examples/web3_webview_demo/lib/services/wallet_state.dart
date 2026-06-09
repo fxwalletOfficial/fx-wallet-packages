@@ -23,9 +23,13 @@ class DemoAccount {
   /// key** (see the class doc) — never reuse for anything with value.
   final String evmPrivateKey;
 
-  /// base58 Solana public key. The matching ed25519 secret key is wired in
-  /// Phase 5 alongside the Solana signer.
+  /// base58 Solana public key derived from [solanaSeed].
   final String solanaAddress;
+
+  /// 0x-prefixed 32-byte ed25519 seed for the Solana account. A fixed demo
+  /// seed (not a real BIP-44 derivation) — see the class doc. Public test
+  /// material; never reuse.
+  final String solanaSeed;
 
   /// BIP-44 derivation index (0, 1, 2 …).
   final int derivationIndex;
@@ -35,6 +39,7 @@ class DemoAccount {
     required this.evmAddress,
     required this.evmPrivateKey,
     required this.solanaAddress,
+    required this.solanaSeed,
     required this.derivationIndex,
   });
 }
@@ -50,14 +55,18 @@ class DemoAccount {
 /// scan for them.
 ///
 ///   * EVM uses BIP-44 path `m/44'/60'/0'/0/<index>` (keys below).
-///   * Solana uses BIP-44 path `m/44'/501'/<index>'/0'` (Phase 5).
+///   * Solana uses a fixed demo ed25519 seed per account (not BIP-44); the
+///     `solanaAddress` is `base58(ed25519PublicKey(solanaSeed))`, verified
+///     in `test/sol_signing_test.dart`.
 const List<DemoAccount> kDemoAccounts = <DemoAccount>[
   DemoAccount(
     label: 'Account 1',
     evmAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
     evmPrivateKey:
         '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-    solanaAddress: '5ZWj7a1f8tWkjBESHKgrLmZhGh7yBR8Cmjw6aQGhRTMQ',
+    solanaAddress: 'F25s3DdjXdCxYBhh2z8FBusVEMT4b9bGNFVKJi3wFoF4',
+    solanaSeed:
+        '0x1111111111111111111111111111111111111111111111111111111111111111',
     derivationIndex: 0,
   ),
   DemoAccount(
@@ -65,7 +74,9 @@ const List<DemoAccount> kDemoAccounts = <DemoAccount>[
     evmAddress: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
     evmPrivateKey:
         '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
-    solanaAddress: 'GwHH8ciFhR8vejWCqmg8FWZUCNtubPY2esALvy5tBvji',
+    solanaAddress: 'Bow1CGKGDB9mNxeWdw85E2aCthQ1oZX4oFEe7fYT17ew',
+    solanaSeed:
+        '0x2222222222222222222222222222222222222222222222222222222222222222',
     derivationIndex: 1,
   ),
   DemoAccount(
@@ -73,7 +84,9 @@ const List<DemoAccount> kDemoAccounts = <DemoAccount>[
     evmAddress: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
     evmPrivateKey:
         '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
-    solanaAddress: 'FN5sV1iyrnUMtSdaXbq5o24WnTcyJ4MEArytfSe6gE2c',
+    solanaAddress: '2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h',
+    solanaSeed:
+        '0x3333333333333333333333333333333333333333333333333333333333333333',
     derivationIndex: 2,
   ),
 ];

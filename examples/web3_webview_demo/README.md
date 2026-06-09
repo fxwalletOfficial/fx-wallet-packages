@@ -25,8 +25,8 @@ reviewable.
 | **1** | App shell + zero-dep state mgmt + bookmark grid + chain / account pickers (placeholders for signing / approval / log) | ✅ |
 | **2** | Custom-URL bar, live bookmark search, in-memory recent-visit row | ✅ |
 | **3** | Full callback wiring + approval sheet + bridge log + wallet→DApp event emit (mock signers) | ✅ |
-| **4** | Real EVM signing (`web3dart` + self-rolled EIP-712): `personal_sign`, `eth_sign`, `eth_signTypedData_v4`, `eth_sendTransaction` | ✅ this commit |
-| 5 | Solana signing (`cryptography` + `bs58`): `solana_signMessage`, `solana_signTransaction` | ☐ |
+| **4** | Real EVM signing (`web3dart` + self-rolled EIP-712): `personal_sign`, `eth_sign`, `eth_signTypedData_v4`, `eth_sendTransaction` | ✅ |
+| **5** | Real Solana signing (`cryptography` ed25519 + self-rolled base58): `solana_signMessage`, `solana_signTransaction` | ✅ this commit |
 | 6 | Settings: auto-approve toggle, real-broadcast toggle, bridge-log viewer | ☐ |
 | 7 | README screenshots, manual regression checklist, more widget tests | ☐ |
 
@@ -107,9 +107,26 @@ Every round-trip — including the emits — is recorded in the `BridgeLog`,
 viewable from the browser AppBar's terminal icon.
 
 Signers are injected through `DemoApp` behind the `EthSigner` /
-`SolSigner` interfaces. The EVM side now uses the **real** `web3dart`
-implementation (`Web3DartEthSigner`); the Solana side is still
-`MockSolSigner` until Phase 5. `MockEthSigner` is retained for tests.
+`SolSigner` interfaces. Both sides now use **real** implementations
+(`Web3DartEthSigner`, `Ed25519SolSigner`); the `Mock*` signers are
+retained for tests.
+
+## Solana signing (Phase 5)
+
+`Ed25519SolSigner` signs with the `cryptography` package's ed25519 over
+each account's fixed demo seed, plus a hand-rolled base58 codec
+(`services/base58.dart`) — matching the "roll the Solana bits yourself"
+choice. The two methods return **different encodings** on purpose,
+matching what the injected provider JS expects:
+
+| Method | Returns | Why |
+|--------|---------|-----|
+| `solana_signMessage` | hex (`0x…`) | provider decodes via `messageToBuffer` (hex) |
+| `solana_signTransaction` | base58 | provider decodes via `bs58.decode` |
+
+The Solana demo addresses are `base58(ed25519PublicKey(seed))`, verified
+against the seeds in `test/sol_signing_test.dart` so the catalogue can
+never drift from the keys.
 
 ## EVM signing (Phase 4)
 

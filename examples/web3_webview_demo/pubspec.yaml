@@ -20,6 +20,7 @@ dependencies:
   web3dart: ^3.0.2
   http: ^1.6.0
   wallet: ^0.0.18
+  cryptography: ^2.9.0
 
 dev_dependencies:
   flutter_test:
