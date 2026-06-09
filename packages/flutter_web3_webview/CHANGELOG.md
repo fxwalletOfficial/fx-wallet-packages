@@ -8,6 +8,7 @@
 * FIX: Surface EIP-1193 `4001` (user rejected) instead of the invalid `4092` code when a chain switch is declined, and reject `wallet_switchEthereumChain` with `4902` for any chain id that is missing or is not a `0x`-prefixed hex string (previously `'1'`, `'0xzz'`, `' 0x1 '` and similar values still reached the wallet callback).
 * FIX: Introduce `Web3RpcError` for structured Dart-side handling of provider failures. The `flutter_inappwebview` bridge still re-wraps the exception before it reaches the in-page DApp, so DApps continue to see a string; `Web3RpcError.toString()` now prefixes its JSON payload with the `Web3RpcError: ` sentinel so the provider JavaScript can extract the structured `{code,message}` once it is rebuilt from source (tracked separately).
 * FIX: Back `JsTransactionObject` fields with the underlying raw map so setting a typed field to `null` actually clears the value (was leaking the original DApp value through `toJson()`), while still preserving DApp-provided fields like `nonce` / `maxFeePerGas` / numeric `gas`.
+* FIX: Pass `overwriteMetamask` to the injected provider at the top level of the config object where the vendored `EthereumProvider` actually reads it. The previous `config.ethereum.isMetamask` field was never read (the rebuilt provider reads `config.overwriteMetamask`), so `window.ethereum.isMetaMask` was permanently `false` — breaking DApps that gate signing on it (e.g. the MetaMask test dapp). Add `Web3EthSettings.overwriteMetamask` (default `false`) so callers can opt into MetaMask impersonation.
 
 ## [0.1.0]
 

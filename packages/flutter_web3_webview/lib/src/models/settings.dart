@@ -16,7 +16,21 @@ class Web3EthSettings {
   /// Rdns display for EIP-6369.
   final String? rdns;
 
-  Web3EthSettings({this.chainId, this.icon, this.rdns});
+  /// When true, `window.ethereum.isMetaMask` reports `true`.
+  ///
+  /// Defaults to `false` — the wallet identifies as itself. Set it to `true`
+  /// to impersonate MetaMask, which some DApps still require (they gate
+  /// signing / advanced features on `isMetaMask`, e.g. the official
+  /// MetaMask test dapp). This is a per-integration choice; the package
+  /// does not impersonate by default.
+  final bool overwriteMetamask;
+
+  Web3EthSettings({
+    this.chainId,
+    this.icon,
+    this.rdns,
+    this.overwriteMetamask = false,
+  });
 }
 
 class Web3SolSettings {

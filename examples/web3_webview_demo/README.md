@@ -187,6 +187,19 @@ reads inside async handlers.
 Use this to verify a provider-JS or dispatcher change end-to-end. Run
 `flutter run`, then:
 
+> **Two gotchas when testing on real EVM DApps:**
+> 1. The demo sets `overwriteMetamask: true` (in `browser_page.dart`) so
+>    `window.ethereum.isMetaMask` reports `true`. The official MetaMask
+>    test dapp and many others gate signing / advanced features on this
+>    flag; without it those buttons stay disabled. The package itself
+>    defaults to `false` (`Web3EthSettings.overwriteMetamask`).
+> 2. The demo's EVM accounts are the **public Hardhat keys**, which
+>    mainstream DApps (OpenSea, …) block as known/abused addresses
+>    ("account has been disabled"). For EVM signing flows prefer a DApp
+>    that doesn't reputation-gate the address, or a testnet. The Solana
+>    accounts have no such problem (Magic Eden SIWS login works
+>    end-to-end).
+
 **EVM (open the MetaMask test dapp from the Tools bookmarks)**
 
 - [ ] **Connect** — the page shows the active account address; with
