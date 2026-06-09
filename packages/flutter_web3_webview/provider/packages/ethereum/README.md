@@ -13,12 +13,9 @@
 
 ```typescript
 const config: {
-  rpc?: string;
-  chainId?: string;
-  overwriteMetamask?: boolean;
-  supportedMethods?: string[];
-  unsupportedMethods?: string[];
-  disableMobileAdapter?: boolean;
+  chainId?: string;            // hex chain id, e.g. '0x1'
+  rpc?: string;                // custom RPC URL (also accepts `rpcUrl`)
+  overwriteMetamask?: boolean; // make window.ethereum.isMetaMask report true
   isFxWallet?: boolean;
 } = {};
 ```

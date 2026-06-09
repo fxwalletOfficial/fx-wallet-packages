@@ -16,9 +16,8 @@
 ```typescript
 const config: {
   isFxWallet?: boolean;
-  enableAdapter?: boolean;
-  cluster?: string;
-  disableMobileAdapter?: boolean;
+  enableAdapter?: boolean;     // register with the Solana wallet standard
+  cluster?: string;            // RPC cluster URL for the connection
 } = {};
 ```
 

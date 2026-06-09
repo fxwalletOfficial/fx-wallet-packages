@@ -1,99 +1,105 @@
 # Provider bundle recovery notes
 
-The current `lib/js/provider.min.js` was generated from a previously-modified
-provider fork whose source modifications were lost, so this document tracks
-what was inferred from the minified bundle and what has / has not been
-ported back into `provider/packages/`.
+`lib/js/provider.min.js` was originally generated from a previously-modified
+provider fork whose source modifications were lost. This document records
+what was inferred from the minified bundle and how the bridge layer was
+ported back into `provider/packages/` so the asset can be rebuilt from
+source.
 
-> **Status update (resolved):** `lib/js/provider.min.js` is now built from
-> this source tree — `bun run build:flutter` produces a **321 KB** esbuild
-> bundle that replaced the legacy ~1.46 MB fork artifact. The Flutter
-> bridge layer is restored in source
-> (`packages/core/adapter/FlutterBridge.ts` plus the per-package
-> overrides), the unreachable `MobileAdapter` is off the request hot path
-> (so the `@metamask/eth-sig-util` chain is no longer pulled in), and
-> Solana `signTransaction` is serialised through an instance-level queue.
-> Surface was diffed against the legacy bundle (every `FxWalletHandler` /
-> `emitChainChanged` / `solana_*` / `wallet-standard:register-wallet` /
-> `Not init finished` token present; no `MobileAdapter` EVM-rename
-> literals leak in). To refresh after a source change, re-run
-> `bun run build:flutter`.
+> **Status: resolved.** `lib/js/provider.min.js` is now built from this
+> source tree — `bun run build:flutter` produces the ~321 KB esbuild bundle
+> that replaced the legacy ~1.46 MB fork artifact. The Flutter bridge layer
+> lives in source (`packages/core/adapter/FlutterBridge.ts` plus the
+> per-package overrides), the unreachable `MobileAdapter` is off the request
+> hot path (so the `@metamask/eth-sig-util` chain is no longer pulled in),
+> and Solana `signTransaction` is serialised through an instance-level queue.
+> Re-run `bun run build:flutter` to refresh the asset after a source change.
 
-## What's in the legacy bundle but not in upstream source
+## What the legacy bundle did differently from upstream
+
+These are the behaviours observed in the *legacy* minified bundle (the lost
+fork). They explain why the vendored source carries custom bridge code on top
+of upstream; the current source reproduces the same wire protocol except
+where noted.
 
 ### 1. Direct `window.flutter_inappwebview.callHandler` bridge
 
 The legacy bundle bypasses the upstream `Adapter` / `IHandler` abstraction
-and instead calls the WebView's JS handler directly. Four distinct call
-sites are visible in the minified output:
+and calls the WebView's JS handler directly. The call sites visible in the
+minified output:
 
 | Caller | Payload |
 |--------|---------|
-| Ethereum bridge (generic) | `callHandler("FxWalletHandler", payload)` — `payload` is the `args` object from `internalRequest`, so the method name is whatever `MobileAdapter` rewrote it to (`requestAccounts`, `signTransaction`, `signPersonalMessage`, `signTypedMessage`, `ecRecover`, `watchAsset`, `addEthereumChain`, `switchEthereumChain`, …). |
+| Ethereum (generic) | `callHandler("FxWalletHandler", args)` — `args` is the DApp's `{ method, params }`. In the legacy bundle the method name was whatever `MobileAdapter` had rewritten it to (`requestAccounts`, `signTransaction`, `signPersonalMessage`, …); **the current source skips that rewrite** and forwards the original `eth_*` / `personal_*` / `wallet_*` names (see "Restored bridge" below). |
 | Solana connect | `callHandler("FxWalletHandler", { method: "solana_account" })` |
 | Solana `signMessage` | `callHandler("FxWalletHandler", { method: "solana_signMessage", params: { raw: hex } })` |
-| Solana `signTransaction` | `callHandler("FxWalletHandler", { method: "solana_signTransaction", params: { raw: message.toString("hex"), message: message.toString("base64") } })` |
+| Solana `signTransaction` | `callHandler("FxWalletHandler", { method: "solana_signTransaction", params: { raw: hex, message: base64 } })` |
 
 ### 2. Solana method-name and parameter rewrites
 
 Upstream `SolanaProvider.signMessage` sends
 `{ method: "signMessage", params: { data, originalMethod: "signMessage" } }`.
 The legacy bundle instead sends
-`{ method: "solana_signMessage", params: { raw: hex } }`. The fork therefore
-introduced both a `solana_` prefix and a renamed `data → raw` parameter
-shape. The `signTransaction` path serialises the transaction message twice
-(`hex` *and* `base64`), which is not how upstream's adapter packs it.
+`{ method: "solana_signMessage", params: { raw: hex } }` — both a `solana_`
+prefix and a renamed `data → raw` parameter. The `signTransaction` path
+serialises the transaction message twice (`hex` *and* `base64`), which is not
+how upstream's adapter packs it. The current source reproduces this exactly.
 
-### 3. Lost Solana methods
+### 3. Solana methods that were not bridged
 
-Methods like `signAllTransactions`, `signRawTransactionMulti`, `signIn`,
-`signAndSendTransaction` exist in the upstream source but the legacy bundle
-either does not bridge them or routes them through a different code path
-that we have not yet traced. The Dart dispatcher
-(`lib/src/utils/request_dispatcher.dart`) currently only handles
-`solana_account`, `solana_signTransaction`, `solana_signMessage`, so the
-gap is largely informational.
+`signIn` / `signAndSendTransaction` exist in the upstream API but the legacy
+bundle did not bridge them through `FxWalletHandler`. The Dart dispatcher
+(`lib/src/utils/request_dispatcher.dart`) only handles `solana_account`,
+`solana_signTransaction`, `solana_signMessage`, so this gap is largely
+informational. `signRawTransactionMulti` (upstream-only, never shipped in the
+legacy bundle, no Dart case) was removed from the current source to keep the
+typed API honest — batch signing composes from `signTransaction` via
+`signAllTransactions`.
 
-## Phase 3 — restored bridge
+## Restored bridge (current source)
 
-The bridge layer has been ported back into the vendored source:
+The bridge layer ported back into the vendored source:
 
 1. **`packages/core/adapter/FlutterBridge.ts`** — single shared helper that
    guards `window.flutter_inappwebview` (throwing `Not init finished.` to
    match the legacy error message) and invokes
    `callHandler('FxWalletHandler', payload)`. Re-exported from
-   `packages/core/index.ts` as `callFlutterHandler` so neither chain
-   package has to re-declare the global.
+   `packages/core/index.ts` as `callFlutterHandler` so neither chain package
+   re-declares the global.
 2. **`packages/ethereum/EthereumProvider.ts`**
-   * `internalRequest(args)` now forwards `args` through the bridge
-     verbatim. `MobileAdapter` still performs the EIP-1193 → mobile
-     method rewrites first, so the Dart dispatcher sees `requestAccounts`,
-     `signTransaction`, `signPersonalMessage`, `signTypedMessage`,
-     `ecRecover`, `watchAsset`, `wallet_addEthereumChain`,
-     `wallet_switchEthereumChain`, etc.
+   * `request(args)` → `internalRequest(args)` → `callFlutterHandler(args)`
+     is a single-step pass-through: the DApp's `{ method, params }` reaches
+     the Dart side **unmodified**. `MobileAdapter` is *not* on this path, so
+     the Dart `Web3RequestDispatcher` switches on the original
+     `eth_sendTransaction` / `personal_sign` / `eth_signTypedData_v4` /
+     `wallet_switchEthereumChain` / `wallet_addEthereumChain` names. (The
+     upstream design routed everything through `MobileAdapter`, which renamed
+     these to `signTransaction` / `signPersonalMessage` / … — those would
+     fall through to `_defaultCallback`. Dropping the adapter also keeps the
+     `@metamask/eth-sig-util` dependency chain out of the bundle.)
    * `emitChainChanged(chainId)` and `emitAccountsChanged(accounts)` are
-     exposed publicly so the Dart side can fire EIP-1193 events after
+     public so the Dart side can fire EIP-1193 events after
      `wallet_switchEthereumChain` or an account switch (matching the
      `window.ethereum.emitChainChanged(...)` injection in
      `lib/src/utils/request_dispatcher.dart`).
 3. **`packages/solana/SolanaProvider.ts`**
-   * `isConnected` boolean field added so DApps can sniff the connection
-     state directly (matching the legacy bundle).
-   * `connect()` now bridges to `{ method: 'solana_account' }`, sets
-     `publicKey` / `isConnected`, and emits `connect`.
-   * `disconnect()` clears `publicKey` / `isConnected` and emits
-     `disconnect`.
+   * `isConnected` boolean field so DApps can sniff connection state.
+   * `connect()` bridges to `{ method: 'solana_account' }`, sets `publicKey`
+     / `isConnected`, and emits `connect`.
+   * `disconnect()` clears `publicKey` / `isConnected` and emits `disconnect`.
    * `signMessage(message)` bridges to
      `{ method: 'solana_signMessage', params: { raw: hex } }`.
-   * `signTransaction(tx)` serialises the transaction message (handling
-     both legacy `Transaction` and `VersionedTransaction`) and bridges to
-     `{ method: 'solana_signTransaction', params: { raw, message } }`,
-     then attaches the returned signature via `mapSignedTransaction`.
-   * `emitAccountChanged()` exposed for the wallet-standard adapter and
-     DApp listeners.
-   * `internalRequest(args)` forwards generic Solana requests through the
-     bridge unchanged so any future method that doesn't have a bespoke
-     wrapper still works.
+   * `signTransaction(tx)` serialises the transaction message (both legacy
+     `Transaction` and `VersionedTransaction`) and bridges to
+     `{ method: 'solana_signTransaction', params: { raw, message } }`, then
+     attaches the returned signature via `mapSignedTransaction`. Calls are
+     serialised through an instance-level `#signTransactionQueue` so a DApp
+     issuing several at once (directly or via `signAllTransactions`) gets them
+     approved one at a time instead of racing the single approval UI.
+   * `emitAccountChanged()` exposed for the wallet-standard adapter and DApp
+     listeners.
+   * `internalRequest(args)` forwards any future un-bridged Solana request
+     through the bridge unchanged.
 
 ### Surface verification (regenerated bundle vs legacy)
 
@@ -111,40 +117,30 @@ The bridge layer has been ported back into the vendored source:
 | `solana_signMessage` | 1 | 1 |
 | `Not init finished` guard | 5 | 1 (minifier dedupes) |
 
-`registerWallet` itself does not appear by name in the regenerated bundle
-because esbuild's minifier renamed the local symbol — the dispatched
-event names (`wallet-standard:register-wallet`, `wallet-standard:app-ready`)
-are present and that is the contract DApps observe.
+`registerWallet` does not appear by name in the regenerated bundle because
+esbuild's minifier renamed the local symbol — the dispatched event names
+(`wallet-standard:register-wallet`, `wallet-standard:app-ready`) are present,
+and that is the contract DApps observe.
 
-## Phase 5 — outstanding regression verification
-
-Before the regenerated bundle replaces `lib/js/provider.min.js`:
-
-1. Run the wallet against a representative DApp set (Uniswap V3, OpenSea,
-   Aave on EVM; Jupiter, Drift on Solana) using **both** bundles.
-2. Intercept every `window.flutter_inappwebview.callHandler('FxWalletHandler',
-   …)` invocation and confirm the new bundle emits payloads byte-for-byte
-   identical to the legacy bundle for: `eth_accounts`, `eth_chainId`,
-   `eth_requestAccounts`, `personal_sign`, `eth_signTypedData_v4`,
-   `eth_sendTransaction`, `wallet_switchEthereumChain`,
-   `wallet_addEthereumChain`, `solana_account`, `solana_signMessage`,
-   `solana_signTransaction`.
-3. Bundle size: regenerated ≈ 2.95 MB vs legacy ≈ 1.46 MB. The growth is
-   driven by the newer Solana / wallet-standard dependency tree esbuild
-   pulls in. Confirm WebView cold-start latency is acceptable before
-   shipping.
+The regenerated bundle was additionally smoke-tested on-device (Magic Eden
+SIWS login over the Solana path). If you change the source again, re-verify
+the wire payloads for `eth_accounts`, `eth_chainId`, `eth_requestAccounts`,
+`personal_sign`, `eth_signTypedData_v4`, `eth_sendTransaction`,
+`wallet_switchEthereumChain`, `wallet_addEthereumChain`, `solana_account`,
+`solana_signMessage`, and `solana_signTransaction` against a representative
+DApp set before shipping.
 
 ## Known gaps (deferred)
 
-The legacy bundle also added the following niceties that are **not yet**
-ported back because they aren't required for the wire protocol:
+The legacy bundle added a few niceties that are **not** ported back because
+they aren't required for the wire protocol:
 
-* `EthereumProvider.setAddress` lower-cases the address, sets
-  `provider.ready`, and walks `window.frames[*].ethereum` to mirror the
-  state into iframes branded with `isFxWallet`. The vendored source still
-  has the upstream stub that just stores the private `#address`.
-* `EthereumProvider.isConnected()` always-returns-true legacy stub.
-* `EthereumProvider.setConfig(config)` aggregate setter.
+* `EthereumProvider.setAddress` in the legacy fork lower-cased the address,
+  set `provider.ready`, and mirrored state into `window.frames[*].ethereum`
+  for iframes branded with `isFxWallet`. The vendored source keeps the
+  upstream stub that just stores the private `#address`.
+* The legacy `isConnected()` stub always returned `true`; the vendored source
+  exposes a `connected` getter that does the same.
+* `EthereumProvider.setConfig(config)` aggregate setter — not present.
 
-These can be ported in a follow-up once a DApp is observed to depend on
-them.
+These can be ported in a follow-up once a DApp is observed to depend on them.
