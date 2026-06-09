@@ -4,6 +4,7 @@ import 'package:web3_webview_demo/pages/browser_page.dart';
 import 'package:web3_webview_demo/pages/home_page.dart';
 import 'package:web3_webview_demo/pages/settings_page.dart';
 import 'package:web3_webview_demo/services/bridge_log.dart';
+import 'package:web3_webview_demo/services/recent_visits.dart';
 import 'package:web3_webview_demo/services/wallet_state.dart';
 
 /// Root widget. Hosts the two long-lived services ([WalletState],
@@ -15,13 +16,16 @@ class DemoApp extends StatefulWidget {
     super.key,
     WalletState? walletState,
     BridgeLog? bridgeLog,
+    RecentVisits? recentVisits,
   })  : _walletState = walletState,
-        _bridgeLog = bridgeLog;
+        _bridgeLog = bridgeLog,
+        _recentVisits = recentVisits;
 
   // Tests inject their own instances so each `pumpWidget` starts from a
   // known state; production code constructs the defaults in [initState].
   final WalletState? _walletState;
   final BridgeLog? _bridgeLog;
+  final RecentVisits? _recentVisits;
 
   @override
   State<DemoApp> createState() => _DemoAppState();
@@ -30,18 +34,21 @@ class DemoApp extends StatefulWidget {
 class _DemoAppState extends State<DemoApp> {
   late final WalletState _walletState;
   late final BridgeLog _bridgeLog;
+  late final RecentVisits _recentVisits;
 
   @override
   void initState() {
     super.initState();
     _walletState = widget._walletState ?? WalletState();
     _bridgeLog = widget._bridgeLog ?? BridgeLog();
+    _recentVisits = widget._recentVisits ?? RecentVisits();
   }
 
   @override
   void dispose() {
     if (widget._walletState == null) _walletState.dispose();
     if (widget._bridgeLog == null) _bridgeLog.dispose();
+    if (widget._recentVisits == null) _recentVisits.dispose();
     super.dispose();
   }
 
@@ -51,14 +58,17 @@ class _DemoAppState extends State<DemoApp> {
       notifier: _walletState,
       child: BridgeLogScope(
         notifier: _bridgeLog,
-        child: MaterialApp(
-          title: 'Flutter Web3 WebView Demo',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-            useMaterial3: true,
+        child: RecentVisitsScope(
+          notifier: _recentVisits,
+          child: MaterialApp(
+            title: 'Flutter Web3 WebView Demo',
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+              useMaterial3: true,
+            ),
+            initialRoute: '/',
+            onGenerateRoute: _onGenerateRoute,
           ),
-          initialRoute: '/',
-          onGenerateRoute: _onGenerateRoute,
         ),
       ),
     );
