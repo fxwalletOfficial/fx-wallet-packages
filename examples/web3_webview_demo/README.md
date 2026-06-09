@@ -23,8 +23,8 @@ reviewable.
 | Phase | What it adds | Status |
 |------:|--------------|--------|
 | **1** | App shell + zero-dep state mgmt + bookmark grid + chain / account pickers (placeholders for signing / approval / log) | ✅ |
-| **2** | Custom-URL bar, live bookmark search, in-memory recent-visit row | ✅ this commit |
-| 3 | Full `Web3Webview` callback wiring + approval bottom-sheet + bridge log capture | ☐ |
+| **2** | Custom-URL bar, live bookmark search, in-memory recent-visit row | ✅ |
+| **3** | Full callback wiring + approval sheet + bridge log + wallet→DApp event emit (mock signers) | ✅ this commit |
 | 4 | EVM signing (`web3dart`): `personal_sign`, `eth_signTypedData_v3/v4`, `eth_sendTransaction` (mock hash by default, real broadcast on toggle) | ☐ |
 | 5 | Solana signing (`cryptography` + `bs58`): `solana_signMessage`, `solana_signTransaction` | ☐ |
 | 6 | Settings: auto-approve toggle, real-broadcast toggle, bridge-log viewer | ☐ |
@@ -66,16 +66,50 @@ lib/
 ├── data/
 │   └── url_utils.dart   # custom-URL normalisation + host labelling
 ├── services/
-│   ├── wallet_state.dart   # ChangeNotifier — active account / chain / settings
-│   ├── bridge_log.dart     # ring-buffer log of bridge round-trips
-│   └── recent_visits.dart  # in-memory MRU of opened DApps
+│   ├── wallet_state.dart    # ChangeNotifier — active account / chain / settings
+│   ├── bridge_log.dart      # ring-buffer log of bridge round-trips
+│   ├── recent_visits.dart   # in-memory MRU of opened DApps
+│   ├── request_summary.dart # parses a request into approval-sheet rows
+│   ├── eth_signer.dart      # EthSigner interface + MockEthSigner
+│   └── sol_signer.dart      # SolSigner interface + MockSolSigner
 ├── pages/
-│   ├── home_page.dart   # URL bar + search + recent row + bookmark grid
-│   ├── browser_page.dart # Web3Webview + AppBar chain / account chips
+│   ├── home_page.dart    # URL bar + search + recent row + bookmark grid
+│   ├── browser_page.dart # Web3Webview — full callback wiring + emits
 │   └── settings_page.dart # account / chain picker + (pending) toggles
 └── widgets/
-    └── dapp_bookmark_grid.dart # reusable grid + tile + filter helper
+    ├── dapp_bookmark_grid.dart # reusable grid + tile + filter helper
+    ├── approval_sheet.dart     # modal confirm sheet (approve / reject)
+    └── debug_panel.dart        # bridge-log bottom sheet
 ```
+
+## Bridge wiring (Phase 3)
+
+`browser_page.dart` connects every `Web3Webview` callback:
+
+| Callback | Behaviour |
+|----------|-----------|
+| `ethAccounts` / `ethChainId` / `solAccount` | resolve immediately when *auto-approve reads* is on, else prompt |
+| `ethPersonalSign` / `ethSign` / `ethSignTypedData` | approval sheet → `EthSigner` |
+| `ethSendTransaction` | approval sheet (danger styling) → `EthSigner`, mock hash unless *real broadcast* |
+| `walletSwitchEthereumChain` | approval sheet → updates `WalletState` (returns `false` on reject so the dispatcher raises EIP-1193 `4001`) |
+| `solSignMessage` / `solSignTransaction` | approval sheet → `SolSigner` |
+| `onDefaultCallback` | logged + rejected so unknown methods fail loudly |
+
+Rejecting any sheet throws `UserRejectedException` whose `toString()` is the
+EIP-1193 `4001` JSON, so the DApp sees a real wallet's rejection shape.
+
+The page also shows the **wallet → DApp** direction: while a DApp is open,
+switching the active chain / EVM account / Solana account (e.g. from
+Settings) pushes `emitChainChanged` / `emitAccountsChanged` /
+`solana.emitAccountChanged` into the page via `evaluateJavascript`.
+
+Every round-trip — including the emits — is recorded in the `BridgeLog`,
+viewable from the browser AppBar's terminal icon.
+
+Signers are **mock** in this phase: deterministic placeholder signatures
+that exercise the plumbing but are not cryptographically valid. Phase 4 / 5
+swap in the real `web3dart` / ed25519 implementations behind the same
+`EthSigner` / `SolSigner` interfaces (injected through `DemoApp`).
 
 State propagates through `InheritedNotifier`-backed scopes
 (`WalletStateScope`, `BridgeLogScope`) — zero third-party state
