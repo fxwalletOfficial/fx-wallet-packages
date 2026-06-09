@@ -17,34 +17,15 @@ packages/
   solana/     # SolanaProvider + wallet-standard adapter
 scripts/
   build.ts             # iterate workspaces, run each `bun run build:source`
-  brand-rename.mjs     # apply / verify the FxWallet brand rename
   packages.ts          # list of allowed sub-packages
 ```
 
-The chains we don't expose through the WebView, the native wrappers, and the
-upstream npm-publishing / chain-scaffolding tooling have been removed. See
-[UPSTREAM.md](./UPSTREAM.md) for the full inventory.
-
-## Brand rename
-
-The bundle that ships in `../lib/js/provider.min.js` must expose the
-FxWallet brand surface (the `window.fxwallet` global, the `'fxwallet:'`
-Solana wallet-standard namespace, the `isFxWallet` feature flag, and so on).
-The complete upstream → FxWallet replacement table is encoded in
-[`scripts/brand-rename.mjs`](./scripts/brand-rename.mjs); see
-[UPSTREAM.md](./UPSTREAM.md) for the human-readable summary. The script is
-idempotent:
-
-```bash
-# CI-friendly — exits non-zero if anything would change.
-bun run brand:check        # or: node ./scripts/brand-rename.mjs --check
-
-# Re-apply after pulling upstream changes.
-bun run brand:apply        # or: node ./scripts/brand-rename.mjs
-```
-
-After a future upstream rebase, run `brand:apply` once and commit the diff —
-every brand substitution is captured in one place.
+The source is already rebranded to FxWallet in place (the `window.fxwallet`
+global, the `'fxwallet:'` Solana wallet-standard namespace, the `isFxWallet`
+feature flag, …). The chains we don't expose through the WebView, the native
+wrappers, and the upstream npm-publishing / chain-scaffolding tooling have
+been removed. See [UPSTREAM.md](./UPSTREAM.md) for the full inventory of
+local divergences from upstream.
 
 ## Build workflow
 
@@ -72,4 +53,4 @@ Flutter package in place.
 ## Requirements
 
 * [Bun](https://bun.sh) for the upstream rollup-based per-package build.
-* Node ≥ 18 for the brand-rename script.
+* Node ≥ 18 for the esbuild bundle (`bundle/build.mjs`).

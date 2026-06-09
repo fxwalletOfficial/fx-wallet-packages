@@ -9,9 +9,7 @@
     "test:only": "bun run test --only",
     "build:packages": "bun run ./scripts/build.ts",
     "build:flutter": "node ./bundle/build.mjs",
-    "build:flutter:watch": "node ./bundle/build.mjs --watch",
-    "brand:check": "node ./scripts/brand-rename.mjs --check",
-    "brand:apply": "node ./scripts/brand-rename.mjs"
+    "build:flutter:watch": "node ./bundle/build.mjs --watch"
   },
   "workspaces": [
     "packages/*"
