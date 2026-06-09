@@ -109,6 +109,20 @@ void main() {
           contains("window.addEventListener('eip6963:requestProvider'"));
     });
 
+    test('emits overwriteMetamask at the top level of the config', () {
+      // The vendored EthereumProvider reads `config.overwriteMetamask`
+      // (top level), not a nested `ethereum.isMetamask`, so the flag must
+      // be a top-level field for `window.ethereum.isMetaMask` to take it.
+      expect(Providers().getInitJs(),
+          contains('overwriteMetamask: false'));
+
+      final impersonating = Providers(
+        settings: Web3Settings(eth: Web3EthSettings(overwriteMetamask: true)),
+      );
+      expect(impersonating.getInitJs(),
+          contains('overwriteMetamask: true'));
+    });
+
     test('uses custom EVM and Solana configuration', () {
       final provider = Providers(
         settings: Web3Settings(

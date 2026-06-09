@@ -156,6 +156,10 @@ class _BrowserPageState extends State<BrowserPage> {
           eth: Web3EthSettings(
             chainId: wallet.evmChainId,
             rdns: 'com.fxfi.fxwallet',
+            // Impersonate MetaMask so DApps that gate signing on
+            // `isMetaMask` (e.g. the official MetaMask test dapp) expose
+            // their full surface to the demo.
+            overwriteMetamask: true,
           ),
         ),
         onWebViewCreated: (c) => _controller = c,
