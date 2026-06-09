@@ -13,6 +13,18 @@
 
 # Uncomment the following section to specify additional rules.
 
+analyzer:
+  exclude:
+    # Manual demo / integration scripts that depend on a live node and/or a
+    # gitignored test/local/config.dart. They are not automated tests and must
+    # not break `dart analyze` in CI.
+    - test/wss_contract_demo.dart
+    - test/wss_delegation_demo.dart
+    - test/wss_token_demo.dart
+    - test/wss_upgrade_demo.dart
+    - test/aleo_public_txs.dart
+    - test/join/aleo_join_offline.dart
+
 linter:
   rules:
     - annotate_overrides

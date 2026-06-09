@@ -5,6 +5,8 @@ import 'package:convert/convert.dart' show hex;
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
+import 'support/test_dylib.dart';
+
 void main() {
   final mnemonic =
       "fly lecture gasp juice hover ice business census bless weapon polar upgrade";
@@ -36,7 +38,11 @@ void main() {
 
 // final String libPosition = './aleo_rust/libaleo_rust.so';
 // final dyLib = DyLib.getDyLibByPosition(libPosition);
-  final dyLib = DyLib.getDyLibFromCargo();
+  final dyLib = tryLoadAleoLib();
+  if (dyLib == null) {
+    test('aleo_dart account FFI tests', () {}, skip: nativeLibMissingReason);
+    return;
+  }
   final rust = AleoAccount(dyLib);
 
   test('test rust ffi', () {
