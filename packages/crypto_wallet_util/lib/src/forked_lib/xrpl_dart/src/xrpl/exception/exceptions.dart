@@ -1,4 +1,4 @@
-import 'package:blockchain_utils/exception/exception.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 /// Exception thrown when an error occurs during XRPL binary encoding or decoding.
 class XRPLBinaryCodecException implements BlockchainUtilsException {
@@ -7,6 +7,9 @@ class XRPLBinaryCodecException implements BlockchainUtilsException {
 
   /// Constructor for XRPLBinaryCodecException
   const XRPLBinaryCodecException(this.message);
+
+  @override
+  Map<String, dynamic>? get details => null;
 
   @override
   String toString() => message;
@@ -19,6 +22,10 @@ class XRPLAddressCodecException implements BlockchainUtilsException {
 
   /// Constructor for XRPLAddressCodecException
   const XRPLAddressCodecException(this.message);
+
+  @override
+  Map<String, dynamic>? get details => null;
+
   @override
   String toString() => message;
 }

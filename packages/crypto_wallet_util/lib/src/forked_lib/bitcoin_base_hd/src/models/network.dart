@@ -1,5 +1,4 @@
-import 'package:blockchain_utils/bip/coin_conf/coin_conf.dart';
-import 'package:blockchain_utils/bip/coin_conf/coins_conf.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 import '../../bitcoin_base.dart';
 import '../utils/enumerate.dart';

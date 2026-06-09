@@ -22,7 +22,7 @@ class ECPrivate {
   factory ECPrivate.fromWif(String wif, {required List<int>? netVersion}) {
     final decode = WifDecoder.decode(wif,
         netVer: netVersion ?? BitcoinNetwork.mainnet.wifNetVer);
-    return ECPrivate.fromBytes(decode.item1);
+    return ECPrivate.fromBytes(decode.$1);
   }
 
   /// returns as WIFC (compressed) or WIF format (string)
@@ -49,16 +49,18 @@ class ECPrivate {
   /// Returns a Bitcoin compact signature in hex
   String signMessage(List<int> message,
       {String messagePrefix = '\x18Bitcoin Signed Message:\n'}) {
-    final btcSigner = BitcoinSigner.fromKeyBytes(toBytes());
-    final signature = btcSigner.signMessage(message, messagePrefix);
-    return BytesUtils.toHexString(signature);
+    final btcSigner = BitcoinKeySigner.fromKeyBytes(toBytes());
+    final signature =
+        btcSigner.signMessageConst(message: message, messagePrefix: messagePrefix);
+    // 6.x prepends a 1-byte recovery header; drop it to match pre-upgrade output.
+    return BytesUtils.toHexString(signature.sublist(1));
   }
 
   /// sign transaction digest  and returns the signature.
   String signInput(List<int> txDigest,
       {int sigHash = BitcoinOpCodeConst.SIGHASH_ALL}) {
-    final btcSigner = BitcoinSigner.fromKeyBytes(toBytes());
-    List<int> signature = btcSigner.signTransaction(txDigest);
+    final btcSigner = BitcoinKeySigner.fromKeyBytes(toBytes());
+    List<int> signature = btcSigner.signECDSADerConst(txDigest);
     signature = <int>[...signature, sigHash];
     return BytesUtils.toHexString(signature);
   }
@@ -75,12 +77,16 @@ class ECPrivate {
       return true;
     }(),
         "When the tweak is false, the `tapScripts` are ignored, to use the tap script path, you need to consider the tweak value to be true.");
-    final tapScriptBytes = !tweak
-        ? []
+    final tapScriptBytes = (!tweak || tapScripts.isEmpty)
+        ? null
         : tapScripts.map((e) => e.map((e) => e.toBytes()).toList()).toList();
-    final btcSigner = BitcoinSigner.fromKeyBytes(toBytes());
-    List<int> signatur = btcSigner.signSchnorrTransaction(txDigest,
-        tapScripts: tapScriptBytes, tweak: tweak);
+    final btcSigner = BitcoinKeySigner.fromKeyBytes(toBytes());
+    final pubPoint = getPublic().publicKey.point as ProjectiveECCPoint;
+    List<int> signatur = btcSigner.signBip340Const(
+      digest: txDigest,
+      tapTweakHash:
+          tweak ? P2TRUtils.calculateTweek(pubPoint, script: tapScriptBytes) : null,
+    );
     if (sighash != BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL) {
       signatur = <int>[...signatur, sighash];
     }

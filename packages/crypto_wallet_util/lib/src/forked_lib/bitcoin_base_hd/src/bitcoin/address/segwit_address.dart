@@ -1,5 +1,5 @@
 import 'package:blockchain_utils/bech32/bech32.dart';
-import 'package:blockchain_utils/binary/utils.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:blockchain_utils/crypto/quick_crypto.dart';
 
 import '../address/core.dart';
@@ -47,11 +47,11 @@ abstract class SegwitAddress implements BitcoinAddress {
   String _addressToHash(String address, BasedUtxoNetwork network) {
     final convert = SegwitBech32Decoder.decode(network.p2wpkhHrp, address);
 
-    final version = convert.item1;
+    final version = convert.$1;
     if (version != segwitNumVersion) {
       throw ArgumentError("Invalid segwit version.");
     }
-    return BytesUtils.toHexString(convert.item2);
+    return BytesUtils.toHexString(convert.$2);
   }
 
   /// returns the address's string encoding (Bech32)

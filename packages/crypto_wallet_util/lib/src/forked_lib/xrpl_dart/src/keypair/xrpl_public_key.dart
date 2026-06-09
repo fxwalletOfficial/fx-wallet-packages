@@ -27,11 +27,11 @@ class XRPPublicKey {
     }
     if (keyBytes.length == RippleKeyConst.publicKeyLength) {
       final prefix = keyBytes.sublist(0, 1);
-      if (bytesEqual(prefix, Ed25519KeysConst.xrpPubKeyPrefix) ||
-          bytesEqual(prefix, Ed25519KeysConst.pubKeyPrefix)) {
+      if (BytesUtils.bytesEqual(prefix, Ed25519KeysConst.xrpPubKeyPrefix) ||
+          BytesUtils.bytesEqual(prefix, Ed25519KeysConst.pubKeyPrefix)) {
         return XRPKeyAlgorithm.ed25519;
       }
-      if (Secp256k1PublicKeyEcdsa.isValidBytes(keyBytes)) {
+      if (Secp256k1PublicKey.isValidBytes(keyBytes)) {
         return XRPKeyAlgorithm.secp256k1;
       }
     }

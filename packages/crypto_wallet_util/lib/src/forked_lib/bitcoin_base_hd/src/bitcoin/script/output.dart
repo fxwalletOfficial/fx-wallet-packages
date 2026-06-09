@@ -1,8 +1,5 @@
 import 'dart:typed_data';
-import 'package:blockchain_utils/binary/utils.dart';
-import 'package:blockchain_utils/numbers/bigint_utils.dart';
-import 'package:blockchain_utils/numbers/int_utils.dart';
-import 'package:blockchain_utils/tuple/tuple.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 import '../script/script.dart';
 
@@ -33,7 +30,7 @@ class TxOutput {
     return data;
   }
 
-  static Tuple<TxOutput, int> fromRaw(
+  static (TxOutput, int) fromRaw(
       {required String raw, required int cursor, bool hasSegwit = false}) {
     final txoutPutRaw = BytesUtils.fromHexString(raw);
     final value = BigintUtils.fromBytes(txoutPutRaw.sublist(cursor, cursor + 8),
@@ -42,10 +39,10 @@ class TxOutput {
     cursor += 8;
 
     final vi = IntUtils.decodeVarint(txoutPutRaw.sublist(cursor, cursor + 9));
-    cursor += vi.item2;
-    List<int> lockScript = txoutPutRaw.sublist(cursor, cursor + vi.item1);
-    cursor += vi.item1;
-    return Tuple(
+    cursor += vi.$2;
+    List<int> lockScript = txoutPutRaw.sublist(cursor, cursor + vi.$1);
+    cursor += vi.$1;
+    return (
         TxOutput(
             amount: value,
             scriptPubKey: Script.fromRaw(

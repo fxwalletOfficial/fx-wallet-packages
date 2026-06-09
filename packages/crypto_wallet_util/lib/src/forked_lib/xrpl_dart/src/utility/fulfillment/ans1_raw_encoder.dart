@@ -81,7 +81,7 @@ class ASN1RawEncoder {
     for (int i = 0; i < buf.length; i++) {
       int shift = 7 * (buf.length - i - 1);
       int mask = 0x7F << shift;
-      buf[i] = ((tag & mask) >> shift) & mask8;
+      buf[i] = ((tag & mask) >> shift) & BinaryOps.mask8;
       // Only the last byte is not marked with 0x80
       if (i != buf.length - 1) {
         buf[i] |= 0x80;
@@ -103,8 +103,8 @@ class ASN1RawEncoder {
 
     for (int i = 0; i < buf.length; i++) {
       int shift = (buf.length - i - 1) * 8;
-      int mask = mask8 << shift;
-      buf[i] = ((mask & length) >> shift) & mask8;
+      int mask = BinaryOps.mask8 << shift;
+      buf[i] = ((mask & length) >> shift) & BinaryOps.mask8;
     }
 
     // Ignore leading zeros
@@ -135,7 +135,7 @@ class ASN1RawEncoder {
 
     // Encode value
     for (int i = byteCount - 1; i >= 0; i--) {
-      encoded.add((value >> (8 * i)) & mask8);
+      encoded.add((value >> (8 * i)) & BinaryOps.mask8);
     }
     // If the first bit of the first byte is 1 (negative number), prepend a zero byte
     if ((encoded[0] & 0x80) != 0) {
