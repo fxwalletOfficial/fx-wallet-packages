@@ -145,8 +145,12 @@ void main() {
       expect(received, [transaction, message, unknown]);
     });
 
-    test('switches or adds a chain, emits the event, and returns chain id',
-        () async {
+    test(
+        'switches a chain, and falls back to switch for add without a '
+        'dedicated handler', () async {
+      // With no `walletAddEthereumChain` handler supplied, add falls back to
+      // the switch handler for backwards compatibility — so both methods
+      // emit `chainChanged` and return the chain id here.
       final scripts = <String>[];
       final receivedChainIds = <String?>[];
       final dispatcher = _dispatcher(
@@ -174,6 +178,81 @@ void main() {
         'window.ethereum.emitChainChanged("0xa")',
         'window.ethereum.emitChainChanged("0xa")',
       ]);
+    });
+
+    test(
+        'wallet_addEthereumChain uses the dedicated add handler without '
+        'switching', () async {
+      // EIP-3085: add registers the chain and returns null; it must NOT
+      // switch the active chain, so no `chainChanged` is emitted and the
+      // switch handler is never touched.
+      final scripts = <String>[];
+      var switchCalls = 0;
+      JsAddEthereumChain? addedChain;
+      final dispatcher = _dispatcher(
+        ethChainId: () async => 10,
+        walletSwitchEthereumChain: (_) async {
+          switchCalls++;
+          return true;
+        },
+        walletAddEthereumChain: (chain) async {
+          addedChain = chain;
+          return true;
+        },
+        evaluateJavascript: (source) async => scripts.add(source),
+      );
+
+      final result = await dispatcher.dispatch(
+        _data('wallet_addEthereumChain', [
+          {'chainId': '0x89'}
+        ]),
+      );
+
+      expect(result, isNull);
+      expect(addedChain?.chainId, '0x89');
+      expect(switchCalls, 0);
+      expect(scripts, isEmpty);
+    });
+
+    test(
+        'wallet_addEthereumChain rejects with 4001 when the add handler '
+        'declines', () async {
+      final scripts = <String>[];
+      final dispatcher = _dispatcher(
+        walletAddEthereumChain: (_) async => false,
+        evaluateJavascript: (source) async => scripts.add(source),
+      );
+
+      await expectLater(
+        dispatcher.dispatch(
+          _data('wallet_addEthereumChain', [
+            {'chainId': '0x1'}
+          ]),
+        ),
+        throwsA(isA<Web3RpcError>().having((error) => error.code, 'code', 4001)),
+      );
+      expect(scripts, isEmpty);
+    });
+
+    test('wallet_addEthereumChain rejects an invalid chain id with 4902',
+        () async {
+      var addCalls = 0;
+      final dispatcher = _dispatcher(
+        walletAddEthereumChain: (_) async {
+          addCalls++;
+          return true;
+        },
+      );
+
+      await expectLater(
+        dispatcher.dispatch(
+          _data('wallet_addEthereumChain', [
+            {'chainId': 'not-hex'}
+          ]),
+        ),
+        throwsA(isA<Web3RpcError>().having((error) => error.code, 'code', 4902)),
+      );
+      expect(addCalls, 0);
     });
 
     test('JSON-encodes chain id before emitting the chain event', () async {
@@ -378,6 +457,7 @@ Web3RequestDispatcher _dispatcher({
   Future<String> Function(String data)? ethPersonalSign,
   Future<String> Function(String data)? ethSignTypedData,
   Future<bool> Function(JsAddEthereumChain data)? walletSwitchEthereumChain,
+  Future<bool> Function(JsAddEthereumChain data)? walletAddEthereumChain,
   Future<String> Function()? solAccount,
   Future<String> Function(JsCallBackData data)? solSignTransaction,
   Future<String> Function(JsCallBackData data)? solSignMessage,
@@ -392,6 +472,7 @@ Web3RequestDispatcher _dispatcher({
     ethPersonalSign: ethPersonalSign,
     ethSignTypedData: ethSignTypedData,
     walletSwitchEthereumChain: walletSwitchEthereumChain,
+    walletAddEthereumChain: walletAddEthereumChain,
     solAccount: solAccount,
     solSignTransaction: solSignTransaction,
     solSignMessage: solSignMessage,

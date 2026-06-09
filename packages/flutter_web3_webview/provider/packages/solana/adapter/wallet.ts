@@ -1,12 +1,4 @@
 import {
-  SolanaSignAndSendTransaction,
-  type SolanaSignAndSendTransactionFeature,
-  type SolanaSignAndSendTransactionMethod,
-  type SolanaSignAndSendTransactionOutput,
-  SolanaSignIn,
-  type SolanaSignInFeature,
-  type SolanaSignInMethod,
-  type SolanaSignInOutput,
   SolanaSignMessage,
   type SolanaSignMessageFeature,
   type SolanaSignMessageMethod,
@@ -36,7 +28,6 @@ import { icon } from './icon';
 import type { SolanaChain } from './solana';
 import { isSolanaChain, isVersionedTransaction, SOLANA_CHAINS } from './solana';
 import { bytesEqual } from '../util';
-import * as bs58 from 'bs58';
 import ISolanaProvider from '../types/SolanaProvider';
 
 export const FxNamespace = 'fxwallet:';
@@ -76,11 +67,14 @@ export class FxWallet implements Wallet {
   get features(): StandardConnectFeature &
     StandardDisconnectFeature &
     StandardEventsFeature &
-    SolanaSignAndSendTransactionFeature &
     SolanaSignTransactionFeature &
     SolanaSignMessageFeature &
-    SolanaSignInFeature &
     FxFeature {
+    // `SolanaSignAndSendTransaction` and `SolanaSignIn` are intentionally
+    // NOT advertised: the provider has no broadcast RPC wired up by default
+    // (so signAndSendTransaction can't send) and SIWS isn't bridged, so a
+    // DApp picking those features would hit a runtime failure. Omitting them
+    // lets DApps fall back to `signTransaction` / `connect` + `signMessage`.
     return {
       [StandardConnect]: {
         version: '1.0.0',
@@ -94,11 +88,6 @@ export class FxWallet implements Wallet {
         version: '1.0.0',
         on: this.#on,
       },
-      [SolanaSignAndSendTransaction]: {
-        version: '1.0.0',
-        supportedTransactionVersions: ['legacy', 0],
-        signAndSendTransaction: this.#signAndSendTransaction,
-      },
       [SolanaSignTransaction]: {
         version: '1.0.0',
         supportedTransactionVersions: ['legacy', 0],
@@ -107,10 +96,6 @@ export class FxWallet implements Wallet {
       [SolanaSignMessage]: {
         version: '1.0.0',
         signMessage: this.#signMessage,
-      },
-      [SolanaSignIn]: {
-        version: '1.0.0',
-        signIn: this.#signIn,
       },
       [FxNamespace]: {
         fx: this.#fx,
@@ -205,40 +190,6 @@ export class FxWallet implements Wallet {
     await this.#fx.disconnect();
   };
 
-  #signAndSendTransaction: SolanaSignAndSendTransactionMethod = async (
-    ...inputs
-  ) => {
-    if (!this.#account) throw new Error('not connected');
-
-    const outputs: SolanaSignAndSendTransactionOutput[] = [];
-
-    if (inputs.length === 1) {
-      const { transaction, account, chain, options } = inputs[0]!;
-      const { minContextSlot, preflightCommitment, skipPreflight, maxRetries } =
-        options || {};
-      if (account !== this.#account) throw new Error('invalid account');
-      if (!isSolanaChain(chain)) throw new Error('invalid chain');
-
-      const { signature } = await this.#fx.signAndSendTransaction(
-        VersionedTransaction.deserialize(transaction),
-        {
-          preflightCommitment,
-          minContextSlot,
-          maxRetries,
-          skipPreflight,
-        },
-      );
-
-      outputs.push({ signature: new Uint8Array(bs58.decode(signature)) });
-    } else if (inputs.length > 1) {
-      for (const input of inputs) {
-        outputs.push(...(await this.#signAndSendTransaction(input)));
-      }
-    }
-
-    return outputs;
-  };
-
   #signTransaction: SolanaSignTransactionMethod = async (...inputs) => {
     if (!this.#account) throw new Error('not connected');
 
@@ -322,20 +273,6 @@ export class FxWallet implements Wallet {
       for (const input of inputs) {
         outputs.push(...(await this.#signMessage(input)));
       }
-    }
-
-    return outputs;
-  };
-
-  #signIn: SolanaSignInMethod = async (...inputs) => {
-    const outputs: SolanaSignInOutput[] = [];
-
-    if (inputs.length > 1) {
-      for (const input of inputs) {
-        outputs.push(await this.#fx.signIn(input));
-      }
-    } else {
-      return [await this.#fx.signIn(inputs[0])];
     }
 
     return outputs;

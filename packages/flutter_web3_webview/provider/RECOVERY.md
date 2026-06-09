@@ -13,7 +13,9 @@ source.
 > per-package overrides), the unreachable `MobileAdapter` is off the request
 > hot path (so the `@metamask/eth-sig-util` chain is no longer pulled in),
 > and Solana `signTransaction` is serialised through an instance-level queue.
-> Re-run `bun run build:flutter` to refresh the asset after a source change.
+> Re-run `bun run build:packages && bun run build:flutter` to refresh the
+> asset after a source change — the esbuild step bundles each package's
+> `dist/` build, so the rollup step must run first.
 
 ## What the legacy bundle did differently from upstream
 

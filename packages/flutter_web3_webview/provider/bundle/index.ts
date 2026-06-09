@@ -21,10 +21,12 @@
  * constructors.
  */
 
-// Import directly from the workspace source. The aggregator is not published
-// as an npm package, so going through the `@fxwallet/web3-provider-*`
-// workspace names would only force a per-package symlink with no benefit;
-// the relative paths let esbuild bundle the TypeScript directly.
+// Import the two providers through their workspace package entry points.
+// Each sub-package's package.json resolves to its rollup `dist/` build, so
+// esbuild bundles the compiled `dist/` output here (NOT the .ts sources) —
+// run `build:packages` before `build:flutter` so these reflect the latest
+// source. The aggregator isn't published as an npm package; the relative
+// paths just avoid a per-package symlink.
 import { EthereumProvider } from '../packages/ethereum';
 import { SolanaProvider } from '../packages/solana';
 
