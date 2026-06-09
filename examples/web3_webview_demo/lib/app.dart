@@ -4,7 +4,9 @@ import 'package:web3_webview_demo/pages/browser_page.dart';
 import 'package:web3_webview_demo/pages/home_page.dart';
 import 'package:web3_webview_demo/pages/settings_page.dart';
 import 'package:web3_webview_demo/services/bridge_log.dart';
+import 'package:web3_webview_demo/services/eth_signer.dart';
 import 'package:web3_webview_demo/services/recent_visits.dart';
+import 'package:web3_webview_demo/services/sol_signer.dart';
 import 'package:web3_webview_demo/services/wallet_state.dart';
 
 /// Root widget. Hosts the two long-lived services ([WalletState],
@@ -17,6 +19,8 @@ class DemoApp extends StatefulWidget {
     WalletState? walletState,
     BridgeLog? bridgeLog,
     RecentVisits? recentVisits,
+    this.ethSigner = const MockEthSigner(),
+    this.solSigner = const MockSolSigner(),
   })  : _walletState = walletState,
         _bridgeLog = bridgeLog,
         _recentVisits = recentVisits;
@@ -26,6 +30,12 @@ class DemoApp extends StatefulWidget {
   final WalletState? _walletState;
   final BridgeLog? _bridgeLog;
   final RecentVisits? _recentVisits;
+
+  /// Signers are injectable so Phase 4 / 5 can swap the deterministic
+  /// [MockEthSigner] / [MockSolSigner] for the real `web3dart` / ed25519
+  /// implementations without touching the routing wiring.
+  final EthSigner ethSigner;
+  final SolSigner solSigner;
 
   @override
   State<DemoApp> createState() => _DemoAppState();
@@ -97,7 +107,11 @@ class _DemoAppState extends State<DemoApp> {
         }
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => BrowserPage(args: args),
+          builder: (_) => BrowserPage(
+            args: args,
+            ethSigner: widget.ethSigner,
+            solSigner: widget.solSigner,
+          ),
         );
       default:
         return null;
