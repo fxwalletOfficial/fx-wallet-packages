@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:web3_webview_demo/pages/browser_page.dart';
 import 'package:web3_webview_demo/pages/home_page.dart';
+import 'package:web3_webview_demo/pages/log_page.dart';
 import 'package:web3_webview_demo/pages/settings_page.dart';
 import 'package:web3_webview_demo/services/bridge_log.dart';
 import 'package:web3_webview_demo/services/eth_signer.dart';
@@ -95,6 +96,11 @@ class _DemoAppState extends State<DemoApp> {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const SettingsPage(),
+        );
+      case '/log':
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const LogPage(),
         );
       case '/browser':
         final args = settings.arguments;

@@ -2,10 +2,36 @@ import 'package:flutter/material.dart';
 
 import 'package:web3_webview_demo/services/bridge_log.dart';
 
-/// Bottom-sheet view of the [BridgeLog]. Phase 3 surfaces it from the
-/// browser page's AppBar so a tester can immediately see the request /
-/// response JSON for whatever the DApp just triggered. Phase 6 reuses the
-/// same entry rendering in the full settings log viewer.
+/// Scrolling list of [BridgeLog] entries (most-recent first), rebuilding on
+/// every new entry. Shared by the browser-page bottom sheet ([DebugPanel])
+/// and the full-screen settings log viewer so both render entries
+/// identically.
+class BridgeLogList extends StatelessWidget {
+  const BridgeLogList({super.key, required this.log});
+
+  final BridgeLog log;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: log,
+      builder: (context, _) {
+        final entries = log.entries.reversed.toList();
+        if (entries.isEmpty) {
+          return const Center(child: Text('No bridge calls yet'));
+        }
+        return ListView.separated(
+          itemCount: entries.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (_, i) => _LogTile(entry: entries[i]),
+        );
+      },
+    );
+  }
+}
+
+/// Bottom-sheet view of the [BridgeLog], shown from the browser page's
+/// AppBar terminal icon.
 class DebugPanel extends StatelessWidget {
   const DebugPanel({super.key, required this.log});
 
@@ -27,40 +53,26 @@ class DebugPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: log,
-      builder: (context, _) {
-        final entries = log.entries.reversed.toList();
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Text('Bridge log',
-                      style: Theme.of(context).textTheme.titleLarge),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: log.clear,
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Clear'),
-                  ),
-                ],
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Text('Bridge log',
+                  style: Theme.of(context).textTheme.titleLarge),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: log.clear,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Clear'),
               ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: entries.isEmpty
-                  ? const Center(child: Text('No bridge calls yet'))
-                  : ListView.separated(
-                      itemCount: entries.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (_, i) => _LogTile(entry: entries[i]),
-                    ),
-            ),
-          ],
-        );
-      },
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(child: BridgeLogList(log: log)),
+      ],
     );
   }
 }

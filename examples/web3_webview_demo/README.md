@@ -26,8 +26,8 @@ reviewable.
 | **2** | Custom-URL bar, live bookmark search, in-memory recent-visit row | ✅ |
 | **3** | Full callback wiring + approval sheet + bridge log + wallet→DApp event emit (mock signers) | ✅ |
 | **4** | Real EVM signing (`web3dart` + self-rolled EIP-712): `personal_sign`, `eth_sign`, `eth_signTypedData_v4`, `eth_sendTransaction` | ✅ |
-| **5** | Real Solana signing (`cryptography` ed25519 + self-rolled base58): `solana_signMessage`, `solana_signTransaction` | ✅ this commit |
-| 6 | Settings: auto-approve toggle, real-broadcast toggle, bridge-log viewer | ☐ |
+| **5** | Real Solana signing (`cryptography` ed25519 + self-rolled base58): `solana_signMessage`, `solana_signTransaction` | ✅ |
+| **6** | Settings: auto-approve toggle, real-broadcast toggle (testnet warning), full-screen bridge-log viewer | ✅ this commit |
 | 7 | README screenshots, manual regression checklist, more widget tests | ☐ |
 
 ## Run it
@@ -75,12 +75,21 @@ lib/
 ├── pages/
 │   ├── home_page.dart    # URL bar + search + recent row + bookmark grid
 │   ├── browser_page.dart # Web3Webview — full callback wiring + emits
-│   └── settings_page.dart # account / chain picker + (pending) toggles
+│   ├── settings_page.dart # account / chain pickers + behaviour toggles
+│   └── log_page.dart      # full-screen bridge-log viewer
 └── widgets/
     ├── dapp_bookmark_grid.dart # reusable grid + tile + filter helper
     ├── approval_sheet.dart     # modal confirm sheet (approve / reject)
-    └── debug_panel.dart        # bridge-log bottom sheet
+    └── debug_panel.dart        # BridgeLogList + browser-page bottom sheet
 ```
+
+## Settings (Phase 6)
+
+| Control | Effect |
+|---------|--------|
+| Auto-approve read-only methods | `eth_accounts` / `eth_chainId` / `solana_account` resolve without a sheet |
+| Broadcast transactions over RPC | `eth_sendTransaction` signs + submits over RPC instead of returning a mock hash; warns when the active chain is not a testnet |
+| Bridge call log | opens the full-screen viewer (live entry-count badge), shared rendering with the browser-page sheet via `BridgeLogList` |
 
 ## Bridge wiring (Phase 3)
 

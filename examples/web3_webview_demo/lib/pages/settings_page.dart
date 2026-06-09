@@ -1,22 +1,15 @@
 // `RadioListTile` here intentionally uses the pre-3.32 `groupValue` /
-// `onChanged` flow. Phase 6 of the demo plan rebuilds this whole screen
-// around the new `RadioGroup` widget along with the auto-approve / real-
-// broadcast switches, so this scoped ignore stays in lock-step with the
-// rewrite rather than churning the file twice.
+// `onChanged` flow rather than the newer `RadioGroup` ancestor.
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 
 import 'package:web3_webview_demo/data/chains.dart';
+import 'package:web3_webview_demo/services/bridge_log.dart';
 import 'package:web3_webview_demo/services/wallet_state.dart';
 
-/// Skeleton settings page.
-///
-/// Phase 6 fills in the auto-approve / real-broadcast toggles plus the
-/// bridge-log viewer; today the page just exposes the picker for the
-/// active EVM account / chain so the rest of the demo has a way to
-/// exercise the `WalletState` listeners and prove the `InheritedNotifier`
-/// rebuild path works.
+/// Settings: active EVM / Solana account + chain pickers, the behaviour
+/// toggles (auto-approve reads, real broadcast) and the bridge-log entry.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -102,29 +95,64 @@ class SettingsPage extends StatelessWidget {
             ),
 
           const Divider(),
-          const _PendingSection(
-            label: 'Auto-approve read-only methods',
-            description:
-                'Phase 6 — toggles whether eth_accounts / eth_chainId / '
-                'solana_account resolve without a confirmation sheet.',
+          const _SectionHeader('Behaviour'),
+          SwitchListTile(
+            value: wallet.autoApproveReadMethods,
+            onChanged: (v) => wallet.autoApproveReadMethods = v,
+            title: const Text('Auto-approve read-only methods'),
+            subtitle: const Text(
+                'eth_accounts / eth_chainId / solana_account resolve '
+                'without a confirmation sheet.'),
           ),
-          const _PendingSection(
-            label: 'Broadcast transactions over RPC',
-            description:
-                'Phase 6 — when enabled (testnets only), eth_sendTransaction '
-                'and Solana signAndSendTransaction will be broadcast through '
-                "the active chain's public endpoint instead of returning a "
-                'mock tx hash.',
+          SwitchListTile(
+            value: wallet.realBroadcast,
+            onChanged: (v) => wallet.realBroadcast = v,
+            title: const Text('Broadcast transactions over RPC'),
+            isThreeLine: true,
+            subtitle: Text(
+              wallet.realBroadcast && !wallet.evmChain.isTestnet
+                  ? '⚠️ Active chain (${wallet.evmChain.name}) is not a '
+                      'testnet. These demo keys hold no funds, so a real '
+                      'broadcast will just fail with insufficient balance.'
+                  : 'When on, eth_sendTransaction is signed and submitted '
+                      'through the active chain\'s RPC instead of returning '
+                      'a mock hash. Use a testnet.',
+            ),
           ),
-          const _PendingSection(
-            label: 'Bridge call log',
-            description:
-                'Phase 3+ — every request the WebView bridge issues plus '
-                'the wallet response will land here so you can reproduce a '
-                'failed DApp interaction by replaying the JSON.',
-          ),
+
+          const Divider(),
+          const _SectionHeader('Diagnostics'),
+          _BridgeLogTile(),
         ],
       ),
+    );
+  }
+}
+
+/// Bridge-log entry with a live count badge, navigating to the full
+/// log viewer.
+class _BridgeLogTile extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final log = BridgeLogScope.of(context);
+    return ListTile(
+      leading: const Icon(Icons.receipt_long_outlined),
+      title: const Text('Bridge call log'),
+      subtitle: const Text(
+          'Every request the WebView bridge issues, with the wallet '
+          'response — replay a failed DApp interaction from the JSON.'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (log.entries.isNotEmpty)
+            Chip(
+              label: Text('${log.entries.length}'),
+              visualDensity: VisualDensity.compact,
+            ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: () => Navigator.of(context).pushNamed('/log'),
     );
   }
 }
@@ -146,20 +174,3 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _PendingSection extends StatelessWidget {
-  const _PendingSection({required this.label, required this.description});
-
-  final String label;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.construction, color: Colors.grey),
-      title: Text(label, style: const TextStyle(color: Colors.grey)),
-      subtitle: Text(description,
-          style: const TextStyle(color: Colors.grey, fontSize: 12)),
-      enabled: false,
-    );
-  }
-}
