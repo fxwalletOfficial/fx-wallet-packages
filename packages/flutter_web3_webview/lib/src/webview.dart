@@ -186,6 +186,8 @@ class Web3Webview extends StatefulWidget {
   final Future<String> Function(String data)? ethSignTypedData;
   final Future<bool> Function(JsAddEthereumChain data)?
       walletSwitchEthereumChain;
+  final Future<bool> Function(JsAddEthereumChain data)?
+      walletAddEthereumChain;
   final Future<String> Function()? solAccount;
   final Future<String> Function(JsCallBackData data)? solSignTransaction;
   final Future<String> Function(JsCallBackData data)? solSignMessage;
@@ -273,6 +275,7 @@ class Web3Webview extends StatefulWidget {
       this.ethPersonalSign,
       this.ethSignTypedData,
       this.walletSwitchEthereumChain,
+      this.walletAddEthereumChain,
       this.solAccount,
       this.solSignTransaction,
       this.solSignMessage,
@@ -410,6 +413,7 @@ class Web3WebviewState extends State<Web3Webview> {
       ethPersonalSign: widget.ethPersonalSign,
       ethSignTypedData: widget.ethSignTypedData,
       walletSwitchEthereumChain: widget.walletSwitchEthereumChain,
+      walletAddEthereumChain: widget.walletAddEthereumChain,
       solAccount: widget.solAccount,
       solSignTransaction: widget.solSignTransaction,
       solSignMessage: widget.solSignMessage,

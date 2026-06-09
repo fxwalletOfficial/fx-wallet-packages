@@ -109,6 +109,21 @@ void main() {
           contains("window.addEventListener('eip6963:requestProvider'"));
     });
 
+    test('announces over EIP-6963 even when window.ethereum already exists',
+        () {
+      // EIP-6963 multi-provider coexistence: the announce must not be gated
+      // on window.ethereum (the previous early-return suppressed it). The
+      // init script now guards re-initialisation on fxwallet.ethereum, only
+      // claims window.ethereum when it is free, and always calls announce().
+      final script = Providers().getInitJs();
+
+      expect(script, isNot(contains('if (window.ethereum != null) return')));
+      expect(script, contains('if (fxwallet.ethereum == null)'));
+      expect(script, contains('if (window.ethereum == null)'));
+      // announce() is invoked unconditionally, outside the init guard.
+      expect(script, contains('announce();'));
+    });
+
     test('emits overwriteMetamask at the top level of the config', () {
       // The vendored EthereumProvider reads `config.overwriteMetamask`
       // (top level), not a nested `ethereum.isMetamask`, so the flag must

@@ -68,6 +68,11 @@ Web3Webview(
     // Return true to accept the switch, false to reject (DApp sees 4001).
     return askUserToSwitch(chain);
   },
+  walletAddEthereumChain: (chain) async {
+    // EIP-3085: register the chain and return true; it resolves with null
+    // and does NOT auto-switch. Omit to fall back to the switch handler.
+    return askUserToAddChain(chain);
+  },
 
   // Solana ---------------------------------------------------------------
   solAccount: () async => 'YourBase58SolanaAddress',
@@ -90,7 +95,8 @@ the EIP-1193 `4001` shape.
 | `ethSign` | `eth_sign` | signature hex |
 | `ethSignTypedData` | `eth_signTypedData` / `_v3` / `_v4` | signature hex |
 | `ethSendTransaction` | `eth_sendTransaction` | transaction hash |
-| `walletSwitchEthereumChain` | `wallet_switchEthereumChain` / `wallet_addEthereumChain` | `bool` accept / reject |
+| `walletSwitchEthereumChain` | `wallet_switchEthereumChain` | `bool` accept / reject |
+| `walletAddEthereumChain` | `wallet_addEthereumChain` | `bool` accept / reject — falls back to `walletSwitchEthereumChain` if unset |
 | `solAccount` | Solana connect | base58 address |
 | `solSignMessage` | `solana_signMessage` | signature (hex) |
 | `solSignTransaction` | `solana_signTransaction` | signature (base58) |

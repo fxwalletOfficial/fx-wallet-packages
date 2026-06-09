@@ -65,40 +65,52 @@ class Providers {
     // `Connection('mainnet-beta')` against an invalid RPC URL.)
     return '''
       (function() {
-        if (window.ethereum != null) return;
-
-        const config = {
-          overwriteMetamask: $overwriteMetamask,
-          ethereum: {
-            chainId: ${settings?.eth?.chainId ?? 1}
-          },
-          solana: {
-            cluster: 'mainnet-beta',
-            icon: $solanaIcon,
-            name: $walletName
-          },
-          isDebug: false
+        const announce = function() {
+          const event = new CustomEvent('eip6963:announceProvider', {
+            detail: {
+              info: {
+                uuid: $providerUuid,
+                name: $walletName,
+                icon: $ethereumIcon,
+                rdns: $rdns
+              },
+              provider: fxwallet.ethereum
+            }
+          });
+          window.dispatchEvent(event);
         };
 
-        fxwallet.ethereum = new fxwallet.Provider(config);
-        fxwallet.solana = new window.fxwallet.SolanaProvider(config);
-        window.ethereum = fxwallet.ethereum;
-
-        const event = new CustomEvent('eip6963:announceProvider', {
-          detail: {
-            info: {
-              uuid: $providerUuid,
-              name: $walletName,
-              icon: $ethereumIcon,
-              rdns: $rdns
+        if (fxwallet.ethereum == null) {
+          const config = {
+            overwriteMetamask: $overwriteMetamask,
+            ethereum: {
+              chainId: ${settings?.eth?.chainId ?? 1}
             },
-            provider: fxwallet.ethereum
+            solana: {
+              cluster: 'mainnet-beta',
+              icon: $solanaIcon,
+              name: $walletName
+            },
+            isDebug: false
+          };
+
+          fxwallet.ethereum = new fxwallet.Provider(config);
+          fxwallet.solana = new window.fxwallet.SolanaProvider(config);
+
+          // Only claim window.ethereum if nothing else already has, so a
+          // coexisting wallet isn't clobbered — EIP-6963 announcement below
+          // handles discovery either way.
+          if (window.ethereum == null) {
+            window.ethereum = fxwallet.ethereum;
           }
-        });
-        window.dispatchEvent(event);
-        window.addEventListener('eip6963:requestProvider', () => {
-          window.dispatchEvent(event);
-        });
+
+          window.addEventListener('eip6963:requestProvider', announce);
+        }
+
+        // Always announce over EIP-6963, regardless of window.ethereum —
+        // multi-provider coexistence is the entire point of the standard,
+        // so an existing window.ethereum must not suppress our announce.
+        announce();
       })();
     ''';
   }

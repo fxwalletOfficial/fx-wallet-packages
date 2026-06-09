@@ -14,6 +14,8 @@ class Web3RequestDispatcher {
   final Future<String> Function(String data)? ethSignTypedData;
   final Future<bool> Function(JsAddEthereumChain data)?
       walletSwitchEthereumChain;
+  final Future<bool> Function(JsAddEthereumChain data)?
+      walletAddEthereumChain;
   final Future<String> Function()? solAccount;
   final Future<String> Function(JsCallBackData data)? solSignTransaction;
   final Future<String> Function(JsCallBackData data)? solSignMessage;
@@ -28,6 +30,7 @@ class Web3RequestDispatcher {
     this.ethPersonalSign,
     this.ethSignTypedData,
     this.walletSwitchEthereumChain,
+    this.walletAddEthereumChain,
     this.solAccount,
     this.solSignTransaction,
     this.solSignMessage,
@@ -48,8 +51,9 @@ class Web3RequestDispatcher {
       case 'eth_chainId':
         return _ethChainId();
       case 'wallet_switchEthereumChain':
-      case 'wallet_addEthereumChain':
         return _walletSwitchEthereumChain(data);
+      case 'wallet_addEthereumChain':
+        return _walletAddEthereumChain(data);
       case 'solana_account':
         return _solAccount();
       case 'eth_sendTransaction':
@@ -130,6 +134,28 @@ class Web3RequestDispatcher {
       'window.ethereum.emitChainChanged(${jsonEncode(chainId)})',
     );
     return _ethChainId();
+  }
+
+  /// EIP-3085 `wallet_addEthereumChain`: register the chain with the wallet
+  /// and return `null` on success. Unlike a switch it must NOT change the
+  /// active chain, so no `chainChanged` event is emitted here.
+  ///
+  /// When no dedicated [walletAddEthereumChain] handler is supplied we fall
+  /// back to [walletSwitchEthereumChain] so existing integrations keep
+  /// working — previously add and switch shared a single handler and add
+  /// always switched.
+  Future<dynamic> _walletAddEthereumChain(JsCallBackData data) async {
+    final callback = walletAddEthereumChain;
+    if (callback == null) return _walletSwitchEthereumChain(data);
+
+    final params = data.getChainParams();
+    final chainId = params.chainId;
+    if (chainId == null || !_chainIdPattern.hasMatch(chainId)) {
+      throw Web3RpcError.unrecognizedChain();
+    }
+
+    if (!await callback(params)) throw Web3RpcError.userRejected();
+    return null;
   }
 
   Future<String> _solAccount() {

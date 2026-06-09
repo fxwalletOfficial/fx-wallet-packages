@@ -34,12 +34,20 @@ names rather than the adapter's rewrites.
 
 ```bash
 bun install
-bun run build:packages   # validate the per-package rollup builds
-bun run build:flutter    # regenerate ../lib/js/provider.min.js via esbuild
+bun run build:packages   # rollup each package's TS source into its dist/
+bun run build:flutter    # esbuild-bundle the dist/ outputs into ../lib/js/provider.min.js
 ```
 
+> ⚠️ Run `build:packages` **before** `build:flutter`. Each sub-package's
+> `package.json` resolves to its rollup `dist/` output, and `bundle/index.ts`
+> imports `EthereumProvider` / `SolanaProvider` through those package entry
+> points — so `build:flutter` bundles the `dist/` artifacts, **not** the
+> `.ts` sources directly. After editing any `.ts` file you must re-run
+> `build:packages` first, otherwise the change won't reach
+> `provider.min.js`.
+
 `bundle/index.ts` is the aggregator entry point; it imports
-`EthereumProvider` and `SolanaProvider` straight from the workspace source
+`EthereumProvider` and `SolanaProvider` (via their package `dist/` builds)
 and assigns them to `window.fxwallet`. `bundle/build.mjs` invokes esbuild
 with Node-builtin polyfills (Buffer / events / crypto / http / https /
 stream / url / util / zlib) and writes the IIFE bundle to the

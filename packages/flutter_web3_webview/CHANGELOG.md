@@ -25,6 +25,28 @@ the EVM / Solana request pipeline has been hardened end-to-end.
 
 * SECURITY: Deny WebView permission requests by default unless the caller
   provides an explicit permission handler.
+* Handle `wallet_addEthereumChain` separately from
+  `wallet_switchEthereumChain` via a new `walletAddEthereumChain` callback:
+  per EIP-3085 it registers the chain and resolves with `null` without
+  switching the active chain or emitting `chainChanged`. Falls back to
+  `walletSwitchEthereumChain` when no add handler is supplied, so existing
+  integrations are unaffected.
+* Stop advertising the Solana wallet-standard `signAndSendTransaction` and
+  `signIn` features: the provider has no default broadcast RPC and SIWS isn't
+  bridged, so advertising them led DApps into a guaranteed runtime failure
+  (`signAndSendTransaction` threw on an uninitialised connection, `signIn`
+  always threw `Method not implemented.`). DApps now fall back to
+  `signTransaction` / `connect` + `signMessage`.
+* Fix the legacy synchronous `_send`: `net_version` / `eth_chainId` no longer
+  return the accounts array, and `getNetworkVersion`'s method name no longer
+  carries a stray trailing space. The pass-through provider doesn't cache the
+  chain id, so these synchronous calls now throw `4200` pointing callers at
+  the async `request` API.
+* Always emit the EIP-6963 `announceProvider` event, even when
+  `window.ethereum` already exists — the previous early-return suppressed the
+  announcement and broke multi-provider coexistence. The injected script now
+  guards re-initialisation on `fxwallet.ethereum` and only claims
+  `window.ethereum` when it is free.
 * Surface EIP-1193 `4001` (user rejected) instead of the invalid `4092` code
   when a chain switch is declined, and reject `wallet_switchEthereumChain`
   with `4902` for any chain id that is missing or is not a `0x`-prefixed hex

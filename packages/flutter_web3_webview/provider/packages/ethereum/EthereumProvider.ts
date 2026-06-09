@@ -142,12 +142,21 @@ export class EthereumProvider
     switch (payload.method) {
       case 'eth_accounts':
       case 'eth_coinbase':
-      case 'net_version':
-      case 'eth_chainId':
         response.result = this.handleStaticRequests({
           method: 'eth_accounts',
         }) as any;
         break;
+
+      case 'net_version':
+      case 'eth_chainId':
+        // The chain id isn't cached on the provider in this pass-through
+        // design — it's served by the Dart `ethChainId` callback over the
+        // async `request` path — so there's no correct synchronous answer
+        // here. (Previously this wrongly returned the accounts array.)
+        throw new RPCError(
+          4200,
+          `FxWallet does not support calling ${payload.method} synchronously. Use request({ method: '${payload.method}' }) instead.`,
+        );
 
       default:
         throw new RPCError(
@@ -304,7 +313,7 @@ export class EthereumProvider
 
   getNetworkVersion() {
     return this.handleStaticRequests({
-      method: 'net_version ',
+      method: 'net_version',
     }) as number | undefined;
   }
 
