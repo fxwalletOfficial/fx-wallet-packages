@@ -28,9 +28,12 @@ the EVM / Solana request pipeline has been hardened end-to-end.
 * Handle `wallet_addEthereumChain` separately from
   `wallet_switchEthereumChain` via a new `walletAddEthereumChain` callback:
   per EIP-3085 it registers the chain and resolves with `null` without
-  switching the active chain or emitting `chainChanged`. Falls back to
-  `walletSwitchEthereumChain` when no add handler is supplied, so existing
-  integrations are unaffected.
+  switching the active chain or emitting `chainChanged`. With no add handler
+  it rejects with `4200` (unsupported method) rather than falling back to a
+  switch, so an add request never silently changes the active network.
+* Return `null` from a successful `wallet_switchEthereumChain` per EIP-3326
+  (it previously resolved with the chain id, which strict DApps treat as a
+  protocol mismatch).
 * Stop advertising the Solana wallet-standard `signAndSendTransaction` and
   `signIn` features: the provider has no default broadcast RPC and SIWS isn't
   bridged, so advertising them led DApps into a guaranteed runtime failure
@@ -47,17 +50,19 @@ the EVM / Solana request pipeline has been hardened end-to-end.
   announcement and broke multi-provider coexistence. The injected script now
   guards re-initialisation on `fxwallet.ethereum` and only claims
   `window.ethereum` when it is free.
+* Default the EIP-6963 announcement metadata to valid values — a built-in
+  data-URI `icon` and a reverse-DNS `rdns` (both overridable via
+  `Web3EthSettings`) — instead of empty strings that strict DApps reject.
 * Surface EIP-1193 `4001` (user rejected) instead of the invalid `4092` code
   when a chain switch is declined, and reject `wallet_switchEthereumChain`
   with `4902` for any chain id that is missing or is not a `0x`-prefixed hex
   string (previously `'1'`, `'0xzz'`, `' 0x1 '` and similar values still
   reached the wallet callback).
-* Introduce `Web3RpcError` for structured Dart-side handling of provider
-  failures. The `flutter_inappwebview` bridge re-wraps the exception before
-  it reaches the in-page DApp, so DApps still see a string;
-  `Web3RpcError.toString()` prefixes its JSON payload with the
-  `Web3RpcError: ` sentinel so the provider can extract the structured
-  `{code,message}` (extraction itself is tracked separately).
+* Surface structured EIP-1193 errors to DApps. The Dart side throws
+  `Web3RpcError`; the injected provider bridge parses its `Web3RpcError: `
+  sentinel out of the wrapped rejection string and re-throws a real
+  `ProviderRpcError` carrying `code` / `message` / `data`, so DApps can branch
+  on `error.code` (e.g. `4902` → `wallet_addEthereumChain`).
 * Add `Web3EthSettings.overwriteMetamask` (default `false`). Previously
   `window.ethereum.isMetaMask` was permanently `false` because the value was
   injected under a config field the provider never read — breaking DApps
