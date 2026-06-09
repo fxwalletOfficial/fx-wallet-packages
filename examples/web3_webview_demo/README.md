@@ -24,8 +24,8 @@ reviewable.
 |------:|--------------|--------|
 | **1** | App shell + zero-dep state mgmt + bookmark grid + chain / account pickers (placeholders for signing / approval / log) | ✅ |
 | **2** | Custom-URL bar, live bookmark search, in-memory recent-visit row | ✅ |
-| **3** | Full callback wiring + approval sheet + bridge log + wallet→DApp event emit (mock signers) | ✅ this commit |
-| 4 | EVM signing (`web3dart`): `personal_sign`, `eth_signTypedData_v3/v4`, `eth_sendTransaction` (mock hash by default, real broadcast on toggle) | ☐ |
+| **3** | Full callback wiring + approval sheet + bridge log + wallet→DApp event emit (mock signers) | ✅ |
+| **4** | Real EVM signing (`web3dart` + self-rolled EIP-712): `personal_sign`, `eth_sign`, `eth_signTypedData_v4`, `eth_sendTransaction` | ✅ this commit |
 | 5 | Solana signing (`cryptography` + `bs58`): `solana_signMessage`, `solana_signTransaction` | ☐ |
 | 6 | Settings: auto-approve toggle, real-broadcast toggle, bridge-log viewer | ☐ |
 | 7 | README screenshots, manual regression checklist, more widget tests | ☐ |
@@ -106,10 +106,32 @@ Settings) pushes `emitChainChanged` / `emitAccountsChanged` /
 Every round-trip — including the emits — is recorded in the `BridgeLog`,
 viewable from the browser AppBar's terminal icon.
 
-Signers are **mock** in this phase: deterministic placeholder signatures
-that exercise the plumbing but are not cryptographically valid. Phase 4 / 5
-swap in the real `web3dart` / ed25519 implementations behind the same
-`EthSigner` / `SolSigner` interfaces (injected through `DemoApp`).
+Signers are injected through `DemoApp` behind the `EthSigner` /
+`SolSigner` interfaces. The EVM side now uses the **real** `web3dart`
+implementation (`Web3DartEthSigner`); the Solana side is still
+`MockSolSigner` until Phase 5. `MockEthSigner` is retained for tests.
+
+## EVM signing (Phase 4)
+
+`Web3DartEthSigner` produces cryptographically valid secp256k1 signatures
+against the demo account's (public Hardhat) private key:
+
+| Method | Implementation |
+|--------|----------------|
+| `personal_sign` | web3dart `signPersonalMessageToUint8List` (EIP-191) |
+| `eth_sign` | raw `sign` over the 32-byte hash |
+| `eth_signTypedData_v4` | `Eip712.digest` (self-rolled v4 encoder — supports nested structs + arrays) → `sign` |
+| `eth_sendTransaction` | mock: signs the payload and returns a deterministic 32-byte hash; real-broadcast: builds an EIP-1559 tx and submits via `Web3Client` over the chain's RPC |
+
+The EIP-712 encoder lives in `services/eip712.dart` and is validated in
+tests against the canonical spec Mail/Person example
+(digest `0xbe609a…57bd2`); signing tests recover the signer address from
+the signature via `ecRecover` to prove correctness end-to-end.
+
+> `web3dart 3.0.2` pins `pointycastle ^4`, which conflicts with
+> `eth_sig_util` / `bip39` (both on `^3`). The demo therefore rolls its
+> own EIP-712 encoder and hard-codes the public Hardhat private keys
+> instead of deriving them at runtime.
 
 State propagates through `InheritedNotifier`-backed scopes
 (`WalletStateScope`, `BridgeLogScope`) — zero third-party state

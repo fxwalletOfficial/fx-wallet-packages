@@ -4,11 +4,13 @@ import 'package:web3_webview_demo/data/chains.dart';
 
 /// Pre-generated demo wallet identity.
 ///
-/// The Phase 4/5 commits replace the placeholder addresses below with real
-/// BIP-39 → BIP-44 → secp256k1 / ed25519 derivations off the well-known
+/// The EVM keys are the first three accounts of the well-known
 /// `"test test test test test test test test test test test junk"`
-/// mnemonic. Until then we surface the labels so the UI / chip / picker
-/// affordances can be wired up against a deterministic identity list.
+/// mnemonic — i.e. the default Hardhat / Anvil accounts whose private keys
+/// are printed on every local-node boot and published all over the
+/// internet. They are used here precisely *because* they are public: the
+/// demo can sign real secp256k1 signatures without ever holding a secret
+/// that matters.
 @immutable
 class DemoAccount {
   /// Display name shown in pickers ("Account 1", "Account 2", …).
@@ -17,16 +19,21 @@ class DemoAccount {
   /// 0x-prefixed checksummed EVM address.
   final String evmAddress;
 
-  /// base58 Solana public key.
+  /// 0x-prefixed secp256k1 private key for [evmAddress]. **Public test
+  /// key** (see the class doc) — never reuse for anything with value.
+  final String evmPrivateKey;
+
+  /// base58 Solana public key. The matching ed25519 secret key is wired in
+  /// Phase 5 alongside the Solana signer.
   final String solanaAddress;
 
-  /// BIP-44 derivation index (0, 1, 2 …) — exposed so the Phase 4 signer
-  /// can derive the matching private key on demand.
+  /// BIP-44 derivation index (0, 1, 2 …).
   final int derivationIndex;
 
   const DemoAccount({
     required this.label,
     required this.evmAddress,
+    required this.evmPrivateKey,
     required this.solanaAddress,
     required this.derivationIndex,
   });
@@ -36,32 +43,36 @@ class DemoAccount {
 /// the `accountsChanged` / `accountChanged` event flows without making the
 /// picker noisy.
 ///
-/// **DO NOT** use these addresses for anything other than the demo. The
-/// BIP-39 mnemonic they derive from is the openly-known
-/// `"test test test test test test test test test test test junk"` phrase
-/// that every Ethereum tooling stack ships as a fixture; any funds sent to
-/// these addresses are immediately drained by the bots that scan for it.
+/// **DO NOT** use these keys for anything other than the demo.** They are
+/// the default Hardhat / Anvil accounts derived from the openly-known
+/// `"test test test test test test test test test test test junk"` phrase;
+/// any funds sent to these addresses are immediately drained by bots that
+/// scan for them.
 ///
-/// The EVM and Solana addresses below are computed off-tree against that
-/// mnemonic so they stay stable across runs:
-///   * EVM uses BIP-44 path `m/44'/60'/0'/0/<index>`.
-///   * Solana uses BIP-44 path `m/44'/501'/<index>'/0'`.
+///   * EVM uses BIP-44 path `m/44'/60'/0'/0/<index>` (keys below).
+///   * Solana uses BIP-44 path `m/44'/501'/<index>'/0'` (Phase 5).
 const List<DemoAccount> kDemoAccounts = <DemoAccount>[
   DemoAccount(
     label: 'Account 1',
     evmAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    evmPrivateKey:
+        '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
     solanaAddress: '5ZWj7a1f8tWkjBESHKgrLmZhGh7yBR8Cmjw6aQGhRTMQ',
     derivationIndex: 0,
   ),
   DemoAccount(
     label: 'Account 2',
     evmAddress: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    evmPrivateKey:
+        '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
     solanaAddress: 'GwHH8ciFhR8vejWCqmg8FWZUCNtubPY2esALvy5tBvji',
     derivationIndex: 1,
   ),
   DemoAccount(
     label: 'Account 3',
     evmAddress: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    evmPrivateKey:
+        '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
     solanaAddress: 'FN5sV1iyrnUMtSdaXbq5o24WnTcyJ4MEArytfSe6gE2c',
     derivationIndex: 2,
   ),
