@@ -1,9 +1,9 @@
 # Provider bundle recovery notes
 
 The current `lib/js/provider.min.js` was generated from a previously-modified
-fork of `trust-web3-provider`. Those source modifications were lost, so this
-document tracks what was inferred from the minified bundle and what has /
-has not been ported back into `provider/packages/`.
+provider fork whose source modifications were lost, so this document tracks
+what was inferred from the minified bundle and what has / has not been
+ported back into `provider/packages/`.
 
 > **Status update (resolved):** `lib/js/provider.min.js` is now built from
 > this source tree — `bun run build:flutter` produces a **321 KB** esbuild
