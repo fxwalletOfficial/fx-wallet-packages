@@ -79,5 +79,14 @@ void main() {
         isTrue,
       );
     });
+
+    // signMessage strips the recovery byte and verify uses verifyMessageSignature
+    // (both changed in the 6.x migration); pin the round-trip so the pair stays
+    // self-consistent.
+    test('signMessage / ECPublic.verify round-trip', () {
+      final pk = ECPrivate.fromBytes(priv);
+      final sig = BytesUtils.fromHexString(pk.signMessage(digest));
+      expect(pk.getPublic().verify(digest, sig), isTrue);
+    });
   });
 }
