@@ -167,7 +167,7 @@ void main() {
         isNull,
       );
       expect(receivedChainId, '0xa');
-      expect(scripts, ['window.ethereum.emitChainChanged("0xa")']);
+      expect(scripts, ['window.fxwallet.ethereum.emitChainChanged("0xa")']);
     });
 
     test(
@@ -297,7 +297,7 @@ void main() {
 
       expect(
         scripts.single,
-        'window.ethereum.emitChainChanged(${jsonEncode(chainId)})',
+        'window.fxwallet.ethereum.emitChainChanged(${jsonEncode(chainId)})',
       );
       expect(scripts.single, isNot(contains('emitChainChanged($chainId)')));
     });
@@ -403,7 +403,7 @@ void main() {
         ]),
       );
 
-      expect(scripts, ['window.ethereum.emitChainChanged("0X1A")']);
+      expect(scripts, ['window.fxwallet.ethereum.emitChainChanged("0X1A")']);
     });
 
     test('throws Invalid wallet when the routed callback is missing', () async {

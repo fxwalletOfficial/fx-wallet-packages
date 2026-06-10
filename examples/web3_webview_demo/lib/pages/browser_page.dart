@@ -103,12 +103,12 @@ class _BrowserPageState extends State<BrowserPage> {
     if (wallet.evmChainId != _lastChainId) {
       _lastChainId = wallet.evmChainId;
       final hex = '0x${wallet.evmChainId.toRadixString(16)}';
-      _emit('window.ethereum.emitChainChanged("$hex")');
+      _emit('window.fxwallet.ethereum.emitChainChanged("$hex")');
       _log.record(method: 'emitChainChanged', request: hex);
     }
     if (wallet.evmAccount.evmAddress != _lastEvmAddress) {
       _lastEvmAddress = wallet.evmAccount.evmAddress;
-      _emit('window.ethereum.emitAccountsChanged('
+      _emit('window.fxwallet.ethereum.emitAccountsChanged('
           '["${wallet.evmAccount.evmAddress}"])');
       _log.record(
           method: 'emitAccountsChanged',

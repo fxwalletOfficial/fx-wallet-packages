@@ -193,7 +193,7 @@ void main() {
     expect(result, isNull);
     expect(
       controller.evaluatedScripts,
-      ['window.ethereum.emitChainChanged("0xa")'],
+      ['window.fxwallet.ethereum.emitChainChanged("0xa")'],
     );
   });
 

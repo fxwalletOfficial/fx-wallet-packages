@@ -70,7 +70,8 @@ Web3Webview(
   },
   walletAddEthereumChain: (chain) async {
     // EIP-3085: register the chain and return true; it resolves with null
-    // and does NOT auto-switch. Omit to fall back to the switch handler.
+    // and does NOT auto-switch. With no add handler the dispatcher rejects
+    // the add with 4200 (unsupported method) rather than switching.
     return askUserToAddChain(chain);
   },
 
@@ -96,7 +97,7 @@ the EIP-1193 `4001` shape.
 | `ethSignTypedData` | `eth_signTypedData` / `_v3` / `_v4` | signature hex |
 | `ethSendTransaction` | `eth_sendTransaction` | transaction hash |
 | `walletSwitchEthereumChain` | `wallet_switchEthereumChain` | `bool` accept / reject |
-| `walletAddEthereumChain` | `wallet_addEthereumChain` | `bool` accept / reject — falls back to `walletSwitchEthereumChain` if unset |
+| `walletAddEthereumChain` | `wallet_addEthereumChain` | `bool` accept / reject — if unset, add is rejected with `4200` (unsupported method) |
 | `solAccount` | Solana connect | base58 address |
 | `solSignMessage` | `solana_signMessage` | signature (hex) |
 | `solSignTransaction` | `solana_signTransaction` | signature (base58) |

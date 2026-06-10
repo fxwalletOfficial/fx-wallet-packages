@@ -130,8 +130,11 @@ class Web3RequestDispatcher {
 
     if (!await callback(params)) throw Web3RpcError.userRejected();
 
+    // Target our own provider explicitly: under EIP-6963 coexistence
+    // `window.ethereum` may belong to another wallet, while `fxwallet.ethereum`
+    // is always this package's provider.
     await evaluateJavascript(
-      'window.ethereum.emitChainChanged(${jsonEncode(chainId)})',
+      'window.fxwallet.ethereum.emitChainChanged(${jsonEncode(chainId)})',
     );
     // EIP-3326: a successful switch resolves with null, not the chain id.
     return null;

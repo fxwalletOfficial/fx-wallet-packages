@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 import 'package:uuid/uuid.dart';
 
@@ -38,8 +38,12 @@ class Providers {
     try {
       _js = await bundle
           .loadString('packages/flutter_web3_webview/js/provider.min.js');
-    } catch (_) {
-      return;
+    } catch (error) {
+      // Surface a diagnostic instead of failing silently — without the asset
+      // the injected `fxwallet` global is undefined and DApps fail with an
+      // opaque ReferenceError.
+      debugPrint(
+          'flutter_web3_webview: failed to load provider.min.js: $error');
     }
   }
 
