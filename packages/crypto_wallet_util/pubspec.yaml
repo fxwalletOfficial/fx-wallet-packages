@@ -6,9 +6,6 @@ homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packa
 environment:
   sdk: '>=3.7.0 <4.0.0'
 
-dependency_overrides:
-  pointycastle: ^4.0.0
-
 dependencies:
   bip340: ^0.3.1
   collection: ^1.19.1
