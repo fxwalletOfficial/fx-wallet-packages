@@ -108,6 +108,7 @@ lib/
 | `ethPersonalSign` / `ethSign` / `ethSignTypedData` | approval sheet → `EthSigner` |
 | `ethSendTransaction` | approval sheet (danger styling) → `EthSigner`, mock hash unless *real broadcast* |
 | `walletSwitchEthereumChain` | approval sheet → updates `WalletState` (returns `false` on reject so the dispatcher raises EIP-1193 `4001`) |
+| `walletAddEthereumChain` | approval sheet → registers the chain **without** switching (EIP-3085); without this handler the dispatcher rejects add with `4200` |
 | `solSignMessage` / `solSignTransaction` | approval sheet → `SolSigner` |
 | `onDefaultCallback` | logged + rejected so unknown methods fail loudly |
 
@@ -217,6 +218,8 @@ Use this to verify a provider-JS or dispatcher change end-to-end. Run
   broadcasting.
 - [ ] **`wallet_switchEthereumChain`** — sheet shows from → to; approving
   updates the AppBar chain chip and the dapp's `chainChanged`.
+- [ ] **`wallet_addEthereumChain`** — "Add chain" sheet; approving resolves
+  the dapp call (null) without changing the active chain.
 - [ ] **Wallet → DApp** — with the dapp open, change the active chain /
   account in Settings; the dapp receives the corresponding event (visible
   in the bridge log too).

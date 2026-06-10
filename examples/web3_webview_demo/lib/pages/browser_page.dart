@@ -232,6 +232,7 @@ class _BrowserPageState extends State<BrowserPage> {
           ),
         ),
         walletSwitchEthereumChain: _switchChain,
+        walletAddEthereumChain: _addChain,
         // ── Solana signing ──────────────────────────────────────────
         solSignMessage: (data) => _runApproved<String>(
           method: 'solana_signMessage',
@@ -372,6 +373,44 @@ class _BrowserPageState extends State<BrowserPage> {
     _wallet.evmChainId = targetId;
     log.resolve(id, response: '0x${targetId.toRadixString(16)}',
         elapsed: sw.elapsed);
+    return true;
+  }
+
+  /// EIP-3085 `wallet_addEthereumChain`. The demo treats this as "register
+  /// the chain": it shows an approval sheet and, on approval, returns true
+  /// WITHOUT switching the active chain (that's `_switchChain`'s job). The
+  /// package then resolves the DApp call with null; with no add handler wired
+  /// it would instead reject with EIP-1193 `4200` (unsupported method).
+  Future<bool> _addChain(JsAddEthereumChain data) async {
+    final log = _log;
+    final id =
+        log.begin(method: 'wallet_addEthereumChain', request: data.toJson());
+    final sw = Stopwatch()..start();
+
+    final hex = (data.chainId ?? '').replaceFirst('0x', '');
+    final targetId = int.tryParse(hex, radix: 16);
+    if (targetId == null) {
+      sw.stop();
+      log.reject(id, error: 'invalid chainId', elapsed: sw.elapsed);
+      return false;
+    }
+
+    final target = evmChainById(targetId);
+    final approved = await _confirm(
+      title: 'Add chain',
+      method: 'wallet_addEthereumChain',
+      rows: [
+        MapEntry('Chain', '${target.name} (chainId $targetId)'),
+        const MapEntry('Note', 'Adds the network without switching to it'),
+      ],
+    );
+    sw.stop();
+    if (!approved) {
+      log.reject(id, error: 'user rejected', elapsed: sw.elapsed);
+      return false;
+    }
+    // Intentionally does NOT change _wallet.evmChainId — add must not switch.
+    log.resolve(id, response: 'added (resolves null)', elapsed: sw.elapsed);
     return true;
   }
 
