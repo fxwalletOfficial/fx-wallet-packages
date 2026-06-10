@@ -111,6 +111,28 @@ pub unsafe extern "C" fn verify(
     signature.verify_bytes(&address, message) as c_int
 }
 
+/// Computes the token_registry owner hash: BHP256 of the struct
+/// `{ account, token_id }`. Returns "" on failure.
+///
+/// SAFETY: `address`/`token_id` are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn get_token_owner_hash(
+    address: *const c_char,
+    token_id: *const c_char,
+) -> *mut c_char {
+    let result = (|| -> Option<String> {
+        let plaintext = Plaintext::<Net>::from_str(&format!(
+            "{{ account: {}, token_id: {} }}",
+            read_str(address),
+            read_str(token_id),
+        ))
+        .ok()?;
+        let hash = Net::hash_bhp256(&plaintext.to_bits_le()).ok()?;
+        Some(hash.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
+}
+
 // ----------------------------------------------------------------------------
 // Group 2: records (read operations). snarkvm-console only.
 // ----------------------------------------------------------------------------

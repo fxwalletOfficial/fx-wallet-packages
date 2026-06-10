@@ -76,4 +76,21 @@ void main() {
       expect(gpl.isValidSignature(addr, sigFromClean, tampered), isFalse);
     }
   });
+
+  test('get_token_owner_hash parity', () {
+    const tokenIds = <String>[
+      '1751493913335802797273486270793650302076377624243810059080883537084141842600field',
+      '0field',
+      '1field',
+      '42field',
+    ];
+    for (var i = 0; i < 30; i++) {
+      final addr = clean.mnemonicToAddress(bip39.generateMnemonic());
+      for (final tokenId in tokenIds) {
+        expect(clean.getTokenOwnerHash(addr, tokenId),
+            gpl.getTokenOwnerHash(addr, tokenId),
+            reason: 'token_owner_hash addr=$addr tokenId=$tokenId');
+      }
+    }
+  });
 }
