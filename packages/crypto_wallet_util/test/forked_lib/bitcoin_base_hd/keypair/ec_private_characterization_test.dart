@@ -2,6 +2,7 @@ import 'package:test/test.dart';
 
 import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_base_hd/src/crypto/keypair/ec_private.dart';
+import 'package:crypto_wallet_util/src/forked_lib/bitcoin_base_hd/src/bitcoin/script/script.dart';
 
 /// Characterization tests for ECPrivate signing (bitcoin_base_hd fork).
 ///
@@ -45,6 +46,37 @@ void main() {
         ECPrivate.fromBytes(priv).signMessage(digest),
         '561fe99047a805b001da87f8730291706eddb48aa2b2a6d80f129cc95a04eae53b'
         '0d637c3057d0a3eab2bdec5cca058651b9fa100dc5d1c8e177fca9976a9c34',
+      );
+    });
+
+    // signTapRoot must fold a committed Taproot script tree's Merkle root into
+    // the key-path tweak — otherwise a key-path spend of a script-tree address
+    // is signed with the wrong tweak and is invalid (funds could be unspendable).
+    test('signTapRoot with script tree folds Merkle root into the tweak', () {
+      final pk = ECPrivate.fromBytes(priv);
+      final leaf = Script(script: ['OP_1']);
+      final withTree = pk.signTapRoot(digest, tapScripts: [
+        [leaf]
+      ]);
+
+      // The script tree must change the tweak → different from plain key-path.
+      expect(withTree, isNot(pk.signTapRoot(digest)));
+      expect(
+        withTree,
+        '252029cd4fb0a25a66283d371993085cfb17dbd814bbef6cc744c04ac84d5ce6'
+        '8bb24ba90b1b61a6d92fa3b6a2b33420976d8765b726136c030b145c94d9883c',
+      );
+
+      // And it must verify against the script-tree-tweaked output key.
+      final pubPoint = pk.getPublic().publicKey.point as ProjectiveECCPoint;
+      final tweak = P2TRUtils.calculateTweek(pubPoint, script: [leaf.toBytes()]);
+      expect(
+        BitcoinSignatureVerifier.fromKeyBytes(pk.getPublic().toBytes())
+            .verifyBip340Signature(
+                digest: digest,
+                signature: BytesUtils.fromHexString(withTree),
+                tapTweakHash: tweak),
+        isTrue,
       );
     });
   });

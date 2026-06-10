@@ -298,5 +298,3 @@
   - `ECPublic.verifyTransactionSignature` and
     `ECPublic.verifySchnorrTransactionSignature` (unused; their post-upgrade
     bodies had latent argument-shape issues).
-  - the unused Taproot script-path branch of `ECPrivate.signTapRoot`
-    (`tapScripts` parameter); key-path signing output is unchanged.

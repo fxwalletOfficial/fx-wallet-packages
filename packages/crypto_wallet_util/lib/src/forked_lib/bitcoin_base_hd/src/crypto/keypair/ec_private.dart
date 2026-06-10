@@ -65,14 +65,33 @@ class ECPrivate {
     return BytesUtils.toHexString(signature);
   }
 
-  /// sign taproot transaction digest (key-path spend) and returns the signature.
+  /// Signs a Taproot key-path spend and returns the signature.
+  ///
+  /// [tapScripts] commits the output's Taproot script tree into the key-path
+  /// tweak (its Merkle root is folded into the tweak), so a signature for an
+  /// address generated with that script tree stays valid. When empty, this is a
+  /// plain key-path spend with no script-tree commitment.
   String signTapRoot(List<int> txDigest,
-      {int sighash = BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL, bool tweak = true}) {
+      {int sighash = BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL,
+      List<List<Script>> tapScripts = const [],
+      bool tweak = true}) {
+    assert(() {
+      if (!tweak && tapScripts.isNotEmpty) {
+        return false;
+      }
+      return true;
+    }(),
+        "When the tweak is false, the `tapScripts` are ignored, to use the tap script path, you need to consider the tweak value to be true.");
+    final tapScriptBytes = (!tweak || tapScripts.isEmpty)
+        ? null
+        : tapScripts.map((e) => e.map((e) => e.toBytes()).toList()).toList();
     final btcSigner = BitcoinKeySigner.fromKeyBytes(toBytes());
     final pubPoint = getPublic().publicKey.point as ProjectiveECCPoint;
     List<int> signatur = btcSigner.signBip340Const(
       digest: txDigest,
-      tapTweakHash: tweak ? P2TRUtils.calculateTweek(pubPoint) : null,
+      tapTweakHash: tweak
+          ? P2TRUtils.calculateTweek(pubPoint, script: tapScriptBytes)
+          : null,
     );
     if (sighash != BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL) {
       signatur = <int>[...signatur, sighash];
