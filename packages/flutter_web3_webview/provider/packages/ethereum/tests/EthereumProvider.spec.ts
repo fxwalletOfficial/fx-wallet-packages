@@ -124,6 +124,21 @@ test('_send answers eth_accounts synchronously from the cached address', () => {
   expect(ethereum._send({ method: 'eth_accounts' }).result).toEqual([account]);
 });
 
+test('request(eth_requestAccounts) caches the address for the sync _send path', async () => {
+  respond = () => Promise.resolve([account]);
+  const ethereum = new EthereumProvider();
+
+  // Nothing cached before connecting.
+  expect(ethereum._send({ method: 'eth_accounts' }).result).toEqual([]);
+
+  await ethereum.request({ method: 'eth_requestAccounts' });
+
+  // request() fires onResponseReady, which caches the address so the
+  // synchronous eth_accounts / eth_coinbase path returns it.
+  expect(ethereum._send({ method: 'eth_accounts' }).result).toEqual([account]);
+  expect(ethereum._send({ method: 'eth_coinbase' }).result).toEqual([account]);
+});
+
 test('_send throws 4200 for synchronous net_version / eth_chainId', () => {
   const ethereum = new EthereumProvider({ chainId: '0x9' });
   expect(() => ethereum._send({ method: 'net_version' })).toThrow(RPCError);

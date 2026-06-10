@@ -210,8 +210,8 @@ export class EthereumProvider
   /**
    * Forward the request to the Flutter side untouched.
    *
-   * Both `request` and `internalRequest` are single-step pass-throughs:
-   * the Dart `Web3RequestDispatcher` (see
+   * `internalRequest` is a single-step pass-through (`request` wraps it to
+   * fire `onResponseReady`, see below): the Dart `Web3RequestDispatcher` (see
    * `lib/src/utils/request_dispatcher.dart`) is the source of truth for
    * which EIP-1193 method names are supported and how their params are
    * parsed, so the JS layer is intentionally a thin transport that does
@@ -238,8 +238,14 @@ export class EthereumProvider
     return callFlutterHandler<T>(args);
   }
 
-  request<T>(args: IRequestArguments): Promise<T> {
-    return this.internalRequest<T>(args);
+  async request<T>(args: IRequestArguments): Promise<T> {
+    const response = await this.internalRequest<T>(args);
+    // Preserve the stateful side-effect the upstream base provider fired:
+    // `onResponseReady` caches the address after eth_requestAccounts so the
+    // synchronous `_send` / `handleStaticRequests` path (eth_accounts /
+    // eth_coinbase) keeps returning it.
+    this.emit('onResponseReady', args, response);
+    return response;
   }
 
   /**

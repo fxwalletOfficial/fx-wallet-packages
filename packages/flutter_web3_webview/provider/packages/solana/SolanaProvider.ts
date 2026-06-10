@@ -221,10 +221,13 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
       params: { raw: hex },
     });
 
+    // Wrap the Buffer view itself (copying its valid bytes), NOT its
+    // `.buffer`: the backing ArrayBuffer may be a larger pooled slab, so
+    // `new Uint8Array(view.buffer)` can balloon a 64-byte signature past its
+    // expected length (e.g. to the 8 KB pool size under Node's Buffer).
+    const signature = SolanaProvider.messageToBuffer(res);
     return {
-      signature: new Uint8Array(
-        Buffer.from(SolanaProvider.messageToBuffer(res).buffer),
-      ),
+      signature: new Uint8Array(signature),
       publicKey: this.publicKey?.toBase58(),
     };
   }

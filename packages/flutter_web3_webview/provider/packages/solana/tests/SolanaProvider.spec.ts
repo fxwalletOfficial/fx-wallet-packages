@@ -67,12 +67,16 @@ test('signMessage bridges the message as hex under solana_signMessage', async ()
   await sol.connect();
 
   const message = Buffer.from('Random message');
-  await sol.signMessage(new Uint8Array(message));
+  const { signature } = await sol.signMessage(new Uint8Array(message));
 
   expect(calls[1]).toEqual({
     method: 'solana_signMessage',
     params: { raw: '0x' + message.toString('hex') },
   });
+  // The reply is a 64-byte ed25519 signature — it must reflect the Buffer's
+  // valid length, not the (possibly larger, pooled) backing ArrayBuffer.
+  expect(signature).toBeInstanceOf(Uint8Array);
+  expect(signature.length).toBe(64);
 });
 
 test('signTransaction bridges the message as hex + base64 under solana_signTransaction', async () => {
