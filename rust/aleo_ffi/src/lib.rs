@@ -17,7 +17,7 @@ use rand::rngs::OsRng;
 use snarkvm_console::account::{Address, PrivateKey, Signature, ViewKey};
 use snarkvm_console::network::MainnetV0;
 use snarkvm_console::prelude::*;
-use snarkvm_console::program::{Ciphertext, Identifier, Plaintext, ProgramID, Record};
+use snarkvm_console::program::{Ciphertext, Identifier, Literal, Plaintext, ProgramID, Record};
 use snarkvm_console::types::Field;
 
 /// Aleo keys/addresses are encoded identically across networks (same curve,
@@ -176,128 +176,79 @@ pub unsafe extern "C" fn decrypt_cipher_text(
     }
 }
 
-#[cfg(test)]
-mod encryptor_probe {
-    //! Black-box scheme search for the private-key Encryptor: tries candidate
-    //! key-derivation constructions (snarkVM public API only) against a known
-    //! (ciphertext, secret, private-key) vector. No GPL source consulted.
-    use super::*;
-    use snarkvm_console::network::TestnetV0;
-    use snarkvm_console::program::Plaintext as Pt;
 
-    const VECTOR_CT: &str = "ciphertext1qvqg7rgvam3xdcu55pwu6sl8rxwefxaj5gwthk0yzln6jv5fastzup0qn0qftqlqq7jcckyx03fzv9kke0z9puwd7cl7jzyhxfy2f2juplz39dkqs6p24urhxymhv364qm3z8mvyklv5gr52n4fxr2z59jgqytyddj8";
-    const SECRET: &str = "mypassword";
-    const EXPECTED: &str = "APrivateKey1zkpAYS46Dq4rnt9wdohyWMwdmjmTeMJKPZdp5AhvjXZDsVG";
+// ----------------------------------------------------------------------------
+// Private-key Encryptor (password-based). The seed is multiplicatively blinded:
+//   secret_field = domain_separator(secret)
+//   blinding     = hash_psd2([domain_separator("private_key"), nonce, secret_field])
+//   key          = blinding * seed         (encrypt)
+//   seed         = key / blinding          (decrypt)
+// and { key, nonce } is then symmetric-encrypted under secret_field.
+// ----------------------------------------------------------------------------
 
-    fn probe<N: Network>(net: &str) {
-        let ct = match snarkvm_console::program::Ciphertext::<N>::from_str(VECTOR_CT) {
-            Ok(ct) => ct,
-            Err(e) => {
-                println!("[{net}] ciphertext parse FAILED: {e}");
-                return;
-            }
-        };
-        let base = Field::<N>::new_domain_separator(SECRET);
-        let candidates: Vec<(&str, Field<N>)> = vec![
-            ("domain_sep(secret)", base),
-            ("psd2[secret]", N::hash_psd2(&[base]).unwrap()),
-            ("psd2[enc_domain, secret]", N::hash_psd2(&[N::encryption_domain(), base]).unwrap()),
-            ("psd4[secret]", N::hash_psd4(&[base]).unwrap()),
-            ("psd8[secret]", N::hash_psd8(&[base]).unwrap()),
-            ("bhp256(secret bits)", N::hash_bhp256(&SECRET.as_bytes().to_bits_le()).unwrap()),
-        ];
-        for (name, key) in candidates {
-            match ct.decrypt_symmetric(key) {
-                Ok(pt) => {
-                    let shown = pt.to_string();
-                    let mut derived = String::from("(not a field literal)");
-                    if let Pt::Literal(snarkvm_console::program::Literal::Field(f), _) = &pt {
-                        if let Ok(pk) = PrivateKey::<N>::try_from(*f) {
-                            derived = pk.to_string();
-                        }
-                    }
-                    let hit = if derived == EXPECTED { "  <<< MATCH" } else { "" };
-                    println!("[{net}] {name}: decrypt OK, pt={shown}, pk={derived}{hit}");
-                }
-                Err(_) => println!("[{net}] {name}: decrypt failed"),
+/// Extracts the `key` and `nonce` field members from the decrypted struct.
+fn key_nonce(plaintext: &Plaintext<Net>) -> Option<(Field<Net>, Field<Net>)> {
+    let members = match plaintext {
+        Plaintext::Struct(members, _) => members,
+        _ => return None,
+    };
+    let (mut key, mut nonce) = (None, None);
+    for (id, member) in members {
+        if let Plaintext::Literal(Literal::Field(field), _) = member {
+            match id.to_string().as_str() {
+                "key" => key = Some(*field),
+                "nonce" => nonce = Some(*field),
+                _ => {}
             }
         }
     }
+    Some((key?, nonce?))
+}
 
-    #[test]
-    fn search_encryptor_scheme() {
-        probe::<MainnetV0>("mainnet");
-        probe::<TestnetV0>("testnet");
-    }
+/// Encrypts an "APrivateKey1..." under `secret`, producing a "ciphertext1...".
+/// Returns "" on failure. Non-deterministic (random nonce).
+///
+/// SAFETY: `private_key`/`secret` are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn encrypt_private_key(
+    private_key: *const c_char,
+    secret: *const c_char,
+) -> *mut c_char {
+    let result = (|| -> Option<String> {
+        let secret_field = Field::<Net>::new_domain_separator(read_str(secret));
+        let seed = PrivateKey::<Net>::from_str(read_str(private_key)).ok()?.seed();
+        let nonce = Field::<Net>::new(Uniform::rand(&mut OsRng));
+        let domain = Field::<Net>::new_domain_separator("private_key");
+        let blinding = Net::hash_psd2(&[domain, nonce, secret_field]).ok()?;
+        let key = blinding * seed;
+        let plaintext =
+            Plaintext::<Net>::from_str(&format!("{{ key: {}, nonce: {} }}", key, nonce)).ok()?;
+        let ciphertext = plaintext.encrypt_symmetric(secret_field).ok()?;
+        Some(ciphertext.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
+}
 
-    fn inner_layer<N: Network>(net: &str) {
-        let ct = snarkvm_console::program::Ciphertext::<N>::from_str(VECTOR_CT).unwrap();
-        let pt = ct.decrypt_symmetric(Field::new_domain_separator(SECRET)).unwrap();
-        let (mut key, mut nonce) = (None, None);
-        if let Pt::Struct(members, _) = &pt {
-            for (id, member) in members {
-                if let Pt::Literal(snarkvm_console::program::Literal::Field(f), _) = member {
-                    match id.to_string().as_str() {
-                        "key" => key = Some(*f),
-                        "nonce" => nonce = Some(*f),
-                        _ => {}
-                    }
-                }
-            }
-        }
-        let (key, nonce) = (key.unwrap(), nonce.unwrap());
-        let expected_seed = PrivateKey::<N>::from_str(EXPECTED).unwrap().seed();
-        let target = key - expected_seed; // the blinding term H(secret, nonce)
-        let secret_field = Field::<N>::new_domain_separator(SECRET);
-        let candidates: Vec<(&str, Field<N>)> = vec![
-            ("psd2[secret, nonce]", N::hash_psd2(&[secret_field, nonce]).unwrap()),
-            ("psd2[nonce, secret]", N::hash_psd2(&[nonce, secret_field]).unwrap()),
-            ("psd4[secret, nonce]", N::hash_psd4(&[secret_field, nonce]).unwrap()),
-            ("psd4[nonce, secret]", N::hash_psd4(&[nonce, secret_field]).unwrap()),
-            ("psd8[secret, nonce]", N::hash_psd8(&[secret_field, nonce]).unwrap()),
-            ("psd2[enc_domain, secret, nonce]", N::hash_psd2(&[N::encryption_domain(), secret_field, nonce]).unwrap()),
-        ];
-        for (name, h) in candidates {
-            let mark = if h == target { "  <<< MATCH (key - H == seed)" } else { "" };
-            println!("[{net}] {name}{mark}");
-        }
-
-        // Hypothesis 2: inner layer is itself encrypt_symmetric(pvk), i.e.
-        // key = seed + hash_many_psd8([enc_domain, pvk], 1)[0].
-        let pvks: Vec<(&str, Field<N>)> = vec![
-            ("pvk=psd2[secret, nonce]", N::hash_psd2(&[secret_field, nonce]).unwrap()),
-            ("pvk=psd2[nonce, secret]", N::hash_psd2(&[nonce, secret_field]).unwrap()),
-            ("pvk=psd4[secret, nonce]", N::hash_psd4(&[secret_field, nonce]).unwrap()),
-            ("pvk=psd8[secret, nonce]", N::hash_psd8(&[secret_field, nonce]).unwrap()),
-            ("pvk=secret+nonce", secret_field + nonce),
-            ("pvk=secret*nonce", secret_field * nonce),
-        ];
-        for (name, pvk) in pvks {
-            let r = N::hash_many_psd8(&[N::encryption_domain(), pvk], 1)[0];
-            let mark = if r == target { "  <<< MATCH (inner encrypt_symmetric)" } else { "" };
-            println!("[{net}] {name}{mark}");
-        }
-
-        // Hypothesis 3: hash_many without the encryption domain, or nested psd2.
-        let more: Vec<(&str, Field<N>)> = vec![
-            ("many8[psd2[s,n]]", N::hash_many_psd8(&[N::hash_psd2(&[secret_field, nonce]).unwrap()], 1)[0]),
-            ("many8[psd2[n,s]]", N::hash_many_psd8(&[N::hash_psd2(&[nonce, secret_field]).unwrap()], 1)[0]),
-            ("many8[s,n]", N::hash_many_psd8(&[secret_field, nonce], 1)[0]),
-            ("many8[n,s]", N::hash_many_psd8(&[nonce, secret_field], 1)[0]),
-            ("psd2[psd2[s],n]", N::hash_psd2(&[N::hash_psd2(&[secret_field]).unwrap(), nonce]).unwrap()),
-            ("psd2[s, psd2[n]]", N::hash_psd2(&[secret_field, N::hash_psd2(&[nonce]).unwrap()]).unwrap()),
-        ];
-        for (name, r) in more {
-            let mark = if r == target { "  <<< MATCH" } else { "" };
-            println!("[{net}] {name}{mark}");
-        }
-    }
-
-    #[test]
-    fn search_inner_layer() {
-        inner_layer::<MainnetV0>("mainnet");
-        inner_layer::<TestnetV0>("testnet");
-    }
+/// Decrypts a "ciphertext1..." back to "APrivateKey1..." using `secret`.
+/// Returns "" on failure (e.g. wrong password).
+///
+/// SAFETY: `ciphertext`/`secret` are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn decrypt_to_private_key(
+    ciphertext: *const c_char,
+    secret: *const c_char,
+) -> *mut c_char {
+    let result = (|| -> Option<String> {
+        let secret_field = Field::<Net>::new_domain_separator(read_str(secret));
+        let ciphertext = Ciphertext::<Net>::from_str(read_str(ciphertext)).ok()?;
+        let plaintext = ciphertext.decrypt_symmetric(secret_field).ok()?;
+        let (key, nonce) = key_nonce(&plaintext)?;
+        let domain = Field::<Net>::new_domain_separator("private_key");
+        let blinding = Net::hash_psd2(&[domain, nonce, secret_field]).ok()?;
+        let seed = key / blinding;
+        Some(PrivateKey::<Net>::try_from(seed).ok()?.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
 }
 
 /// Computes the record's serial number for `program_id`/`record_name`. Returns
