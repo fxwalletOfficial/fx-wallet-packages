@@ -17,6 +17,7 @@ use rand::rngs::OsRng;
 use snarkvm_console::account::{Address, PrivateKey, Signature, ViewKey};
 use snarkvm_console::network::MainnetV0;
 use snarkvm_console::prelude::*;
+use snarkvm_console::program::{Ciphertext, Record};
 use snarkvm_console::types::Field;
 
 /// Aleo keys/addresses are encoded identically across networks (same curve,
@@ -108,4 +109,47 @@ pub unsafe extern "C" fn verify(
     };
     let message = slice::from_raw_parts(msg, len as usize);
     signature.verify_bytes(&address, message) as c_int
+}
+
+// ----------------------------------------------------------------------------
+// Group 2: records (read operations). snarkvm-console only.
+// ----------------------------------------------------------------------------
+
+/// Returns 1 if the encrypted record is owned by the view key, 0 otherwise.
+///
+/// SAFETY: `record`/`view_key` are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn is_owner(record: *const c_char, view_key: *const c_char) -> c_int {
+    let view_key = match ViewKey::<Net>::from_str(read_str(view_key)) {
+        Ok(view_key) => view_key,
+        Err(_) => return 0,
+    };
+    let record = match Record::<Net, Ciphertext<Net>>::from_str(read_str(record)) {
+        Ok(record) => record,
+        Err(_) => return 0,
+    };
+    record.is_owner(&view_key) as c_int
+}
+
+/// Decrypts an encrypted record to its plaintext string. Returns "" on failure
+/// (e.g. the view key does not own the record).
+///
+/// SAFETY: `record`/`view_key` are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn decrypt_cipher_text(
+    record: *const c_char,
+    view_key: *const c_char,
+) -> *mut c_char {
+    let view_key = match ViewKey::<Net>::from_str(read_str(view_key)) {
+        Ok(view_key) => view_key,
+        Err(_) => return to_cstring(String::new()),
+    };
+    let record = match Record::<Net, Ciphertext<Net>>::from_str(read_str(record)) {
+        Ok(record) => record,
+        Err(_) => return to_cstring(String::new()),
+    };
+    match record.decrypt(&view_key) {
+        Ok(plaintext) => to_cstring(plaintext.to_string()),
+        Err(_) => to_cstring(String::new()),
+    }
 }
