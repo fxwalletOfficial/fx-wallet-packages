@@ -1,4 +1,4 @@
-import 'package:blockchain_utils/binary/binary_operation.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 class DynamicByteTracker {
   final List<int> _buffer = List<int>.empty(growable: true);
@@ -9,7 +9,7 @@ class DynamicByteTracker {
 
   void add(List<int> chunk) {
     for (int i in chunk) {
-      _buffer.add(i & mask8);
+      _buffer.add(i & BinaryOps.mask8);
     }
   }
 }

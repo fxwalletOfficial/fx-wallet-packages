@@ -651,7 +651,7 @@ class Signature {
     for (int i = 0; i < signatureLength; i++) sm[i] = signature[i];
     for (int i = 0; i < message.length; i++)
       sm[i + signatureLength] = message[i];
-    return (TweetNaclFast.crypto_sign_open(m, -1, sm, 0, sm.length, _theirPublicKey!) >= 0);
+    return (TweetNaclFast.crypto_sign_open(m, -1, sm, 0, sm.length, _theirPublicKey) >= 0);
   }
 
   /*

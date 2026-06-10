@@ -36,7 +36,7 @@ class XrpSeedUtils {
   /// This method takes a seed as input and applies the SHA-512 hash function to it
   /// to derive an ED25519 key. It returns the derived key as a list of integers.
   static List<int> deriveED25519(List<int> seed) {
-    return QuickCrypto.sha512HashHalves(seed).item1;
+    return QuickCrypto.sha512HashHalves(seed).$1;
   }
 
   /// Derives a key pair from the given seed using a multi-step process.
@@ -60,7 +60,8 @@ class XrpSeedUtils {
     final BigInt finalPair = (root + mid) % order;
 
     // Convert the final key pair value to a byte array representation with a specific length.
-    return BigintUtils.toBytes(finalPair, length: BigintUtils.orderLen(order));
+    return BigintUtils.toBytes(finalPair,
+        length: BigintUtils.bitlengthInBytes(order));
   }
 
   /// Calculates the secret value from the given data using an iterative process.
@@ -70,7 +71,7 @@ class XrpSeedUtils {
   static BigInt _getSecret(List<int> data, {bool isMid = false}) {
     const int sqSize = 4;
     final BigInt sqMax = BigInt.from(256) << (sqSize * 8);
-    final BigInt bigMask8 = BigInt.from(mask8);
+    final BigInt bigMask8 = BigInt.from(BinaryOps.mask8);
     for (BigInt rawRoot = BigInt.zero;
         rawRoot < sqMax;
         rawRoot += BigInt.zero) {
@@ -89,7 +90,7 @@ class XrpSeedUtils {
         combine = [...data, ...root];
       }
       final hash = QuickCrypto.sha512Hash(combine).sublist(0, 32);
-      if (Secp256k1PrivateKeyEcdsa.isValidBytes(hash)) {
+      if (Secp256k1PrivateKey.isValidBytes(hash)) {
         return BigintUtils.fromBytes(hash);
       }
     }
@@ -138,7 +139,7 @@ class XrpSeedUtils {
         Base58Decoder.checkDecode(b58String, Base58Alphabets.ripple);
 
     /// Check if the decoded bytes match the provided prefix.
-    if (!bytesEqual(decoded.sublist(0, prefixLength), prefix)) {
+    if (!BytesUtils.bytesEqual(decoded.sublist(0, prefixLength), prefix)) {
       /// Throw an exception if the prefix does not match, indicating an incorrect prefix.
       throw const XRPLAddressCodecException('Provided prefix is incorrect');
     }
@@ -163,14 +164,14 @@ class XrpSeedUtils {
   }
 
   /// This method decodes a Ripple address (seed) into its corresponding entropy and encoding algorithm.
-  static Tuple<List<int>, XRPKeyAlgorithm> decodeSeed(String seed,
+  static (List<int>, XRPKeyAlgorithm) decodeSeed(String seed,
       [XRPKeyAlgorithm? algorithm]) {
     if (algorithm != null) {
       /// If a specific algorithm is provided, attempt to decode with that algorithm's prefix.
       for (final prefix in _algorithmSeedPrefix[algorithm]!) {
         try {
           final decodedResult = _decode(seed, prefix);
-          return Tuple(decodedResult, algorithm);
+          return (decodedResult, algorithm);
         } catch (e) {
           /// Prefix is incorrect, continue to the next prefix.
           continue;
@@ -185,7 +186,7 @@ class XrpSeedUtils {
       final prefix = _algorithmSeedPrefix[algorithm]![0];
       try {
         final decodedResult = _decode(seed, prefix);
-        return Tuple(decodedResult, algorithm);
+        return (decodedResult, algorithm);
       } catch (e) {
         /// Prefix is incorrect, continue to the next algorithm.
         continue;
@@ -227,7 +228,7 @@ class XRPPrivateKey {
     switch (algorithm) {
       case XRPKeyAlgorithm.secp256k1:
         final derive = XrpSeedUtils.deriveKeyPair(entropyBytes);
-        final privateKey = Secp256k1PrivateKeyEcdsa.fromBytes(derive);
+        final privateKey = Secp256k1PrivateKey.fromBytes(derive);
         return XRPPrivateKey._(privateKey, algorithm);
       default:
         final privateBytes = XrpSeedUtils.deriveED25519(entropyBytes);
@@ -244,8 +245,8 @@ class XRPPrivateKey {
     final entropy = XrpSeedUtils.decodeSeed(seed);
 
     /// Create an XRPPrivateKey from the entropy and specified algorithm
-    return XRPPrivateKey.fromEntropy(BytesUtils.toHexString(entropy.item1),
-        algorithm: entropy.item2);
+    return XRPPrivateKey.fromEntropy(BytesUtils.toHexString(entropy.$1),
+        algorithm: entropy.$2);
   }
 
   /// Factory constructor for creating an XRP private key from a hexadecimal representation.
@@ -275,9 +276,9 @@ class XRPPrivateKey {
   static XRPKeyAlgorithm findAlgorithm(List<int> keyBytes) {
     if (keyBytes.length == XrpKeyConst.privateKeyWithPrefix) {
       final keyPrefix = keyBytes.sublist(0, 1);
-      if (bytesEqual(keyPrefix, XrpKeyConst.secpPrivateKey)) {
+      if (BytesUtils.bytesEqual(keyPrefix, XrpKeyConst.secpPrivateKey)) {
         return XRPKeyAlgorithm.secp256k1;
-      } else if (bytesEqual(keyPrefix, XrpKeyConst.ed255PrivateKeyPrefix)) {
+      } else if (BytesUtils.bytesEqual(keyPrefix, XrpKeyConst.ed255PrivateKeyPrefix)) {
         return XRPKeyAlgorithm.ed25519;
       }
     }

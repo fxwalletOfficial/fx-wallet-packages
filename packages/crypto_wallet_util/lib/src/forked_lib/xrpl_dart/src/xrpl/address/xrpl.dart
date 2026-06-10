@@ -1,4 +1,3 @@
-import 'package:blockchain_utils/bip/coin_conf/coins_conf.dart';
 import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/src/keypair/xrpl_private_key.dart';
 
@@ -11,7 +10,7 @@ class XRPAddress {
   factory XRPAddress.fromPublicKeyBytes(
       List<int> bytes, XRPKeyAlgorithm algorithm) {
     return XRPAddress._(
-        XrpAddrEncoder().encodeKey(bytes, {"curve_type": algorithm.curveType}),
+        XrpAddrEncoder().encodeKey(bytes, pubKeyType: algorithm.curveType),
         null);
   }
 
@@ -21,8 +20,8 @@ class XRPAddress {
         ? CoinsConf.rippleTestNet.params.addrNetVer!
         : CoinsConf.ripple.params.addrNetVer!;
     final decodeXAddress = XRPAddressUtils.decodeXAddress(xAddress, addrNetVar);
-    final toClassic = XRPAddressUtils.hashToAddress(decodeXAddress.item1);
-    return XRPAddress._(toClassic, decodeXAddress.item2);
+    final toClassic = XRPAddressUtils.hashToAddress(decodeXAddress.bytes);
+    return XRPAddress._(toClassic, decodeXAddress.tag);
   }
 
   /// Converts the XRP address to an X-Address.

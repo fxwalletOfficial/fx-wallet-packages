@@ -205,9 +205,9 @@ class BinaryParser {
   }
 
   /// Read both a field and its value
-  Tuple<FieldInstance, SerializedType> readFieldAndValue() {
+  (FieldInstance, SerializedType) readFieldAndValue() {
     final field = readField();
     final value = readFieldValue(field);
-    return Tuple(field, value);
+    return (field, value);
   }
 }

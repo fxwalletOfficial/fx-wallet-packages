@@ -1,6 +1,6 @@
 import 'package:blockchain_utils/base58/base58.dart';
 import 'package:blockchain_utils/bech32/bch_bech32.dart';
-import 'package:blockchain_utils/binary/utils.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:blockchain_utils/bip/ecc/keys/secp256k1_keys_ecdsa.dart';
 import 'package:blockchain_utils/crypto/quick_crypto.dart';
 
@@ -169,7 +169,7 @@ class P2pkhAddress extends LegacyAddress {
 class P2pkAddress extends LegacyAddress {
   P2pkAddress({required String publicKey}) : super._() {
     final toBytes = BytesUtils.fromHexString(publicKey);
-    if (!Secp256k1PublicKeyEcdsa.isValidBytes(toBytes)) {
+    if (!Secp256k1PublicKey.isValidBytes(toBytes)) {
       throw ArgumentError("The public key is wrong");
     }
     publicHex = publicKey;

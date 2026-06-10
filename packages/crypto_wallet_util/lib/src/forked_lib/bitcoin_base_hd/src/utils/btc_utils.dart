@@ -1,4 +1,4 @@
-import 'package:blockchain_utils/numbers/big_rational.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 class BtcUtils {
   static BigInt toSatoshi(String dec) {
