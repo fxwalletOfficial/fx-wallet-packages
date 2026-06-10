@@ -1,0 +1,4 @@
+# Pin the toolchain for reproducible native builds of the crates under rust/.
+# Verified: aleo_rust + the vendored snarkvm-synthesizer build on 1.96.0.
+[toolchain]
+channel = "1.96.0"
