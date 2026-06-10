@@ -45,9 +45,15 @@ pub extern "C" fn numbers_add(a: c_int, b: c_int) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn seed_to_private_key(seed: *const u8) -> *mut c_char {
     let bytes = slice::from_raw_parts(seed, 32);
-    let field = Field::<Net>::from_bytes_le(bytes).expect("seed -> field");
-    let private_key = PrivateKey::<Net>::try_from(field).expect("field -> private key");
-    to_cstring(private_key.to_string())
+    // Reduce the 32-byte seed modulo the field order. A raw 32-byte value
+    // exceeds the BLS12-377 scalar field ~93% of the time, so the canonical
+    // `from_bytes_le` would reject most seeds; Aleo derives the account seed by
+    // reducing mod order instead.
+    let field = Field::<Net>::new(<Net as Environment>::Field::from_bytes_le_mod_order(bytes));
+    match PrivateKey::<Net>::try_from(field) {
+        Ok(private_key) => to_cstring(private_key.to_string()),
+        Err(_) => to_cstring(String::new()),
+    }
 }
 
 /// SAFETY: `pk` must be a valid NUL-terminated C string.
