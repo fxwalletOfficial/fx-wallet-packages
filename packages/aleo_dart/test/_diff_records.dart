@@ -54,4 +54,25 @@ void main() {
     expect(ownedChecked, greaterThan(0));
     expect(notOwnedChecked, greaterThan(0));
   });
+
+  test('serial_number_string parity over owned records', () {
+    // The Dart layer only ever computes serial numbers for owned records
+    // (it filters by is_owner first), so restrict parity to that domain.
+    const privateKey =
+        'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
+    const viewKey = 'AViewKey1tQY7eCFZhX6wxNDpuTeBoCQEn3KsmmwoY9rUBWhxBdjp';
+    var checked = 0;
+    for (final record in records) {
+      if (!ref.isOwner(record, viewKey)) continue;
+      expect(neu.serialNumberString(record, privateKey),
+          ref.serialNumberString(record, privateKey),
+          reason: 'serial_number mismatch record=$record');
+      checked++;
+    }
+    expect(checked, greaterThan(0));
+    // Absolute check against the canonical value (record[2] is owned by this key).
+    expect(
+        neu.serialNumberString(records[2], privateKey),
+        '832456939067524461249417512029753636275825913577828456140675004985222334481field');
+  });
 }

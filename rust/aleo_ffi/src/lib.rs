@@ -17,7 +17,7 @@ use rand::rngs::OsRng;
 use snarkvm_console::account::{Address, PrivateKey, Signature, ViewKey};
 use snarkvm_console::network::MainnetV0;
 use snarkvm_console::prelude::*;
-use snarkvm_console::program::{Ciphertext, Record};
+use snarkvm_console::program::{Ciphertext, Identifier, Plaintext, ProgramID, Record};
 use snarkvm_console::types::Field;
 
 /// Aleo keys/addresses are encoded identically across networks (same curve,
@@ -152,4 +152,34 @@ pub unsafe extern "C" fn decrypt_cipher_text(
         Ok(plaintext) => to_cstring(plaintext.to_string()),
         Err(_) => to_cstring(String::new()),
     }
+}
+
+/// Computes the record's serial number for `program_id`/`record_name`. Returns
+/// "" on failure. `program_id` is e.g. "credits.aleo", `record_name` "credits".
+///
+/// SAFETY: all four pointers are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn serial_number_string(
+    record: *const c_char,
+    private_key: *const c_char,
+    program_id: *const c_char,
+    record_name: *const c_char,
+) -> *mut c_char {
+    let result = (|| -> Option<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key)).ok()?;
+        let view_key = ViewKey::<Net>::try_from(&private_key).ok()?;
+        let record = Record::<Net, Ciphertext<Net>>::from_str(read_str(record)).ok()?;
+        let program_id = ProgramID::<Net>::from_str(read_str(program_id)).ok()?;
+        let record_name = Identifier::<Net>::from_str(read_str(record_name)).ok()?;
+
+        // Record view key via ECDH: x-coordinate of (nonce * view_key scalar).
+        let record_view_key = (record.clone().into_nonce() * *view_key).to_x_coordinate();
+        let plaintext = record.decrypt(&view_key).ok()?;
+        let commitment =
+            plaintext.to_commitment(&program_id, &record_name, &record_view_key).ok()?;
+        let serial_number =
+            Record::<Net, Plaintext<Net>>::serial_number(private_key, commitment).ok()?;
+        Some(serial_number.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
 }
