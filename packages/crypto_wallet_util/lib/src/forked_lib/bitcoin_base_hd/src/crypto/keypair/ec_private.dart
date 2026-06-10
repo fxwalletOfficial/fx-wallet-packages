@@ -65,7 +65,12 @@ class ECPrivate {
     return BytesUtils.toHexString(signature);
   }
 
-  /// sign taproot transaction digest and returns the signature.
+  /// Signs a Taproot key-path spend and returns the signature.
+  ///
+  /// [tapScripts] commits the output's Taproot script tree into the key-path
+  /// tweak (its Merkle root is folded into the tweak), so a signature for an
+  /// address generated with that script tree stays valid. When empty, this is a
+  /// plain key-path spend with no script-tree commitment.
   String signTapRoot(List<int> txDigest,
       {int sighash = BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL,
       List<List<Script>> tapScripts = const [],
@@ -84,8 +89,9 @@ class ECPrivate {
     final pubPoint = getPublic().publicKey.point as ProjectiveECCPoint;
     List<int> signatur = btcSigner.signBip340Const(
       digest: txDigest,
-      tapTweakHash:
-          tweak ? P2TRUtils.calculateTweek(pubPoint, script: tapScriptBytes) : null,
+      tapTweakHash: tweak
+          ? P2TRUtils.calculateTweek(pubPoint, script: tapScriptBytes)
+          : null,
     );
     if (sighash != BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL) {
       signatur = <int>[...signatur, sighash];
