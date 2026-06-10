@@ -35,5 +35,11 @@ jobs:
     - name: Format
       run: melos run format
 
+    # crypto_wallet_util's Siacoin (sc) support runs a WASM module via the
+    # `wasm_run` package, which needs a prebuilt native binary at test time.
+    - name: Setup wasm_run native library (crypto_wallet_util)
+      run: dart run wasm_run:setup
+      working-directory: packages/crypto_wallet_util
+
     - name: Test
       run: melos run test
