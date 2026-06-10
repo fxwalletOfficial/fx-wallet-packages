@@ -17,6 +17,7 @@ void main() async {
 
   final url = 'https://api.explorer.aleo.org/v1';
   final amountRecord = '';
+  final feeRecord = '';
 
   test('try transfer without record', () async {
     final privateKey =
@@ -28,7 +29,7 @@ void main() async {
     final feeCredits = 10000;
 
     final tx = await rust.buildTransaction(privateKey, recipient, transferType,
-        amountCredits, feeCredits, url, amountRecord, amountRecord);
+        amountCredits, feeCredits, url, amountRecord, feeRecord);
     print(tx);
     final txHash = await rust.broadcast(tx, url, transferType);
     print(txHash);

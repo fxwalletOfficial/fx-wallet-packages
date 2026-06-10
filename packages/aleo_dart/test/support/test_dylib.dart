@@ -6,8 +6,8 @@ import 'package:aleo_dart/aleo.dart';
 /// `aleo_rust` library could not be loaded (e.g. on CI where it is neither
 /// prebuilt nor compiled from source).
 const nativeLibMissingReason =
-    'native libaleo_rust not available; build it with `cargo build --release` '
-    'in rust/aleo_rust or fetch a prebuilt one via `dart run aleo_dart:setup`';
+    'native libaleo_rust not available; fetch a prebuilt copy with '
+    '`dart run aleo_dart:setup` (loaded via DyLib.getDyLibFromGit)';
 
 /// Attempts to load the native `aleo_rust` dynamic library for tests.
 ///
