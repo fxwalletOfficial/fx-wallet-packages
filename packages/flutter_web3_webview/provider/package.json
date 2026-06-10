@@ -1,0 +1,34 @@
+{
+  "name": "@fxwallet/web3-provider",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "bun test",
+    "test:watch": "bun test --watch --only",
+    "test:only": "bun run test --only",
+    "build:packages": "bun run ./scripts/build.ts",
+    "build:flutter": "node ./bundle/build.mjs",
+    "build:flutter:watch": "node ./bundle/build.mjs --watch"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "22.0.2",
+    "@rollup/plugin-json": "6.1.0",
+    "@rollup/plugin-node-resolve": "13.3.0",
+    "@types/bun": "latest",
+    "esbuild": "0.17.19",
+    "esbuild-plugin-polyfill-node": "^0.3.0",
+    "eslint": "9.x",
+    "globals": "^15.3.0",
+    "rollup": "2.79.2",
+    "rollup-plugin-esbuild": "4.9.3",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^7.10.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -5,14 +5,14 @@ class JsAddEthereumChain {
   JsAddEthereumChain({this.chainId, this.data});
 
   JsAddEthereumChain.fromJson(Map<String, dynamic> json) {
-    chainId = json['chainId'];
-    data = json;
+    chainId = json['chainId'] is String ? json['chainId'] as String : null;
+    data = Map<String, dynamic>.from(json);
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> item = <String, dynamic>{};
-    item['chainId'] = chainId;
-    item['data'] = data;
-    return item;
+    return <String, dynamic>{
+      'chainId': chainId,
+      'data': data,
+    };
   }
 }
