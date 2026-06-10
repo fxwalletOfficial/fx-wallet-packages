@@ -65,27 +65,14 @@ class ECPrivate {
     return BytesUtils.toHexString(signature);
   }
 
-  /// sign taproot transaction digest and returns the signature.
+  /// sign taproot transaction digest (key-path spend) and returns the signature.
   String signTapRoot(List<int> txDigest,
-      {int sighash = BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL,
-      List<List<Script>> tapScripts = const [],
-      bool tweak = true}) {
-    assert(() {
-      if (!tweak && tapScripts.isNotEmpty) {
-        return false;
-      }
-      return true;
-    }(),
-        "When the tweak is false, the `tapScripts` are ignored, to use the tap script path, you need to consider the tweak value to be true.");
-    final tapScriptBytes = (!tweak || tapScripts.isEmpty)
-        ? null
-        : tapScripts.map((e) => e.map((e) => e.toBytes()).toList()).toList();
+      {int sighash = BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL, bool tweak = true}) {
     final btcSigner = BitcoinKeySigner.fromKeyBytes(toBytes());
     final pubPoint = getPublic().publicKey.point as ProjectiveECCPoint;
     List<int> signatur = btcSigner.signBip340Const(
       digest: txDigest,
-      tapTweakHash:
-          tweak ? P2TRUtils.calculateTweek(pubPoint, script: tapScriptBytes) : null,
+      tapTweakHash: tweak ? P2TRUtils.calculateTweek(pubPoint) : null,
     );
     if (sighash != BitcoinOpCodeConst.TAPROOT_SIGHASH_ALL) {
       signatur = <int>[...signatur, sighash];

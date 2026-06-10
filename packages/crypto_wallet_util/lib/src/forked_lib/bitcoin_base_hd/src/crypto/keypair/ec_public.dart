@@ -177,24 +177,4 @@ class ECPublic {
     return verifyKey.verifyMessageSignature(
         message: message, messagePrefix: messagePrefix, signature: signature);
   }
-
-  /// returns true if the message was signed with this public key's
-  bool verifyTransactionSignature(List<int> message, List<int> signature) {
-    final verifyKey = BitcoinSignatureVerifier.fromKeyBytes(toBytes());
-    return verifyKey.verifyECDSADerSignature(
-        digest: message, signature: signature);
-  }
-
-  /// returns true if the message was signed with this public key's
-  bool verifySchnorrTransactionSignature(List<int> message, List<int> signature,
-      {List<dynamic>? tapleafScripts, bool isTweak = true}) {
-    final verifyKey = BitcoinSignatureVerifier.fromKeyBytes(toBytes());
-    final pubPoint = publicKey.point as ProjectiveECCPoint;
-    return verifyKey.verifyBip340Signature(
-        digest: message,
-        signature: signature,
-        tapTweakHash: isTweak
-            ? P2TRUtils.calculateTweek(pubPoint, script: tapleafScripts)
-            : null);
-  }
 }

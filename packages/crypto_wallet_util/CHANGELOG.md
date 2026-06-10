@@ -285,3 +285,18 @@
 ### Notes
 
 - No public API changes beyond the SDK floor; all 782 unit tests pass.
+
+
+## [Unreleased]
+### Removed
+
+- Pruned dead code from the vendored `bitcoin_base_hd` fork that is never
+  reached by this package (BTC/LTC/BCH only use `ECPrivate`):
+  - the entire `provider/` subtree (Electrum/HTTP API providers and the
+    `BitcoinTransactionBuilder` / BCH builder) and `utils/btc_utils.dart`
+    (~2.2k lines).
+  - `ECPublic.verifyTransactionSignature` and
+    `ECPublic.verifySchnorrTransactionSignature` (unused; their post-upgrade
+    bodies had latent argument-shape issues).
+  - the unused Taproot script-path branch of `ECPrivate.signTapRoot`
+    (`tapScripts` parameter); key-path signing output is unchanged.
