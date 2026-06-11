@@ -310,6 +310,24 @@ fn static_query(url: &str, network: &str) -> anyhow::Result<Query<Net, BlockMemo
     Query::try_from(json)
 }
 
+/// Current block height from the node (used to select the consensus version).
+fn fetch_height(url: &str, network: &str) -> anyhow::Result<u32> {
+    let base = format!("{}/{}", url.trim_end_matches('/'), network);
+    let height = ureq::get(&format!("{base}/latest/height")).call()?.into_string()?;
+    Ok(height.trim().parse()?)
+}
+
+/// Minimum (base) fee in microcredits for an execution at the node's height.
+fn base_fee_for(execution: &Execution<Net>, url: &str, network: &str) -> anyhow::Result<u64> {
+    let consensus_version = Net::CONSENSUS_VERSION(fetch_height(url, network)?)?;
+    let vm = new_vm()?;
+    let process = vm.process();
+    let process = process.read();
+    let (base_fee, _details) =
+        snarkvm_synthesizer::process::execution_cost(&process, execution, consensus_version)?;
+    Ok(base_fee)
+}
+
 /// Builds an execution authorization for a credits.aleo transfer. Offline
 /// (credits.aleo is built in). Returns "" on failure.
 ///
@@ -372,6 +390,117 @@ pub unsafe extern "C" fn execute_proof(
         Ok(execution) => to_cstring(execution),
         Err(error) => {
             eprintln!("[execute_proof] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Broadcasts a serialized transaction to the node, returning the node's
+/// response (the transaction id on success). Returns "" on transport failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn broadcast(
+    transaction: *const c_char,
+    url: *const c_char,
+    _transfer_type: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let base = format!("{}/{}", read_str(url).trim_end_matches('/'), read_str(network));
+        let response = ureq::post(&format!("{base}/transaction/broadcast"))
+            .set("Content-Type", "application/json")
+            .send_string(read_str(transaction))?
+            .into_string()?;
+        Ok(response)
+    };
+    match inner() {
+        Ok(response) => to_cstring(response),
+        Err(error) => {
+            eprintln!("[broadcast] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Returns the base (minimum) fee in microcredits for a serialized execution.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn get_base_fee(
+    url: *const c_char,
+    execution: *const c_char,
+    network: *const c_char,
+) -> c_int {
+    let inner = || -> anyhow::Result<u64> {
+        let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
+        base_fee_for(&execution, read_str(url), read_str(network))
+    };
+    inner().map(|fee| fee as c_int).unwrap_or(0)
+}
+
+/// Builds the fee authorization for an execution. `fee_credits` is the priority
+/// fee; the base fee is computed from the execution. An empty `fee_record` uses
+/// a public fee, otherwise a private fee spending that record. Returns "".
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execution_fee_authorization(
+    private_key: *const c_char,
+    _transfer_type: *const c_char,
+    url: *const c_char,
+    fee_credits: c_int,
+    fee_record: *const c_char,
+    execution: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
+        let execution_id = execution.to_execution_id()?;
+        let base_fee = base_fee_for(&execution, read_str(url), read_str(network))?;
+        let priority_fee = fee_credits as u64;
+        let fee_record = read_str(fee_record);
+        let vm = new_vm()?;
+        let rng = &mut rand::thread_rng();
+        let authorization = if fee_record.trim().is_empty() {
+            vm.authorize_fee_public(&private_key, base_fee, priority_fee, execution_id, rng)?
+        } else {
+            let record = Record::<Net, Plaintext<Net>>::from_str(fee_record)?;
+            vm.authorize_fee_private(&private_key, record, base_fee, priority_fee, execution_id, rng)?
+        };
+        Ok(serde_json::to_string(&authorization)?)
+    };
+    match inner() {
+        Ok(authorization) => to_cstring(authorization),
+        Err(error) => {
+            eprintln!("[execution_fee_authorization] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Generates the fee proof for a fee authorization (the patched
+/// `execute_fee_authorization_raw`). Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_fee_proof(
+    url: *const c_char,
+    authorization: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
+        let query = static_query(read_str(url), read_str(network))?;
+        let vm = new_vm()?;
+        let fee = vm.execute_fee_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&fee)?)
+    };
+    match inner() {
+        Ok(fee) => to_cstring(fee),
+        Err(error) => {
+            eprintln!("[execute_fee_proof] {error:?}");
             to_cstring(String::new())
         }
     }
