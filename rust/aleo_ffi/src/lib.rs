@@ -457,15 +457,44 @@ fn full_transaction(
     Ok(Transaction::from_execution(execution, Some(fee))?.to_string())
 }
 
+/// Returns a program's current on-chain edition by probing the node. snarkVM's
+/// REST serves the program source for any edition `<= current` and 404s above
+/// it, so the current edition is the highest one that exists. Errors (rather
+/// than guessing) when the node can't answer — registering at the wrong edition
+/// would produce a proof that disagrees with chain state.
+fn node_program_edition(base: &str, program_id: &str) -> anyhow::Result<u16> {
+    let exists = |edition: u16| -> anyhow::Result<bool> {
+        match ureq::get(&format!("{base}/program/{program_id}/{edition}")).call() {
+            Ok(_) => Ok(true),
+            Err(ureq::Error::Status(404, _)) => Ok(false),
+            Err(e) => Err(e.into()),
+        }
+    };
+    if !exists(0)? {
+        anyhow::bail!("program {program_id} not found while determining its edition");
+    }
+    let mut edition = 0u16;
+    while exists(edition + 1)? {
+        edition += 1;
+        if edition == u16::MAX {
+            anyhow::bail!("edition probe overflowed for {program_id}");
+        }
+    }
+    Ok(edition)
+}
+
 /// Fetches a non-builtin program from the node and adds it to the VM, loading
 /// every imported program first (snarkVM rejects a program whose imports are
 /// not already present). A no-op for built-in programs like credits.aleo or any
 /// program already loaded.
 ///
-/// Edition note: programs are added at edition 1, which is correct for the
-/// non-upgradeable programs wallets call. Programs that have been upgraded past
-/// edition 1 (constructor-bearing) would need their on-chain edition, which the
-/// public REST API does not expose as a "current edition" lookup.
+/// Edition selection:
+/// - Non-upgradeable programs (no constructor) execute at edition 1; edition 0
+///   is rejected by `Authorization::check_valid_edition` post-V8.
+/// - Upgradeable programs (with a constructor) start at edition 0 (added via
+///   `add_program`, which execution permits for constructor programs) and bump
+///   on each upgrade. Their current edition is read from the node; if it can't
+///   be determined the call fails rather than emit a proof at the wrong edition.
 fn add_program_from_node(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program_id: &str,
@@ -494,11 +523,23 @@ fn add_program_from_node(
         add_program_from_node(vm, &import_id.to_string(), url, network)?;
     }
 
+    let edition = if program.contains_constructor() {
+        node_program_edition(&base, program_id)?
+    } else {
+        1
+    };
+
     let process = vm.process();
     let mut process = process.write();
     // A diamond import graph may have added it during the recursion above.
     if !process.contains_program(program.id()) {
-        process.add_program_with_edition(&program, 1)?;
+        // edition 0 uses `add_program` (the reviewer's recommended path for
+        // first-deploy constructor programs); higher editions are explicit.
+        if edition == 0 {
+            process.add_program(&program)?;
+        } else {
+            process.add_program_with_edition(&program, edition)?;
+        }
     }
     Ok(())
 }
@@ -1156,6 +1197,17 @@ mod tests {
     #[test]
     fn transfer_inputs_rejects_unknown_function() {
         assert!(transfer_inputs("not_a_transfer", "aleo1recipient", 1, "", &owner()).is_err());
+    }
+
+    // A non-upgradeable program (no constructor) reports edition 1. Validates
+    // the edition probe against a program whose execution edition is known.
+    #[test]
+    #[ignore = "network: run with `cargo test -- --ignored`"]
+    fn node_program_edition_non_upgradeable_is_one() {
+        let base = std::env::var("ALEO_NODE_URL")
+            .unwrap_or_else(|_| "https://api.explorer.provable.com/v1".to_string())
+            + "/testnet";
+        assert_eq!(node_program_edition(&base, "token_registry.aleo").unwrap(), 1);
     }
 
     // Loading a program pulls in its non-builtin imports recursively
