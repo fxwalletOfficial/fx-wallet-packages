@@ -457,6 +457,54 @@ fn add_program_from_node(
     Ok(())
 }
 
+/// Authorizes and executes a program function, returning the serialized
+/// execution. Fetches the program if it isn't built in.
+fn program_execution(
+    private_key: &PrivateKey<Net>,
+    program_id: &str,
+    function: &str,
+    arguments: &str,
+    url: &str,
+    network: &str,
+) -> anyhow::Result<String> {
+    let inputs: Vec<String> = serde_json::from_str(arguments)?;
+    let vm = new_vm()?;
+    add_program_from_node(&vm, program_id, url, network)?;
+    let query = NodeQuery::new(url, network);
+    let rng = &mut rand::thread_rng();
+    let authorization = vm.authorize(private_key, program_id, function, inputs, rng)?;
+    let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
+    Ok(serde_json::to_string(&execution)?)
+}
+
+/// Produces the (public) fee proof for a serialized execution of `program_id`.
+/// The program is loaded so its per-transition cost can be computed.
+fn program_fee(
+    private_key: &PrivateKey<Net>,
+    priority_fee: u64,
+    execution: &str,
+    program_id: &str,
+    url: &str,
+    network: &str,
+) -> anyhow::Result<String> {
+    let execution: Execution<Net> = serde_json::from_str(execution)?;
+    let vm = new_vm()?;
+    add_program_from_node(&vm, program_id, url, network)?;
+    let query = NodeQuery::new(url, network);
+    let rng = &mut rand::thread_rng();
+    let execution_id = execution.to_execution_id()?;
+    let base_fee = {
+        let consensus_version = Net::CONSENSUS_VERSION(query.current_block_height()?)?;
+        let process = vm.process();
+        let process = process.read();
+        snarkvm_synthesizer::process::execution_cost(&process, &execution, consensus_version)?.0
+    };
+    let fee_authorization =
+        vm.authorize_fee_public(private_key, base_fee, priority_fee, execution_id, rng)?;
+    let fee = vm.execute_fee_authorization_raw(fee_authorization, &query, rng)?;
+    Ok(serde_json::to_string(&fee)?)
+}
+
 /// POSTs a transaction to the node, returning the node's response body.
 fn broadcast_to_node(transaction: &str, url: &str, network: &str) -> anyhow::Result<String> {
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
@@ -604,21 +652,85 @@ pub unsafe extern "C" fn execute_program_proof(
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        let program_id = read_str(program_id);
-        let inputs: Vec<String> = serde_json::from_str(read_str(arguments))?;
-        let vm = new_vm()?;
-        add_program_from_node(&vm, program_id, read_str(url), read_str(network))?;
-        let query = NodeQuery::new(read_str(url), read_str(network));
-        let rng = &mut rand::thread_rng();
-        let authorization =
-            vm.authorize(&private_key, program_id, read_str(function_name), inputs, rng)?;
-        let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
-        Ok(serde_json::to_string(&execution)?)
+        program_execution(
+            &private_key,
+            read_str(program_id),
+            read_str(function_name),
+            read_str(arguments),
+            read_str(url),
+            read_str(network),
+        )
     };
     match inner() {
         Ok(execution) => to_cstring(execution),
         Err(error) => {
             eprintln!("[execute_program_proof] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Like `execute_program_proof`: authorizes + executes a program function,
+/// returning the serialized execution (split-proof; fee comes separately via
+/// `contract_fee_execution`).
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn contract_execution(
+    private_key: *const c_char,
+    program_id: *const c_char,
+    function_name: *const c_char,
+    arguments: *const c_char,
+    url: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        program_execution(
+            &private_key,
+            read_str(program_id),
+            read_str(function_name),
+            read_str(arguments),
+            read_str(url),
+            read_str(network),
+        )
+    };
+    match inner() {
+        Ok(execution) => to_cstring(execution),
+        Err(error) => {
+            eprintln!("[contract_execution] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Produces the public fee proof for a contract execution. Returns "".
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn contract_fee_execution(
+    private_key: *const c_char,
+    fee: c_int,
+    execution: *const c_char,
+    program_id: *const c_char,
+    url: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        program_fee(
+            &private_key,
+            fee as u64,
+            read_str(execution),
+            read_str(program_id),
+            read_str(url),
+            read_str(network),
+        )
+    };
+    match inner() {
+        Ok(fee) => to_cstring(fee),
+        Err(error) => {
+            eprintln!("[contract_fee_execution] {error:?}");
             to_cstring(String::new())
         }
     }
