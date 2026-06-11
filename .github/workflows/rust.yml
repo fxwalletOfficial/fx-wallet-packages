@@ -1,0 +1,79 @@
+name: Rust (aleo_ffi)
+
+# Builds and unit-tests the clean-room aleo_ffi crate, then runs the Dart
+# wrapper's FFI-backed tests against the built cdylib. Path-filtered to the
+# crate and its Dart wrapper so it does not run on (and slow down) unrelated
+# Dart-only PRs; the snarkVM build is heavy and is cached between runs.
+on:
+  push:
+    branches: [ main, 'epic/**' ]
+    paths: [ 'rust/**', 'packages/aleo_dart/**', '.github/workflows/rust.yml' ]
+  pull_request:
+    branches: [ main, 'epic/**' ]
+    paths: [ 'rust/**', 'packages/aleo_dart/**', '.github/workflows/rust.yml' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Installs the toolchain pinned by rust/rust-toolchain.toml.
+      - name: Install Rust toolchain
+        working-directory: rust/aleo_ffi
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/aleo_ffi
+
+      # Offline unit tests only; the recursive-import test is #[ignore]d as it
+      # needs a live node. Includes an FFI smoke test that calls the exported
+      # functions (and free_string) through their C signatures.
+      - name: Test
+        working-directory: rust/aleo_ffi
+        run: cargo test --lib
+
+      # Build the actual deliverable — the release cdylib — and verify its
+      # exported C ABI, so a green run means the library Dart loads is buildable
+      # and complete (not just that the rlib test harness compiles).
+      - name: Build release cdylib
+        working-directory: rust/aleo_ffi
+        run: cargo build --release
+
+      - name: Verify exported FFI symbols
+        working-directory: rust/aleo_ffi
+        run: |
+          lib=target/release/libaleo_rust.so
+          test -f "$lib" || { echo "release cdylib not found"; exit 1; }
+          syms=$(nm -D --defined-only "$lib")
+          missing=0
+          for f in numbers_add seed_to_private_key private_key_to_address \
+                   private_key_to_view_key view_key_to_address sign_message verify \
+                   get_token_owner_hash is_owner decrypt_cipher_text \
+                   serial_number_string encrypt_private_key decrypt_to_private_key \
+                   decrypt_sender_ciphertext build_transaction_offline \
+                   execution_authorization execute_proof execution_fee_authorization \
+                   execute_fee_proof get_base_fee broadcast build_transaction \
+                   try_transfer join_authorization try_join execute_program \
+                   execute_program_proof contract_execution contract_fee_execution \
+                   upgrade_authorization build_upgrade_transaction_offline free_string; do
+            echo "$syms" | grep -qw "$f" || { echo "MISSING SYMBOL: $f"; missing=1; }
+          done
+          test "$missing" -eq 0 && echo "all 31 FFI functions + free_string exported"
+
+      # Run the Dart wrapper's FFI-backed tests against the cdylib built above,
+      # so Dart/Rust signature mismatches, string-ownership bugs and wrapper
+      # regressions fail CI instead of being skipped for want of a library.
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.8.0'
+
+      - name: Dart FFI integration tests
+        working-directory: packages/aleo_dart
+        env:
+          ALEO_NEW_LIB: ${{ github.workspace }}/rust/aleo_ffi/target/release/libaleo_rust.so
+        run: |
+          dart pub get
+          dart test
