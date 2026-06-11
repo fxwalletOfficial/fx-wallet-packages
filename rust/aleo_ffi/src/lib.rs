@@ -34,15 +34,22 @@ use aleo_std_storage::StorageMode;
 /// these account operations.
 type Net = MainnetV0;
 
+/// Borrows a C string as `&str`. Invalid UTF-8 yields "" rather than panicking,
+/// so malformed input is handled by the caller's normal "" error path instead
+/// of unwinding across the FFI boundary (which aborts the process).
+///
 /// SAFETY: `p` must be a valid NUL-terminated C string for the duration of the call.
 unsafe fn read_str<'a>(p: *const c_char) -> &'a str {
-    CStr::from_ptr(p).to_str().expect("invalid UTF-8 in FFI input")
+    CStr::from_ptr(p).to_str().unwrap_or("")
 }
 
 /// Transfers ownership of a heap C string to the caller (matches the existing
-/// FFI contract; the caller is responsible for the buffer).
+/// FFI contract; the caller is responsible for the buffer). A NUL in the output
+/// (never expected for our textual outputs) is truncated rather than panicking.
 fn to_cstring(s: String) -> *mut c_char {
-    CString::new(s).expect("unexpected NUL in FFI output").into_raw()
+    let bytes: Vec<u8> = s.into_bytes().into_iter().take_while(|&b| b != 0).collect();
+    // SAFETY: `take_while` stops at the first NUL, so `bytes` has no interior NUL.
+    unsafe { CString::from_vec_unchecked(bytes) }.into_raw()
 }
 
 /// Frees a string previously returned by this library. Returned pointers are
@@ -80,36 +87,50 @@ pub unsafe extern "C" fn seed_to_private_key(seed: *const u8) -> *mut c_char {
     }
 }
 
+/// Returns "" on a malformed key (rather than panicking, which would unwind
+/// across the FFI boundary and abort the process).
+///
 /// SAFETY: `pk` must be a valid NUL-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn private_key_to_address(pk: *const c_char) -> *mut c_char {
-    let private_key = PrivateKey::<Net>::from_str(read_str(pk)).expect("parse private key");
-    let address = Address::<Net>::try_from(&private_key).expect("private key -> address");
-    to_cstring(address.to_string())
+    let result = (|| -> Option<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(pk)).ok()?;
+        Some(Address::<Net>::try_from(&private_key).ok()?.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
 }
 
-/// SAFETY: `pk` must be a valid NUL-terminated C string.
+/// Returns "" on a malformed key. SAFETY: `pk` is a NUL-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn private_key_to_view_key(pk: *const c_char) -> *mut c_char {
-    let private_key = PrivateKey::<Net>::from_str(read_str(pk)).expect("parse private key");
-    let view_key = ViewKey::<Net>::try_from(&private_key).expect("private key -> view key");
-    to_cstring(view_key.to_string())
+    let result = (|| -> Option<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(pk)).ok()?;
+        Some(ViewKey::<Net>::try_from(&private_key).ok()?.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
 }
 
-/// SAFETY: `vk` must be a valid NUL-terminated C string.
+/// Returns "" on a malformed key. SAFETY: `vk` is a NUL-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn view_key_to_address(vk: *const c_char) -> *mut c_char {
-    let view_key = ViewKey::<Net>::from_str(read_str(vk)).expect("parse view key");
-    to_cstring(view_key.to_address().to_string())
+    let result = (|| -> Option<String> {
+        let view_key = ViewKey::<Net>::from_str(read_str(vk)).ok()?;
+        Some(view_key.to_address().to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
 }
 
-/// SAFETY: `pk` is a NUL-terminated C string; `msg` points to `len` readable bytes.
+/// Returns "" on a malformed key or signing failure (no panic across the FFI
+/// boundary). SAFETY: `pk` is a NUL-terminated C string; `msg` points to `len`
+/// readable bytes.
 #[no_mangle]
 pub unsafe extern "C" fn sign_message(pk: *const c_char, msg: *const u8, len: c_int) -> *mut c_char {
-    let private_key = PrivateKey::<Net>::from_str(read_str(pk)).expect("parse private key");
     let message = slice::from_raw_parts(msg, len as usize);
-    let signature = private_key.sign_bytes(message, &mut OsRng).expect("sign");
-    to_cstring(signature.to_string())
+    let result = (|| -> Option<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(pk)).ok()?;
+        Some(private_key.sign_bytes(message, &mut OsRng).ok()?.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
 }
 
 /// Returns 1 if the signature is valid, 0 otherwise.
@@ -1210,6 +1231,28 @@ mod tests {
         unsafe {
             free_string(to_cstring("hello".to_string()));
             free_string(std::ptr::null_mut());
+        }
+    }
+
+    // Malformed input must return "" (not panic/abort across the FFI boundary).
+    #[test]
+    fn malformed_key_returns_empty_not_abort() {
+        unsafe {
+            let bad = CString::new("not-a-valid-key").unwrap();
+            let fns: [unsafe extern "C" fn(*const c_char) -> *mut c_char; 3] = [
+                private_key_to_address,
+                private_key_to_view_key,
+                view_key_to_address,
+            ];
+            for f in fns {
+                let ptr = f(bad.as_ptr());
+                assert!(CStr::from_ptr(ptr).to_str().unwrap().is_empty());
+                free_string(ptr);
+            }
+            let msg = [1u8, 2, 3];
+            let ptr = sign_message(bad.as_ptr(), msg.as_ptr(), 3);
+            assert!(CStr::from_ptr(ptr).to_str().unwrap().is_empty());
+            free_string(ptr);
         }
     }
 
