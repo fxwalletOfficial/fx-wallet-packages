@@ -1,8 +1,42 @@
 # Design: move network I/O out of `aleo_ffi` into Dart
 
-Status: **proposed** (spec only; no code yet)
+Status: **phase 1 implemented** (the `_static` exports + helpers; old exports
+untouched). Phases 2–4 not started.
 Owner: aleo_ffi
 Supersedes: the in-Rust HTTP hardening accreted across PR #51 review rounds 5–13.
+
+## Phase 1 status (implemented)
+
+Phase 1 is strictly additive: it ships the pure, network-free primitives and
+helpers under new `_static` symbols alongside the untouched old exports
+(`required_commitments`, `required_imports`, `state_root_from_paths`,
+`consensus_version_for`, `get_base_fee_static`, `execution_fee_authorization_static`,
+`execute_proof_static`, `execute_fee_proof_static`, `execute_program_proof_static`).
+The pure helpers, the budgets, and the private-flow `StaticQuery` construction
+are unit-tested offline (real sampled `StatePath`s); the release cdylib's exported
+ABI is checked in CI.
+
+The following are **intentionally deferred** — surfaced by a high-effort
+self-review, none blocking, all sequenced to a later phase:
+
+- **No exact-match of state paths to `required_commitments`.** The proving
+  primitives rely on a byte+entry budget plus `StaticQuery`'s missing-path
+  fail-closed, not this spec's "the parsed paths' commitment set exactly equals
+  `required_commitments`". Pinned by the phase-2 parity test before the old node
+  path is deleted.
+- **`required_commitments` over-reports for composite programs** that spend a
+  record produced by an earlier transition in the *same* transaction (the
+  "local" record, which is not on-chain). Exact for the single-request credits
+  flows (transfer / join / upgrade); excluding the local set needs execution
+  outputs — also pinned by the phase-2 parity test.
+- **End-to-end SNARK proving of `execute_*_static` is not unit-tested** (needs a
+  live node + proving keys); the private-flow `StaticQuery` mechanism *is*
+  covered offline with real sampled `StatePath`s.
+- **Minor cleanup left for phase 3** (when the old path is deleted and `_static`
+  is renamed to canonical): `execution_fee_authorization_static` builds two VMs;
+  `base_fee_at_height` and the three `execute_*_static` share structure with the
+  old exports. Kept duplicated for now to match the file's per-export style and
+  keep the diff easy to check against this spec.
 
 ## Why
 
