@@ -335,18 +335,19 @@ fn new_vm() -> anyhow::Result<VM<Net, ConsensusMemory<Net>>> {
     VM::from(ConsensusStore::<Net, ConsensusMemory<Net>>::open(StorageMode::Production)?)
 }
 
-/// Shared HTTP agent with bounded timeouts. `ureq`'s defaults only bound the
-/// connect phase, so a node that accepts the connection and then stalls would
-/// hang the (synchronous) FFI call forever and the retry loop would never run.
-/// The read/write timeouts cap each attempt so a stalled peer surfaces as an
-/// error and is retried.
+/// Shared HTTP agent with bounded timeouts. `.timeout()` is a deadline for the
+/// whole exchange — connect, request, and reading the response body — so a
+/// node that stalls *or trickles bytes indefinitely* surfaces as an error
+/// instead of hanging the (synchronous) FFI call. Per-read timeouts alone
+/// would not do that: each trickled byte resets them. Response memory is
+/// bounded as well: every body is read via `into_string()`, which fails past
+/// 10 MiB rather than growing without limit.
 fn http_agent() -> &'static ureq::Agent {
     static AGENT: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
     AGENT.get_or_init(|| {
         ureq::AgentBuilder::new()
             .timeout_connect(std::time::Duration::from_secs(10))
-            .timeout_read(std::time::Duration::from_secs(30))
-            .timeout_write(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(60))
             .build()
     })
 }
@@ -401,7 +402,16 @@ impl QueryTrait<Net> for NodeQuery {
         &self,
         commitments: &[Field<Net>],
     ) -> anyhow::Result<Vec<StatePath<Net>>> {
-        commitments.iter().map(|commitment| self.get_state_path_for_commitment(commitment)).collect()
+        // One batch request (the same `statePaths` route snarkVM's RestQuery
+        // uses) so every returned path is anchored to a single block: fetching
+        // per commitment can straddle a block boundary, and the inclusion
+        // prover rejects state paths that disagree on the global state root.
+        if commitments.is_empty() {
+            return Ok(Vec::new());
+        }
+        let commitments =
+            commitments.iter().map(|commitment| commitment.to_string()).collect::<Vec<_>>();
+        self.get_json(&format!("statePaths?commitments={}", commitments.join(",")))
     }
 
     fn current_block_height(&self) -> anyhow::Result<u32> {

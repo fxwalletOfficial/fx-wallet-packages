@@ -1,7 +1,5 @@
 import 'dart:math';
 
-import 'package:ffi/ffi.dart';
-
 import 'package:aleo_dart/src/rust_lib/record_rust_ffi.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
 import 'package:aleo_dart/src/aleo_utils.dart';
@@ -18,21 +16,23 @@ class AleoRecord {
     AleoUtils.checkPrivateKey(privateKeyRaw);
     final privateKey = dartStrToC(privateKeyRaw);
     final secret = dartStrToC(secretRaw);
-    final result = recordRustFFI.encryptPrivateKey(privateKey, secret);
-    final ciphertext = takeNativeString(recordRustFFI.dyLib, result);
-    malloc.free(privateKey);
-    malloc.free(secret);
-    return ciphertext;
+    try {
+      final result = recordRustFFI.encryptPrivateKey(privateKey, secret);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([privateKey, secret]);
+    }
   }
 
   String decryptToPrivateKey(ciphertextRaw, secretRaw) {
     final ciphertext = dartStrToC(ciphertextRaw);
     final secret = dartStrToC(secretRaw);
-    final result = recordRustFFI.decryptToPrivateKey(ciphertext, secret);
-    final privateKey = takeNativeString(recordRustFFI.dyLib, result);
-    malloc.free(ciphertext);
-    malloc.free(secret);
-    return privateKey;
+    try {
+      final result = recordRustFFI.decryptToPrivateKey(ciphertext, secret);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([ciphertext, secret]);
+    }
   }
 
   RecordPlainText decryptCipherText(String record, String viewKey) {
@@ -48,11 +48,12 @@ class AleoRecord {
     }
     final recordPtr = dartStrToC(record);
     final viewKeyPtr = dartStrToC(viewKey);
-    final result = recordRustFFI.decryptCipherText(recordPtr, viewKeyPtr);
-    final plaintext = takeNativeString(recordRustFFI.dyLib, result);
-    malloc.free(recordPtr);
-    malloc.free(viewKeyPtr);
-    return plaintext;
+    try {
+      final result = recordRustFFI.decryptCipherText(recordPtr, viewKeyPtr);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([recordPtr, viewKeyPtr]);
+    }
   }
 
   bool isOwner(String record, String viewKey) {
@@ -60,10 +61,11 @@ class AleoRecord {
     AleoUtils.checkViewKey(viewKey);
     final recordPtr = dartStrToC(record);
     final viewKeyPtr = dartStrToC(viewKey);
-    final owned = recordRustFFI.isOwner(recordPtr, viewKeyPtr);
-    malloc.free(recordPtr);
-    malloc.free(viewKeyPtr);
-    return owned;
+    try {
+      return recordRustFFI.isOwner(recordPtr, viewKeyPtr);
+    } finally {
+      freeAll([recordPtr, viewKeyPtr]);
+    }
   }
 
   /// 解密 sender_ciphertext 字段，获取发送方地址
@@ -89,13 +91,13 @@ class AleoRecord {
     final recordPtr = dartStrToC(record);
     final viewKeyPtr = dartStrToC(viewKey);
     final senderCiphertextPtr = dartStrToC(senderCiphertext);
-    final result = recordRustFFI.decryptSenderCiphertext(
-        recordPtr, viewKeyPtr, senderCiphertextPtr);
-    final senderInfo = takeNativeString(recordRustFFI.dyLib, result);
-    malloc.free(recordPtr);
-    malloc.free(viewKeyPtr);
-    malloc.free(senderCiphertextPtr);
-    return senderInfo;
+    try {
+      final result = recordRustFFI.decryptSenderCiphertext(
+          recordPtr, viewKeyPtr, senderCiphertextPtr);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([recordPtr, viewKeyPtr, senderCiphertextPtr]);
+    }
   }
 
   String serialNumberString(String recordCipherTextRaw, String privateKeyRaw,
@@ -107,14 +109,13 @@ class AleoRecord {
     final privateKey = dartStrToC(privateKeyRaw);
     final programId = dartStrToC(programIdRaw);
     final recordName = dartStrToC(recordNameRaw);
-    final result = recordRustFFI.serialNumberString(
-        recordPlainText, privateKey, programId, recordName);
-    final serialNumber = takeNativeString(recordRustFFI.dyLib, result);
-    malloc.free(recordPlainText);
-    malloc.free(privateKey);
-    malloc.free(programId);
-    malloc.free(recordName);
-    return serialNumber;
+    try {
+      final result = recordRustFFI.serialNumberString(
+          recordPlainText, privateKey, programId, recordName);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([recordPlainText, privateKey, programId, recordName]);
+    }
   }
 
   List<String> serialNumberStrings(

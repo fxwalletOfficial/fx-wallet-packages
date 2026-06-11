@@ -35,11 +35,14 @@ void freeNativeString(ffi.DynamicLibrary dyLib, ffi.Pointer<Utf8> ptr) {
 }
 
 /// Copies a Rust-returned C string into a Dart string and frees the native
-/// buffer. Use for every `Pointer<Utf8>` returned by the library.
+/// buffer (even when the conversion throws). Use for every `Pointer<Utf8>`
+/// returned by the library.
 String takeNativeString(ffi.DynamicLibrary dyLib, ffi.Pointer<Utf8> ptr) {
-  final value = ptr.toDartString();
-  freeNativeString(dyLib, ptr);
-  return value;
+  try {
+    return ptr.toDartString();
+  } finally {
+    freeNativeString(dyLib, ptr);
+  }
 }
 
 /// Frees Dart-allocated input string pointers (from [dartStrToC]).
