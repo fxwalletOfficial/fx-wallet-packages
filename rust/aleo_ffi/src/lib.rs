@@ -2030,6 +2030,46 @@ pub unsafe extern "C" fn execute_program_proof_static(
     }
 }
 
+/// Builds an execution authorization for an arbitrary program function, offline.
+/// The referenced program (and its imports) is supplied in-memory via
+/// `program_sources_json` and loaded before authorizing — `vm.authorize` reads
+/// the program's `Stack`, so a non-builtin function cannot be authorized without
+/// it. `arguments` is a JSON array of Aleo value strings (record inputs already
+/// decrypted to plaintext by the caller, as on the old `contract_execution`
+/// path). This is the pure-FFI authorize step the phase-2 Dart orchestration
+/// uses for arbitrary programs, replacing the network-bound
+/// `contract_execution` / `execute_program`. Empty `program_sources_json` works
+/// for a built-in program (credits.aleo). Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn program_authorization_static(
+    private_key: *const c_char,
+    program_id: *const c_char,
+    function_name: *const c_char,
+    arguments: *const c_char,
+    program_sources_json: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let inputs: Vec<String> = serde_json::from_str(read_str(arguments))?;
+        let vm = new_vm()?;
+        add_programs_from_sources(&vm, read_str(program_sources_json))?;
+        let authorization = vm.authorize(
+            &private_key,
+            read_str(program_id),
+            read_str(function_name),
+            inputs,
+            &mut rand::thread_rng(),
+        )?;
+        Ok(serde_json::to_string(&authorization)?)
+    };
+    match inner() {
+        Ok(authorization) => to_cstring(authorization),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2825,5 +2865,64 @@ mod tests {
             free_string(ptr);
             assert_eq!(out, "");
         }
+    }
+
+    /// Calls the 5-arg program_authorization_static and returns the owned result.
+    fn call_program_authorization(
+        private_key: &str,
+        program_id: &str,
+        function: &str,
+        arguments: &str,
+        sources: &str,
+    ) -> String {
+        unsafe {
+            let pk = CString::new(private_key).unwrap();
+            let program = CString::new(program_id).unwrap();
+            let function = CString::new(function).unwrap();
+            let arguments = CString::new(arguments).unwrap();
+            let sources = CString::new(sources).unwrap();
+            let ptr = program_authorization_static(
+                pk.as_ptr(),
+                program.as_ptr(),
+                function.as_ptr(),
+                arguments.as_ptr(),
+                sources.as_ptr(),
+            );
+            let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
+            free_string(ptr);
+            out
+        }
+    }
+
+    // A built-in program (credits.aleo) authorizes with no program sources.
+    #[test]
+    fn program_authorization_static_builtin_no_sources() {
+        let args = serde_json::to_string(&vec![recipient_address(), "5u64".to_string()]).unwrap();
+        let out =
+            call_program_authorization(OWNER_KEY, "credits.aleo", "transfer_public", &args, "");
+        let auth: Authorization<Net> = serde_json::from_str(&out).unwrap();
+        assert_eq!(auth.to_vec_deque().len(), 1);
+    }
+
+    // The path credits-only authorize exports can't reach: load a non-builtin
+    // program from sources, then authorize its function offline.
+    #[test]
+    fn program_authorization_static_loads_then_authorizes() {
+        let sources = sources_json(&[("auth0.aleo", &[])]);
+        let out = call_program_authorization(OWNER_KEY, "auth0.aleo", "noop", "[]", &sources);
+        let auth: Authorization<Net> = serde_json::from_str(&out).unwrap();
+        assert!(!auth.to_vec_deque().is_empty(), "authorized a non-builtin function");
+    }
+
+    // Malformed input returns "" rather than panicking across the FFI boundary.
+    #[test]
+    fn program_authorization_static_malformed_returns_empty() {
+        // Bad arguments JSON.
+        assert_eq!(
+            call_program_authorization(OWNER_KEY, "credits.aleo", "transfer_public", "nope", ""),
+            ""
+        );
+        // Unknown program with no sources to load it.
+        assert_eq!(call_program_authorization(OWNER_KEY, "ghost.aleo", "go", "[]", ""), "");
     }
 }

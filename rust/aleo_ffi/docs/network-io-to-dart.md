@@ -11,12 +11,13 @@ Phase 1 is strictly additive: it ships the pure, network-free primitives and
 helpers under new `_static` symbols alongside the untouched old exports
 (`required_commitments`, `required_imports`, `state_root_from_paths`,
 `consensus_version_for`, `get_base_fee_static`, `execution_fee_authorization_static`,
-`execute_proof_static`, `execute_fee_proof_static`, `execute_program_proof_static`).
+`execute_proof_static`, `execute_fee_proof_static`, `execute_program_proof_static`,
+`program_authorization_static`).
 The pure helpers, the budgets, and the private-flow `StaticQuery` construction
 are unit-tested offline (real sampled `StatePath`s); the release cdylib's exported
 ABI is checked in CI.
 
-Three P1 issues from follow-up reviews were fixed in-phase (not deferred): (1)
+Four P1 issues from follow-up reviews were fixed in-phase (not deferred): (1)
 the fee API (`get_base_fee_static` / `execution_fee_authorization_static`) now
 takes `program_sources_json` and loads the execution's root program, since
 snarkVM's `execution_cost` reads each transition's program `Stack` (without it a
@@ -24,10 +25,17 @@ non-credits execution returned fee 0 / ""); (2) `required_commitments` now
 subtracts the transaction's own transition outputs from the input commitments,
 excluding a composite program's intra-transaction ("local") record
 (`vm.authorize` already populates the authorization's transitions, so this is
-exact and offline); and (3) `add_programs_from_sources` keeps a wall-clock
-deadline over its CPU-bound parse / Stack-build steps — moving HTTP to Dart
-removed the *network* stall, but a hostile closure of large valid programs is
-still uninterruptible CPU work the Dart timeout cannot reach.
+exact and offline); (3) `add_programs_from_sources` keeps a wall-clock deadline
+over its CPU-bound parse / Stack-build steps — moving HTTP to Dart removed the
+*network* stall, but a hostile closure of large valid programs is still
+uninterruptible CPU work the Dart timeout cannot reach; and (4) added
+`program_authorization_static(private_key, program_id, function, arguments,
+program_sources_json)` — the pure authorize primitive for *arbitrary* programs
+(load the program from sources, then `vm.authorize`). Without it phase 2 had no
+offline entry point for non-credits flows and would have to keep calling the
+network-bound `contract_execution` / `execute_program`; the credits-only
+`execution_authorization` / `join_authorization` / `upgrade_authorization`
+don't cover it.
 
 The following are **intentionally deferred** — surfaced by a high-effort
 self-review, none blocking, all sequenced to a later phase:

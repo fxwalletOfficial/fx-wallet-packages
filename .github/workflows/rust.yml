@@ -63,10 +63,11 @@ jobs:
                    required_commitments required_imports state_root_from_paths \
                    consensus_version_for get_base_fee_static \
                    execution_fee_authorization_static execute_proof_static \
-                   execute_fee_proof_static execute_program_proof_static; do
+                   execute_fee_proof_static execute_program_proof_static \
+                   program_authorization_static; do
             echo "$syms" | grep -qw "$f" || { echo "MISSING SYMBOL: $f"; missing=1; }
           done
-          test "$missing" -eq 0 && echo "all 40 FFI functions + free_string exported"
+          test "$missing" -eq 0 && echo "all 41 FFI functions + free_string exported"
 
       # Run the Dart wrapper's FFI-backed tests against the cdylib built above,
       # so Dart/Rust signature mismatches, string-ownership bugs and wrapper
