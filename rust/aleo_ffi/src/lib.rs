@@ -562,6 +562,51 @@ struct PendingProgram {
     pending: Vec<ProgramID<Net>>,
 }
 
+/// Wall-clock ceiling on resolving one import graph from a node. A real
+/// closure loads in a second or two; this is a DoS guard, not a protocol
+/// limit, so it sits far above any honest case. Checked between fetches, each
+/// of which is itself bounded by the per-request agent timeout.
+const IMPORT_LOAD_DEADLINE: std::time::Duration = std::time::Duration::from_secs(120);
+
+/// Ceiling on the number of programs fetched while resolving one import graph.
+/// On-chain closures are tens of programs; this is far above any of them but,
+/// with each source bounded by `MAX_PROGRAM_SIZE`, caps total memory. Like the
+/// deadline it is a DoS budget the protocol itself does not define (it bounds
+/// only a program's *direct* imports and source size, not transitive closure
+/// size), made generous so it never rejects an honest closure — the explicit
+/// trade-off for not reintroducing a depth/length cap that would.
+const MAX_IMPORT_PROGRAMS: usize = 256;
+
+/// Resource budget for a single `add_program_from_node` load, bounding the two
+/// ways a hostile node can make an honest, acyclic, individually-valid import
+/// chain expensive: total time and total programs (hence memory).
+struct LoadBudget {
+    deadline: std::time::Instant,
+    remaining_programs: usize,
+}
+
+impl LoadBudget {
+    fn new() -> Self {
+        Self {
+            deadline: std::time::Instant::now() + IMPORT_LOAD_DEADLINE,
+            remaining_programs: MAX_IMPORT_PROGRAMS,
+        }
+    }
+
+    /// Accounts for one program about to be fetched, failing if either budget
+    /// is spent.
+    fn charge_one_program(&mut self) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            std::time::Instant::now() < self.deadline,
+            "import load exceeded its {IMPORT_LOAD_DEADLINE:?} time budget"
+        );
+        self.remaining_programs = self.remaining_programs.checked_sub(1).ok_or_else(|| {
+            anyhow::anyhow!("import load exceeded its {MAX_IMPORT_PROGRAMS}-program budget")
+        })?;
+        Ok(())
+    }
+}
+
 /// True for built-in programs and anything already loaded in the process.
 fn program_is_present(vm: &VM<Net, ConsensusMemory<Net>>, id: &ProgramID<Net>) -> bool {
     id.to_string() == "credits.aleo" || vm.process().read().contains_program(id)
@@ -570,15 +615,25 @@ fn program_is_present(vm: &VM<Net, ConsensusMemory<Net>>, id: &ProgramID<Net>) -
 /// Fetches `id`'s source at its current on-chain edition. The two are read in
 /// that order (`latest_edition`, then `/program/{id}/{edition}`) so they stay
 /// consistent even if the program is upgraded concurrently. The node is not
-/// trusted: the returned source must actually declare `id`, so a node cannot
-/// substitute a different program for a requested import.
+/// trusted: the source may not exceed `MAX_PROGRAM_SIZE` (a larger one cannot
+/// be a valid on-chain program, so rejecting it never rejects a real one) and
+/// must actually declare `id`, so a node can neither flood memory with an
+/// oversized body nor substitute a different program for a requested import.
 fn fetch_program_at_latest_edition(
     base: &str,
     id: &ProgramID<Net>,
+    budget: &mut LoadBudget,
 ) -> anyhow::Result<PendingProgram> {
+    budget.charge_one_program()?;
     let edition = node_latest_edition(base, &id.to_string())?;
     let body = http_get(&format!("{base}/program/{id}/{edition}"))?;
     let source: String = serde_json::from_str(body.trim())?;
+    anyhow::ensure!(
+        source.len() <= Net::MAX_PROGRAM_SIZE,
+        "node returned a {}-byte source for '{id}', over the {}-byte maximum",
+        source.len(),
+        Net::MAX_PROGRAM_SIZE
+    );
     let program = Program::<Net>::from_str(&source)?;
     if program.id() != id {
         anyhow::bail!("node returned program '{}' for requested '{id}'", program.id());
@@ -621,7 +676,10 @@ fn add_fetched_program(
 /// no limit on transitive chain length, so arbitrarily deep legal chains must
 /// load. An import referring back to a program still being loaded is a cycle —
 /// impossible on-chain, where a program can only import programs deployed
-/// before it — and is rejected as a lying node.
+/// before it — and is rejected as a lying node. Because the protocol does not
+/// bound closure size, the whole walk runs against a [`LoadBudget`] (total time
+/// and program count) so an unbounded acyclic chain of distinct valid programs
+/// cannot block the synchronous call forever or exhaust memory.
 fn add_program_from_node(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program_id: &str,
@@ -633,9 +691,10 @@ fn add_program_from_node(
         return Ok(());
     }
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
+    let budget = &mut LoadBudget::new();
 
     // `stack` holds fetched programs whose imports are still being satisfied.
-    let mut stack = vec![fetch_program_at_latest_edition(&base, &requested)?];
+    let mut stack = vec![fetch_program_at_latest_edition(&base, &requested, budget)?];
     while let Some(frame) = stack.last_mut() {
         match frame.pending.pop() {
             Some(import_id) => {
@@ -650,7 +709,7 @@ fn add_program_from_node(
                     anyhow::bail!("node returned an import cycle: {chain} -> {import_id}");
                 }
                 if !program_is_present(vm, &import_id) {
-                    stack.push(fetch_program_at_latest_edition(&base, &import_id)?);
+                    stack.push(fetch_program_at_latest_edition(&base, &import_id, budget)?);
                 }
             }
             None => {
@@ -1400,6 +1459,44 @@ mod tests {
         address
     }
 
+    /// Like [`serve_canned`] but computes each response from the request path,
+    /// so a test can model an *unbounded* node (e.g. an endless distinct import
+    /// chain) without materializing infinite routes.
+    fn serve_dynamic<F>(handler: F) -> String
+    where
+        F: Fn(&str) -> Option<String> + Send + 'static,
+    {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let mut buffer = [0u8; 4096];
+                let read = stream.read(&mut buffer).unwrap_or(0);
+                let request = String::from_utf8_lossy(&buffer[..read]).into_owned();
+                let path = request.split_whitespace().nth(1).unwrap_or("");
+                let (status, body) = match handler(path) {
+                    Some(body) => ("200 OK", body),
+                    None => ("404 Not Found", String::new()),
+                };
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+            }
+        });
+        address
+    }
+
+    /// Source for a minimal valid program named `id` importing `imports`.
+    fn program_source(id: &str, imports: &[String]) -> String {
+        let imports_block =
+            imports.iter().map(|import| format!("import {import};\n")).collect::<String>();
+        format!("{imports_block}\nprogram {id};\n\nfunction noop:\n    add 1u8 1u8 into r0;\n")
+    }
+
     /// Registers the `latest_edition` and source routes for a minimal valid
     /// program named `id` importing `imports`.
     fn program_routes(
@@ -1407,10 +1504,7 @@ mod tests {
         id: &str,
         imports: &[String],
     ) {
-        let imports_block =
-            imports.iter().map(|import| format!("import {import};\n")).collect::<String>();
-        let source =
-            format!("{imports_block}\nprogram {id};\n\nfunction noop:\n    add 1u8 1u8 into r0;\n");
+        let source = program_source(id, imports);
         routes.insert(format!("/testnet/program/{id}/latest_edition"), "1".to_string());
         routes.insert(format!("/testnet/program/{id}/1"), serde_json::to_string(&source).unwrap());
     }
@@ -1467,6 +1561,48 @@ mod tests {
         assert!(process.contains_program(&ProgramID::from_str("deep0.aleo").unwrap()));
         assert!(process
             .contains_program(&ProgramID::from_str(&format!("deep{}.aleo", DEPTH - 1)).unwrap()));
+    }
+
+    // An acyclic but endless chain of distinct, individually-valid programs
+    // (no cycle, each within protocol limits) must still terminate, on the
+    // program-count budget, rather than fetch forever or exhaust memory.
+    #[test]
+    fn unbounded_import_chain_hits_budget() {
+        // Every `deepN.aleo` validly imports `deep{N+1}.aleo`, without end.
+        let url = serve_dynamic(|path| {
+            let parts: Vec<&str> = path.trim_start_matches('/').split('/').collect();
+            // ["testnet", "program", "deepN.aleo", "latest_edition" | "1"]
+            if parts.len() != 4 || parts[1] != "program" {
+                return None;
+            }
+            let id = parts[2];
+            if parts[3] == "latest_edition" {
+                return Some("1".to_string());
+            }
+            let n: usize = id.strip_prefix("deep")?.strip_suffix(".aleo")?.parse().ok()?;
+            let source = program_source(id, &[format!("deep{}.aleo", n + 1)]);
+            Some(serde_json::to_string(&source).unwrap())
+        });
+        let vm = new_vm().unwrap();
+        let error = add_program_from_node(&vm, "deep0.aleo", &url, "testnet").unwrap_err();
+        assert!(error.to_string().contains("program budget"), "got: {error}");
+    }
+
+    // A source larger than the protocol maximum can't be a real program, so it
+    // must be rejected (bounding per-fetch memory) rather than parsed.
+    #[test]
+    fn oversized_program_source_rejected() {
+        let mut routes = std::collections::HashMap::new();
+        let bloated = format!("program big.aleo;\n{}", " ".repeat(Net::MAX_PROGRAM_SIZE + 1));
+        routes.insert("/testnet/program/big.aleo/latest_edition".to_string(), "1".to_string());
+        routes.insert(
+            "/testnet/program/big.aleo/1".to_string(),
+            serde_json::to_string(&bloated).unwrap(),
+        );
+        let url = serve_canned(routes);
+        let vm = new_vm().unwrap();
+        let error = add_program_from_node(&vm, "big.aleo", &url, "testnet").unwrap_err();
+        assert!(error.to_string().contains("maximum"), "got: {error}");
     }
 
     // A fee the network would reject must fail before proving, and the
