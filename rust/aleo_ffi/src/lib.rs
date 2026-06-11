@@ -359,10 +359,10 @@ impl QueryTrait<Net> for NodeQuery {
 }
 
 /// Current block height from the node (used to select the consensus version).
+/// Goes through `NodeQuery` so it shares the retrying `http_get` (the public
+/// node returns transient 5xx/522), like every other node read.
 fn fetch_height(url: &str, network: &str) -> anyhow::Result<u32> {
-    let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    let height = ureq::get(&format!("{base}/latest/height")).call()?.into_string()?;
-    Ok(height.trim().parse()?)
+    NodeQuery::new(url, network).current_block_height()
 }
 
 /// Minimum (base) fee in microcredits for an execution at the node's height.
