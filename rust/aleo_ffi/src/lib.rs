@@ -177,6 +177,36 @@ pub unsafe extern "C" fn decrypt_cipher_text(
 }
 
 
+/// Decrypts a `transfer_private` `sender_ciphertext` field to the sender's
+/// Address, using the recipient's view key and the record's (public) nonce.
+/// Returns "" on failure.
+///
+///   record_view_key = x(record.nonce * view_key)
+///   randomizer      = hash_psd4([domain_separator("AleoSymmetricEncryption0"),
+///                                record_view_key, 1field])
+///   sender_x        = sender_ciphertext - randomizer
+///   sender          = Address::from_field(sender_x)
+///
+/// SAFETY: all three pointers are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn decrypt_sender_ciphertext(
+    record: *const c_char,
+    view_key: *const c_char,
+    sender_ciphertext: *const c_char,
+) -> *mut c_char {
+    let result = (|| -> Option<String> {
+        let view_key = ViewKey::<Net>::from_str(read_str(view_key)).ok()?;
+        let record = Record::<Net, Ciphertext<Net>>::from_str(read_str(record)).ok()?;
+        let record_view_key = (record.into_nonce() * *view_key).to_x_coordinate();
+        let domain = Field::<Net>::new_domain_separator("AleoSymmetricEncryption0");
+        let randomizer = Net::hash_psd4(&[domain, record_view_key, Field::<Net>::one()]).ok()?;
+        let sender_ciphertext = Field::<Net>::from_str(read_str(sender_ciphertext)).ok()?;
+        let sender_x = sender_ciphertext - randomizer;
+        Some(Address::<Net>::from_field(&sender_x).ok()?.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
+}
+
 // ----------------------------------------------------------------------------
 // Private-key Encryptor (password-based). The seed is multiplicatively blinded:
 //   secret_field = domain_separator(secret)
