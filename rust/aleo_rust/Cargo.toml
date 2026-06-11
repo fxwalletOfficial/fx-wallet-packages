@@ -86,3 +86,10 @@ default = [ "full","mainnet" ]
 full = [ "ureq", "snarkvm" ]
 testnet = []
 mainnet = []
+
+# src/program/transfer.rs needs VM::execute_authorization_raw /
+# execute_fee_authorization_raw, which upstream snarkVM 4.5.0 keeps private
+# (the original build used a now-lost snarkVM fork). The vendored copy is
+# upstream + a 2-line visibility change; see rust/vendor/README.md.
+[patch.crates-io]
+snarkvm-synthesizer = { path = "../vendor/snarkvm-synthesizer-4.5.0" }
