@@ -438,6 +438,22 @@ fn fetch_height(url: &str, network: &str) -> anyhow::Result<u32> {
     NodeQuery::new(url, network).current_block_height()
 }
 
+/// Rejects a fee the network can never accept, *before* the expensive fee
+/// proving: snarkVM verification requires `fee.amount() <= N::MAX_FEE`, so a
+/// base + priority total past the cap could only produce a proof of a
+/// transaction every node rejects.
+fn check_total_fee(base_fee: u64, priority_fee: u64) -> anyhow::Result<()> {
+    let total = base_fee
+        .checked_add(priority_fee)
+        .ok_or_else(|| anyhow::anyhow!("total fee overflows u64"))?;
+    anyhow::ensure!(
+        total <= Net::MAX_FEE,
+        "total fee {total} exceeds the network maximum {}",
+        Net::MAX_FEE
+    );
+    Ok(())
+}
+
 /// Minimum (base) fee in microcredits for an execution at the node's height.
 fn base_fee_for(execution: &Execution<Net>, url: &str, network: &str) -> anyhow::Result<u64> {
     let consensus_version = Net::CONSENSUS_VERSION(fetch_height(url, network)?)?;
@@ -519,6 +535,7 @@ fn full_transaction(
         let process = process.read();
         snarkvm_synthesizer::process::execution_cost(&process, &execution, consensus_version)?.0
     };
+    check_total_fee(base_fee, fee_credits)?;
     let fee_authorization = if fee_record.trim().is_empty() {
         vm.authorize_fee_public(private_key, base_fee, fee_credits, execution_id, rng)?
     } else {
@@ -537,97 +554,109 @@ fn node_latest_edition(base: &str, program_id: &str) -> anyhow::Result<u16> {
     Ok(body.trim().trim_matches('"').parse()?)
 }
 
-/// Cap on the import-chain depth accepted from a node. Real Aleo import graphs
-/// are a few levels deep; anything past this is a malicious or broken node.
-const MAX_IMPORT_DEPTH: usize = 16;
+/// A fetched program whose imports have not all been confirmed present yet.
+struct PendingProgram {
+    program: Program<Net>,
+    edition: u16,
+    /// Imports still to satisfy before this program can be added.
+    pending: Vec<ProgramID<Net>>,
+}
+
+/// True for built-in programs and anything already loaded in the process.
+fn program_is_present(vm: &VM<Net, ConsensusMemory<Net>>, id: &ProgramID<Net>) -> bool {
+    id.to_string() == "credits.aleo" || vm.process().read().contains_program(id)
+}
+
+/// Fetches `id`'s source at its current on-chain edition. The two are read in
+/// that order (`latest_edition`, then `/program/{id}/{edition}`) so they stay
+/// consistent even if the program is upgraded concurrently. The node is not
+/// trusted: the returned source must actually declare `id`, so a node cannot
+/// substitute a different program for a requested import.
+fn fetch_program_at_latest_edition(
+    base: &str,
+    id: &ProgramID<Net>,
+) -> anyhow::Result<PendingProgram> {
+    let edition = node_latest_edition(base, &id.to_string())?;
+    let body = http_get(&format!("{base}/program/{id}/{edition}"))?;
+    let source: String = serde_json::from_str(body.trim())?;
+    let program = Program::<Net>::from_str(&source)?;
+    if program.id() != id {
+        anyhow::bail!("node returned program '{}' for requested '{id}'", program.id());
+    }
+    let pending = program.imports().keys().cloned().collect();
+    Ok(PendingProgram { program, edition, pending })
+}
+
+/// Adds a fetched program to the process at its edition. Edition 0
+/// (first-deployed, constructor-bearing programs) goes through `add_program`,
+/// which execution permits; non-upgradeable programs are edition 1, upgraded
+/// programs their bumped edition. A wrong edition would yield a proof that
+/// disagrees with chain state, so edition determination failures propagate.
+fn add_fetched_program(
+    vm: &VM<Net, ConsensusMemory<Net>>,
+    program: &Program<Net>,
+    edition: u16,
+) -> anyhow::Result<()> {
+    let process = vm.process();
+    let mut process = process.write();
+    // A diamond import graph may have added it along another path already.
+    if !process.contains_program(program.id()) {
+        if edition == 0 {
+            process.add_program(program)?;
+        } else {
+            process.add_program_with_edition(program, edition)?;
+        }
+    }
+    Ok(())
+}
 
 /// Fetches a non-builtin program from the node and adds it to the VM, loading
 /// every imported program first (snarkVM rejects a program whose imports are
 /// not already present). A no-op for built-in programs like credits.aleo or any
 /// program already loaded.
 ///
-/// The current edition is read first, then the source is fetched *at that
-/// edition* (`/program/{id}/{edition}`) so the two are consistent even if the
-/// program is upgraded concurrently. Edition 0 (first-deployed, constructor-
-/// bearing programs) is added via `add_program`, which execution permits;
-/// non-upgradeable programs are edition 1, upgraded programs their bumped
-/// edition. A wrong edition would yield a proof that disagrees with chain state,
-/// so any failure to determine it (e.g. a node without the route) propagates.
-///
-/// The node's responses are not trusted: the returned source must declare the
-/// requested program ID, an import cycle (`a -> b -> a`, only possible if the
-/// node lies, since on-chain programs can only import pre-existing ones) is
-/// rejected rather than recursed into, and the chain depth is capped by
-/// [`MAX_IMPORT_DEPTH`] so a hostile node cannot overflow the stack.
+/// The import graph is walked iteratively in post-order (imports before
+/// importers), so a hostile node cannot drive call-stack depth: the protocol
+/// caps a program's *direct* imports (parsing enforces `MAX_IMPORTS`) but puts
+/// no limit on transitive chain length, so arbitrarily deep legal chains must
+/// load. An import referring back to a program still being loaded is a cycle —
+/// impossible on-chain, where a program can only import programs deployed
+/// before it — and is rejected as a lying node.
 fn add_program_from_node(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program_id: &str,
     url: &str,
     network: &str,
 ) -> anyhow::Result<()> {
-    add_program_from_node_guarded(vm, program_id, url, network, &mut Vec::new())
-}
-
-/// [`add_program_from_node`] with the in-progress import chain (`visiting`)
-/// threaded through the recursion for cycle and depth checks.
-fn add_program_from_node_guarded(
-    vm: &VM<Net, ConsensusMemory<Net>>,
-    program_id: &str,
-    url: &str,
-    network: &str,
-    visiting: &mut Vec<String>,
-) -> anyhow::Result<()> {
     let requested = ProgramID::<Net>::from_str(program_id)?;
-    let program_id = requested.to_string();
-
-    // Skip built-ins and anything already loaded (without holding the lock
-    // across the recursion below).
-    {
-        let process = vm.process();
-        let process = process.read();
-        if program_id == "credits.aleo" || process.contains_program(&requested) {
-            return Ok(());
-        }
+    if program_is_present(vm, &requested) {
+        return Ok(());
     }
-
-    if visiting.iter().any(|id| id == &program_id) {
-        anyhow::bail!("node returned an import cycle: {} -> {program_id}", visiting.join(" -> "));
-    }
-    if visiting.len() >= MAX_IMPORT_DEPTH {
-        anyhow::bail!(
-            "import chain from node exceeds {MAX_IMPORT_DEPTH} levels at {program_id}: {}",
-            visiting.join(" -> ")
-        );
-    }
-
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    let edition = node_latest_edition(&base, &program_id)?;
-    let body = http_get(&format!("{base}/program/{program_id}/{edition}"))?;
-    let source: String = serde_json::from_str(body.trim())?;
-    let program = Program::<Net>::from_str(&source)?;
-    if program.id() != &requested {
-        anyhow::bail!("node returned program '{}' for requested '{program_id}'", program.id());
-    }
 
-    // Load imports (which may themselves import others) before this program.
-    visiting.push(program_id);
-    let imports = (|| -> anyhow::Result<()> {
-        for import_id in program.imports().keys() {
-            add_program_from_node_guarded(vm, &import_id.to_string(), url, network, visiting)?;
-        }
-        Ok(())
-    })();
-    visiting.pop();
-    imports?;
-
-    let process = vm.process();
-    let mut process = process.write();
-    // A diamond import graph may have added it during the recursion above.
-    if !process.contains_program(program.id()) {
-        if edition == 0 {
-            process.add_program(&program)?;
-        } else {
-            process.add_program_with_edition(&program, edition)?;
+    // `stack` holds fetched programs whose imports are still being satisfied.
+    let mut stack = vec![fetch_program_at_latest_edition(&base, &requested)?];
+    while let Some(frame) = stack.last_mut() {
+        match frame.pending.pop() {
+            Some(import_id) => {
+                // A stack entry is a program still waiting on its imports, so
+                // an import pointing back into the stack is a cycle.
+                if stack.iter().any(|frame| frame.program.id() == &import_id) {
+                    let chain = stack
+                        .iter()
+                        .map(|frame| frame.program.id().to_string())
+                        .collect::<Vec<_>>()
+                        .join(" -> ");
+                    anyhow::bail!("node returned an import cycle: {chain} -> {import_id}");
+                }
+                if !program_is_present(vm, &import_id) {
+                    stack.push(fetch_program_at_latest_edition(&base, &import_id)?);
+                }
+            }
+            None => {
+                let done = stack.pop().expect("the loop condition saw a frame");
+                add_fetched_program(vm, &done.program, done.edition)?;
+            }
         }
     }
     Ok(())
@@ -675,6 +704,7 @@ fn program_fee(
         let process = process.read();
         snarkvm_synthesizer::process::execution_cost(&process, &execution, consensus_version)?.0
     };
+    check_total_fee(base_fee, priority_fee)?;
     let fee_authorization =
         vm.authorize_fee_public(private_key, base_fee, priority_fee, execution_id, rng)?;
     let fee = vm.execute_fee_authorization_raw(fee_authorization, &query, rng)?;
@@ -1093,6 +1123,7 @@ pub unsafe extern "C" fn execution_fee_authorization(
         let execution_id = execution.to_execution_id()?;
         let base_fee = base_fee_for(&execution, read_str(url), read_str(network))?;
         let priority_fee = fee_credits;
+        check_total_fee(base_fee, priority_fee)?;
         let fee_record = read_str(fee_record);
         let vm = new_vm()?;
         let rng = &mut rand::thread_rng();
@@ -1342,38 +1373,112 @@ mod tests {
         }
     }
 
-    // A node claiming `a.aleo -> ... -> a.aleo` must be rejected before any
-    // fetch, not recursed into until the stack overflows. Both guards fire
-    // before HTTP, so these run offline (the URL is never contacted).
+    /// Serves canned `path -> body` responses on a local port, so the
+    /// node-facing program loader can be exercised without a network.
+    fn serve_canned(routes: std::collections::HashMap<String, String>) -> String {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let mut buffer = [0u8; 4096];
+                let read = stream.read(&mut buffer).unwrap_or(0);
+                let request = String::from_utf8_lossy(&buffer[..read]).into_owned();
+                let path = request.split_whitespace().nth(1).unwrap_or("").to_string();
+                let (status, body) = match routes.get(&path) {
+                    Some(body) => ("200 OK", body.clone()),
+                    None => ("404 Not Found", String::new()),
+                };
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+            }
+        });
+        address
+    }
+
+    /// Registers the `latest_edition` and source routes for a minimal valid
+    /// program named `id` importing `imports`.
+    fn program_routes(
+        routes: &mut std::collections::HashMap<String, String>,
+        id: &str,
+        imports: &[String],
+    ) {
+        let imports_block =
+            imports.iter().map(|import| format!("import {import};\n")).collect::<String>();
+        let source =
+            format!("{imports_block}\nprogram {id};\n\nfunction noop:\n    add 1u8 1u8 into r0;\n");
+        routes.insert(format!("/testnet/program/{id}/latest_edition"), "1".to_string());
+        routes.insert(format!("/testnet/program/{id}/1"), serde_json::to_string(&source).unwrap());
+    }
+
+    // A node claiming `a.aleo -> b.aleo -> a.aleo` must be rejected, not
+    // walked forever: such a cycle is impossible on-chain (programs can only
+    // import programs deployed before them), so it can only be a lying node.
     #[test]
     fn import_cycle_from_node_rejected() {
+        let mut routes = std::collections::HashMap::new();
+        program_routes(&mut routes, "cyclea.aleo", &["cycleb.aleo".to_string()]);
+        program_routes(&mut routes, "cycleb.aleo", &["cyclea.aleo".to_string()]);
+        let url = serve_canned(routes);
         let vm = new_vm().unwrap();
-        let mut visiting = vec!["token_registry.aleo".to_string()];
-        let error = add_program_from_node_guarded(
-            &vm,
-            "token_registry.aleo",
-            "http://127.0.0.1:1",
-            "testnet",
-            &mut visiting,
-        )
-        .unwrap_err();
+        let error = add_program_from_node(&vm, "cyclea.aleo", &url, "testnet").unwrap_err();
         assert!(error.to_string().contains("import cycle"), "got: {error}");
     }
 
+    // The returned source must declare the requested ID: a node answering the
+    // request for one program with another must be rejected.
     #[test]
-    fn import_depth_from_node_capped() {
+    fn node_substituting_a_program_rejected() {
+        let mut routes = std::collections::HashMap::new();
+        program_routes(&mut routes, "evil.aleo", &[]);
+        let evil_body = routes["/testnet/program/evil.aleo/1"].clone();
+        routes.insert("/testnet/program/honest.aleo/latest_edition".to_string(), "1".to_string());
+        routes.insert("/testnet/program/honest.aleo/1".to_string(), evil_body);
+        let url = serve_canned(routes);
         let vm = new_vm().unwrap();
-        let mut visiting =
-            (0..MAX_IMPORT_DEPTH).map(|i| format!("program{i}.aleo")).collect::<Vec<_>>();
-        let error = add_program_from_node_guarded(
-            &vm,
-            "token_registry.aleo",
-            "http://127.0.0.1:1",
-            "testnet",
-            &mut visiting,
-        )
-        .unwrap_err();
+        let error = add_program_from_node(&vm, "honest.aleo", &url, "testnet").unwrap_err();
+        assert!(error.to_string().contains("returned program"), "got: {error}");
+    }
+
+    // The protocol caps a program's direct imports, not transitive chain
+    // depth, so a legal chain deeper than any fixed guess must still load
+    // (and must not grow the call stack while doing so).
+    #[test]
+    fn deep_import_chain_loads() {
+        const DEPTH: usize = 20;
+        let mut routes = std::collections::HashMap::new();
+        for i in 0..DEPTH {
+            let imports = if i + 1 < DEPTH {
+                vec![format!("deep{}.aleo", i + 1)]
+            } else {
+                Vec::new()
+            };
+            program_routes(&mut routes, &format!("deep{i}.aleo"), &imports);
+        }
+        let url = serve_canned(routes);
+        let vm = new_vm().unwrap();
+        add_program_from_node(&vm, "deep0.aleo", &url, "testnet").unwrap();
+        let process = vm.process();
+        let process = process.read();
+        assert!(process.contains_program(&ProgramID::from_str("deep0.aleo").unwrap()));
+        assert!(process
+            .contains_program(&ProgramID::from_str(&format!("deep{}.aleo", DEPTH - 1)).unwrap()));
+    }
+
+    // A fee the network would reject must fail before proving, and the
+    // base + priority sum must not wrap.
+    #[test]
+    fn total_fee_capped_at_network_maximum() {
+        assert!(check_total_fee(Net::MAX_FEE, 0).is_ok());
+        assert!(check_total_fee(Net::MAX_FEE - 1, 1).is_ok());
+        let error = check_total_fee(Net::MAX_FEE, 1).unwrap_err();
         assert!(error.to_string().contains("exceeds"), "got: {error}");
+        let error = check_total_fee(u64::MAX, 1).unwrap_err();
+        assert!(error.to_string().contains("overflows"), "got: {error}");
     }
 
     // Calls a few exported functions through their C ABI and frees the result,
