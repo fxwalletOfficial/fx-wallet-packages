@@ -17,3 +17,34 @@ ffi.Pointer<Utf8> dartStrToC(String string) {
 String cStrToDart(ffi.Pointer<Utf8> charPointer) {
   return charPointer.toDartString();
 }
+
+typedef _FreeStringC = ffi.Void Function(ffi.Pointer<Utf8>);
+typedef _FreeStringDart = void Function(ffi.Pointer<Utf8>);
+
+/// Frees a string returned by the native library. Returned pointers are
+/// allocated by Rust (`CString::into_raw`), so they must be released through
+/// Rust's `free_string`, not the C allocator. If the loaded library predates
+/// `free_string` (the older GPL build), this degrades to the previous
+/// behaviour — the buffer is not freed — rather than throwing.
+void freeNativeString(ffi.DynamicLibrary dyLib, ffi.Pointer<Utf8> ptr) {
+  try {
+    dyLib.lookupFunction<_FreeStringC, _FreeStringDart>('free_string')(ptr);
+  } catch (_) {
+    // Library has no free_string: fall back to leaking, as before.
+  }
+}
+
+/// Copies a Rust-returned C string into a Dart string and frees the native
+/// buffer. Use for every `Pointer<Utf8>` returned by the library.
+String takeNativeString(ffi.DynamicLibrary dyLib, ffi.Pointer<Utf8> ptr) {
+  final value = ptr.toDartString();
+  freeNativeString(dyLib, ptr);
+  return value;
+}
+
+/// Frees Dart-allocated input string pointers (from [dartStrToC]).
+void freeAll(Iterable<ffi.Pointer<Utf8>> pointers) {
+  for (final pointer in pointers) {
+    malloc.free(pointer);
+  }
+}

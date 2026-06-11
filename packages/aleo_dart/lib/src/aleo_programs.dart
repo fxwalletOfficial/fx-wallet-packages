@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
 
-import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:aleo_dart/src/rust_lib/programs_rust_ffi.dart';
@@ -10,6 +9,8 @@ import 'package:aleo_dart/src/rust_lib/utils.dart';
 class AleoProgram {
   late ProgramsRustFFI programsRustFFI;
 
+  // Long-lived: the network pointer is held for the object's lifetime and
+  // passed to every call, so it is not freed per-call.
   AleoProgram(dyLib, [network_raw = 'testnet']) {
     final network = dartStrToC(network_raw);
     this.programsRustFFI = ProgramsRustFFI(dyLib, network);
@@ -40,7 +41,16 @@ class AleoProgram {
         url,
         amount_record,
         fee_record);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([
+      private_key,
+      transfer_type,
+      recipient,
+      url,
+      amount_record,
+      fee_record
+    ]);
+    return out;
   }
 
   Future<String> tryJoin(
@@ -58,7 +68,9 @@ class AleoProgram {
     final url = dartStrToC(url_raw);
     final result = await programsRustFFI.join(
         private_key, record_1, record_2, fee_credits, fee_record, url);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([private_key, record_1, record_2, fee_record, url]);
+    return out;
   }
 
   Future<String> joinAuthorization(
@@ -73,7 +85,9 @@ class AleoProgram {
     final url = dartStrToC(url_raw);
     final result = await programsRustFFI.joinAuthorization(
         private_key, record_1, record_2, url);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([private_key, record_1, record_2, url]);
+    return out;
   }
 
   Future<String> upgradeAuthorization(
@@ -86,7 +100,9 @@ class AleoProgram {
     final url = dartStrToC(url_raw);
     final result =
         await programsRustFFI.upgradeAuthorization(private_key, record, url);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([private_key, record, url]);
+    return out;
   }
 
   Future<String> buildTransaction(
@@ -115,7 +131,16 @@ class AleoProgram {
         url,
         amount_record,
         fee_record);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([
+      private_key,
+      transfer_type,
+      recipient,
+      url,
+      amount_record,
+      fee_record
+    ]);
+    return out;
   }
 
   Future<String> broadcast(
@@ -129,7 +154,9 @@ class AleoProgram {
 
     final result =
         await programsRustFFI.broadcast(transaction, url, transfer_type);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([transaction, url, transfer_type]);
+    return out;
   }
 
   Future<String> executionAuthorization(
@@ -148,7 +175,9 @@ class AleoProgram {
 
     final result = await programsRustFFI.executionAuthorization(private_key,
         recipient, transfer_type, amount_credits, url, amount_record);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([private_key, transfer_type, recipient, url, amount_record]);
+    return out;
   }
 
   Future<String> executionFeeAuthorization(
@@ -166,14 +195,18 @@ class AleoProgram {
 
     final result = await programsRustFFI.executionFeeAuthorization(
         private_key, transfer_type, fee_credits, url, fee_record, execution);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([private_key, transfer_type, url, fee_record, execution]);
+    return out;
   }
 
   Future<String> executeProof(String url_raw, String authorization_raw) async {
     final url = dartStrToC(url_raw);
     final authorization = dartStrToC(authorization_raw);
     final result = await programsRustFFI.executeProof(url, authorization);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([url, authorization]);
+    return out;
   }
 
   Future<String> executeProgramProof(String url_raw, String authorization_raw,
@@ -183,7 +216,9 @@ class AleoProgram {
     final program_id = dartStrToC(program_id_raw);
     final result = await programsRustFFI.executeProgramProof(
         url, authorization, program_id);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([url, authorization, program_id]);
+    return out;
   }
 
   Future<String> executeFeeProof(
@@ -193,7 +228,9 @@ class AleoProgram {
     final url = dartStrToC(url_raw);
     final authorization = dartStrToC(authorization_raw);
     final result = await programsRustFFI.executeFeeProof(url, authorization);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([url, authorization]);
+    return out;
   }
 
   Future<String> buildTransactionOffline(
@@ -204,15 +241,20 @@ class AleoProgram {
     final fee = dartStrToC(fee_raw);
     final result =
         await programsRustFFI.buildTransactionOffline(execution, fee);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([execution, fee]);
+    return out;
   }
 
   Future<String> buildUpgradeTransactionOffline(
     String execution_raw,
   ) async {
     final execution = dartStrToC(execution_raw);
-    final result = await programsRustFFI.buildUpgradeTransactionOffline(execution);
-    return result.toDartString();
+    final result =
+        await programsRustFFI.buildUpgradeTransactionOffline(execution);
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([execution]);
+    return out;
   }
 
   Future<int> getBaseFee(
@@ -222,6 +264,7 @@ class AleoProgram {
     final execution = dartStrToC(execution_raw);
     final url = dartStrToC(url_raw);
     final result = await programsRustFFI.getBaseFee(url, execution);
+    freeAll([execution, url]);
     return result;
   }
 
@@ -261,7 +304,9 @@ class AleoProgram {
     final url = dartStrToC(url_raw);
     final result = await programsRustFFI.contractExecution(
         private_key, program_id, function_name, arguments, url);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([private_key, program_id, function_name, arguments, url]);
+    return out;
   }
 
   Future<String> executeProgram(
@@ -279,7 +324,9 @@ class AleoProgram {
     final url = dartStrToC(url_raw);
     final result = await programsRustFFI.executeProgram(
         private_key, program_id, function_name, arguments, fee, url);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([private_key, program_id, function_name, arguments, url]);
+    return out;
   }
 
   Future<String> contractFeeExecution(
@@ -295,7 +342,9 @@ class AleoProgram {
     final url = dartStrToC(url_raw);
     final result = await programsRustFFI.contractFeeExecution(
         private_key, fee, execution, program_id, url);
-    return result.toDartString();
+    final out = takeNativeString(programsRustFFI.dyLib, result);
+    freeAll([private_key, execution, program_id, url]);
+    return out;
   }
 
   String modifyAuthorization(

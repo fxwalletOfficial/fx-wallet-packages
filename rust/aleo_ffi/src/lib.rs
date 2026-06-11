@@ -45,6 +45,20 @@ fn to_cstring(s: String) -> *mut c_char {
     CString::new(s).expect("unexpected NUL in FFI output").into_raw()
 }
 
+/// Frees a string previously returned by this library. Returned pointers are
+/// allocated with Rust's allocator via `CString::into_raw`, so they must be
+/// handed back to Rust to be freed — calling the C `free` on them is undefined
+/// behaviour. Null is a no-op; each pointer must be freed at most once.
+///
+/// SAFETY: `ptr` is null or a pointer previously returned by this library and
+/// not yet freed.
+#[no_mangle]
+pub unsafe extern "C" fn free_string(ptr: *mut c_char) {
+    if !ptr.is_null() {
+        drop(CString::from_raw(ptr));
+    }
+}
+
 /// FFI sanity check used by the test suite.
 #[no_mangle]
 pub extern "C" fn numbers_add(a: c_int, b: c_int) -> c_int {
@@ -300,12 +314,28 @@ fn new_vm() -> anyhow::Result<VM<Net, ConsensusMemory<Net>>> {
     VM::from(ConsensusStore::<Net, ConsensusMemory<Net>>::open(StorageMode::Production)?)
 }
 
+/// Shared HTTP agent with bounded timeouts. `ureq`'s defaults only bound the
+/// connect phase, so a node that accepts the connection and then stalls would
+/// hang the (synchronous) FFI call forever and the retry loop would never run.
+/// The read/write timeouts cap each attempt so a stalled peer surfaces as an
+/// error and is retried.
+fn http_agent() -> &'static ureq::Agent {
+    static AGENT: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
+    AGENT.get_or_init(|| {
+        ureq::AgentBuilder::new()
+            .timeout_connect(std::time::Duration::from_secs(10))
+            .timeout_read(std::time::Duration::from_secs(30))
+            .timeout_write(std::time::Duration::from_secs(30))
+            .build()
+    })
+}
+
 /// HTTP GET with a few retries (the public node occasionally returns transient
 /// 5xx / connection errors).
 fn http_get(url: &str) -> anyhow::Result<String> {
     let mut last_error = None;
     for attempt in 0..4 {
-        match ureq::get(url).call() {
+        match http_agent().get(url).call() {
             Ok(response) => return Ok(response.into_string()?),
             Err(error) => {
                 last_error = Some(error);
@@ -569,7 +599,8 @@ fn program_fee(
 /// POSTs a transaction to the node, returning the node's response body.
 fn broadcast_to_node(transaction: &str, url: &str, network: &str) -> anyhow::Result<String> {
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    Ok(ureq::post(&format!("{base}/transaction/broadcast"))
+    Ok(http_agent()
+        .post(&format!("{base}/transaction/broadcast"))
         .set("Content-Type", "application/json")
         .send_string(transaction)?
         .into_string()?)
@@ -1171,6 +1202,36 @@ mod tests {
     #[test]
     fn transfer_inputs_rejects_unknown_function() {
         assert!(transfer_inputs("not_a_transfer", "aleo1recipient", 1, "", &owner()).is_err());
+    }
+
+    // free_string reclaims a returned pointer and tolerates null.
+    #[test]
+    fn free_string_reclaims_returned_pointers() {
+        unsafe {
+            free_string(to_cstring("hello".to_string()));
+            free_string(std::ptr::null_mut());
+        }
+    }
+
+    // Calls a few exported functions through their C ABI and frees the result,
+    // exercising the FFI surface end-to-end (not just internal helpers).
+    #[test]
+    fn ffi_smoke_through_c_abi() {
+        assert_eq!(numbers_add(2, 3), 6); // a + b + 1
+        unsafe {
+            let seed = [1u8; 32];
+            let pk_ptr = seed_to_private_key(seed.as_ptr());
+            let pk = CStr::from_ptr(pk_ptr).to_str().unwrap().to_owned();
+            assert!(pk.starts_with("APrivateKey1"), "got {pk}");
+
+            let pk_c = CString::new(pk).unwrap();
+            let addr_ptr = private_key_to_address(pk_c.as_ptr());
+            let addr = CStr::from_ptr(addr_ptr).to_str().unwrap();
+            assert!(addr.starts_with("aleo1"), "got {addr}");
+
+            free_string(pk_ptr);
+            free_string(addr_ptr);
+        }
     }
 
     // latest_edition reports a program's current edition (token_registry = 1).

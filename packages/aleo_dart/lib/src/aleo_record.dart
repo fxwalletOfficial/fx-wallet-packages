@@ -19,27 +19,25 @@ class AleoRecord {
     AleoUtils.checkPrivateKey(privateKeyRaw);
     final privateKey = dartStrToC(privateKeyRaw);
     final secret = dartStrToC(secretRaw);
-    final ciphertext = recordRustFFI.encryptPrivateKey(privateKey, secret);
-    return ciphertext.toDartString();
+    final result = recordRustFFI.encryptPrivateKey(privateKey, secret);
+    final ciphertext = takeNativeString(recordRustFFI.dyLib, result);
+    malloc.free(privateKey);
+    malloc.free(secret);
+    return ciphertext;
   }
 
   String decryptToPrivateKey(ciphertextRaw, secretRaw) {
     final ciphertext = dartStrToC(ciphertextRaw);
     final secret = dartStrToC(secretRaw);
-    final privateKey = recordRustFFI.decryptToPrivateKey(ciphertext, secret);
-    return privateKey.toDartString();
+    final result = recordRustFFI.decryptToPrivateKey(ciphertext, secret);
+    final privateKey = takeNativeString(recordRustFFI.dyLib, result);
+    malloc.free(ciphertext);
+    malloc.free(secret);
+    return privateKey;
   }
 
   RecordPlainText decryptCipherText(String record, String viewKey) {
-    AleoUtils.checkRecord(record);
-    AleoUtils.checkViewKey(viewKey);
-    final flag = isOwner(record, viewKey);
-    if (!flag) {
-      throw Exception('Record is not owned by the view key');
-    }
-    final result = recordRustFFI.decryptCipherText(
-        dartStrToC(record), dartStrToC(viewKey));
-    return processRecord(result.toDartString());
+    return processRecord(decryptCipherTextRaw(record, viewKey));
   }
 
   String decryptCipherTextRaw(String record, String viewKey) {
@@ -49,15 +47,24 @@ class AleoRecord {
     if (!flag) {
       throw Exception('Record is not owned by the view key');
     }
-    final result = recordRustFFI.decryptCipherText(
-        dartStrToC(record), dartStrToC(viewKey));
-    return result.toDartString();
+    final recordPtr = dartStrToC(record);
+    final viewKeyPtr = dartStrToC(viewKey);
+    final result = recordRustFFI.decryptCipherText(recordPtr, viewKeyPtr);
+    final plaintext = takeNativeString(recordRustFFI.dyLib, result);
+    malloc.free(recordPtr);
+    malloc.free(viewKeyPtr);
+    return plaintext;
   }
 
   bool isOwner(String record, String viewKey) {
     AleoUtils.checkRecord(record);
     AleoUtils.checkViewKey(viewKey);
-    return recordRustFFI.isOwner(dartStrToC(record), dartStrToC(viewKey));
+    final recordPtr = dartStrToC(record);
+    final viewKeyPtr = dartStrToC(viewKey);
+    final owned = recordRustFFI.isOwner(recordPtr, viewKeyPtr);
+    malloc.free(recordPtr);
+    malloc.free(viewKeyPtr);
+    return owned;
   }
 
   /// 解密 sender_ciphertext 字段，获取发送方地址
@@ -80,11 +87,15 @@ class AleoRecord {
     }
 
     // 调用 Rust FFI 解密 sender_ciphertext
+    final recordPtr = dartStrToC(record);
+    final viewKeyPtr = dartStrToC(viewKey);
+    final senderCiphertextPtr = dartStrToC(senderCiphertext);
     final result = recordRustFFI.decryptSenderCiphertext(
-        dartStrToC(record), dartStrToC(viewKey), dartStrToC(senderCiphertext));
-
-    final senderInfo = result.toDartString();
-
+        recordPtr, viewKeyPtr, senderCiphertextPtr);
+    final senderInfo = takeNativeString(recordRustFFI.dyLib, result);
+    malloc.free(recordPtr);
+    malloc.free(viewKeyPtr);
+    malloc.free(senderCiphertextPtr);
     return senderInfo;
   }
 
@@ -99,7 +110,12 @@ class AleoRecord {
     final recordName = dartStrToC(recordNameRaw);
     final result = recordRustFFI.serialNumberString(
         recordPlainText, privateKey, programId, recordName);
-    return result.toDartString();
+    final serialNumber = takeNativeString(recordRustFFI.dyLib, result);
+    malloc.free(recordPlainText);
+    malloc.free(privateKey);
+    malloc.free(programId);
+    malloc.free(recordName);
+    return serialNumber;
   }
 
   List<String> serialNumberStrings(
