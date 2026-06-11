@@ -377,21 +377,84 @@ const HTTP_GET_ATTEMPTS: u32 = 4;
 /// incidental one.
 const HTTP_GET_DEADLINE: std::time::Duration = std::time::Duration::from_secs(240);
 
-/// Performs one GET, bounding the caller's wait by `budget` *wherever* the
-/// request blocks. ureq's per-request `.timeout()` covers the request and body
-/// read but not connection setup (a separate connect timeout) and cannot
-/// interrupt blocking DNS resolution, so a near-expired deadline could still be
-/// overrun by a slow connect or DNS lookup. Running the blocking call on a
-/// worker thread and waiting at most `budget` for it makes the deadline a real
-/// bound: the caller returns on time; the orphaned worker, itself capped by
-/// ureq's connect/request timeouts, exits on its own shortly after.
-fn get_once_bounded(url: &str, budget: std::time::Duration) -> anyhow::Result<String> {
+/// Most request workers allowed in flight at once. A worker can outlive its
+/// caller when blocked on connection setup or DNS resolution (ended by the OS
+/// resolver, which ureq cannot interrupt — not by us), so without a ceiling a
+/// burst of such calls could pile up threads and stacks until `thread::spawn`
+/// itself fails. Over the ceiling, a request fails fast instead of spawning.
+const MAX_INFLIGHT_REQUESTS: usize = 16;
+
+static INFLIGHT_REQUESTS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Counts one live request worker. The slot frees when the worker *thread*
+/// ends — which, for an abandoned worker stuck in DNS, is when the OS resolver
+/// finally returns, not when the caller stopped waiting — so the count tracks
+/// real live threads, capping accumulation rather than just concurrent callers.
+struct InflightPermit;
+
+impl InflightPermit {
+    fn acquire() -> Option<Self> {
+        use std::sync::atomic::Ordering::{Acquire, Relaxed};
+        let mut current = INFLIGHT_REQUESTS.load(Relaxed);
+        loop {
+            if current >= MAX_INFLIGHT_REQUESTS {
+                return None;
+            }
+            match INFLIGHT_REQUESTS.compare_exchange_weak(current, current + 1, Acquire, Relaxed) {
+                Ok(_) => return Some(Self),
+                Err(actual) => current = actual,
+            }
+        }
+    }
+}
+
+impl Drop for InflightPermit {
+    fn drop(&mut self) {
+        INFLIGHT_REQUESTS.fetch_sub(1, std::sync::atomic::Ordering::Release);
+    }
+}
+
+/// A GET, or a POST carrying a body. POST is issued at most once by callers
+/// (broadcasting a transaction is not idempotent — a retry could double-submit).
+enum HttpMethod {
+    Get,
+    Post(String),
+}
+
+/// Runs one request, bounding the caller's wait by `budget` *wherever* it
+/// blocks — including connection setup and DNS resolution, which ureq's own
+/// timeout cannot interrupt. The blocking call runs on a worker thread the
+/// caller waits at most `budget` for; an over-budget worker is left to finish
+/// on its own (bounded by ureq's timeouts for connect/read, or by the OS
+/// resolver for a DNS stall) and holds its in-flight permit until it does, so
+/// abandoned workers are capped at [`MAX_INFLIGHT_REQUESTS`] instead of able to
+/// accumulate without limit. This is what bounds the caller; ureq's timeouts
+/// alone cannot, because they do not cover connect-precedence and DNS.
+fn request_once_bounded(
+    method: HttpMethod,
+    url: &str,
+    budget: std::time::Duration,
+) -> anyhow::Result<String> {
+    let permit = InflightPermit::acquire()
+        .ok_or_else(|| anyhow::anyhow!("too many in-flight node requests (>{MAX_INFLIGHT_REQUESTS})"))?;
     let request_timeout = budget.min(HTTP_REQUEST_TIMEOUT);
     let url = url.to_string();
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
+        // The permit rides with the worker, so the slot is held until the
+        // thread truly ends — even after the caller has abandoned us.
+        let _permit = permit;
         let outcome = (|| -> anyhow::Result<String> {
-            Ok(http_agent().get(&url).timeout(request_timeout).call()?.into_string()?)
+            let agent = http_agent();
+            let response = match method {
+                HttpMethod::Get => agent.get(&url).timeout(request_timeout).call()?,
+                HttpMethod::Post(body) => agent
+                    .post(&url)
+                    .timeout(request_timeout)
+                    .set("Content-Type", "application/json")
+                    .send_string(&body)?,
+            };
+            Ok(response.into_string()?)
         })();
         // The receiver is gone if we already timed out; that is expected.
         let _ = tx.send(outcome);
@@ -421,7 +484,7 @@ fn http_get_until(url: &str, deadline: std::time::Instant) -> anyhow::Result<Str
         if remaining.is_zero() {
             break;
         }
-        match get_once_bounded(url, remaining) {
+        match request_once_bounded(HttpMethod::Get, url, remaining) {
             Ok(body) => return Ok(body),
             Err(error) => {
                 last_error = Some(error);
@@ -445,6 +508,13 @@ fn http_get_until(url: &str, deadline: std::time::Instant) -> anyhow::Result<Str
 /// have no overall budget of their own.
 fn http_get(url: &str) -> anyhow::Result<String> {
     http_get_until(url, std::time::Instant::now() + HTTP_GET_DEADLINE)
+}
+
+/// Single bounded POST, through the same worker-thread executor as GET so a
+/// POST cannot hang the synchronous call on connect/DNS either. Not retried
+/// (a transaction broadcast is not idempotent).
+fn http_post(url: &str, body: &str) -> anyhow::Result<String> {
+    request_once_bounded(HttpMethod::Post(body.to_string()), url, HTTP_GET_DEADLINE)
 }
 
 /// REST query against `{url}/{network}`. snarkVM's own RestQuery derives the
@@ -729,6 +799,12 @@ fn fetch_program_at_latest_edition(
 /// which execution permits; non-upgradeable programs are edition 1, upgraded
 /// programs their bumped edition. A wrong edition would yield a proof that
 /// disagrees with chain state, so edition determination failures propagate.
+///
+/// `add_program_with_edition` builds and verifies the program's `Stack` —
+/// real CPU work that snarkVM exposes no way to interrupt. The caller checks
+/// the load deadline *before* each call, so no new add starts once the budget
+/// is spent, but a call already under way runs to completion: the deadline
+/// bounds when adds *start*, with an overshoot of at most one program's add.
 fn add_fetched_program(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program: &Program<Net>,
@@ -761,7 +837,10 @@ fn add_fetched_program(
 /// before it — and is rejected as a lying node. Because the protocol does not
 /// bound closure size, the whole walk runs against a [`LoadBudget`] (total time
 /// and program count) so an unbounded acyclic chain of distinct valid programs
-/// cannot block the synchronous call forever or exhaust memory.
+/// cannot block the synchronous call indefinitely or exhaust memory. The time
+/// budget gates the *start* of every fetch, parse and add; one in-flight
+/// `add_fetched_program` is not interrupted (see its docs), so the real
+/// overshoot past the deadline is at most a single program's add.
 fn add_program_from_node(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program_id: &str,
@@ -868,14 +947,12 @@ fn program_fee(
     Ok(serde_json::to_string(&fee)?)
 }
 
-/// POSTs a transaction to the node, returning the node's response body.
+/// POSTs a transaction to the node, returning the node's response body. Goes
+/// through the bounded executor, so a stalled/odd-DNS node fails the call
+/// instead of hanging the synchronous broadcast forever.
 fn broadcast_to_node(transaction: &str, url: &str, network: &str) -> anyhow::Result<String> {
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    Ok(http_agent()
-        .post(&format!("{base}/transaction/broadcast"))
-        .set("Content-Type", "application/json")
-        .send_string(transaction)?
-        .into_string()?)
+    http_post(&format!("{base}/transaction/broadcast"), transaction)
 }
 
 /// Builds a complete credits.aleo transfer transaction (without broadcasting).
@@ -1227,13 +1304,7 @@ pub unsafe extern "C" fn broadcast(
     network: *const c_char,
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
-        let base = format!("{}/{}", read_str(url).trim_end_matches('/'), read_str(network));
-        let response = http_agent()
-            .post(&format!("{base}/transaction/broadcast"))
-            .set("Content-Type", "application/json")
-            .send_string(read_str(transaction))?
-            .into_string()?;
-        Ok(response)
+        broadcast_to_node(read_str(transaction), read_str(url), read_str(network))
     };
     match inner() {
         Ok(response) => to_cstring(response),
@@ -1725,6 +1796,40 @@ mod tests {
             http_get_until(&format!("{url}/x"), started + std::time::Duration::from_secs(1));
         assert!(result.is_err());
         assert!(started.elapsed() < std::time::Duration::from_secs(15), "took {:?}", started.elapsed());
+    }
+
+    // POST (broadcast) goes through the same bounded executor, so a stalling
+    // node bounds it too instead of hanging the synchronous broadcast forever.
+    #[test]
+    fn post_bounded_against_stalling_node() {
+        let url = serve_stalling();
+        let started = std::time::Instant::now();
+        let result = request_once_bounded(
+            HttpMethod::Post("{}".to_string()),
+            &format!("{url}/x"),
+            std::time::Duration::from_secs(1),
+        );
+        assert!(result.is_err());
+        assert!(started.elapsed() < std::time::Duration::from_secs(15), "took {:?}", started.elapsed());
+    }
+
+    // The in-flight permit caps concurrency: once the ceiling is held, the next
+    // acquire is refused; freeing a permit lets a later one through. Acquire
+    // up-to-refusal rather than from a fixed base, since other tests share the
+    // global counter.
+    #[test]
+    fn inflight_permit_caps_then_recovers() {
+        let mut held = Vec::new();
+        while held.len() <= MAX_INFLIGHT_REQUESTS {
+            match InflightPermit::acquire() {
+                Some(permit) => held.push(permit),
+                None => break,
+            }
+        }
+        assert!(held.len() <= MAX_INFLIGHT_REQUESTS, "never exceeds the cap");
+        assert!(!held.is_empty(), "acquired at least one");
+        held.clear(); // free them all
+        assert!(InflightPermit::acquire().is_some(), "freed slots are reusable");
     }
 
     // The whole import-graph load — not just one request — is bounded by the
