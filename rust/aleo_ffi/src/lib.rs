@@ -19,6 +19,7 @@ use snarkvm_console::network::MainnetV0;
 use snarkvm_console::prelude::*;
 use snarkvm_console::program::{Ciphertext, Identifier, Literal, Plaintext, ProgramID, Record};
 use snarkvm_console::types::Field;
+use snarkvm_ledger_block::{Execution, Fee, Transaction};
 
 /// Aleo keys/addresses are encoded identically across networks (same curve,
 /// network-independent bech32 HRPs), so the concrete network is irrelevant to
@@ -277,6 +278,28 @@ pub unsafe extern "C" fn decrypt_to_private_key(
         let blinding = Net::hash_psd2(&[domain, nonce, secret_field]).ok()?;
         let seed = key / blinding;
         Some(PrivateKey::<Net>::try_from(seed).ok()?.to_string())
+    })();
+    to_cstring(result.unwrap_or_default())
+}
+
+// ----------------------------------------------------------------------------
+// Group 3: programs / proofs / transactions.
+// ----------------------------------------------------------------------------
+
+/// Assembles a transaction from a serialized execution proof and fee proof
+/// (the split-proof flow). Deterministic; returns "" on failure.
+///
+/// SAFETY: `execution`/`fee` are NUL-terminated C strings (snarkVM serde JSON).
+#[no_mangle]
+pub unsafe extern "C" fn build_transaction_offline(
+    execution: *const c_char,
+    fee: *const c_char,
+) -> *mut c_char {
+    let result = (|| -> Option<String> {
+        let execution: Execution<Net> = serde_json::from_str(read_str(execution)).ok()?;
+        let fee: Fee<Net> = serde_json::from_str(read_str(fee)).ok()?;
+        let transaction = Transaction::from_execution(execution, Some(fee)).ok()?;
+        Some(transaction.to_string())
     })();
     to_cstring(result.unwrap_or_default())
 }
