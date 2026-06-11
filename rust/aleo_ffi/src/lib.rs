@@ -75,6 +75,9 @@ pub extern "C" fn numbers_add(a: c_int, b: c_int) -> c_int {
 /// SAFETY: `seed` must point to at least 32 readable bytes.
 #[no_mangle]
 pub unsafe extern "C" fn seed_to_private_key(seed: *const u8) -> *mut c_char {
+    if seed.is_null() {
+        return to_cstring(String::new());
+    }
     let bytes = slice::from_raw_parts(seed, 32);
     // Reduce the 32-byte seed modulo the field order. A raw 32-byte value
     // exceeds the BLS12-377 scalar field ~93% of the time, so the canonical
@@ -120,11 +123,15 @@ pub unsafe extern "C" fn view_key_to_address(vk: *const c_char) -> *mut c_char {
     to_cstring(result.unwrap_or_default())
 }
 
-/// Returns "" on a malformed key or signing failure (no panic across the FFI
-/// boundary). SAFETY: `pk` is a NUL-terminated C string; `msg` points to `len`
-/// readable bytes.
+/// Returns "" on a malformed key, a null/negative-length message, or signing
+/// failure (no panic across the FFI boundary). SAFETY: `pk` is a
+/// NUL-terminated C string; `msg` points to `len` readable bytes.
 #[no_mangle]
 pub unsafe extern "C" fn sign_message(pk: *const c_char, msg: *const u8, len: c_int) -> *mut c_char {
+    // A negative length would wrap to a huge usize and read out of bounds.
+    if msg.is_null() || len < 0 {
+        return to_cstring(String::new());
+    }
     let message = slice::from_raw_parts(msg, len as usize);
     let result = (|| -> Option<String> {
         let private_key = PrivateKey::<Net>::from_str(read_str(pk)).ok()?;
@@ -133,7 +140,8 @@ pub unsafe extern "C" fn sign_message(pk: *const c_char, msg: *const u8, len: c_
     to_cstring(result.unwrap_or_default())
 }
 
-/// Returns 1 if the signature is valid, 0 otherwise.
+/// Returns 1 if the signature is valid, 0 otherwise (including for a
+/// null/negative-length message).
 ///
 /// SAFETY: `addr`/`sig` are NUL-terminated C strings; `msg` points to `len` readable bytes.
 #[no_mangle]
@@ -143,6 +151,10 @@ pub unsafe extern "C" fn verify(
     msg: *const u8,
     len: c_int,
 ) -> c_int {
+    // A negative length would wrap to a huge usize and read out of bounds.
+    if msg.is_null() || len < 0 {
+        return 0;
+    }
     let address = match Address::<Net>::from_str(read_str(addr)) {
         Ok(address) => address,
         Err(_) => return 0,
@@ -464,7 +476,7 @@ fn plaintext_record_typed(
 fn transfer_inputs(
     function: &str,
     recipient: &str,
-    amount: i64,
+    amount: u64,
     amount_record: &str,
     private_key: &PrivateKey<Net>,
 ) -> anyhow::Result<Vec<String>> {
@@ -525,6 +537,10 @@ fn node_latest_edition(base: &str, program_id: &str) -> anyhow::Result<u16> {
     Ok(body.trim().trim_matches('"').parse()?)
 }
 
+/// Cap on the import-chain depth accepted from a node. Real Aleo import graphs
+/// are a few levels deep; anything past this is a malicious or broken node.
+const MAX_IMPORT_DEPTH: usize = 16;
+
 /// Fetches a non-builtin program from the node and adds it to the VM, loading
 /// every imported program first (snarkVM rejects a program whose imports are
 /// not already present). A no-op for built-in programs like credits.aleo or any
@@ -537,34 +553,72 @@ fn node_latest_edition(base: &str, program_id: &str) -> anyhow::Result<u16> {
 /// non-upgradeable programs are edition 1, upgraded programs their bumped
 /// edition. A wrong edition would yield a proof that disagrees with chain state,
 /// so any failure to determine it (e.g. a node without the route) propagates.
+///
+/// The node's responses are not trusted: the returned source must declare the
+/// requested program ID, an import cycle (`a -> b -> a`, only possible if the
+/// node lies, since on-chain programs can only import pre-existing ones) is
+/// rejected rather than recursed into, and the chain depth is capped by
+/// [`MAX_IMPORT_DEPTH`] so a hostile node cannot overflow the stack.
 fn add_program_from_node(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program_id: &str,
     url: &str,
     network: &str,
 ) -> anyhow::Result<()> {
+    add_program_from_node_guarded(vm, program_id, url, network, &mut Vec::new())
+}
+
+/// [`add_program_from_node`] with the in-progress import chain (`visiting`)
+/// threaded through the recursion for cycle and depth checks.
+fn add_program_from_node_guarded(
+    vm: &VM<Net, ConsensusMemory<Net>>,
+    program_id: &str,
+    url: &str,
+    network: &str,
+    visiting: &mut Vec<String>,
+) -> anyhow::Result<()> {
+    let requested = ProgramID::<Net>::from_str(program_id)?;
+    let program_id = requested.to_string();
+
     // Skip built-ins and anything already loaded (without holding the lock
     // across the recursion below).
     {
         let process = vm.process();
         let process = process.read();
-        if program_id == "credits.aleo"
-            || process.contains_program(&ProgramID::from_str(program_id)?)
-        {
+        if program_id == "credits.aleo" || process.contains_program(&requested) {
             return Ok(());
         }
     }
 
+    if visiting.iter().any(|id| id == &program_id) {
+        anyhow::bail!("node returned an import cycle: {} -> {program_id}", visiting.join(" -> "));
+    }
+    if visiting.len() >= MAX_IMPORT_DEPTH {
+        anyhow::bail!(
+            "import chain from node exceeds {MAX_IMPORT_DEPTH} levels at {program_id}: {}",
+            visiting.join(" -> ")
+        );
+    }
+
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    let edition = node_latest_edition(&base, program_id)?;
+    let edition = node_latest_edition(&base, &program_id)?;
     let body = http_get(&format!("{base}/program/{program_id}/{edition}"))?;
     let source: String = serde_json::from_str(body.trim())?;
     let program = Program::<Net>::from_str(&source)?;
+    if program.id() != &requested {
+        anyhow::bail!("node returned program '{}' for requested '{program_id}'", program.id());
+    }
 
     // Load imports (which may themselves import others) before this program.
-    for import_id in program.imports().keys() {
-        add_program_from_node(vm, &import_id.to_string(), url, network)?;
-    }
+    visiting.push(program_id);
+    let imports = (|| -> anyhow::Result<()> {
+        for import_id in program.imports().keys() {
+            add_program_from_node_guarded(vm, &import_id.to_string(), url, network, visiting)?;
+        }
+        Ok(())
+    })();
+    visiting.pop();
+    imports?;
 
     let process = vm.process();
     let mut process = process.write();
@@ -646,8 +700,8 @@ pub unsafe extern "C" fn build_transaction(
     private_key: *const c_char,
     recipient: *const c_char,
     transfer_type: *const c_char,
-    amount: c_int,
-    fee_credits: c_int,
+    amount: u64,
+    fee_credits: u64,
     url: *const c_char,
     amount_record: *const c_char,
     fee_record: *const c_char,
@@ -659,7 +713,7 @@ pub unsafe extern "C" fn build_transaction(
         let inputs = transfer_inputs(
             function,
             read_str(recipient),
-            amount as i64,
+            amount,
             read_str(amount_record),
             &private_key,
         )?;
@@ -668,7 +722,7 @@ pub unsafe extern "C" fn build_transaction(
             "credits.aleo",
             function,
             inputs,
-            fee_credits as u64,
+            fee_credits,
             read_str(fee_record),
             read_str(url),
             read_str(network),
@@ -689,8 +743,8 @@ pub unsafe extern "C" fn try_transfer(
     private_key: *const c_char,
     recipient: *const c_char,
     transfer_type: *const c_char,
-    amount: c_int,
-    fee_credits: c_int,
+    amount: u64,
+    fee_credits: u64,
     url: *const c_char,
     amount_record: *const c_char,
     fee_record: *const c_char,
@@ -702,7 +756,7 @@ pub unsafe extern "C" fn try_transfer(
         let inputs = transfer_inputs(
             function,
             read_str(recipient),
-            amount as i64,
+            amount,
             read_str(amount_record),
             &private_key,
         )?;
@@ -711,7 +765,7 @@ pub unsafe extern "C" fn try_transfer(
             "credits.aleo",
             function,
             inputs,
-            fee_credits as u64,
+            fee_credits,
             read_str(fee_record),
             read_str(url),
             read_str(network),
@@ -734,7 +788,7 @@ pub unsafe extern "C" fn execute_program(
     program_id: *const c_char,
     function_name: *const c_char,
     arguments: *const c_char,
-    fee: c_int,
+    fee: u64,
     url: *const c_char,
     network: *const c_char,
 ) -> *mut c_char {
@@ -746,7 +800,7 @@ pub unsafe extern "C" fn execute_program(
             read_str(program_id),
             read_str(function_name),
             inputs,
-            fee as u64,
+            fee,
             "",
             read_str(url),
             read_str(network),
@@ -824,7 +878,7 @@ pub unsafe extern "C" fn contract_execution(
 #[no_mangle]
 pub unsafe extern "C" fn contract_fee_execution(
     private_key: *const c_char,
-    fee: c_int,
+    fee: u64,
     execution: *const c_char,
     program_id: *const c_char,
     url: *const c_char,
@@ -834,7 +888,7 @@ pub unsafe extern "C" fn contract_fee_execution(
         let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
         program_fee(
             &private_key,
-            fee as u64,
+            fee,
             read_str(execution),
             read_str(program_id),
             read_str(url),
@@ -885,7 +939,7 @@ pub unsafe extern "C" fn try_join(
     private_key: *const c_char,
     record_1: *const c_char,
     record_2: *const c_char,
-    fee_credits: c_int,
+    fee_credits: u64,
     fee_record: *const c_char,
     url: *const c_char,
     network: *const c_char,
@@ -901,7 +955,7 @@ pub unsafe extern "C" fn try_join(
             "credits.aleo",
             "join",
             inputs,
-            fee_credits as u64,
+            fee_credits,
             read_str(fee_record),
             read_str(url),
             read_str(network),
@@ -923,7 +977,7 @@ pub unsafe extern "C" fn execution_authorization(
     private_key: *const c_char,
     recipient: *const c_char,
     transfer_type: *const c_char,
-    amount: c_int,
+    amount: u64,
     _url: *const c_char,
     amount_record: *const c_char,
     _network: *const c_char,
@@ -934,7 +988,7 @@ pub unsafe extern "C" fn execution_authorization(
         let inputs = transfer_inputs(
             function,
             read_str(recipient),
-            amount as i64,
+            amount,
             read_str(amount_record),
             &private_key,
         )?;
@@ -1000,7 +1054,9 @@ pub unsafe extern "C" fn broadcast(
     }
 }
 
-/// Returns the base (minimum) fee in microcredits for a serialized execution.
+/// Returns the base (minimum) fee in microcredits for a serialized execution,
+/// or 0 on failure. u64, like every fee crossing this ABI: snarkVM fees are
+/// u64 microcredits and can legitimately exceed i32.
 ///
 /// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
@@ -1008,12 +1064,12 @@ pub unsafe extern "C" fn get_base_fee(
     url: *const c_char,
     execution: *const c_char,
     network: *const c_char,
-) -> c_int {
+) -> u64 {
     let inner = || -> anyhow::Result<u64> {
         let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
         base_fee_for(&execution, read_str(url), read_str(network))
     };
-    inner().map(|fee| fee as c_int).unwrap_or(0)
+    inner().unwrap_or(0)
 }
 
 /// Builds the fee authorization for an execution. `fee_credits` is the priority
@@ -1026,7 +1082,7 @@ pub unsafe extern "C" fn execution_fee_authorization(
     private_key: *const c_char,
     _transfer_type: *const c_char,
     url: *const c_char,
-    fee_credits: c_int,
+    fee_credits: u64,
     fee_record: *const c_char,
     execution: *const c_char,
     network: *const c_char,
@@ -1036,7 +1092,7 @@ pub unsafe extern "C" fn execution_fee_authorization(
         let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
         let execution_id = execution.to_execution_id()?;
         let base_fee = base_fee_for(&execution, read_str(url), read_str(network))?;
-        let priority_fee = fee_credits as u64;
+        let priority_fee = fee_credits;
         let fee_record = read_str(fee_record);
         let vm = new_vm()?;
         let rng = &mut rand::thread_rng();
@@ -1267,6 +1323,57 @@ mod tests {
             assert!(CStr::from_ptr(ptr).to_str().unwrap().is_empty());
             free_string(ptr);
         }
+    }
+
+    // A negative message length must be rejected, not wrapped to a huge usize
+    // and read out of bounds.
+    #[test]
+    fn negative_message_length_rejected() {
+        unsafe {
+            let key = CString::new(OWNER_KEY).unwrap();
+            let msg = [1u8, 2, 3];
+            let ptr = sign_message(key.as_ptr(), msg.as_ptr(), -1);
+            assert!(CStr::from_ptr(ptr).to_str().unwrap().is_empty());
+            free_string(ptr);
+
+            let addr = CString::new("aleo1qqq").unwrap();
+            let sig = CString::new("sign1qqq").unwrap();
+            assert_eq!(verify(addr.as_ptr(), sig.as_ptr(), msg.as_ptr(), -1), 0);
+        }
+    }
+
+    // A node claiming `a.aleo -> ... -> a.aleo` must be rejected before any
+    // fetch, not recursed into until the stack overflows. Both guards fire
+    // before HTTP, so these run offline (the URL is never contacted).
+    #[test]
+    fn import_cycle_from_node_rejected() {
+        let vm = new_vm().unwrap();
+        let mut visiting = vec!["token_registry.aleo".to_string()];
+        let error = add_program_from_node_guarded(
+            &vm,
+            "token_registry.aleo",
+            "http://127.0.0.1:1",
+            "testnet",
+            &mut visiting,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("import cycle"), "got: {error}");
+    }
+
+    #[test]
+    fn import_depth_from_node_capped() {
+        let vm = new_vm().unwrap();
+        let mut visiting =
+            (0..MAX_IMPORT_DEPTH).map(|i| format!("program{i}.aleo")).collect::<Vec<_>>();
+        let error = add_program_from_node_guarded(
+            &vm,
+            "token_registry.aleo",
+            "http://127.0.0.1:1",
+            "testnet",
+            &mut visiting,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("exceeds"), "got: {error}");
     }
 
     // Calls a few exported functions through their C ABI and frees the result,

@@ -26,7 +26,17 @@ void main() {
   final recipient = account.privateKeyToAddress(privateKey);
 
   test('transfer amount is encoded as microcredits without scaling', () async {
-    for (final amount in <int>[1, 5, 1000000, 2000000000]) {
+    // Includes values past i32 (2^31, 2^32) and the total-supply order of
+    // magnitude (10^15): the ABI is u64 end to end, so none may truncate.
+    for (final amount in <int>[
+      1,
+      5,
+      1000000,
+      2000000000,
+      2147483648,
+      4294967296,
+      1000000000000000,
+    ]) {
       final auth = await program.executionAuthorization(
           privateKey, recipient, 'transfer_public', amount, '', '');
       expect(auth, isNotEmpty);
@@ -35,5 +45,17 @@ void main() {
       expect(inputs, contains('${amount}u64'),
           reason: 'amount $amount should pass through as ${amount}u64');
     }
+  });
+
+  test('negative amounts and fees are rejected before reaching the FFI', () {
+    // A negative Dart int would wrap to an enormous u64 across the ABI.
+    expect(
+        () => program.executionAuthorization(
+            privateKey, recipient, 'transfer_public', -1, '', ''),
+        throwsException);
+    expect(
+        () => program.executionFeeAuthorization(
+            privateKey, 'transfer_public', -1, '', '', '{}'),
+        throwsException);
   });
 }

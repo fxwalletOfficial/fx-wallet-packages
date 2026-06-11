@@ -4,12 +4,14 @@ import 'package:ffi/ffi.dart';
 typedef TypeTestInRust = ffi.Int Function(ffi.Int, ffi.Int);
 typedef TypeTestInDart = int Function(int, int);
 
+// Amounts and fees cross the ABI as unsigned 64-bit microcredits (snarkVM's
+// fee/amount type); 32-bit types cannot express the legal range.
 typedef TypeTransferInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
-    ffi.Int,
-    ffi.Int,
+    ffi.Uint64,
+    ffi.Uint64,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
@@ -33,7 +35,7 @@ typedef TypeAuthorizationInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
-    ffi.Int,
+    ffi.Uint64,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
@@ -66,7 +68,7 @@ typedef TypeJoinInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
-    ffi.Int,
+    ffi.Uint64,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
@@ -83,7 +85,7 @@ typedef TypeJoinInDart = ffi.Pointer<Utf8> Function(
 typedef TypeJoinAuthorization = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
-typedef TypeGetBaseFeeInRust = ffi.Int Function(
+typedef TypeGetBaseFeeInRust = ffi.Uint64 Function(
   ffi.Pointer<Utf8>,
   ffi.Pointer<Utf8>,
   ffi.Pointer<Utf8>,
@@ -116,7 +118,7 @@ typedef TypeExecuteProgramInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
-    ffi.Int,
+    ffi.Uint64,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
@@ -131,7 +133,7 @@ typedef TypeExecuteProgramInDart = ffi.Pointer<Utf8> Function(
 
 typedef TypeContractFeeExecutionInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
-    ffi.Int,
+    ffi.Uint64,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,

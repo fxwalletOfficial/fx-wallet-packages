@@ -5,6 +5,7 @@ import 'package:path/path.dart' as path;
 
 import 'package:aleo_dart/src/rust_lib/programs_rust_ffi.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
+import 'package:aleo_dart/src/aleo_utils.dart';
 
 class AleoProgram {
   late ProgramsRustFFI programsRustFFI;
@@ -23,6 +24,8 @@ class AleoProgram {
     String amount_record_raw,
     String fee_record_raw,
   ) async {
+    AleoUtils.checkAmount(amount_credits, 'amount');
+    AleoUtils.checkAmount(fee_credits, 'fee');
     final private_key = dartStrToC(private_key_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
     final recipient = dartStrToC(recipient_raw);
@@ -60,6 +63,7 @@ class AleoProgram {
     String fee_record_raw,
     String url_raw,
   ) async {
+    AleoUtils.checkAmount(fee_credits, 'fee');
     final private_key = dartStrToC(private_key_raw);
     final record_1 = dartStrToC(record_1_raw);
     final record_2 = dartStrToC(record_2_raw);
@@ -120,6 +124,8 @@ class AleoProgram {
     String amount_record_raw,
     String fee_record_raw,
   ) async {
+    AleoUtils.checkAmount(amount_credits, 'amount');
+    AleoUtils.checkAmount(fee_credits, 'fee');
     final private_key = dartStrToC(private_key_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
     final recipient = dartStrToC(recipient_raw);
@@ -174,6 +180,7 @@ class AleoProgram {
     String url_raw,
     String amount_record_raw,
   ) async {
+    AleoUtils.checkAmount(amount_credits, 'amount');
     final private_key = dartStrToC(private_key_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
     final recipient = dartStrToC(recipient_raw);
@@ -195,6 +202,7 @@ class AleoProgram {
       String url_raw,
       String fee_record_raw,
       String execution_raw) async {
+    AleoUtils.checkAmount(fee_credits, 'fee');
     final private_key = dartStrToC(private_key_raw);
     final transfer_type = dartStrToC(transfer_type_raw);
     final url = dartStrToC(url_raw);
@@ -340,6 +348,7 @@ class AleoProgram {
     int fee,
     String url_raw,
   ) async {
+    AleoUtils.checkAmount(fee, 'fee');
     final private_key = dartStrToC(private_key_raw);
     final program_id = dartStrToC(program_id_raw);
     final function_name = dartStrToC(function_name_raw);
@@ -361,6 +370,7 @@ class AleoProgram {
     String program_id_raw,
     String url_raw,
   ) async {
+    AleoUtils.checkAmount(fee, 'fee');
     final private_key = dartStrToC(private_key_raw);
     final execution = dartStrToC(execution_raw);
     final program_id = dartStrToC(program_id_raw);
