@@ -9,11 +9,8 @@ import 'package:aleo_dart/src/rust_lib/utils.dart';
 class AleoProgram {
   late ProgramsRustFFI programsRustFFI;
 
-  // Long-lived: the network pointer is held for the object's lifetime and
-  // passed to every call, so it is not freed per-call.
-  AleoProgram(dyLib, [network_raw = 'testnet']) {
-    final network = dartStrToC(network_raw);
-    this.programsRustFFI = ProgramsRustFFI(dyLib, network);
+  AleoProgram(dyLib, [String network_raw = 'testnet']) {
+    this.programsRustFFI = ProgramsRustFFI(dyLib, network_raw);
   }
 
   Future<String> tryTransfer(

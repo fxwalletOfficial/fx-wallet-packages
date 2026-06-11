@@ -977,7 +977,8 @@ pub unsafe extern "C" fn broadcast(
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let base = format!("{}/{}", read_str(url).trim_end_matches('/'), read_str(network));
-        let response = ureq::post(&format!("{base}/transaction/broadcast"))
+        let response = http_agent()
+            .post(&format!("{base}/transaction/broadcast"))
             .set("Content-Type", "application/json")
             .send_string(read_str(transaction))?
             .into_string()?;
@@ -1123,11 +1124,13 @@ pub unsafe extern "C" fn build_upgrade_transaction_offline(
 /// Assembles a transaction from a serialized execution proof and fee proof
 /// (the split-proof flow). Deterministic; returns "" on failure.
 ///
-/// SAFETY: `execution`/`fee` are NUL-terminated C strings (snarkVM serde JSON).
+/// SAFETY: `execution`/`fee`/`_network` are NUL-terminated C strings
+/// (snarkVM serde JSON).
 #[no_mangle]
 pub unsafe extern "C" fn build_transaction_offline(
     execution: *const c_char,
     fee: *const c_char,
+    _network: *const c_char,
 ) -> *mut c_char {
     let result = (|| -> Option<String> {
         let execution: Execution<Net> = serde_json::from_str(read_str(execution)).ok()?;

@@ -4,22 +4,21 @@
 // the caller is responsible for supplying microcredits.
 //
 // Run against a built library:
-//   ALEO_NEW_LIB=/abs/path/libaleo_rust.dylib flutter test test/amount_units_test.dart
+//   ALEO_NEW_LIB=/abs/path/libaleo_rust.dylib dart test test/amount_units_test.dart
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
+import 'support/test_dylib.dart';
+
 void main() {
-  final libPath = Platform.environment['ALEO_NEW_LIB'];
-  if (libPath == null) {
-    test('amount units', () {},
-        skip: 'set ALEO_NEW_LIB to a libaleo_rust build');
+  final dy = tryLoadAleoLib();
+  if (dy == null) {
+    test('amount units', () {}, skip: nativeLibMissingReason);
     return;
   }
 
-  final dy = DyLib.getDyLibByPosition(libPath);
   final program = AleoProgram(dy);
   final account = AleoAccount(dy);
   const privateKey =

@@ -1,15 +1,16 @@
 name: Rust (aleo_ffi)
 
-# Builds and unit-tests the clean-room aleo_ffi crate. Path-filtered so it does
-# not run on (and slow down) Dart-only PRs; the snarkVM build is heavy and is
-# cached between runs.
+# Builds and unit-tests the clean-room aleo_ffi crate, then runs the Dart
+# wrapper's FFI-backed tests against the built cdylib. Path-filtered to the
+# crate and its Dart wrapper so it does not run on (and slow down) unrelated
+# Dart-only PRs; the snarkVM build is heavy and is cached between runs.
 on:
   push:
     branches: [ main, 'epic/**' ]
-    paths: [ 'rust/**', '.github/workflows/rust.yml' ]
+    paths: [ 'rust/**', 'packages/aleo_dart/**', '.github/workflows/rust.yml' ]
   pull_request:
     branches: [ main, 'epic/**' ]
-    paths: [ 'rust/**', '.github/workflows/rust.yml' ]
+    paths: [ 'rust/**', 'packages/aleo_dart/**', '.github/workflows/rust.yml' ]
 
 jobs:
   test:
@@ -60,3 +61,19 @@ jobs:
             echo "$syms" | grep -qw "$f" || { echo "MISSING SYMBOL: $f"; missing=1; }
           done
           test "$missing" -eq 0 && echo "all 31 FFI functions + free_string exported"
+
+      # Run the Dart wrapper's FFI-backed tests against the cdylib built above,
+      # so Dart/Rust signature mismatches, string-ownership bugs and wrapper
+      # regressions fail CI instead of being skipped for want of a library.
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.8.0'
+
+      - name: Dart FFI integration tests
+        working-directory: packages/aleo_dart
+        env:
+          ALEO_NEW_LIB: ${{ github.workspace }}/rust/aleo_ffi/target/release/libaleo_rust.so
+        run: |
+          dart pub get
+          dart test

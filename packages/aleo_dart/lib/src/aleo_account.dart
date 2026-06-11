@@ -12,11 +12,8 @@ const ALEO_PATH = "m/44/0/0/0";
 
 class AleoAccount {
   late AccountRustFFI accountRustFFI;
-  // Long-lived: the network pointer is held for the object's lifetime and
-  // passed to every call, so it is not freed per-call.
-  AleoAccount(dyLib, [network_raw = 'testnet']) {
-    final network = dartStrToC(network_raw);
-    this.accountRustFFI = AccountRustFFI(dyLib, network);
+  AleoAccount(dyLib, [String network_raw = 'testnet']) {
+    this.accountRustFFI = AccountRustFFI(dyLib, network_raw);
   }
 
   int testRustFFi(int a, int b) {
