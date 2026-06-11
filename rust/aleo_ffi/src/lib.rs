@@ -10,7 +10,7 @@
 // Group 1 of the rewrite: account / key operations. These need only
 // snarkvm-console (no VM, no snarkVM visibility patch).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::slice;
 
@@ -1619,10 +1619,18 @@ fn static_query(
 
 /// Base (minimum) fee in microcredits for an execution at the given height. The
 /// pure analogue of [`base_fee_for`]: `height` selects the consensus version
-/// instead of a node fetch.
-fn base_fee_at_height(execution: &Execution<Net>, height: u32) -> anyhow::Result<u64> {
+/// instead of a node fetch. `program_sources_json` supplies the execution's root
+/// program (and its imports) — snarkVM's `execution_cost` reads each transition's
+/// program `Stack`, so a non-builtin execution needs them loaded first. Empty
+/// for a credits.aleo execution (the program is built in).
+fn base_fee_at_height(
+    execution: &Execution<Net>,
+    program_sources_json: &str,
+    height: u32,
+) -> anyhow::Result<u64> {
     let consensus_version = Net::CONSENSUS_VERSION(height)?;
     let vm = new_vm()?;
+    add_programs_from_sources(&vm, program_sources_json)?;
     let process = vm.process();
     let process = process.read();
     let (base_fee, _details) =
@@ -1717,32 +1725,57 @@ fn add_programs_from_sources(
     Ok(())
 }
 
+/// Drops the local commitments (records created within the same transaction)
+/// from the input-record commitments, leaving the global (on-chain) set whose
+/// state paths the node can serve. Split out so the set difference is unit-tested
+/// directly (a composite authorization is impractical to build offline).
+fn exclude_local_commitments(inputs: Vec<String>, local: &HashSet<String>) -> Vec<String> {
+    inputs.into_iter().filter(|commitment| !local.contains(commitment)).collect()
+}
+
 /// The input-record commitments whose state paths the caller must fetch before
 /// proving this authorization. Empty for public flows (no record inputs).
-/// Pure: derived from the authorization's request input ids, no VM or network.
+/// Pure: read from the authorization itself, no VM/synthesis or network.
 ///
-/// Note: this returns *every* record-input commitment across all requests, which
-/// is exactly the set proving asks for in the single-request credits flows
-/// (transfer / join / upgrade) and any program without intra-transaction record
-/// passing. A composite program that consumes a record produced by an earlier
-/// transition in the *same* transaction would over-report (that "local" record
-/// is not on-chain); excluding the local set needs execution outputs and is
-/// pinned by the phase-2 parity test before the old node path is deleted.
+/// This mirrors exactly what proving asks the query for: `Trace::prepare`
+/// collects the input-record commitments whose record is NOT an output of an
+/// earlier transition in the same transaction (a "local" record, which is not
+/// on-chain and has no state path). `vm.authorize` already populates the
+/// authorization's transitions (with their record outputs), so the local set is
+/// the union of all transition output commitments — subtract it from the
+/// request input commitments to get exactly the global (on-chain) set. For the
+/// single-request credits flows (transfer / join / upgrade) the outputs are
+/// freshly-created records, so nothing is subtracted; for a composite program
+/// that spends a record minted earlier in the same transaction, that local
+/// commitment is correctly excluded.
 ///
 /// SAFETY: `authorization` is a NUL-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn required_commitments(authorization: *const c_char) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        let mut commitments = Vec::new();
-        for request in authorization.to_vec_deque() {
-            for input_id in request.input_ids() {
-                if let InputID::Record(commitment, ..) = input_id {
-                    commitments.push(commitment.to_string());
+        // Records created within this transaction (any transition's output) are
+        // local: proving builds their inclusion path internally and never asks
+        // the query for them, so they must not be fetched from the node.
+        let mut local = HashSet::new();
+        for (_, transition) in authorization.transitions() {
+            for output in transition.outputs() {
+                if let Some(commitment) = output.commitment() {
+                    local.insert(commitment.to_string());
                 }
             }
         }
-        Ok(serde_json::to_string(&commitments)?)
+        // Global (on-chain) input-record commitments = request record inputs
+        // minus the local set.
+        let mut inputs = Vec::new();
+        for request in authorization.to_vec_deque() {
+            for input_id in request.input_ids() {
+                if let InputID::Record(commitment, ..) = input_id {
+                    inputs.push(commitment.to_string());
+                }
+            }
+        }
+        Ok(serde_json::to_string(&exclude_local_commitments(inputs, &local))?)
     };
     match inner() {
         Ok(commitments) => to_cstring(commitments),
@@ -1809,41 +1842,59 @@ pub extern "C" fn consensus_version_for(height: u32) -> u16 {
 }
 
 /// Pure variant of [`get_base_fee`]: `height` (→ consensus version) replaces the
-/// node fetch. Returns the base fee in microcredits, or 0 on failure.
+/// node fetch, and `program_sources_json` supplies the execution's root program
+/// (+ imports) needed to compute its cost — empty for a credits.aleo execution.
+/// Returns the base fee in microcredits, or 0 on failure.
 ///
-/// SAFETY: `execution` is a NUL-terminated C string.
+/// SAFETY: `execution`/`program_sources_json` are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn get_base_fee_static(execution: *const c_char, height: u32) -> u64 {
+pub unsafe extern "C" fn get_base_fee_static(
+    execution: *const c_char,
+    program_sources_json: *const c_char,
+    height: u32,
+) -> u64 {
     let inner = || -> anyhow::Result<u64> {
         let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
-        base_fee_at_height(&execution, height)
+        base_fee_at_height(&execution, read_str(program_sources_json), height)
     };
     inner().unwrap_or(0)
 }
 
 /// Pure variant of [`execution_fee_authorization`]: `height` replaces the node
-/// fetch used to derive the base fee. `fee_credits` is the priority fee; an
-/// empty `fee_record` uses a public fee, otherwise a private fee spending that
-/// record. Returns "" on failure.
+/// fetch used to derive the base fee, and `program_sources_json` supplies the
+/// execution's root program (+ imports) needed to compute that fee (empty for a
+/// credits.aleo execution). `fee_credits` is the priority fee; an empty
+/// `fee_record` uses a public fee, otherwise a private fee spending that record.
+/// Returns "" on failure.
 ///
-/// SAFETY: `private_key`/`execution`/`fee_record` are NUL-terminated C strings.
+/// SAFETY: `private_key`/`execution`/`fee_record`/`program_sources_json` are
+/// NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn execution_fee_authorization_static(
     private_key: *const c_char,
     execution: *const c_char,
     fee_credits: u64,
     fee_record: *const c_char,
+    program_sources_json: *const c_char,
     height: u32,
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
         let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
         let execution_id = execution.to_execution_id()?;
-        let base_fee = base_fee_at_height(&execution, height)?;
+        // One VM loads the execution's program(s) so its cost can be computed,
+        // then authorizes the fee (credits.aleo is built in) — no second VM.
+        let consensus_version = Net::CONSENSUS_VERSION(height)?;
+        let vm = new_vm()?;
+        add_programs_from_sources(&vm, read_str(program_sources_json))?;
+        let base_fee = {
+            let process = vm.process();
+            let process = process.read();
+            snarkvm_synthesizer::process::execution_cost(&process, &execution, consensus_version)?.0
+        };
         let priority_fee = fee_credits;
         check_total_fee(base_fee, priority_fee)?;
         let fee_record = read_str(fee_record);
-        let vm = new_vm()?;
         let rng = &mut rand::thread_rng();
         let authorization = if fee_record.trim().is_empty() {
             vm.authorize_fee_public(&private_key, base_fee, priority_fee, execution_id, rng)?
@@ -2642,5 +2693,90 @@ mod tests {
         let vm = new_vm().unwrap();
         add_programs_from_sources(&vm, "").unwrap();
         add_programs_from_sources(&vm, "[]").unwrap();
+    }
+
+    // The local-commitment set difference drops exactly the local entries (a
+    // record minted earlier in the same transaction) and preserves input order.
+    #[test]
+    fn exclude_local_commitments_drops_only_local() {
+        let mut local = HashSet::new();
+        local.insert("c_local".to_string());
+        let inputs =
+            vec!["c_global".to_string(), "c_local".to_string(), "c_global2".to_string()];
+        assert_eq!(
+            exclude_local_commitments(inputs, &local),
+            vec!["c_global".to_string(), "c_global2".to_string()]
+        );
+    }
+
+    // On a real authorization, required_commitments returns the global inputs and
+    // never a record the transaction itself creates (a transition output) — so a
+    // composite program's local record can never be sent to the node as a path
+    // request. (transfer_private's outputs are fresh, so nothing is dropped here;
+    // the drop path is covered by the unit test above.)
+    #[test]
+    fn required_commitments_excludes_transition_outputs() {
+        let owner = owner();
+        let record = plaintext_record(TEST_RECORD, &owner).unwrap();
+        let vm = new_vm().unwrap();
+        let auth = vm
+            .authorize(
+                &owner,
+                "credits.aleo",
+                "transfer_private",
+                vec![record, recipient_address(), "5u64".to_string()],
+                &mut rand::thread_rng(),
+            )
+            .unwrap();
+        // The transaction's own output-record commitments (the local set).
+        let mut outputs = HashSet::new();
+        for (_, transition) in auth.transitions() {
+            for output in transition.outputs() {
+                if let Some(commitment) = output.commitment() {
+                    outputs.insert(commitment.to_string());
+                }
+            }
+        }
+        assert!(!outputs.is_empty(), "transfer_private creates output records");
+
+        let out = call_str(required_commitments, &serde_json::to_string(&auth).unwrap());
+        let required: Vec<String> = serde_json::from_str(&out).unwrap();
+        assert_eq!(required.len(), 1, "the one spent record; got {out}");
+        for commitment in &required {
+            assert!(!outputs.contains(commitment), "leaked a local output: {commitment}");
+        }
+    }
+
+    // The static fee API takes program_sources_json (so non-builtin executions
+    // can be costed). Malformed input returns 0 / "" without panicking across the
+    // FFI boundary — and exercises the new 3-arg / 6-arg ABIs.
+    #[test]
+    fn get_base_fee_static_malformed_returns_zero() {
+        unsafe {
+            let execution = CString::new("not json").unwrap();
+            let sources = CString::new("").unwrap();
+            assert_eq!(get_base_fee_static(execution.as_ptr(), sources.as_ptr(), 9_430_000), 0);
+        }
+    }
+
+    #[test]
+    fn execution_fee_authorization_static_malformed_returns_empty() {
+        unsafe {
+            let pk = CString::new(OWNER_KEY).unwrap();
+            let execution = CString::new("not json").unwrap();
+            let fee_record = CString::new("").unwrap();
+            let sources = CString::new("").unwrap();
+            let ptr = execution_fee_authorization_static(
+                pk.as_ptr(),
+                execution.as_ptr(),
+                1000,
+                fee_record.as_ptr(),
+                sources.as_ptr(),
+                9_430_000,
+            );
+            let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
+            free_string(ptr);
+            assert_eq!(out, "");
+        }
     }
 }

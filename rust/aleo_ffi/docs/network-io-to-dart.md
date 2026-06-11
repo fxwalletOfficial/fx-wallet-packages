@@ -16,6 +16,16 @@ The pure helpers, the budgets, and the private-flow `StaticQuery` construction
 are unit-tested offline (real sampled `StatePath`s); the release cdylib's exported
 ABI is checked in CI.
 
+Two P1 issues from a follow-up review were fixed in-phase (not deferred): the
+fee API (`get_base_fee_static` / `execution_fee_authorization_static`) now takes
+`program_sources_json` and loads the execution's root program, since snarkVM's
+`execution_cost` reads each transition's program `Stack` (without it a
+non-credits execution returned fee 0 / ""); and `required_commitments` now
+subtracts the transaction's own transition outputs from the input commitments,
+excluding a composite program's intra-transaction ("local") record
+(`vm.authorize` already populates the authorization's transitions, so this is
+exact and offline).
+
 The following are **intentionally deferred** — surfaced by a high-effort
 self-review, none blocking, all sequenced to a later phase:
 
@@ -24,19 +34,13 @@ self-review, none blocking, all sequenced to a later phase:
   fail-closed, not this spec's "the parsed paths' commitment set exactly equals
   `required_commitments`". Pinned by the phase-2 parity test before the old node
   path is deleted.
-- **`required_commitments` over-reports for composite programs** that spend a
-  record produced by an earlier transition in the *same* transaction (the
-  "local" record, which is not on-chain). Exact for the single-request credits
-  flows (transfer / join / upgrade); excluding the local set needs execution
-  outputs — also pinned by the phase-2 parity test.
 - **End-to-end SNARK proving of `execute_*_static` is not unit-tested** (needs a
   live node + proving keys); the private-flow `StaticQuery` mechanism *is*
   covered offline with real sampled `StatePath`s.
 - **Minor cleanup left for phase 3** (when the old path is deleted and `_static`
-  is renamed to canonical): `execution_fee_authorization_static` builds two VMs;
-  `base_fee_at_height` and the three `execute_*_static` share structure with the
-  old exports. Kept duplicated for now to match the file's per-export style and
-  keep the diff easy to check against this spec.
+  is renamed to canonical): `base_fee_at_height` and the three `execute_*_static`
+  share structure with the old exports. Kept duplicated for now to match the
+  file's per-export style and keep the diff easy to check against this spec.
 
 ## Why
 
@@ -117,9 +121,12 @@ for the consensus version, so it cannot be omitted:
   — builds the `StaticQuery` and proves; no HTTP.
 - `execute_fee_proof(authorization, height, state_paths_json, public_state_root)`.
 - `execute_program_proof(authorization, program_sources_json, height, state_paths_json, public_state_root)`.
-- `get_base_fee(execution, height)` — height in, fee out, pure.
-- `execution_fee_authorization(private_key, execution, fee_credits, fee_record, height)`
-  — base fee derived from `height`, pure.
+- `get_base_fee(execution, program_sources_json, height)` — height in, fee out,
+  pure. `program_sources_json` loads the execution's root program: snarkVM's
+  `execution_cost` reads each transition's program `Stack`, so a non-credits
+  execution needs it (empty for a credits.aleo execution).
+- `execution_fee_authorization(private_key, execution, fee_credits, fee_record, program_sources_json, height)`
+  — base fee derived from `height` over the loaded program(s), pure.
 
 **Phase-1 symbol names — these cannot reuse the old symbols.** `execute_proof`,
 `execute_fee_proof`, `execute_program_proof` already exist as exports with the
@@ -174,8 +181,11 @@ set rather than the network.
 
 ### New pure helpers (so Dart knows what to fetch)
 
-- `required_commitments(authorization_json) -> JSON [field]` — the input-record
-  commitments whose state paths the caller must fetch before proving. Empty for
+- `required_commitments(authorization_json) -> JSON [field]` — the **global**
+  input-record commitments whose state paths the caller must fetch before
+  proving: the request record inputs minus the transaction's own transition
+  outputs (a record minted earlier in the same transaction is "local" — proving
+  builds its inclusion path itself and the node has no path for it). Empty for
   public transfers. **Called once per authorization** — both the execution
   authorization and (separately) the fee authorization, since a private fee
   spends its own record (see the example flow).
