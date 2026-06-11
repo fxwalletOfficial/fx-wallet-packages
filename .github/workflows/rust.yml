@@ -1,0 +1,33 @@
+name: Rust (aleo_ffi)
+
+# Builds and unit-tests the clean-room aleo_ffi crate. Path-filtered so it does
+# not run on (and slow down) Dart-only PRs; the snarkVM build is heavy and is
+# cached between runs.
+on:
+  push:
+    branches: [ main, 'epic/**' ]
+    paths: [ 'rust/**', '.github/workflows/rust.yml' ]
+  pull_request:
+    branches: [ main, 'epic/**' ]
+    paths: [ 'rust/**', '.github/workflows/rust.yml' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Installs the toolchain pinned by rust/rust-toolchain.toml.
+      - name: Install Rust toolchain
+        working-directory: rust/aleo_ffi
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/aleo_ffi
+
+      # Offline unit tests only; the recursive-import test is #[ignore]d as it
+      # needs a live node.
+      - name: Test
+        working-directory: rust/aleo_ffi
+        run: cargo test --lib

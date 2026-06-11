@@ -376,23 +376,45 @@ fn base_fee_for(execution: &Execution<Net>, url: &str, network: &str) -> anyhow:
     Ok(base_fee)
 }
 
-/// Maps a credits.aleo transfer function to its input list.
+/// Returns a plaintext record string suitable as a function input. Records are
+/// supplied encrypted (`record1...`); they are decrypted with the key's view
+/// key. An already-plaintext record (`{ ... }`) is returned unchanged.
+fn plaintext_record(record: &str, private_key: &PrivateKey<Net>) -> anyhow::Result<String> {
+    let record = record.trim();
+    if record.starts_with("record1") {
+        let view_key = ViewKey::<Net>::try_from(private_key)?;
+        let ciphertext = Record::<Net, Ciphertext<Net>>::from_str(record)?;
+        Ok(ciphertext.decrypt(&view_key)?.to_string())
+    } else {
+        Ok(record.to_string())
+    }
+}
+
+/// Decrypts (if needed) and parses a record as a typed plaintext record.
+fn plaintext_record_typed(
+    record: &str,
+    private_key: &PrivateKey<Net>,
+) -> anyhow::Result<Record<Net, Plaintext<Net>>> {
+    Ok(Record::<Net, Plaintext<Net>>::from_str(&plaintext_record(record, private_key)?)?)
+}
+
+/// Maps a credits.aleo transfer function to its input list, decrypting the
+/// spent record for private transfers.
 fn transfer_inputs(
     function: &str,
     recipient: &str,
     amount: i64,
     amount_record: &str,
-) -> Option<Vec<String>> {
+    private_key: &PrivateKey<Net>,
+) -> anyhow::Result<Vec<String>> {
     let amount = format!("{amount}u64");
-    match function {
-        "transfer_public" | "transfer_public_to_private" => {
-            Some(vec![recipient.to_string(), amount])
-        }
+    Ok(match function {
+        "transfer_public" | "transfer_public_to_private" => vec![recipient.to_string(), amount],
         "transfer_private" | "transfer_private_to_public" => {
-            Some(vec![amount_record.to_string(), recipient.to_string(), amount])
+            vec![plaintext_record(amount_record, private_key)?, recipient.to_string(), amount]
         }
-        _ => None,
-    }
+        _ => anyhow::bail!("unsupported transfer type: {function}"),
+    })
 }
 
 /// Runs the whole split-proof flow for a credits.aleo function and returns the
@@ -427,7 +449,7 @@ fn full_transaction(
     let fee_authorization = if fee_record.trim().is_empty() {
         vm.authorize_fee_public(private_key, base_fee, fee_credits, execution_id, rng)?
     } else {
-        let record = Record::<Net, Plaintext<Net>>::from_str(fee_record)?;
+        let record = plaintext_record_typed(fee_record, private_key)?;
         vm.authorize_fee_private(private_key, record, base_fee, fee_credits, execution_id, rng)?
     };
     let fee = vm.execute_fee_authorization_raw(fee_authorization, &query, rng)?;
@@ -435,25 +457,49 @@ fn full_transaction(
     Ok(Transaction::from_execution(execution, Some(fee))?.to_string())
 }
 
-/// Fetches a non-builtin program from the node and adds it (and any imports
-/// already built in) to the VM. A no-op for built-in programs like credits.aleo.
+/// Fetches a non-builtin program from the node and adds it to the VM, loading
+/// every imported program first (snarkVM rejects a program whose imports are
+/// not already present). A no-op for built-in programs like credits.aleo or any
+/// program already loaded.
+///
+/// Edition note: programs are added at edition 1, which is correct for the
+/// non-upgradeable programs wallets call. Programs that have been upgraded past
+/// edition 1 (constructor-bearing) would need their on-chain edition, which the
+/// public REST API does not expose as a "current edition" lookup.
 fn add_program_from_node(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program_id: &str,
     url: &str,
     network: &str,
 ) -> anyhow::Result<()> {
-    let process = vm.process();
-    let mut process = process.write();
-    if program_id == "credits.aleo" || process.contains_program(&ProgramID::from_str(program_id)?) {
-        return Ok(());
+    // Skip built-ins and anything already loaded (without holding the lock
+    // across the recursion below).
+    {
+        let process = vm.process();
+        let process = process.read();
+        if program_id == "credits.aleo"
+            || process.contains_program(&ProgramID::from_str(program_id)?)
+        {
+            return Ok(());
+        }
     }
+
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
     let body = http_get(&format!("{base}/program/{program_id}"))?;
     let source: String = serde_json::from_str(body.trim())?;
     let program = Program::<Net>::from_str(&source)?;
-    // Non-upgradeable programs (no constructor) are deployed at edition 1.
-    process.add_program_with_edition(&program, 1)?;
+
+    // Load imports (which may themselves import others) before this program.
+    for import_id in program.imports().keys() {
+        add_program_from_node(vm, &import_id.to_string(), url, network)?;
+    }
+
+    let process = vm.process();
+    let mut process = process.write();
+    // A diamond import graph may have added it during the recursion above.
+    if !process.contains_program(program.id()) {
+        process.add_program_with_edition(&program, 1)?;
+    }
     Ok(())
 }
 
@@ -533,9 +579,13 @@ pub unsafe extern "C" fn build_transaction(
     let inner = || -> anyhow::Result<String> {
         let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
         let function = read_str(transfer_type);
-        let inputs =
-            transfer_inputs(function, read_str(recipient), amount as i64, read_str(amount_record))
-                .ok_or_else(|| anyhow::anyhow!("unsupported transfer type: {function}"))?;
+        let inputs = transfer_inputs(
+            function,
+            read_str(recipient),
+            amount as i64,
+            read_str(amount_record),
+            &private_key,
+        )?;
         full_transaction(
             &private_key,
             "credits.aleo",
@@ -572,9 +622,13 @@ pub unsafe extern "C" fn try_transfer(
     let inner = || -> anyhow::Result<String> {
         let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
         let function = read_str(transfer_type);
-        let inputs =
-            transfer_inputs(function, read_str(recipient), amount as i64, read_str(amount_record))
-                .ok_or_else(|| anyhow::anyhow!("unsupported transfer type: {function}"))?;
+        let inputs = transfer_inputs(
+            function,
+            read_str(recipient),
+            amount as i64,
+            read_str(amount_record),
+            &private_key,
+        )?;
         let transaction = full_transaction(
             &private_key,
             "credits.aleo",
@@ -628,29 +682,27 @@ pub unsafe extern "C" fn execute_program(
     }
 }
 
-/// Generates the execution proof for an arbitrary program function call (the
-/// authorization + execute step, returning the serialized execution).
+/// Generates the execution proof for a previously built authorization that
+/// targets a non-builtin program. Unlike `execute_proof`, the referenced
+/// `program_id` (and its imports) is fetched from the node and loaded before
+/// the execution. Returns the serialized execution, or "" on failure.
 ///
 /// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn execute_program_proof(
-    private_key: *const c_char,
-    program_id: *const c_char,
-    function_name: *const c_char,
-    arguments: *const c_char,
     url: *const c_char,
+    authorization: *const c_char,
     network: *const c_char,
+    program_id: *const c_char,
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        program_execution(
-            &private_key,
-            read_str(program_id),
-            read_str(function_name),
-            read_str(arguments),
-            read_str(url),
-            read_str(network),
-        )
+        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
+        let vm = new_vm()?;
+        add_program_from_node(&vm, read_str(program_id), read_str(url), read_str(network))?;
+        let query = NodeQuery::new(read_str(url), read_str(network));
+        let (execution, _response) =
+            vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&execution)?)
     };
     match inner() {
         Ok(execution) => to_cstring(execution),
@@ -732,7 +784,10 @@ pub unsafe extern "C" fn join_authorization(
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        let inputs = vec![read_str(record_1).to_string(), read_str(record_2).to_string()];
+        let inputs = vec![
+            plaintext_record(read_str(record_1), &private_key)?,
+            plaintext_record(read_str(record_2), &private_key)?,
+        ];
         let vm = new_vm()?;
         let authorization =
             vm.authorize(&private_key, "credits.aleo", "join", inputs, &mut rand::thread_rng())?;
@@ -760,7 +815,10 @@ pub unsafe extern "C" fn try_join(
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        let inputs = vec![read_str(record_1).to_string(), read_str(record_2).to_string()];
+        let inputs = vec![
+            plaintext_record(read_str(record_1), &private_key)?,
+            plaintext_record(read_str(record_2), &private_key)?,
+        ];
         let transaction = full_transaction(
             &private_key,
             "credits.aleo",
@@ -793,18 +851,25 @@ pub unsafe extern "C" fn execution_authorization(
     amount_record: *const c_char,
     _network: *const c_char,
 ) -> *mut c_char {
-    let result = (|| -> Option<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key)).ok()?;
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
         let function = read_str(transfer_type);
-        let inputs =
-            transfer_inputs(function, read_str(recipient), amount as i64, read_str(amount_record))?;
-        let vm = new_vm().ok()?;
-        let authorization = vm
-            .authorize(&private_key, "credits.aleo", function, inputs, &mut rand::thread_rng())
-            .ok()?;
-        serde_json::to_string(&authorization).ok()
-    })();
-    to_cstring(result.unwrap_or_default())
+        let inputs = transfer_inputs(
+            function,
+            read_str(recipient),
+            amount as i64,
+            read_str(amount_record),
+            &private_key,
+        )?;
+        let vm = new_vm()?;
+        let authorization =
+            vm.authorize(&private_key, "credits.aleo", function, inputs, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&authorization)?)
+    };
+    match inner() {
+        Ok(authorization) => to_cstring(authorization),
+        Err(_) => to_cstring(String::new()),
+    }
 }
 
 /// Generates the execution proof for an authorization (the patched
@@ -900,7 +965,7 @@ pub unsafe extern "C" fn execution_fee_authorization(
         let authorization = if fee_record.trim().is_empty() {
             vm.authorize_fee_public(&private_key, base_fee, priority_fee, execution_id, rng)?
         } else {
-            let record = Record::<Net, Plaintext<Net>>::from_str(fee_record)?;
+            let record = plaintext_record_typed(fee_record, &private_key)?;
             vm.authorize_fee_private(&private_key, record, base_fee, priority_fee, execution_id, rng)?
         };
         Ok(serde_json::to_string(&authorization)?)
@@ -1034,4 +1099,80 @@ pub unsafe extern "C" fn serial_number_string(
         Some(serial_number.to_string())
     })();
     to_cstring(result.unwrap_or_default())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // record[2] from packages/aleo_dart/test/_diff_records.dart, owned by OWNER_KEY.
+    const TEST_RECORD: &str = "record1qyqspdn8f6lh4eum9a36l93mnxh5vcqssjsep9z4lp4vpya2efgmjdsvqyxx66trwfhkxun9v35hguerqqpqzq9yu3tvsnj4x0a7e2w9w204aya09thraeckdlsn59pve6fnnd3eqv0n7jpp5rsxn48jdjj3z55vhmp42f8hxp7vk5d2430vuvk3fzrsx0w9wqw";
+    const OWNER_KEY: &str = "APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v";
+
+    fn owner() -> PrivateKey<Net> {
+        PrivateKey::<Net>::from_str(OWNER_KEY).unwrap()
+    }
+
+    fn other_key() -> PrivateKey<Net> {
+        let field = Field::<Net>::new(<Net as Environment>::Field::from_bytes_le_mod_order(&[7u8; 32]));
+        PrivateKey::<Net>::try_from(field).unwrap()
+    }
+
+    // A ciphertext record (record1...) is decrypted to a plaintext record before
+    // it can be used as a function input.
+    #[test]
+    fn plaintext_record_decrypts_ciphertext() {
+        let plaintext = plaintext_record(TEST_RECORD, &owner()).unwrap();
+        assert!(plaintext.starts_with('{'), "expected plaintext record, got: {plaintext}");
+        // Round-trips as a typed plaintext record.
+        Record::<Net, Plaintext<Net>>::from_str(&plaintext).unwrap();
+        // An already-plaintext input is returned unchanged (idempotent).
+        assert_eq!(plaintext_record(&plaintext, &owner()).unwrap(), plaintext);
+    }
+
+    // A key that does not own the record cannot decrypt it -> error (fail closed).
+    #[test]
+    fn plaintext_record_rejects_wrong_owner() {
+        assert!(plaintext_record(TEST_RECORD, &other_key()).is_err());
+    }
+
+    #[test]
+    fn transfer_inputs_public_ordering() {
+        let inputs = transfer_inputs("transfer_public", "aleo1recipient", 5, "", &owner()).unwrap();
+        assert_eq!(inputs, vec!["aleo1recipient".to_string(), "5u64".to_string()]);
+    }
+
+    // Private transfers place the decrypted record first, then recipient, amount.
+    #[test]
+    fn transfer_inputs_private_decrypts_record() {
+        let inputs =
+            transfer_inputs("transfer_private", "aleo1recipient", 5, TEST_RECORD, &owner()).unwrap();
+        assert_eq!(inputs.len(), 3);
+        Record::<Net, Plaintext<Net>>::from_str(&inputs[0]).unwrap();
+        assert_eq!(inputs[1], "aleo1recipient");
+        assert_eq!(inputs[2], "5u64");
+    }
+
+    #[test]
+    fn transfer_inputs_rejects_unknown_function() {
+        assert!(transfer_inputs("not_a_transfer", "aleo1recipient", 1, "", &owner()).is_err());
+    }
+
+    // Loading a program pulls in its non-builtin imports recursively
+    // (wrapped_credits.aleo imports token_registry.aleo). Hits the public node.
+    #[test]
+    #[ignore = "network: run with `cargo test -- --ignored`"]
+    fn add_program_loads_imports_recursively() {
+        let url = std::env::var("ALEO_NODE_URL")
+            .unwrap_or_else(|_| "https://api.explorer.provable.com/v1".to_string());
+        let vm = new_vm().unwrap();
+        add_program_from_node(&vm, "wrapped_credits.aleo", &url, "testnet").unwrap();
+        let process = vm.process();
+        let process = process.read();
+        assert!(process.contains_program(&ProgramID::from_str("wrapped_credits.aleo").unwrap()));
+        assert!(
+            process.contains_program(&ProgramID::from_str("token_registry.aleo").unwrap()),
+            "recursive import token_registry.aleo was not loaded"
+        );
+    }
 }

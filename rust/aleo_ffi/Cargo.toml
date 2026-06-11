@@ -8,7 +8,8 @@ edition = "2021"
 
 [lib]
 name = "aleo_rust"
-crate-type = ["cdylib"]
+# rlib in addition to cdylib so `cargo test` can build a unit-test harness.
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 snarkvm-console = "=4.5.0"
