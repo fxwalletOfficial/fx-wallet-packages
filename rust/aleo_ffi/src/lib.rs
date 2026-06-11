@@ -347,13 +347,13 @@ fn new_vm() -> anyhow::Result<VM<Net, ConsensusMemory<Net>>> {
     VM::from(ConsensusStore::<Net, ConsensusMemory<Net>>::open(StorageMode::Production)?)
 }
 
-/// Shared HTTP agent with bounded timeouts. `.timeout()` is a deadline for the
-/// whole exchange — connect, request, and reading the response body — so a
-/// node that stalls *or trickles bytes indefinitely* surfaces as an error
-/// instead of hanging the (synchronous) FFI call. Per-read timeouts alone
-/// would not do that: each trickled byte resets them. Response memory is
-/// bounded as well: every body is read via `into_string()`, which fails past
-/// 10 MiB rather than growing without limit.
+/// Shared HTTP agent. `.timeout()` bounds the request and body read (so a node
+/// that stalls or trickles bytes errors out), and every body is read via
+/// `into_string()`, which fails past 10 MiB rather than growing without limit.
+/// Connection setup is bounded separately by `timeout_connect`, and ureq cannot
+/// interrupt blocking DNS resolution at all — so neither is covered by the
+/// per-request `.timeout()`. `get_once_bounded` closes that gap by running the
+/// whole call on a worker thread the caller stops waiting for on deadline.
 fn http_agent() -> &'static ureq::Agent {
     static AGENT: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
     AGENT.get_or_init(|| {
@@ -377,14 +377,43 @@ const HTTP_GET_ATTEMPTS: u32 = 4;
 /// incidental one.
 const HTTP_GET_DEADLINE: std::time::Duration = std::time::Duration::from_secs(240);
 
+/// Performs one GET, bounding the caller's wait by `budget` *wherever* the
+/// request blocks. ureq's per-request `.timeout()` covers the request and body
+/// read but not connection setup (a separate connect timeout) and cannot
+/// interrupt blocking DNS resolution, so a near-expired deadline could still be
+/// overrun by a slow connect or DNS lookup. Running the blocking call on a
+/// worker thread and waiting at most `budget` for it makes the deadline a real
+/// bound: the caller returns on time; the orphaned worker, itself capped by
+/// ureq's connect/request timeouts, exits on its own shortly after.
+fn get_once_bounded(url: &str, budget: std::time::Duration) -> anyhow::Result<String> {
+    let request_timeout = budget.min(HTTP_REQUEST_TIMEOUT);
+    let url = url.to_string();
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let outcome = (|| -> anyhow::Result<String> {
+            Ok(http_agent().get(&url).timeout(request_timeout).call()?.into_string()?)
+        })();
+        // The receiver is gone if we already timed out; that is expected.
+        let _ = tx.send(outcome);
+    });
+    match rx.recv_timeout(budget) {
+        Ok(outcome) => outcome,
+        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+            anyhow::bail!("request exceeded its {budget:?} budget (connect/DNS/read)")
+        }
+        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+            anyhow::bail!("request worker terminated unexpectedly")
+        }
+    }
+}
+
 /// HTTP GET with a few retries (the public node occasionally returns transient
-/// 5xx / connection errors), bounded by `deadline`: no request, retry, or
-/// backoff sleep runs past it, and each request's own timeout is the smaller of
-/// [`HTTP_REQUEST_TIMEOUT`] and the time left. Passing an overall `deadline`
-/// lets a caller's budget (e.g. the import-graph load) cap the *total* time
-/// across every request it triggers, not just each one in isolation — a
-/// per-request timeout alone bounds one attempt, but several attempts across
-/// several fetches still add up well past any single-request limit.
+/// 5xx / connection errors), bounded by `deadline`: no attempt, retry, or
+/// backoff sleep runs past it, and each attempt — connect, DNS, request and
+/// body read alike — is bounded by the time left via [`get_once_bounded`].
+/// Passing an overall `deadline` lets a caller's budget (e.g. the import-graph
+/// load) cap the *total* time across every request it triggers, not just each
+/// one in isolation.
 fn http_get_until(url: &str, deadline: std::time::Instant) -> anyhow::Result<String> {
     let mut last_error = None;
     for attempt in 0..HTTP_GET_ATTEMPTS {
@@ -392,8 +421,8 @@ fn http_get_until(url: &str, deadline: std::time::Instant) -> anyhow::Result<Str
         if remaining.is_zero() {
             break;
         }
-        match http_agent().get(url).timeout(remaining.min(HTTP_REQUEST_TIMEOUT)).call() {
-            Ok(response) => return Ok(response.into_string()?),
+        match get_once_bounded(url, remaining) {
+            Ok(body) => return Ok(body),
             Err(error) => {
                 last_error = Some(error);
                 // Back off before retrying, but never past the deadline and not
@@ -636,13 +665,21 @@ impl LoadBudget {
         }
     }
 
-    /// Accounts for one program about to be fetched, failing if either budget
-    /// is spent.
-    fn charge_one_program(&mut self) -> anyhow::Result<()> {
+    /// Fails if the time budget is spent. Cheap, so it gates not just fetches
+    /// but the CPU-bound parse and add-to-process steps, which on a deep chain
+    /// run many in a row after the final fetch.
+    fn check_time(&self) -> anyhow::Result<()> {
         anyhow::ensure!(
             std::time::Instant::now() < self.deadline,
             "import load exceeded its {IMPORT_LOAD_DEADLINE:?} time budget"
         );
+        Ok(())
+    }
+
+    /// Accounts for one program about to be fetched, failing if either budget
+    /// is spent.
+    fn charge_one_program(&mut self) -> anyhow::Result<()> {
+        self.check_time()?;
         self.remaining_programs = self.remaining_programs.checked_sub(1).ok_or_else(|| {
             anyhow::anyhow!("import load exceeded its {MAX_IMPORT_PROGRAMS}-program budget")
         })?;
@@ -678,6 +715,8 @@ fn fetch_program_at_latest_edition(
         Net::MAX_PROGRAM_SIZE
     );
     let program = Program::<Net>::from_str(&source)?;
+    // Parsing a (≤ MAX_PROGRAM_SIZE) source is CPU work; re-check after it.
+    budget.check_time()?;
     if program.id() != id {
         anyhow::bail!("node returned program '{}' for requested '{id}'", program.id());
     }
@@ -751,6 +790,10 @@ fn add_program_from_node_within(
     // `stack` holds fetched programs whose imports are still being satisfied.
     let mut stack = vec![fetch_program_at_latest_edition(&base, &requested, budget)?];
     while let Some(frame) = stack.last_mut() {
+        // Gate every iteration — including the run of `add_fetched_program`
+        // calls that unwinds the stack after the last fetch, which is otherwise
+        // pure CPU work with no fetch (hence no charge) between adds.
+        budget.check_time()?;
         match frame.pending.pop() {
             Some(import_id) => {
                 // A stack entry is a program still waiting on its imports, so
@@ -1686,6 +1729,8 @@ mod tests {
 
     // The whole import-graph load — not just one request — is bounded by the
     // budget's deadline, even when each fetch would otherwise stall for minutes.
+    // The bound comes from the worker thread, so it holds wherever the request
+    // blocks (connect / DNS / read), not just on the part ureq can time out.
     #[test]
     fn import_load_bounded_by_budget_deadline() {
         let url = serve_stalling();
@@ -1701,6 +1746,28 @@ mod tests {
         // Ended on the network/deadline, not by loading anything.
         assert!(!vm.process().read().contains_program(&ProgramID::from_str("stall.aleo").unwrap()));
         let _ = error;
+    }
+
+    // check_time gates the CPU-bound parse/add phase (not just fetches), so an
+    // already-spent time budget refuses to load even an instantly-served,
+    // protocol-valid program rather than running the add phase unchecked.
+    #[test]
+    fn spent_time_budget_loads_nothing() {
+        assert!(LoadBudget::new().check_time().is_ok());
+        let spent = LoadBudget {
+            deadline: std::time::Instant::now() - std::time::Duration::from_secs(1),
+            remaining_programs: MAX_IMPORT_PROGRAMS,
+        };
+        assert!(spent.check_time().is_err());
+
+        let mut routes = std::collections::HashMap::new();
+        program_routes(&mut routes, "solo.aleo", &[]);
+        let url = serve_canned(routes);
+        let vm = new_vm().unwrap();
+        let error =
+            add_program_from_node_within(&vm, "solo.aleo", &url, "testnet", spent).unwrap_err();
+        assert!(error.to_string().contains("time budget"), "got: {error}");
+        assert!(!vm.process().read().contains_program(&ProgramID::from_str("solo.aleo").unwrap()));
     }
 
     // A source larger than the protocol maximum can't be a real program, so it
