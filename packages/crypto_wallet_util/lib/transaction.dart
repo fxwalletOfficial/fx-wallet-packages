@@ -56,6 +56,7 @@ export 'src/transaction/xrp/xrp_lib.dart';
 export 'src/transaction/filecoin/fil_lib.dart';
 export 'src/transaction/sc/sc_lib.dart';
 export 'src/transaction/sc/sc_wasm_bridge.dart';
+export 'src/transaction/sc/sc_go_ffi_bridge.dart';
 export 'src/transaction/sc/sc_wasm_run_bridge.dart';
 
 /// export scp module
