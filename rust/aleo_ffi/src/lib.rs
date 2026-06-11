@@ -549,10 +549,7 @@ pub unsafe extern "C" fn build_transaction(
     };
     match inner() {
         Ok(transaction) => to_cstring(transaction),
-        Err(error) => {
-            eprintln!("[build_transaction] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -592,10 +589,7 @@ pub unsafe extern "C" fn try_transfer(
     };
     match inner() {
         Ok(response) => to_cstring(response),
-        Err(error) => {
-            eprintln!("[try_transfer] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -630,10 +624,7 @@ pub unsafe extern "C" fn execute_program(
     };
     match inner() {
         Ok(response) => to_cstring(response),
-        Err(error) => {
-            eprintln!("[execute_program] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -663,10 +654,7 @@ pub unsafe extern "C" fn execute_program_proof(
     };
     match inner() {
         Ok(execution) => to_cstring(execution),
-        Err(error) => {
-            eprintln!("[execute_program_proof] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -697,10 +685,7 @@ pub unsafe extern "C" fn contract_execution(
     };
     match inner() {
         Ok(execution) => to_cstring(execution),
-        Err(error) => {
-            eprintln!("[contract_execution] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -729,10 +714,7 @@ pub unsafe extern "C" fn contract_fee_execution(
     };
     match inner() {
         Ok(fee) => to_cstring(fee),
-        Err(error) => {
-            eprintln!("[contract_fee_execution] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -758,10 +740,7 @@ pub unsafe extern "C" fn join_authorization(
     };
     match inner() {
         Ok(authorization) => to_cstring(authorization),
-        Err(error) => {
-            eprintln!("[join_authorization] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -796,10 +775,7 @@ pub unsafe extern "C" fn try_join(
     };
     match inner() {
         Ok(response) => to_cstring(response),
-        Err(error) => {
-            eprintln!("[try_join] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -852,10 +828,7 @@ pub unsafe extern "C" fn execute_proof(
     };
     match inner() {
         Ok(execution) => to_cstring(execution),
-        Err(error) => {
-            eprintln!("[execute_proof] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -880,10 +853,7 @@ pub unsafe extern "C" fn broadcast(
     };
     match inner() {
         Ok(response) => to_cstring(response),
-        Err(error) => {
-            eprintln!("[broadcast] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -937,10 +907,7 @@ pub unsafe extern "C" fn execution_fee_authorization(
     };
     match inner() {
         Ok(authorization) => to_cstring(authorization),
-        Err(error) => {
-            eprintln!("[execution_fee_authorization] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
@@ -963,10 +930,7 @@ pub unsafe extern "C" fn execute_fee_proof(
     };
     match inner() {
         Ok(fee) => to_cstring(fee),
-        Err(error) => {
-            eprintln!("[execute_fee_proof] {error:?}");
-            to_cstring(String::new())
-        }
+        Err(_) => to_cstring(String::new()),
     }
 }
 
