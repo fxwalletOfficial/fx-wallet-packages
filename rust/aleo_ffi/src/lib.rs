@@ -25,6 +25,7 @@ use snarkvm_ledger_query::QueryTrait;
 use snarkvm_ledger_store::helpers::memory::ConsensusMemory;
 use snarkvm_ledger_store::ConsensusStore;
 use snarkvm_synthesizer::process::Authorization;
+use snarkvm_synthesizer::program::Program;
 use snarkvm_synthesizer::VM;
 use aleo_std_storage::StorageMode;
 
@@ -299,6 +300,22 @@ fn new_vm() -> anyhow::Result<VM<Net, ConsensusMemory<Net>>> {
     VM::from(ConsensusStore::<Net, ConsensusMemory<Net>>::open(StorageMode::Production)?)
 }
 
+/// HTTP GET with a few retries (the public node occasionally returns transient
+/// 5xx / connection errors).
+fn http_get(url: &str) -> anyhow::Result<String> {
+    let mut last_error = None;
+    for attempt in 0..4 {
+        match ureq::get(url).call() {
+            Ok(response) => return Ok(response.into_string()?),
+            Err(error) => {
+                last_error = Some(error);
+                std::thread::sleep(std::time::Duration::from_millis(500 * (attempt + 1)));
+            }
+        }
+    }
+    Err(anyhow::anyhow!("GET {url} failed after retries: {last_error:?}"))
+}
+
 /// REST query against `{url}/{network}`. snarkVM's own RestQuery derives the
 /// URL path from the network type (MainnetV0 -> `/mainnet`), but Aleo's testnet
 /// runs the network-0 protocol under a `/testnet` path, so we issue the
@@ -313,8 +330,7 @@ impl NodeQuery {
     }
 
     fn get_json<T: serde::de::DeserializeOwned>(&self, route: &str) -> anyhow::Result<T> {
-        let body = ureq::get(&format!("{}/{route}", self.base)).call()?.into_string()?;
-        Ok(serde_json::from_str(body.trim())?)
+        Ok(serde_json::from_str(http_get(&format!("{}/{route}", self.base))?.trim())?)
     }
 }
 
@@ -382,8 +398,10 @@ fn transfer_inputs(
 /// Runs the whole split-proof flow for a credits.aleo function and returns the
 /// assembled transaction: authorize -> execute -> fee authorize -> fee execute
 /// -> assemble. `fee_credits` is the priority fee; empty `fee_record` = public fee.
+#[allow(clippy::too_many_arguments)]
 fn full_transaction(
     private_key: &PrivateKey<Net>,
+    program_id: &str,
     function: &str,
     inputs: Vec<String>,
     fee_credits: u64,
@@ -392,10 +410,11 @@ fn full_transaction(
     network: &str,
 ) -> anyhow::Result<String> {
     let vm = new_vm()?;
+    add_program_from_node(&vm, program_id, url, network)?;
     let query = NodeQuery::new(url, network);
     let rng = &mut rand::thread_rng();
 
-    let authorization = vm.authorize(private_key, "credits.aleo", function, inputs, rng)?;
+    let authorization = vm.authorize(private_key, program_id, function, inputs, rng)?;
     let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
 
     let execution_id = execution.to_execution_id()?;
@@ -414,6 +433,28 @@ fn full_transaction(
     let fee = vm.execute_fee_authorization_raw(fee_authorization, &query, rng)?;
 
     Ok(Transaction::from_execution(execution, Some(fee))?.to_string())
+}
+
+/// Fetches a non-builtin program from the node and adds it (and any imports
+/// already built in) to the VM. A no-op for built-in programs like credits.aleo.
+fn add_program_from_node(
+    vm: &VM<Net, ConsensusMemory<Net>>,
+    program_id: &str,
+    url: &str,
+    network: &str,
+) -> anyhow::Result<()> {
+    let process = vm.process();
+    let mut process = process.write();
+    if program_id == "credits.aleo" || process.contains_program(&ProgramID::from_str(program_id)?) {
+        return Ok(());
+    }
+    let base = format!("{}/{}", url.trim_end_matches('/'), network);
+    let body = http_get(&format!("{base}/program/{program_id}"))?;
+    let source: String = serde_json::from_str(body.trim())?;
+    let program = Program::<Net>::from_str(&source)?;
+    // Non-upgradeable programs (no constructor) are deployed at edition 1.
+    process.add_program_with_edition(&program, 1)?;
+    Ok(())
 }
 
 /// POSTs a transaction to the node, returning the node's response body.
@@ -449,6 +490,7 @@ pub unsafe extern "C" fn build_transaction(
                 .ok_or_else(|| anyhow::anyhow!("unsupported transfer type: {function}"))?;
         full_transaction(
             &private_key,
+            "credits.aleo",
             function,
             inputs,
             fee_credits as u64,
@@ -490,6 +532,7 @@ pub unsafe extern "C" fn try_transfer(
                 .ok_or_else(|| anyhow::anyhow!("unsupported transfer type: {function}"))?;
         let transaction = full_transaction(
             &private_key,
+            "credits.aleo",
             function,
             inputs,
             fee_credits as u64,
@@ -503,6 +546,79 @@ pub unsafe extern "C" fn try_transfer(
         Ok(response) => to_cstring(response),
         Err(error) => {
             eprintln!("[try_transfer] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Executes an arbitrary program function and broadcasts the transaction.
+/// `arguments` is a JSON array of Aleo value strings. Returns the node response.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_program(
+    private_key: *const c_char,
+    program_id: *const c_char,
+    function_name: *const c_char,
+    arguments: *const c_char,
+    fee: c_int,
+    url: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let inputs: Vec<String> = serde_json::from_str(read_str(arguments))?;
+        let transaction = full_transaction(
+            &private_key,
+            read_str(program_id),
+            read_str(function_name),
+            inputs,
+            fee as u64,
+            "",
+            read_str(url),
+            read_str(network),
+        )?;
+        broadcast_to_node(&transaction, read_str(url), read_str(network))
+    };
+    match inner() {
+        Ok(response) => to_cstring(response),
+        Err(error) => {
+            eprintln!("[execute_program] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Generates the execution proof for an arbitrary program function call (the
+/// authorization + execute step, returning the serialized execution).
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_program_proof(
+    private_key: *const c_char,
+    program_id: *const c_char,
+    function_name: *const c_char,
+    arguments: *const c_char,
+    url: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let program_id = read_str(program_id);
+        let inputs: Vec<String> = serde_json::from_str(read_str(arguments))?;
+        let vm = new_vm()?;
+        add_program_from_node(&vm, program_id, read_str(url), read_str(network))?;
+        let query = NodeQuery::new(read_str(url), read_str(network));
+        let rng = &mut rand::thread_rng();
+        let authorization =
+            vm.authorize(&private_key, program_id, read_str(function_name), inputs, rng)?;
+        let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
+        Ok(serde_json::to_string(&execution)?)
+    };
+    match inner() {
+        Ok(execution) => to_cstring(execution),
+        Err(error) => {
+            eprintln!("[execute_program_proof] {error:?}");
             to_cstring(String::new())
         }
     }
@@ -556,6 +672,7 @@ pub unsafe extern "C" fn try_join(
         let inputs = vec![read_str(record_1).to_string(), read_str(record_2).to_string()];
         let transaction = full_transaction(
             &private_key,
+            "credits.aleo",
             "join",
             inputs,
             fee_credits as u64,
