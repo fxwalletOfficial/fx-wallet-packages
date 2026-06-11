@@ -16,15 +16,18 @@ The pure helpers, the budgets, and the private-flow `StaticQuery` construction
 are unit-tested offline (real sampled `StatePath`s); the release cdylib's exported
 ABI is checked in CI.
 
-Two P1 issues from a follow-up review were fixed in-phase (not deferred): the
-fee API (`get_base_fee_static` / `execution_fee_authorization_static`) now takes
-`program_sources_json` and loads the execution's root program, since snarkVM's
-`execution_cost` reads each transition's program `Stack` (without it a
-non-credits execution returned fee 0 / ""); and `required_commitments` now
+Three P1 issues from follow-up reviews were fixed in-phase (not deferred): (1)
+the fee API (`get_base_fee_static` / `execution_fee_authorization_static`) now
+takes `program_sources_json` and loads the execution's root program, since
+snarkVM's `execution_cost` reads each transition's program `Stack` (without it a
+non-credits execution returned fee 0 / ""); (2) `required_commitments` now
 subtracts the transaction's own transition outputs from the input commitments,
 excluding a composite program's intra-transaction ("local") record
 (`vm.authorize` already populates the authorization's transitions, so this is
-exact and offline).
+exact and offline); and (3) `add_programs_from_sources` keeps a wall-clock
+deadline over its CPU-bound parse / Stack-build steps — moving HTTP to Dart
+removed the *network* stall, but a hostile closure of large valid programs is
+still uninterruptible CPU work the Dart timeout cannot reach.
 
 The following are **intentionally deferred** — surfaced by a high-effort
 self-review, none blocking, all sequenced to a later phase:
@@ -294,7 +297,7 @@ contain: a node can still answer an endless *acyclic* chain of distinct valid
 programs. Now the Dart closure walk would fetch forever, and the assembled
 `program_sources_json` would grow without limit — `MAX_PROGRAM_SIZE` caps one
 program, not the set. So the **count + total-byte budget is kept, on both
-sides**, even though the HTTP/threading/deadline machinery is deleted:
+sides**, even though the HTTP/worker-thread machinery is deleted:
 
 - **Dart (fetch side):** the closure walk via `required_imports` enforces a
   max-program-count and cumulative-byte budget (and a wall-clock budget, now
@@ -302,18 +305,25 @@ sides**, even though the HTTP/threading/deadline machinery is deleted:
   unbounded chain.
 - **Rust (parse side):** parsing `program_sources_json` re-checks a program
   count cap and a total-byte cap (not just per-program `MAX_PROGRAM_SIZE`),
-  since Rust must not trust the caller's set blindly either.
+  **and keeps a wall-clock deadline** gating each `Program::from_str` and each
+  `add_program_with_edition` (Stack build) — both are expensive, uninterruptible
+  CPU work, so a hostile-but-valid closure of up to `MAX_IMPORT_PROGRAMS` large
+  programs must not be able to block the synchronous FFI call. The Dart-side
+  timeout can only bound the *fetch*; it cannot interrupt work already inside the
+  FFI, so the CPU bound has to live in Rust. Rust must not trust the caller's set
+  blindly either.
 
-Only the *time/deadline* and *worker-thread* parts of the budget are dropped
-(no blocking I/O left in Rust to bound); the *size* parts persist.
+Only the *worker-thread / in-flight* machinery is dropped (no blocking I/O left
+in Rust to bound); the *size* and *wall-clock* parts persist.
 
 ## Deleted from Rust
 
 `ureq` dependency; `http_agent`, `http_get`, `http_get_until`, `http_post`,
 `request_once_bounded`, `InflightPermit`/`MAX_INFLIGHT_REQUESTS`; the
-*time/thread* part of `LoadBudget` (the wall-clock deadline, `get_once_bounded`
-plumbing) — **but not** its size budget, which moves to the `program_sources_json`
-parser per above; `NodeQuery`'s HTTP impl (replaced by building `StaticQuery`
+*thread/in-flight* part of the load machinery (`get_once_bounded` plumbing) —
+**but not** `LoadBudget`'s size and wall-clock budget, which move to the
+`program_sources_json` parser (it keeps a deadline over its CPU-bound
+parse/Stack-build steps) per above; `NodeQuery`'s HTTP impl (replaced by building `StaticQuery`
 from caller JSON); `node_latest_edition`, `add_program_from_node` (network),
 `broadcast_to_node`. The worker-thread/deadline tests go with them; the
 program-count/byte-budget tests are kept and re-pointed at the parser.

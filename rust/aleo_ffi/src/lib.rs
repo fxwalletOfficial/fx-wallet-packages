@@ -1649,14 +1649,37 @@ struct ProgramSourceEntry {
 /// Adds programs supplied as in-memory sources (the whole import closure, in any
 /// order) to the VM, imports-before-importers — the offline analogue of
 /// [`add_program_from_node`]. Applies the same per-program id-match and
-/// `MAX_PROGRAM_SIZE` checks, plus the program-count and total-byte budget that
-/// the node loader used (the size budget survives the move; only the
-/// time/thread machinery is dropped, since there is no I/O left to bound). A
-/// missing import or an import cycle in the supplied set is rejected as the walk
-/// stalls with programs left unadded.
+/// `MAX_PROGRAM_SIZE` checks, the program-count and total-byte budget, and a
+/// wall-clock deadline. The deadline matters even with no network I/O left:
+/// `Program::from_str` and `add_program_with_edition` (Stack construction) are
+/// expensive, uninterruptible CPU work, so a hostile closure of up to
+/// `MAX_IMPORT_PROGRAMS` large-but-valid programs could otherwise block this
+/// synchronous FFI call for a long time — and the Dart-side network timeout
+/// cannot interrupt work already inside the FFI. Only the *thread/in-flight*
+/// machinery is dropped (no blocking I/O left to bound). A missing import or an
+/// import cycle in the supplied set is rejected as the walk stalls with programs
+/// left unadded.
 fn add_programs_from_sources(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program_sources_json: &str,
+) -> anyhow::Result<()> {
+    add_programs_from_sources_within(
+        vm,
+        program_sources_json,
+        std::time::Instant::now() + IMPORT_LOAD_DEADLINE,
+    )
+}
+
+/// [`add_programs_from_sources`] with an explicit `deadline`, so a caller (or
+/// test) can bound the whole load. The deadline is checked before each
+/// `Program::from_str` and before each program is added, so an over-budget call
+/// stops starting new CPU-bound work instead of parsing/building all of them; a
+/// single in-flight add still runs to completion (snarkVM exposes no way to
+/// interrupt it), an overshoot of at most one program.
+fn add_programs_from_sources_within(
+    vm: &VM<Net, ConsensusMemory<Net>>,
+    program_sources_json: &str,
+    deadline: std::time::Instant,
 ) -> anyhow::Result<()> {
     let program_sources_json = program_sources_json.trim();
     if program_sources_json.is_empty() {
@@ -1679,8 +1702,13 @@ fn add_programs_from_sources(
 
     // Parse and validate each program; the node is not trusted, so a source over
     // the protocol maximum or one not declaring its claimed id is rejected.
+    // Parsing is uninterruptible CPU work, so gate every one on the deadline.
     let mut pending: HashMap<ProgramID<Net>, (Program<Net>, u16)> = HashMap::new();
     for entry in entries {
+        anyhow::ensure!(
+            std::time::Instant::now() < deadline,
+            "program load exceeded its {IMPORT_LOAD_DEADLINE:?} time budget"
+        );
         anyhow::ensure!(
             entry.source.len() <= Net::MAX_PROGRAM_SIZE,
             "program '{}' source is {} bytes, over the {}-byte maximum",
@@ -1718,6 +1746,12 @@ fn add_programs_from_sources(
             "program_sources_json has unresolved imports or an import cycle"
         );
         for id in ready {
+            // `add_program_with_edition` builds the program's Stack — real CPU
+            // work snarkVM cannot interrupt — so gate every add on the deadline.
+            anyhow::ensure!(
+                std::time::Instant::now() < deadline,
+                "program load exceeded its {IMPORT_LOAD_DEADLINE:?} time budget"
+            );
             let (program, edition) = pending.remove(&id).expect("a ready id is pending");
             add_fetched_program(vm, &program, edition)?;
         }
@@ -2693,6 +2727,19 @@ mod tests {
         let vm = new_vm().unwrap();
         add_programs_from_sources(&vm, "").unwrap();
         add_programs_from_sources(&vm, "[]").unwrap();
+    }
+
+    // Parse + Stack build is uninterruptible CPU work even with no network, so an
+    // expired deadline stops the load before building anything — the Dart-side
+    // timeout can't reach work already inside the FFI, so the bound must be here.
+    #[test]
+    fn add_programs_from_sources_bounded_by_deadline() {
+        let json = sources_json(&[("solo.aleo", &[])]);
+        let vm = new_vm().unwrap();
+        let expired = std::time::Instant::now() - std::time::Duration::from_secs(1);
+        let error = add_programs_from_sources_within(&vm, &json, expired).unwrap_err();
+        assert!(error.to_string().contains("time budget"), "got: {error}");
+        assert!(!vm.process().read().contains_program(&ProgramID::from_str("solo.aleo").unwrap()));
     }
 
     // The local-commitment set difference drops exactly the local entries (a
