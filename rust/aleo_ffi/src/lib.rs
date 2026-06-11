@@ -934,6 +934,60 @@ pub unsafe extern "C" fn execute_fee_proof(
     }
 }
 
+/// Builds the authorization to migrate an old (version-0) credits record to a
+/// version-1 record via credits.aleo `upgrade`. The encrypted `record` is
+/// decrypted with the key's view key and passed as the single input. Offline.
+/// Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn upgrade_authorization(
+    private_key: *const c_char,
+    record: *const c_char,
+    _url: *const c_char,
+    _network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let view_key = ViewKey::<Net>::try_from(&private_key)?;
+        let record = Record::<Net, Ciphertext<Net>>::from_str(read_str(record))?;
+        let plaintext = record.decrypt(&view_key)?;
+        let vm = new_vm()?;
+        let authorization = vm.authorize(
+            &private_key,
+            "credits.aleo",
+            "upgrade",
+            vec![plaintext.to_string()],
+            &mut rand::thread_rng(),
+        )?;
+        Ok(serde_json::to_string(&authorization)?)
+    };
+    match inner() {
+        Ok(authorization) => to_cstring(authorization),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
+/// Assembles a credits.aleo `upgrade` transaction from its execution alone. A
+/// transaction with a single `upgrade` transition is base-fee exempt, so no fee
+/// is attached (`Transaction::from_execution(execution, None)`). Returns "".
+///
+/// SAFETY: `execution` is a NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn build_upgrade_transaction_offline(
+    execution: *const c_char,
+    _network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
+        Ok(Transaction::from_execution(execution, None)?.to_string())
+    };
+    match inner() {
+        Ok(transaction) => to_cstring(transaction),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
 /// Assembles a transaction from a serialized execution proof and fee proof
 /// (the split-proof flow). Deterministic; returns "" on failure.
 ///
