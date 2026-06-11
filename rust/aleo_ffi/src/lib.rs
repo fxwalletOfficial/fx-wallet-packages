@@ -457,30 +457,11 @@ fn full_transaction(
     Ok(Transaction::from_execution(execution, Some(fee))?.to_string())
 }
 
-/// Returns a program's current on-chain edition by probing the node. snarkVM's
-/// REST serves the program source for any edition `<= current` and 404s above
-/// it, so the current edition is the highest one that exists. Errors (rather
-/// than guessing) when the node can't answer — registering at the wrong edition
-/// would produce a proof that disagrees with chain state.
-fn node_program_edition(base: &str, program_id: &str) -> anyhow::Result<u16> {
-    let exists = |edition: u16| -> anyhow::Result<bool> {
-        match ureq::get(&format!("{base}/program/{program_id}/{edition}")).call() {
-            Ok(_) => Ok(true),
-            Err(ureq::Error::Status(404, _)) => Ok(false),
-            Err(e) => Err(e.into()),
-        }
-    };
-    if !exists(0)? {
-        anyhow::bail!("program {program_id} not found while determining its edition");
-    }
-    let mut edition = 0u16;
-    while exists(edition + 1)? {
-        edition += 1;
-        if edition == u16::MAX {
-            anyhow::bail!("edition probe overflowed for {program_id}");
-        }
-    }
-    Ok(edition)
+/// Reads a program's current on-chain edition from snarkOS's
+/// `/program/{id}/latest_edition` route (via the retrying `http_get`).
+fn node_latest_edition(base: &str, program_id: &str) -> anyhow::Result<u16> {
+    let body = http_get(&format!("{base}/program/{program_id}/latest_edition"))?;
+    Ok(body.trim().trim_matches('"').parse()?)
 }
 
 /// Fetches a non-builtin program from the node and adds it to the VM, loading
@@ -488,13 +469,13 @@ fn node_program_edition(base: &str, program_id: &str) -> anyhow::Result<u16> {
 /// not already present). A no-op for built-in programs like credits.aleo or any
 /// program already loaded.
 ///
-/// Edition selection:
-/// - Non-upgradeable programs (no constructor) execute at edition 1; edition 0
-///   is rejected by `Authorization::check_valid_edition` post-V8.
-/// - Upgradeable programs (with a constructor) start at edition 0 (added via
-///   `add_program`, which execution permits for constructor programs) and bump
-///   on each upgrade. Their current edition is read from the node; if it can't
-///   be determined the call fails rather than emit a proof at the wrong edition.
+/// The current edition is read first, then the source is fetched *at that
+/// edition* (`/program/{id}/{edition}`) so the two are consistent even if the
+/// program is upgraded concurrently. Edition 0 (first-deployed, constructor-
+/// bearing programs) is added via `add_program`, which execution permits;
+/// non-upgradeable programs are edition 1, upgraded programs their bumped
+/// edition. A wrong edition would yield a proof that disagrees with chain state,
+/// so any failure to determine it (e.g. a node without the route) propagates.
 fn add_program_from_node(
     vm: &VM<Net, ConsensusMemory<Net>>,
     program_id: &str,
@@ -514,7 +495,8 @@ fn add_program_from_node(
     }
 
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    let body = http_get(&format!("{base}/program/{program_id}"))?;
+    let edition = node_latest_edition(&base, program_id)?;
+    let body = http_get(&format!("{base}/program/{program_id}/{edition}"))?;
     let source: String = serde_json::from_str(body.trim())?;
     let program = Program::<Net>::from_str(&source)?;
 
@@ -523,18 +505,10 @@ fn add_program_from_node(
         add_program_from_node(vm, &import_id.to_string(), url, network)?;
     }
 
-    let edition = if program.contains_constructor() {
-        node_program_edition(&base, program_id)?
-    } else {
-        1
-    };
-
     let process = vm.process();
     let mut process = process.write();
     // A diamond import graph may have added it during the recursion above.
     if !process.contains_program(program.id()) {
-        // edition 0 uses `add_program` (the reviewer's recommended path for
-        // first-deploy constructor programs); higher editions are explicit.
         if edition == 0 {
             process.add_program(&program)?;
         } else {
@@ -1199,15 +1173,14 @@ mod tests {
         assert!(transfer_inputs("not_a_transfer", "aleo1recipient", 1, "", &owner()).is_err());
     }
 
-    // A non-upgradeable program (no constructor) reports edition 1. Validates
-    // the edition probe against a program whose execution edition is known.
+    // latest_edition reports a program's current edition (token_registry = 1).
     #[test]
     #[ignore = "network: run with `cargo test -- --ignored`"]
-    fn node_program_edition_non_upgradeable_is_one() {
+    fn node_latest_edition_reads_current_edition() {
         let base = std::env::var("ALEO_NODE_URL")
             .unwrap_or_else(|_| "https://api.explorer.provable.com/v1".to_string())
             + "/testnet";
-        assert_eq!(node_program_edition(&base, "token_registry.aleo").unwrap(), 1);
+        assert_eq!(node_latest_edition(&base, "token_registry.aleo").unwrap(), 1);
     }
 
     // Loading a program pulls in its non-builtin imports recursively
