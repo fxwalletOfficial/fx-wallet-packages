@@ -364,20 +364,58 @@ fn http_agent() -> &'static ureq::Agent {
     })
 }
 
+/// Per-attempt ceiling on one HTTP request (connect, request, body read).
+/// Overridden downward when less of the caller's overall deadline remains.
+const HTTP_REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// Number of attempts `http_get` makes against the (flaky) public node.
+const HTTP_GET_ATTEMPTS: u32 = 4;
+
+/// Default overall deadline for a standalone `http_get`, for callers without
+/// their own budget. Covers all attempts and their backoff, keeping the
+/// historical 4 x 60s retry envelope — but now as a hard bound rather than an
+/// incidental one.
+const HTTP_GET_DEADLINE: std::time::Duration = std::time::Duration::from_secs(240);
+
 /// HTTP GET with a few retries (the public node occasionally returns transient
-/// 5xx / connection errors).
-fn http_get(url: &str) -> anyhow::Result<String> {
+/// 5xx / connection errors), bounded by `deadline`: no request, retry, or
+/// backoff sleep runs past it, and each request's own timeout is the smaller of
+/// [`HTTP_REQUEST_TIMEOUT`] and the time left. Passing an overall `deadline`
+/// lets a caller's budget (e.g. the import-graph load) cap the *total* time
+/// across every request it triggers, not just each one in isolation — a
+/// per-request timeout alone bounds one attempt, but several attempts across
+/// several fetches still add up well past any single-request limit.
+fn http_get_until(url: &str, deadline: std::time::Instant) -> anyhow::Result<String> {
     let mut last_error = None;
-    for attempt in 0..4 {
-        match http_agent().get(url).call() {
+    for attempt in 0..HTTP_GET_ATTEMPTS {
+        let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+        if remaining.is_zero() {
+            break;
+        }
+        match http_agent().get(url).timeout(remaining.min(HTTP_REQUEST_TIMEOUT)).call() {
             Ok(response) => return Ok(response.into_string()?),
             Err(error) => {
                 last_error = Some(error);
-                std::thread::sleep(std::time::Duration::from_millis(500 * (attempt + 1)));
+                // Back off before retrying, but never past the deadline and not
+                // at all after the final attempt.
+                if attempt + 1 < HTTP_GET_ATTEMPTS {
+                    let backoff = std::time::Duration::from_millis(500 * (attempt as u64 + 1));
+                    let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+                    if remaining.is_zero() {
+                        break;
+                    }
+                    std::thread::sleep(backoff.min(remaining));
+                }
             }
         }
     }
     Err(anyhow::anyhow!("GET {url} failed after retries: {last_error:?}"))
+}
+
+/// [`http_get_until`] with the default standalone deadline, for callers that
+/// have no overall budget of their own.
+fn http_get(url: &str) -> anyhow::Result<String> {
+    http_get_until(url, std::time::Instant::now() + HTTP_GET_DEADLINE)
 }
 
 /// REST query against `{url}/{network}`. snarkVM's own RestQuery derives the
@@ -548,9 +586,14 @@ fn full_transaction(
 }
 
 /// Reads a program's current on-chain edition from snarkOS's
-/// `/program/{id}/latest_edition` route (via the retrying `http_get`).
-fn node_latest_edition(base: &str, program_id: &str) -> anyhow::Result<u16> {
-    let body = http_get(&format!("{base}/program/{program_id}/latest_edition"))?;
+/// `/program/{id}/latest_edition` route, bounded by `deadline` (shared with the
+/// rest of the import-graph load).
+fn node_latest_edition(
+    base: &str,
+    program_id: &str,
+    deadline: std::time::Instant,
+) -> anyhow::Result<u16> {
+    let body = http_get_until(&format!("{base}/program/{program_id}/latest_edition"), deadline)?;
     Ok(body.trim().trim_matches('"').parse()?)
 }
 
@@ -625,8 +668,8 @@ fn fetch_program_at_latest_edition(
     budget: &mut LoadBudget,
 ) -> anyhow::Result<PendingProgram> {
     budget.charge_one_program()?;
-    let edition = node_latest_edition(base, &id.to_string())?;
-    let body = http_get(&format!("{base}/program/{id}/{edition}"))?;
+    let edition = node_latest_edition(base, &id.to_string(), budget.deadline)?;
+    let body = http_get_until(&format!("{base}/program/{id}/{edition}"), budget.deadline)?;
     let source: String = serde_json::from_str(body.trim())?;
     anyhow::ensure!(
         source.len() <= Net::MAX_PROGRAM_SIZE,
@@ -686,12 +729,24 @@ fn add_program_from_node(
     url: &str,
     network: &str,
 ) -> anyhow::Result<()> {
+    add_program_from_node_within(vm, program_id, url, network, LoadBudget::new())
+}
+
+/// [`add_program_from_node`] with an explicit budget, so a caller (or test) can
+/// bound the whole load rather than take the default.
+fn add_program_from_node_within(
+    vm: &VM<Net, ConsensusMemory<Net>>,
+    program_id: &str,
+    url: &str,
+    network: &str,
+    mut budget: LoadBudget,
+) -> anyhow::Result<()> {
     let requested = ProgramID::<Net>::from_str(program_id)?;
     if program_is_present(vm, &requested) {
         return Ok(());
     }
     let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    let budget = &mut LoadBudget::new();
+    let budget = &mut budget;
 
     // `stack` holds fetched programs whose imports are still being satisfied.
     let mut stack = vec![fetch_program_at_latest_edition(&base, &requested, budget)?];
@@ -1588,6 +1643,66 @@ mod tests {
         assert!(error.to_string().contains("program budget"), "got: {error}");
     }
 
+    /// Accepts connections and never replies, so a client's per-request timeout
+    /// / overall deadline — not the server — is what ends the call.
+    fn serve_stalling() -> String {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(stream) = stream else { continue };
+                // Hold the socket open a while without responding, then drop it.
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(30));
+                    drop(stream);
+                });
+            }
+        });
+        address
+    }
+
+    // A deadline already in the past makes no request at all and returns at
+    // once (the URL is never contacted).
+    #[test]
+    fn http_get_past_deadline_returns_immediately() {
+        let started = std::time::Instant::now();
+        let result =
+            http_get_until("http://203.0.113.1/never", started - std::time::Duration::from_secs(1));
+        assert!(result.is_err());
+        assert!(started.elapsed() < std::time::Duration::from_secs(1), "took {:?}", started.elapsed());
+    }
+
+    // A stalling node must not hold the call past the deadline: without the
+    // deadline plumbing this would block ~4 x 60s, here it ends in ~1s.
+    #[test]
+    fn http_get_bounded_by_deadline_against_stalling_node() {
+        let url = serve_stalling();
+        let started = std::time::Instant::now();
+        let result =
+            http_get_until(&format!("{url}/x"), started + std::time::Duration::from_secs(1));
+        assert!(result.is_err());
+        assert!(started.elapsed() < std::time::Duration::from_secs(15), "took {:?}", started.elapsed());
+    }
+
+    // The whole import-graph load — not just one request — is bounded by the
+    // budget's deadline, even when each fetch would otherwise stall for minutes.
+    #[test]
+    fn import_load_bounded_by_budget_deadline() {
+        let url = serve_stalling();
+        let vm = new_vm().unwrap();
+        let budget = LoadBudget {
+            deadline: std::time::Instant::now() + std::time::Duration::from_secs(1),
+            remaining_programs: MAX_IMPORT_PROGRAMS,
+        };
+        let started = std::time::Instant::now();
+        let error =
+            add_program_from_node_within(&vm, "stall.aleo", &url, "testnet", budget).unwrap_err();
+        assert!(started.elapsed() < std::time::Duration::from_secs(15), "took {:?}", started.elapsed());
+        // Ended on the network/deadline, not by loading anything.
+        assert!(!vm.process().read().contains_program(&ProgramID::from_str("stall.aleo").unwrap()));
+        let _ = error;
+    }
+
     // A source larger than the protocol maximum can't be a real program, so it
     // must be rejected (bounding per-fetch memory) rather than parsed.
     #[test]
@@ -1645,7 +1760,8 @@ mod tests {
         let base = std::env::var("ALEO_NODE_URL")
             .unwrap_or_else(|_| "https://api.explorer.provable.com/v1".to_string())
             + "/testnet";
-        assert_eq!(node_latest_edition(&base, "token_registry.aleo").unwrap(), 1);
+        let deadline = std::time::Instant::now() + HTTP_GET_DEADLINE;
+        assert_eq!(node_latest_edition(&base, "token_registry.aleo", deadline).unwrap(), 1);
     }
 
     // Loading a program pulls in its non-builtin imports recursively
