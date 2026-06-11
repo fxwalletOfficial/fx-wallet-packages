@@ -1759,12 +1759,28 @@ fn add_programs_from_sources_within(
     Ok(())
 }
 
-/// Drops the local commitments (records created within the same transaction)
-/// from the input-record commitments, leaving the global (on-chain) set whose
-/// state paths the node can serve. Split out so the set difference is unit-tested
-/// directly (a composite authorization is impractical to build offline).
-fn exclude_local_commitments(inputs: Vec<String>, local: &HashSet<String>) -> Vec<String> {
-    inputs.into_iter().filter(|commitment| !local.contains(commitment)).collect()
+/// Given each transition's record-input and record-output commitments **in
+/// execution order**, returns the global (on-chain) input commitments. Mirrors
+/// snarkVM's `Inclusion::insert_transition`: an input record is *local* only if
+/// an *earlier* transition output it — a later transition's output never makes
+/// an earlier input local (that would drop a real on-chain commitment and miss
+/// its state path). Split out so the order-sensitive logic is unit-tested.
+fn global_input_commitments(transitions: &[(Vec<String>, Vec<String>)]) -> Vec<String> {
+    let mut local: HashSet<String> = HashSet::new();
+    let mut global = Vec::new();
+    for (inputs, outputs) in transitions {
+        // Judge this transition's inputs against outputs accumulated so far...
+        for commitment in inputs {
+            if !local.contains(commitment) {
+                global.push(commitment.clone());
+            }
+        }
+        // ...then add this transition's outputs (visible only to later ones).
+        for commitment in outputs {
+            local.insert(commitment.clone());
+        }
+    }
+    global
 }
 
 /// The input-record commitments whose state paths the caller must fetch before
@@ -1773,43 +1789,48 @@ fn exclude_local_commitments(inputs: Vec<String>, local: &HashSet<String>) -> Ve
 ///
 /// This mirrors exactly what proving asks the query for: `Trace::prepare`
 /// collects the input-record commitments whose record is NOT an output of an
-/// earlier transition in the same transaction (a "local" record, which is not
+/// *earlier* transition in the same transaction (a "local" record, which is not
 /// on-chain and has no state path). `vm.authorize` already populates the
-/// authorization's transitions (with their record outputs), so the local set is
-/// the union of all transition output commitments — subtract it from the
-/// request input commitments to get exactly the global (on-chain) set. For the
-/// single-request credits flows (transfer / join / upgrade) the outputs are
-/// freshly-created records, so nothing is subtracted; for a composite program
-/// that spends a record minted earlier in the same transaction, that local
-/// commitment is correctly excluded.
+/// authorization's transitions (with their record outputs). Requests are stored
+/// pre-order and transitions in execution order, so they are paired by `tcm`
+/// (the same key `Authorization::try_from` uses), and the local filter is
+/// applied in execution order — a later transition's output cannot retroactively
+/// make an earlier input local. For the single-request credits flows (transfer /
+/// join / upgrade) the outputs are freshly-created records, so nothing is
+/// dropped; for a composite program that spends a record minted by an earlier
+/// transition, that local commitment is correctly excluded.
 ///
 /// SAFETY: `authorization` is a NUL-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn required_commitments(authorization: *const c_char) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        // Records created within this transaction (any transition's output) are
-        // local: proving builds their inclusion path internally and never asks
-        // the query for them, so they must not be fetched from the node.
-        let mut local = HashSet::new();
-        for (_, transition) in authorization.transitions() {
-            for output in transition.outputs() {
-                if let Some(commitment) = output.commitment() {
-                    local.insert(commitment.to_string());
-                }
-            }
-        }
-        // Global (on-chain) input-record commitments = request record inputs
-        // minus the local set.
-        let mut inputs = Vec::new();
+        // Pair each request's record-input commitments with its transition by
+        // tcm: requests are pre-order and transitions execution-order, so they
+        // can't be zipped positionally.
+        let mut inputs_by_tcm: HashMap<String, Vec<String>> = HashMap::new();
         for request in authorization.to_vec_deque() {
+            let entry = inputs_by_tcm.entry(request.tcm().to_string()).or_default();
             for input_id in request.input_ids() {
                 if let InputID::Record(commitment, ..) = input_id {
-                    inputs.push(commitment.to_string());
+                    entry.push(commitment.to_string());
                 }
             }
         }
-        Ok(serde_json::to_string(&exclude_local_commitments(inputs, &local))?)
+        // Walk transitions in execution order, building (inputs, outputs) per
+        // transition for the order-sensitive local filter.
+        let mut ordered = Vec::new();
+        for (_, transition) in authorization.transitions() {
+            let inputs =
+                inputs_by_tcm.get(&transition.tcm().to_string()).cloned().unwrap_or_default();
+            let outputs = transition
+                .outputs()
+                .iter()
+                .filter_map(|output| output.commitment().map(|commitment| commitment.to_string()))
+                .collect();
+            ordered.push((inputs, outputs));
+        }
+        Ok(serde_json::to_string(&global_input_commitments(&ordered))?)
     };
     match inner() {
         Ok(commitments) => to_cstring(commitments),
@@ -2782,18 +2803,32 @@ mod tests {
         assert!(!vm.process().read().contains_program(&ProgramID::from_str("solo.aleo").unwrap()));
     }
 
-    // The local-commitment set difference drops exactly the local entries (a
-    // record minted earlier in the same transaction) and preserves input order.
+    // The local filter is order-sensitive, mirroring Inclusion::insert_transition.
     #[test]
-    fn exclude_local_commitments_drops_only_local() {
-        let mut local = HashSet::new();
-        local.insert("c_local".to_string());
-        let inputs =
-            vec!["c_global".to_string(), "c_local".to_string(), "c_global2".to_string()];
+    fn global_input_commitments_is_order_sensitive() {
+        // An earlier transition's output makes a later input local -> dropped.
+        let earlier_output_then_spend = vec![
+            (vec![], vec!["c_local".to_string()]),     // T0 outputs c_local
+            (vec!["c_local".to_string()], vec![]),     // T1 spends it (earlier output)
+        ];
+        assert!(global_input_commitments(&earlier_output_then_spend).is_empty());
+
+        // A LATER transition's output must NOT make an earlier input local: the
+        // input is a real on-chain commitment and still needs its state path.
+        // (This is the case the old all-outputs-minus-all-inputs logic got wrong.)
+        let spend_then_later_output = vec![
+            (vec!["c_chain".to_string()], vec![]),     // T0 spends c_chain (on-chain)
+            (vec![], vec!["c_chain".to_string()]),     // T1 outputs the same commitment
+        ];
         assert_eq!(
-            exclude_local_commitments(inputs, &local),
-            vec!["c_global".to_string(), "c_global2".to_string()]
+            global_input_commitments(&spend_then_later_output),
+            vec!["c_chain".to_string()]
         );
+
+        // A plain global input with unrelated outputs stays global.
+        let global_with_fresh_outputs =
+            vec![(vec!["c_in".to_string()], vec!["c_out".to_string()])];
+        assert_eq!(global_input_commitments(&global_with_fresh_outputs), vec!["c_in".to_string()]);
     }
 
     // On a real authorization, required_commitments returns the global inputs and

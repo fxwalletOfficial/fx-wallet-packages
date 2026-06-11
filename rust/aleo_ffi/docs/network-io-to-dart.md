@@ -22,10 +22,12 @@ the fee API (`get_base_fee_static` / `execution_fee_authorization_static`) now
 takes `program_sources_json` and loads the execution's root program, since
 snarkVM's `execution_cost` reads each transition's program `Stack` (without it a
 non-credits execution returned fee 0 / ""); (2) `required_commitments` now
-subtracts the transaction's own transition outputs from the input commitments,
-excluding a composite program's intra-transaction ("local") record
-(`vm.authorize` already populates the authorization's transitions, so this is
-exact and offline); (3) `add_programs_from_sources` keeps a wall-clock deadline
+excludes a composite program's intra-transaction ("local") record by walking the
+authorization's transitions in execution order (paired to requests by `tcm`) and
+dropping an input only if an *earlier* transition output it — mirroring
+`Inclusion::insert_transition` exactly, not an order-insensitive all-outputs
+subtraction that could drop a real on-chain input matching a *later* output
+(`vm.authorize` already populates the transitions, so this is exact and offline); (3) `add_programs_from_sources` keeps a wall-clock deadline
 over its CPU-bound parse / Stack-build steps — moving HTTP to Dart removed the
 *network* stall, but a hostile closure of large valid programs is still
 uninterruptible CPU work the Dart timeout cannot reach; and (4) added
@@ -194,10 +196,11 @@ set rather than the network.
 
 - `required_commitments(authorization_json) -> JSON [field]` — the **global**
   input-record commitments whose state paths the caller must fetch before
-  proving: the request record inputs minus the transaction's own transition
-  outputs (a record minted earlier in the same transaction is "local" — proving
-  builds its inclusion path itself and the node has no path for it). Empty for
-  public transfers. **Called once per authorization** — both the execution
+  proving: each transition's record inputs, dropping any whose record was output
+  by an *earlier* transition in the same transaction (a "local" record — proving
+  builds its inclusion path itself and the node has no path for it). The filter
+  is applied in execution order (transitions paired to requests by `tcm`), so a
+  later output can't drop an earlier on-chain input. Empty for public transfers. **Called once per authorization** — both the execution
   authorization and (separately) the fee authorization, since a private fee
   spends its own record (see the example flow).
 - `required_imports(program_source) -> JSON [program_id]` — direct imports of a
