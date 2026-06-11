@@ -19,6 +19,7 @@ snarkvm-synthesizer = "=4.5.0"
 aleo-std-storage = "=1.0.3"
 anyhow = "1"
 rand = "0.8.5"
+serde = "1"
 serde_json = "1"
 ureq = { version = "2.7.1", features = ["json"] }
 

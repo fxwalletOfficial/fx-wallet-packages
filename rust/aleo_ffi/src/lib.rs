@@ -19,9 +19,10 @@ use snarkvm_console::network::MainnetV0;
 use snarkvm_console::prelude::*;
 use snarkvm_console::program::{Ciphertext, Identifier, Literal, Plaintext, ProgramID, Record};
 use snarkvm_console::types::Field;
+use snarkvm_console::program::StatePath;
 use snarkvm_ledger_block::{Execution, Fee, Transaction};
-use snarkvm_ledger_query::Query;
-use snarkvm_ledger_store::helpers::memory::{BlockMemory, ConsensusMemory};
+use snarkvm_ledger_query::QueryTrait;
+use snarkvm_ledger_store::helpers::memory::ConsensusMemory;
 use snarkvm_ledger_store::ConsensusStore;
 use snarkvm_synthesizer::process::Authorization;
 use snarkvm_synthesizer::VM;
@@ -298,16 +299,47 @@ fn new_vm() -> anyhow::Result<VM<Net, ConsensusMemory<Net>>> {
     VM::from(ConsensusStore::<Net, ConsensusMemory<Net>>::open(StorageMode::Production)?)
 }
 
-/// Builds a static query by fetching the current state root + height from the
-/// node's REST API at `{url}/{network}` (works regardless of the network-name
-/// path mismatch).
-fn static_query(url: &str, network: &str) -> anyhow::Result<Query<Net, BlockMemory<Net>>> {
-    let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    let state_root = ureq::get(&format!("{base}/latest/stateRoot")).call()?.into_string()?;
-    let state_root = state_root.trim().trim_matches('"');
-    let height = ureq::get(&format!("{base}/latest/height")).call()?.into_string()?;
-    let json = format!(r#"{{"state_root":"{}","height":{}}}"#, state_root, height.trim());
-    Query::try_from(json)
+/// REST query against `{url}/{network}`. snarkVM's own RestQuery derives the
+/// URL path from the network type (MainnetV0 -> `/mainnet`), but Aleo's testnet
+/// runs the network-0 protocol under a `/testnet` path, so we issue the
+/// requests ourselves with the caller-provided network path.
+struct NodeQuery {
+    base: String,
+}
+
+impl NodeQuery {
+    fn new(url: &str, network: &str) -> Self {
+        Self { base: format!("{}/{}", url.trim_end_matches('/'), network) }
+    }
+
+    fn get_json<T: serde::de::DeserializeOwned>(&self, route: &str) -> anyhow::Result<T> {
+        let body = ureq::get(&format!("{}/{route}", self.base)).call()?.into_string()?;
+        Ok(serde_json::from_str(body.trim())?)
+    }
+}
+
+impl QueryTrait<Net> for NodeQuery {
+    fn current_state_root(&self) -> anyhow::Result<<Net as Network>::StateRoot> {
+        self.get_json("latest/stateRoot")
+    }
+
+    fn get_state_path_for_commitment(
+        &self,
+        commitment: &Field<Net>,
+    ) -> anyhow::Result<StatePath<Net>> {
+        self.get_json(&format!("statePath/{commitment}"))
+    }
+
+    fn get_state_paths_for_commitments(
+        &self,
+        commitments: &[Field<Net>],
+    ) -> anyhow::Result<Vec<StatePath<Net>>> {
+        commitments.iter().map(|commitment| self.get_state_path_for_commitment(commitment)).collect()
+    }
+
+    fn current_block_height(&self) -> anyhow::Result<u32> {
+        self.get_json("latest/height")
+    }
 }
 
 /// Current block height from the node (used to select the consensus version).
@@ -328,6 +360,220 @@ fn base_fee_for(execution: &Execution<Net>, url: &str, network: &str) -> anyhow:
     Ok(base_fee)
 }
 
+/// Maps a credits.aleo transfer function to its input list.
+fn transfer_inputs(
+    function: &str,
+    recipient: &str,
+    amount: i64,
+    amount_record: &str,
+) -> Option<Vec<String>> {
+    let amount = format!("{amount}u64");
+    match function {
+        "transfer_public" | "transfer_public_to_private" => {
+            Some(vec![recipient.to_string(), amount])
+        }
+        "transfer_private" | "transfer_private_to_public" => {
+            Some(vec![amount_record.to_string(), recipient.to_string(), amount])
+        }
+        _ => None,
+    }
+}
+
+/// Runs the whole split-proof flow for a credits.aleo function and returns the
+/// assembled transaction: authorize -> execute -> fee authorize -> fee execute
+/// -> assemble. `fee_credits` is the priority fee; empty `fee_record` = public fee.
+fn full_transaction(
+    private_key: &PrivateKey<Net>,
+    function: &str,
+    inputs: Vec<String>,
+    fee_credits: u64,
+    fee_record: &str,
+    url: &str,
+    network: &str,
+) -> anyhow::Result<String> {
+    let vm = new_vm()?;
+    let query = NodeQuery::new(url, network);
+    let rng = &mut rand::thread_rng();
+
+    let authorization = vm.authorize(private_key, "credits.aleo", function, inputs, rng)?;
+    let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
+
+    let execution_id = execution.to_execution_id()?;
+    let base_fee = {
+        let consensus_version = Net::CONSENSUS_VERSION(query.current_block_height()?)?;
+        let process = vm.process();
+        let process = process.read();
+        snarkvm_synthesizer::process::execution_cost(&process, &execution, consensus_version)?.0
+    };
+    let fee_authorization = if fee_record.trim().is_empty() {
+        vm.authorize_fee_public(private_key, base_fee, fee_credits, execution_id, rng)?
+    } else {
+        let record = Record::<Net, Plaintext<Net>>::from_str(fee_record)?;
+        vm.authorize_fee_private(private_key, record, base_fee, fee_credits, execution_id, rng)?
+    };
+    let fee = vm.execute_fee_authorization_raw(fee_authorization, &query, rng)?;
+
+    Ok(Transaction::from_execution(execution, Some(fee))?.to_string())
+}
+
+/// POSTs a transaction to the node, returning the node's response body.
+fn broadcast_to_node(transaction: &str, url: &str, network: &str) -> anyhow::Result<String> {
+    let base = format!("{}/{}", url.trim_end_matches('/'), network);
+    Ok(ureq::post(&format!("{base}/transaction/broadcast"))
+        .set("Content-Type", "application/json")
+        .send_string(transaction)?
+        .into_string()?)
+}
+
+/// Builds a complete credits.aleo transfer transaction (without broadcasting).
+/// Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn build_transaction(
+    private_key: *const c_char,
+    recipient: *const c_char,
+    transfer_type: *const c_char,
+    amount: c_int,
+    fee_credits: c_int,
+    url: *const c_char,
+    amount_record: *const c_char,
+    fee_record: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let function = read_str(transfer_type);
+        let inputs =
+            transfer_inputs(function, read_str(recipient), amount as i64, read_str(amount_record))
+                .ok_or_else(|| anyhow::anyhow!("unsupported transfer type: {function}"))?;
+        full_transaction(
+            &private_key,
+            function,
+            inputs,
+            fee_credits as u64,
+            read_str(fee_record),
+            read_str(url),
+            read_str(network),
+        )
+    };
+    match inner() {
+        Ok(transaction) => to_cstring(transaction),
+        Err(error) => {
+            eprintln!("[build_transaction] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Builds and broadcasts a credits.aleo transfer, returning the node response.
+/// Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn try_transfer(
+    private_key: *const c_char,
+    recipient: *const c_char,
+    transfer_type: *const c_char,
+    amount: c_int,
+    fee_credits: c_int,
+    url: *const c_char,
+    amount_record: *const c_char,
+    fee_record: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let function = read_str(transfer_type);
+        let inputs =
+            transfer_inputs(function, read_str(recipient), amount as i64, read_str(amount_record))
+                .ok_or_else(|| anyhow::anyhow!("unsupported transfer type: {function}"))?;
+        let transaction = full_transaction(
+            &private_key,
+            function,
+            inputs,
+            fee_credits as u64,
+            read_str(fee_record),
+            read_str(url),
+            read_str(network),
+        )?;
+        broadcast_to_node(&transaction, read_str(url), read_str(network))
+    };
+    match inner() {
+        Ok(response) => to_cstring(response),
+        Err(error) => {
+            eprintln!("[try_transfer] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Builds an execution authorization for credits.aleo `join` (merging two
+/// private records). Offline. Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn join_authorization(
+    private_key: *const c_char,
+    record_1: *const c_char,
+    record_2: *const c_char,
+    _url: *const c_char,
+    _network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let inputs = vec![read_str(record_1).to_string(), read_str(record_2).to_string()];
+        let vm = new_vm()?;
+        let authorization =
+            vm.authorize(&private_key, "credits.aleo", "join", inputs, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&authorization)?)
+    };
+    match inner() {
+        Ok(authorization) => to_cstring(authorization),
+        Err(error) => {
+            eprintln!("[join_authorization] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
+/// Builds, proves, and broadcasts a credits.aleo `join` of two private records.
+/// Returns the node response, or "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn try_join(
+    private_key: *const c_char,
+    record_1: *const c_char,
+    record_2: *const c_char,
+    fee_credits: c_int,
+    fee_record: *const c_char,
+    url: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let inputs = vec![read_str(record_1).to_string(), read_str(record_2).to_string()];
+        let transaction = full_transaction(
+            &private_key,
+            "join",
+            inputs,
+            fee_credits as u64,
+            read_str(fee_record),
+            read_str(url),
+            read_str(network),
+        )?;
+        broadcast_to_node(&transaction, read_str(url), read_str(network))
+    };
+    match inner() {
+        Ok(response) => to_cstring(response),
+        Err(error) => {
+            eprintln!("[try_join] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
+
 /// Builds an execution authorization for a credits.aleo transfer. Offline
 /// (credits.aleo is built in). Returns "" on failure.
 ///
@@ -345,15 +591,8 @@ pub unsafe extern "C" fn execution_authorization(
     let result = (|| -> Option<String> {
         let private_key = PrivateKey::<Net>::from_str(read_str(private_key)).ok()?;
         let function = read_str(transfer_type);
-        let recipient = read_str(recipient).to_string();
-        let amount = format!("{}u64", amount as i64);
-        let inputs: Vec<String> = match function {
-            "transfer_public" | "transfer_public_to_private" => vec![recipient, amount],
-            "transfer_private" | "transfer_private_to_public" => {
-                vec![read_str(amount_record).to_string(), recipient, amount]
-            }
-            _ => return None,
-        };
+        let inputs =
+            transfer_inputs(function, read_str(recipient), amount as i64, read_str(amount_record))?;
         let vm = new_vm().ok()?;
         let authorization = vm
             .authorize(&private_key, "credits.aleo", function, inputs, &mut rand::thread_rng())
@@ -376,11 +615,7 @@ pub unsafe extern "C" fn execute_proof(
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        // Aleo's testnet runs the network-0 (Mainnet) protocol but serves under a
-        // `/testnet` REST path, so snarkVM's RestQuery (which derives the path from
-        // the network type) can't reach it. Fetch the state root directly and feed
-        // a static query instead.
-        let query: Query<Net, BlockMemory<Net>> = static_query(read_str(url), read_str(network))?;
+        let query = NodeQuery::new(read_str(url), read_str(network));
         let vm = new_vm()?;
         let (execution, _response) =
             vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
@@ -492,7 +727,7 @@ pub unsafe extern "C" fn execute_fee_proof(
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        let query = static_query(read_str(url), read_str(network))?;
+        let query = NodeQuery::new(read_str(url), read_str(network));
         let vm = new_vm()?;
         let fee = vm.execute_fee_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
         Ok(serde_json::to_string(&fee)?)
