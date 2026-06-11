@@ -79,32 +79,48 @@ yields an invalid query.
 Every proving primitive takes `height` — proving reads `current_block_height`
 for the consensus version, so it cannot be omitted:
 
-- `execute_proof(authorization, height, state_root, state_paths_json)` — build a
-  `StaticQuery::new(height, state_root, paths)` from the inputs; no HTTP.
-- `execute_fee_proof(authorization, height, state_root, state_paths_json)`.
-- `execute_program_proof(authorization, program_sources_json, height, state_root, state_paths_json)`.
+- `execute_proof(authorization, height, state_paths_json, public_state_root)`
+  — builds the `StaticQuery` and proves; no HTTP.
+- `execute_fee_proof(authorization, height, state_paths_json, public_state_root)`.
+- `execute_program_proof(authorization, program_sources_json, height, state_paths_json, public_state_root)`.
 - `get_base_fee(execution, height)` — height in, fee out, pure.
 - `execution_fee_authorization(private_key, execution, fee_credits, fee_record, height)`
   — base fee derived from `height`, pure.
 
-`state_paths_json`: a JSON array of snarkVM state-path strings; Rust parses each,
-keys it by its commitment, and assembles the `HashMap`. Empty for public flows
-(see the state-root snapshot contract below for how `state_root` relates to it).
+**Root handling (no protocol parsing in Dart).** Dart has no `StatePath`
+parser, and Rust parses the paths anyway, so Rust — not Dart — derives the root:
+
+- `state_paths_json` non-empty (private flows): Rust parses each path, verifies
+  they all carry the same `global_state_root`, and builds
+  `StaticQuery::new(height, that_root, map)`. `public_state_root` must be empty
+  (or, if supplied, must equal the derived root) — Rust rejects a mismatch.
+- `state_paths_json` empty (public flows): Rust builds the query from
+  `public_state_root` (the opaque `latest/stateRoot` string Dart fetched).
+
+So Dart only ever passes through opaque strings it got from the node: the path
+strings from `statePaths`, or the root string from `latest/stateRoot`. It never
+parses snarkVM types.
 
 `program_sources_json`: a JSON array of `{id, edition, source}` the caller has
-already fetched (closure included, topologically any order — Rust still
-validates ids and loads imports-before-importers from the supplied set, with the
-existing cycle / id-mismatch / `MAX_PROGRAM_SIZE` checks, now over an in-memory
-set rather than the network).
+already fetched (closure included, any order). Rust validates ids, loads
+imports-before-importers from the supplied set, and applies the existing cycle /
+id-mismatch / `MAX_PROGRAM_SIZE` checks **plus a program-count and total-byte
+budget** (see "Resource budgets survive the move" below) — now over an in-memory
+set rather than the network.
 
 ### New pure helpers (so Dart knows what to fetch)
 
 - `required_commitments(authorization_json) -> JSON [field]` — the input-record
   commitments whose state paths the caller must fetch before proving. Empty for
-  public transfers.
+  public transfers. **Called once per authorization** — both the execution
+  authorization and (separately) the fee authorization, since a private fee
+  spends its own record (see the example flow).
 - `required_imports(program_source) -> JSON [program_id]` — direct imports of a
   program, so Dart can walk the closure it must fetch. (Dart recurses; Rust
   stays a pure per-program function.)
+- `state_root_from_paths(state_paths_json) -> field` — optional convenience if
+  Dart needs the snapshot root for logging/caching; not required for proving
+  (the proving primitives derive it themselves, above).
 
 ### Removed exports
 
@@ -119,23 +135,30 @@ primitives. `broadcast` is deleted (Dart does the POST).
 
 `statePaths?commitments=…` returns paths only, **not** the latest state root, so
 a separately-fetched `latest/stateRoot` can come from a different block than the
-paths. To keep one consistent snapshot, the root is sourced differently per flow
-and Rust verifies it:
+paths. To keep one consistent snapshot, the root is sourced differently per flow,
+and (per finding above) Rust derives and verifies it — Dart passes opaque
+strings only:
 
 - **Private flows (≥1 commitment):** do **not** fetch `latest/stateRoot`. Every
-  returned `StatePath` carries a `global_state_root()`; they must all agree
-  (snarkVM's inclusion prepare already enforces this). Dart derives the snapshot
-  root from the paths and passes it as `state_root`; Rust **rejects** the call
-  if any supplied path's `global_state_root` differs from `state_root` or from
-  the others. This makes the root and the paths a single verified snapshot.
+  returned `StatePath` carries a `global_state_root`; Rust parses the paths,
+  **rejects** the call unless they all agree, and uses that shared root. The
+  root and the paths are thus one verified snapshot with no second fetch to
+  straddle a block.
 - **Public flows (no commitments → no paths):** there is no path to derive from,
-  so Dart fetches `latest/stateRoot` and passes it; `state_paths_json` is empty.
-  Inclusion proving uses this root directly (snarkVM falls back to
-  `current_state_root` when there are no paths).
+  so Dart fetches `latest/stateRoot` and passes it as `public_state_root`;
+  `state_paths_json` is empty. Inclusion proving uses this root directly
+  (snarkVM falls back to `current_state_root` when there are no paths).
 
-`height` is fetched once alongside, and may lag the root by a block without harm
-(it only selects the consensus version); the root↔paths consistency above is the
-part that must be atomic.
+**Height vs the snapshot — not automatically harmless.** `height` selects the
+consensus version, which changes at specific upgrade heights. If `height` and
+the root/paths straddle such an upgrade height, proving applies the wrong rules
+and fails. So height is not "a block of slack for free": the caller must ensure
+`height` maps to the **same consensus version** as the snapshot. Practical rule
+for `AleoNode`: read height, take the snapshot, re-read height; if
+`CONSENSUS_VERSION(h_before) != CONSENSUS_VERSION(h_after)` an upgrade landed
+mid-snapshot — retry. A `consensus_version_for(height) -> u16` helper (pure,
+wrapping `Net::CONSENSUS_VERSION`) lets Dart make this check without hardcoding
+upgrade heights.
 
 ## Dart responsibilities (new)
 
@@ -153,18 +176,59 @@ dependency of `aleo_dart`):
   suspenders outer guard, never described as the cancellation mechanism.
 
 The existing `AleoProgram` Dart methods keep their signatures where possible by
-orchestrating internally: e.g. `tryTransfer(...)` becomes
-`authorize → node.statePaths(required_commitments) → executeProof →
-node.height → feeAuthorize → executeFeeProof → buildTransactionOffline →
-node.broadcast`, so app-facing call sites change little.
+orchestrating internally. The full flow has two independent inclusion snapshots
+— one for the execution, one for the fee — because a **private fee spends its
+own record**, so its proof needs its own state paths. `tryTransfer(...)` becomes:
+
+1. `height = node.height()` (up front — every proof needs it; re-checked for
+   consensus-version stability per the snapshot contract).
+2. `exec = executionAuthorization(...)`.
+3. `execPaths = node.statePaths(required_commitments(exec))` — empty for a
+   public transfer.
+4. `executionProof = executeProof(exec, height, execPaths, publicRoot)` where
+   `publicRoot = execPaths.isEmpty ? node.stateRoot() : ""`.
+5. `feeAuth = executionFeeAuthorization(..., height)`.
+6. `feePaths = node.statePaths(required_commitments(feeAuth))` — **non-empty
+   when the fee is private** (spends a fee record), empty for a public fee.
+7. `feeProof = executeFeeProof(feeAuth, height, feePaths, feePublicRoot)` with
+   `feePublicRoot = feePaths.isEmpty ? node.stateRoot() : ""`.
+8. `tx = buildTransactionOffline(executionProof, feeProof)`.
+9. `node.broadcast(tx)`.
+
+Steps 3–4 and 6–7 are the same snapshot contract applied twice, to two
+different commitment sets. So app-facing call sites change little, but the
+orchestration is not a single linear fetch — the fee path is its own snapshot.
+
+## Resource budgets survive the move
+
+Moving HTTP to Dart does **not** remove the malicious-node risk it was added to
+contain: a node can still answer an endless *acyclic* chain of distinct valid
+programs. Now the Dart closure walk would fetch forever, and the assembled
+`program_sources_json` would grow without limit — `MAX_PROGRAM_SIZE` caps one
+program, not the set. So the **count + total-byte budget is kept, on both
+sides**, even though the HTTP/threading/deadline machinery is deleted:
+
+- **Dart (fetch side):** the closure walk via `required_imports` enforces a
+  max-program-count and cumulative-byte budget (and a wall-clock budget, now
+  natural with `dio`/`CancelToken`); it stops and errors rather than fetch an
+  unbounded chain.
+- **Rust (parse side):** parsing `program_sources_json` re-checks a program
+  count cap and a total-byte cap (not just per-program `MAX_PROGRAM_SIZE`),
+  since Rust must not trust the caller's set blindly either.
+
+Only the *time/deadline* and *worker-thread* parts of the budget are dropped
+(no blocking I/O left in Rust to bound); the *size* parts persist.
 
 ## Deleted from Rust
 
 `ureq` dependency; `http_agent`, `http_get`, `http_get_until`, `http_post`,
-`request_once_bounded`, `InflightPermit`/`MAX_INFLIGHT_REQUESTS`; `LoadBudget`
-and the whole import-load budget; `NodeQuery`'s HTTP impl (replaced by building
-`StaticQuery` from caller JSON); `node_latest_edition`, `add_program_from_node`
-(network), `broadcast_to_node`. The worker-thread/deadline tests go with them.
+`request_once_bounded`, `InflightPermit`/`MAX_INFLIGHT_REQUESTS`; the
+*time/thread* part of `LoadBudget` (the wall-clock deadline, `get_once_bounded`
+plumbing) — **but not** its size budget, which moves to the `program_sources_json`
+parser per above; `NodeQuery`'s HTTP impl (replaced by building `StaticQuery`
+from caller JSON); `node_latest_edition`, `add_program_from_node` (network),
+`broadcast_to_node`. The worker-thread/deadline tests go with them; the
+program-count/byte-budget tests are kept and re-pointed at the parser.
 
 Result: the Rust crate makes **zero network calls** and links no HTTP stack —
 which also simplifies the pending iOS/Android cross-compile (no curl/OpenSSL or
@@ -174,8 +238,11 @@ rustls needed; see the GPL-removal plan).
 
 1. **Add pure primitives + helpers alongside the existing functions** (no
    removals). New exports: `required_commitments`, `required_imports`,
-   `*_static` proving variants, `get_base_fee_at(height)`. CI keeps the old
-   path green.
+   `state_root_from_paths`, `consensus_version_for(height)`, the height-taking
+   proving variants (`execute_proof`/`execute_fee_proof`/`execute_program_proof`
+   with the `height, state_paths_json, public_state_root` shape), and a
+   `program_sources_json` parser carrying the count/byte budget. CI keeps the
+   old path green.
 2. **Move orchestration to Dart**: implement `AleoNode` + rewrite `AleoProgram`
    orchestration onto the pure primitives; keep method signatures stable.
    Parity-test new Dart pipeline vs the old FFI one against testnet.
@@ -192,6 +259,15 @@ rustls needed; see the GPL-removal plan).
   paths agree). The `required_commitments` helper must return *exactly* the set
   snarkVM will ask for during proving — to be pinned by a parity test against
   the current `NodeQuery` path before deleting it.
+- **API churn**: app code calling the one-call functions directly (not via the
+  Dart wrapper) would change. Mitigated by keeping `AleoProgram` method
+  signatures stable in step 2.
+- **Two snapshots per transaction**: the execution and a private fee each need
+  their own inclusion snapshot (different commitment sets). The orchestration
+  must not share one snapshot across both — pinned by a private-fee parity test.
+- **Resource budget parity**: the count/byte budget must reject the same
+  oversized closures Dart's walk does; tested on both sides against a synthetic
+  oversized set.
 - **API churn**: app code calling the one-call functions directly (not via the
   Dart wrapper) would change. Mitigated by keeping `AleoProgram` method
   signatures stable in step 2.
