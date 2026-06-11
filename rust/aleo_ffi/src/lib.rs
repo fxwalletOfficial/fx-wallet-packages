@@ -2512,6 +2512,71 @@ mod tests {
         assert!(static_query(123, "", "").is_err(), "public flow needs a root");
     }
 
+    // The private-flow StaticQuery path is exercised with real (sampled)
+    // StatePaths, so it is covered offline ahead of the phase-2 testnet parity
+    // run (full SNARK proving still needs a live node + proving keys).
+    use snarkvm_console::network::prelude::TestRng;
+    use snarkvm_console::program::state_path::test_helpers::sample_global_state_path;
+
+    // The load-bearing assumption execute_proof_static relies on: a *global*
+    // StatePath's transition-leaf id IS the record commitment, so static_query
+    // can key the query map by it and proving finds each path by commitment.
+    #[test]
+    fn static_query_private_flow_derives_root_and_keys_by_commitment() {
+        let mut rng = TestRng::default();
+        let commitment = Field::<Net>::new(Uniform::rand(&mut rng));
+        let path = sample_global_state_path::<Net>(Some(commitment), &mut rng).unwrap();
+        // The identity the keying depends on.
+        assert_eq!(path.transition_leaf().id(), commitment);
+        let root = path.global_state_root();
+        let json = serde_json::to_string(&vec![path]).unwrap();
+
+        let query = static_query(99, &json, "").unwrap();
+        assert_eq!(query.current_block_height().unwrap(), 99);
+        // Root is derived from the path, not fetched separately.
+        assert_eq!(query.current_state_root().unwrap().to_string(), root.to_string());
+        // Proving looks the path up by commitment exactly like this.
+        assert!(query.get_state_path_for_commitment(&commitment).is_ok());
+        // An unknown commitment is not found -> proving fails closed.
+        let unknown = Field::<Net>::new(Uniform::rand(&mut rng));
+        assert!(query.get_state_path_for_commitment(&unknown).is_err());
+    }
+
+    // Paths from different blocks (different global state roots) are rejected,
+    // not silently proved against a mixed root.
+    #[test]
+    fn static_query_private_flow_rejects_disagreeing_roots() {
+        let mut rng = TestRng::default();
+        let p1 = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let p2 = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![p1, p2]).unwrap();
+        let error = static_query(1, &json, "").map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("disagree on the global state root"), "got: {error}");
+    }
+
+    // A supplied public_state_root that disagrees with the paths' derived root
+    // is rejected (the snapshot must be internally consistent).
+    #[test]
+    fn static_query_private_flow_rejects_mismatched_public_root() {
+        let mut rng = TestRng::default();
+        let path = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![path]).unwrap();
+        let wrong = "sr1dz06ur5spdgzkguh4pr42mvft6u3nwsg5drh9rdja9v8jpcz3czsls9geg";
+        let error = static_query(1, &json, wrong).map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("disagrees"), "got: {error}");
+    }
+
+    // A repeated commitment would silently drop a path from the map, so it is
+    // rejected outright rather than proving with a missing inclusion.
+    #[test]
+    fn static_query_private_flow_rejects_duplicate_commitment() {
+        let mut rng = TestRng::default();
+        let path = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![path.clone(), path]).unwrap();
+        let error = static_query(1, &json, "").map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("duplicate state path"), "got: {error}");
+    }
+
     // The state-paths byte budget rejects an oversized blob before parsing.
     #[test]
     fn state_paths_byte_budget_rejects_oversized() {
