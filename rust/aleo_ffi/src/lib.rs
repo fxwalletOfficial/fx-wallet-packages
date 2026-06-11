@@ -20,6 +20,12 @@ use snarkvm_console::prelude::*;
 use snarkvm_console::program::{Ciphertext, Identifier, Literal, Plaintext, ProgramID, Record};
 use snarkvm_console::types::Field;
 use snarkvm_ledger_block::{Execution, Fee, Transaction};
+use snarkvm_ledger_query::Query;
+use snarkvm_ledger_store::helpers::memory::{BlockMemory, ConsensusMemory};
+use snarkvm_ledger_store::ConsensusStore;
+use snarkvm_synthesizer::process::Authorization;
+use snarkvm_synthesizer::VM;
+use aleo_std_storage::StorageMode;
 
 /// Aleo keys/addresses are encoded identically across networks (same curve,
 /// network-independent bech32 HRPs), so the concrete network is irrelevant to
@@ -285,6 +291,91 @@ pub unsafe extern "C" fn decrypt_to_private_key(
 // ----------------------------------------------------------------------------
 // Group 3: programs / proofs / transactions.
 // ----------------------------------------------------------------------------
+
+/// A fresh in-memory VM (credits.aleo and the other built-in programs are
+/// bundled in snarkVM, so no network fetch is needed to authorize/execute them).
+fn new_vm() -> anyhow::Result<VM<Net, ConsensusMemory<Net>>> {
+    VM::from(ConsensusStore::<Net, ConsensusMemory<Net>>::open(StorageMode::Production)?)
+}
+
+/// Builds a static query by fetching the current state root + height from the
+/// node's REST API at `{url}/{network}` (works regardless of the network-name
+/// path mismatch).
+fn static_query(url: &str, network: &str) -> anyhow::Result<Query<Net, BlockMemory<Net>>> {
+    let base = format!("{}/{}", url.trim_end_matches('/'), network);
+    let state_root = ureq::get(&format!("{base}/latest/stateRoot")).call()?.into_string()?;
+    let state_root = state_root.trim().trim_matches('"');
+    let height = ureq::get(&format!("{base}/latest/height")).call()?.into_string()?;
+    let json = format!(r#"{{"state_root":"{}","height":{}}}"#, state_root, height.trim());
+    Query::try_from(json)
+}
+
+/// Builds an execution authorization for a credits.aleo transfer. Offline
+/// (credits.aleo is built in). Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execution_authorization(
+    private_key: *const c_char,
+    recipient: *const c_char,
+    transfer_type: *const c_char,
+    amount: c_int,
+    _url: *const c_char,
+    amount_record: *const c_char,
+    _network: *const c_char,
+) -> *mut c_char {
+    let result = (|| -> Option<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key)).ok()?;
+        let function = read_str(transfer_type);
+        let recipient = read_str(recipient).to_string();
+        let amount = format!("{}u64", amount as i64);
+        let inputs: Vec<String> = match function {
+            "transfer_public" | "transfer_public_to_private" => vec![recipient, amount],
+            "transfer_private" | "transfer_private_to_public" => {
+                vec![read_str(amount_record).to_string(), recipient, amount]
+            }
+            _ => return None,
+        };
+        let vm = new_vm().ok()?;
+        let authorization = vm
+            .authorize(&private_key, "credits.aleo", function, inputs, &mut rand::thread_rng())
+            .ok()?;
+        serde_json::to_string(&authorization).ok()
+    })();
+    to_cstring(result.unwrap_or_default())
+}
+
+/// Generates the execution proof for an authorization (the patched
+/// `execute_authorization_raw`). Queries `url`/`network` for the state root.
+/// Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_proof(
+    url: *const c_char,
+    authorization: *const c_char,
+    network: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
+        // Aleo's testnet runs the network-0 (Mainnet) protocol but serves under a
+        // `/testnet` REST path, so snarkVM's RestQuery (which derives the path from
+        // the network type) can't reach it. Fetch the state root directly and feed
+        // a static query instead.
+        let query: Query<Net, BlockMemory<Net>> = static_query(read_str(url), read_str(network))?;
+        let vm = new_vm()?;
+        let (execution, _response) =
+            vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&execution)?)
+    };
+    match inner() {
+        Ok(execution) => to_cstring(execution),
+        Err(error) => {
+            eprintln!("[execute_proof] {error:?}");
+            to_cstring(String::new())
+        }
+    }
+}
 
 /// Assembles a transaction from a serialized execution proof and fee proof
 /// (the split-proof flow). Deterministic; returns "" on failure.

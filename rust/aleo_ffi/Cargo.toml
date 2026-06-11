@@ -13,5 +13,16 @@ crate-type = ["cdylib"]
 [dependencies]
 snarkvm-console = "=4.5.0"
 snarkvm-ledger-block = "=4.5.0"
+snarkvm-ledger-store = "=4.5.0"
+snarkvm-ledger-query = "=4.5.0"
+snarkvm-synthesizer = "=4.5.0"
+aleo-std-storage = "=1.0.3"
+anyhow = "1"
 rand = "0.8.5"
 serde_json = "1"
+ureq = { version = "2.7.1", features = ["json"] }
+
+# Expose VM::execute_authorization_raw / execute_fee_authorization_raw (private
+# upstream) for the split-proof flow. Apache-2.0; verbatim + a 2-line pub patch.
+[patch.crates-io]
+snarkvm-synthesizer = { path = "../vendor/snarkvm-synthesizer-4.5.0" }
