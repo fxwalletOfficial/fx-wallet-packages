@@ -63,25 +63,33 @@ StaticQuery::new(block_height: u32,
                  state_paths: HashMap<Field<N>, StatePath<N>>)
 ```
 
-`execute_authorization_raw` / `execute_fee_authorization_raw` only call
-`current_state_root` and `get_state_paths_for_commitments` on the query, both of
-which `StaticQuery` answers from its preloaded data. So proving is fully offline
-once the caller supplies `{height, state_root, state_paths}`.
+`execute_authorization_raw` / `execute_fee_authorization_raw` call
+`current_state_root`, `get_state_paths_for_commitments`, **and
+`current_block_height`** on the query (height selects the consensus version and
+feeds inclusion `prepare`), all of which `StaticQuery` answers from its
+preloaded data. So proving is fully offline once the caller supplies
+`{height, state_root, state_paths}` — note `height` is required, not optional:
+`StaticQuery::new` takes it as its first argument and a wrong/absent height
+yields an invalid query.
 
 ## New FFI shape
 
 ### Pure primitives (replace `url`/`network` with pre-fetched data)
 
-- `execute_proof(authorization, state_root, state_paths_json)` — build a
-  `StaticQuery` from the inputs; no HTTP.
-- `execute_fee_proof(authorization, state_root, state_paths_json)`.
-- `execute_program_proof(authorization, program_sources_json, state_root, state_paths_json)`.
+Every proving primitive takes `height` — proving reads `current_block_height`
+for the consensus version, so it cannot be omitted:
+
+- `execute_proof(authorization, height, state_root, state_paths_json)` — build a
+  `StaticQuery::new(height, state_root, paths)` from the inputs; no HTTP.
+- `execute_fee_proof(authorization, height, state_root, state_paths_json)`.
+- `execute_program_proof(authorization, program_sources_json, height, state_root, state_paths_json)`.
 - `get_base_fee(execution, height)` — height in, fee out, pure.
 - `execution_fee_authorization(private_key, execution, fee_credits, fee_record, height)`
   — base fee derived from `height`, pure.
 
 `state_paths_json`: a JSON array of snarkVM state-path strings; Rust parses each,
-keys it by its commitment, and assembles the `HashMap`. Empty for public flows.
+keys it by its commitment, and assembles the `HashMap`. Empty for public flows
+(see the state-root snapshot contract below for how `state_root` relates to it).
 
 `program_sources_json`: a JSON array of `{id, edition, source}` the caller has
 already fetched (closure included, topologically any order — Rust still
@@ -107,14 +115,42 @@ from Rust and **re-implemented in Dart** as compositions of the pure primitives
 `contract_fee_execution` likewise become Dart compositions over the program-proof
 primitives. `broadcast` is deleted (Dart does the POST).
 
+## State-root snapshot contract
+
+`statePaths?commitments=…` returns paths only, **not** the latest state root, so
+a separately-fetched `latest/stateRoot` can come from a different block than the
+paths. To keep one consistent snapshot, the root is sourced differently per flow
+and Rust verifies it:
+
+- **Private flows (≥1 commitment):** do **not** fetch `latest/stateRoot`. Every
+  returned `StatePath` carries a `global_state_root()`; they must all agree
+  (snarkVM's inclusion prepare already enforces this). Dart derives the snapshot
+  root from the paths and passes it as `state_root`; Rust **rejects** the call
+  if any supplied path's `global_state_root` differs from `state_root` or from
+  the others. This makes the root and the paths a single verified snapshot.
+- **Public flows (no commitments → no paths):** there is no path to derive from,
+  so Dart fetches `latest/stateRoot` and passes it; `state_paths_json` is empty.
+  Inclusion proving uses this root directly (snarkVM falls back to
+  `current_state_root` when there are no paths).
+
+`height` is fetched once alongside, and may lag the root by a block without harm
+(it only selects the consensus version); the root↔paths consistency above is the
+part that must be atomic.
+
 ## Dart responsibilities (new)
 
-A small `AleoNode` Dart class owns all node I/O with `dio`/`http`:
+A small `AleoNode` Dart class owns all node I/O with **`dio`** (already a
+dependency of `aleo_dart`):
 
 - `latestHeight()`, `latestStateRoot()`, `statePaths(commitments)`,
   `programSource(id)` (+ closure walk via `required_imports`), `broadcast(tx)`.
-- Real timeouts / retries / cancellation via `Future.timeout`, `CancelToken` —
-  where they are natural and correct.
+- **Real cancellation, not just `Future.timeout`.** `Future.timeout` only stops
+  *awaiting* — the underlying socket keeps running, which would recreate the
+  abandoned-worker resource leak we are leaving Rust to escape. So every request
+  carries a `dio` `CancelToken`; on timeout we `cancelToken.cancel()` (which
+  aborts the HTTP request), and `dio`'s own `connectTimeout` / `receiveTimeout`
+  bound the connect and read phases. `Future.timeout` is at most a belt-and-
+  suspenders outer guard, never described as the cancellation mechanism.
 
 The existing `AleoProgram` Dart methods keep their signatures where possible by
 orchestrating internally: e.g. `tryTransfer(...)` becomes
@@ -150,12 +186,12 @@ rustls needed; see the GPL-removal plan).
 
 ## Open questions / risks
 
-- **State-path correctness across blocks**: Dart must fetch state root + all
-  state paths atomically (one batch `statePaths?commitments=`, as the in-Rust
-  fix already does) so every path shares one global root. The
-  `required_commitments` helper must return *exactly* the set snarkVM will ask
-  for during proving — to be pinned by a parity test against the current
-  `NodeQuery` path before deleting it.
+- **State-path correctness across blocks**: handled by the state-root snapshot
+  contract above (derive the root from the batch `statePaths` response for
+  private flows; fetch it separately only for public ones; Rust verifies the
+  paths agree). The `required_commitments` helper must return *exactly* the set
+  snarkVM will ask for during proving — to be pinned by a parity test against
+  the current `NodeQuery` path before deleting it.
 - **API churn**: app code calling the one-call functions directly (not via the
   Dart wrapper) would change. Mitigated by keeping `AleoProgram` method
   signatures stable in step 2.

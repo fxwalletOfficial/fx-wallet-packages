@@ -440,7 +440,11 @@ fn request_once_bounded(
     let request_timeout = budget.min(HTTP_REQUEST_TIMEOUT);
     let url = url.to_string();
     let (tx, rx) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
+    // `Builder::spawn`, not `thread::spawn`: spawning panics on OS thread
+    // exhaustion, and a panic across this `extern "C"` boundary would abort the
+    // host app. Turn the failure into an error instead. (On `Err` the closure —
+    // and the permit it captured — is dropped, releasing the slot.)
+    std::thread::Builder::new().name("aleo-ffi-http".into()).spawn(move || {
         // The permit rides with the worker, so the slot is held until the
         // thread truly ends — even after the caller has abandoned us.
         let _permit = permit;
@@ -458,7 +462,8 @@ fn request_once_bounded(
         })();
         // The receiver is gone if we already timed out; that is expected.
         let _ = tx.send(outcome);
-    });
+    })
+    .map_err(|e| anyhow::anyhow!("could not spawn request worker: {e}"))?;
     match rx.recv_timeout(budget) {
         Ok(outcome) => outcome,
         Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
