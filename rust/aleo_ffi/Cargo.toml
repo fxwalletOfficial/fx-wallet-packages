@@ -1,0 +1,17 @@
+[package]
+name = "aleo_ffi"
+version = "0.1.0"
+authors = ["fx wallet <www.fxwallet.com>"]
+description = "Apache-2.0 clean-room FFI bindings for Aleo, built directly on snarkVM (no GPL Aleo SDK)."
+license = "Apache-2.0"
+edition = "2021"
+
+[lib]
+name = "aleo_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+snarkvm-console = "=4.5.0"
+snarkvm-ledger-block = "=4.5.0"
+rand = "0.8.5"
+serde_json = "1"
