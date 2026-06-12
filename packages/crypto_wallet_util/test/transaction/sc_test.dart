@@ -26,6 +26,15 @@ void main() async {
   const expectedDigest =
       'c191c3f2478833e66eb8911038f7fbe4f1810ec16cb3f0628c0ccfe7a4bc2f4d';
 
+  // The native FFI library is only built for some platforms. Where it isn't
+  // available (e.g. Linux CI), skip the FFI cases instead of failing.
+  String? ffiSkip;
+  try {
+    await ScGoFfiBridge.create();
+  } catch (_) {
+    ffiSkip = 'native SC library unavailable on this platform';
+  }
+
   // The two bridges must behave identically; run the same suite against each.
   final bridges = <String, Future<ScWasmBridge> Function()>{
     'ScGoFfiBridge': () => ScGoFfiBridge.create(),
@@ -35,6 +44,7 @@ void main() async {
   for (final entry in bridges.entries) {
     final name = entry.key;
     final makeBridge = entry.value;
+    final skip = name == 'ScGoFfiBridge' ? ffiSkip : null;
 
     group('sc digest [$name]', () {
       test('produces the expected digest from FIXED_UNSIGNED_TX', () async {
@@ -47,7 +57,7 @@ void main() async {
         watch.stop();
         print('[sc_test/$name] digest: ${watch.elapsedMilliseconds} ms');
       });
-    });
+    }, skip: skip);
 
     group('sc sign & verify [$name]', () {
       test('signs the digests and verifies', () async {
@@ -78,6 +88,6 @@ void main() async {
 
         expect(() => ScTxSigner(wallet, txData).sign(), throwsStateError);
       });
-    });
+    }, skip: skip);
   }
 }
