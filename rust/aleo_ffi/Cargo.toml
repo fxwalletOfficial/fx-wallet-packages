@@ -22,7 +22,6 @@ anyhow = "1"
 rand = "0.8.5"
 serde = "1"
 serde_json = "1"
-ureq = { version = "2.7.1", features = ["json"] }
 
 [dev-dependencies]
 # Enables snarkVM's `state_path::test_helpers::sample_global_state_path`, so the
