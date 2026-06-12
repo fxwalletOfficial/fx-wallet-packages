@@ -1,7 +1,12 @@
 # Design: move network I/O out of `aleo_ffi` into Dart
 
-Status: **phase 1 implemented** (the `_static` exports + helpers; old exports
-untouched). Phases 2–4 not started.
+Status: **phase 2 implemented** — phase 1 shipped the `_static` exports +
+helpers (old exports untouched); phase 2 adds the Dart `AleoNode` (all node I/O,
+with `dio` + real `CancelToken` cancellation), rewrites the `AleoProgram`
+orchestration onto the pure primitives, and lands the Rust exact-match guard
+(`checked_static_query`: the supplied state paths must equal exactly
+`required_commitments`). Phases 3–4 (delete the old in-Rust network code; drop
+the proving-parameter `curl`/OpenSSL download) not started.
 Owner: aleo_ffi
 Supersedes: the in-Rust HTTP hardening accreted across PR #51 review rounds 5–13.
 
@@ -52,11 +57,14 @@ don't cover it.
 The following are **intentionally deferred** — surfaced by a high-effort
 self-review, none blocking, all sequenced to a later phase:
 
-- **No exact-match of state paths to `required_commitments`.** The proving
-  primitives rely on a byte+entry budget plus `StaticQuery`'s missing-path
-  fail-closed, not this spec's "the parsed paths' commitment set exactly equals
-  `required_commitments`". Pinned by the phase-2 parity test before the old node
-  path is deleted.
+- ~~**No exact-match of state paths to `required_commitments`.**~~ **Done in
+  phase 2.** The three proving primitives now build their query through
+  `checked_static_query`, which requires the supplied paths' commitment set to
+  equal exactly `global_commitment_set(authorization)` — rejecting an *extra*
+  padded path (the budget bounds size, not relevance) as well as a missing one.
+  Covered offline by `checked_static_query_*` Rust tests (real sampled
+  `StatePath`s keyed by a private transfer's actual commitment) and, through the
+  FFI, by `aleo_required_commitments_test.dart`.
 - **End-to-end SNARK proving is only partly covered.** `execute_proof_static`
   for a *public* transfer is proved end-to-end (the `#[ignore]`d
   `execute_proof_static_public_transfer_end_to_end`, run with proving keys), and
@@ -225,12 +233,13 @@ response buffer or Rust's serde. Bounds, both sides:
   most any execution can require). `public_state_root` is length-checked before
   parsing. A missing path fails closed (proving's `get_state_path_for_commitment`
   errors).
-- *Rust (parse side), phase-2 target (not yet implemented):* additionally require
-  the parsed paths' commitment set to **exactly equal
-  `required_commitments(authorization)`** — no extra, no missing. This is a
+- *Rust (parse side), phase 2 (implemented):* `checked_static_query`
+  additionally requires the parsed paths' commitment set to **exactly equal
+  `global_commitment_set(authorization)`** — no extra, no missing. This is a
   stronger correctness check (prove inclusion for exactly the spent records) and
-  a tighter, protocol-grounded bound. Pinned by the phase-2 parity test before the
-  old node path is deleted (see deferred items).
+  a tighter, protocol-grounded bound. The Dart fetch side asks for exactly
+  `required_commitments`, so the two agree by construction; the guard is what
+  stops an untrusted node from padding the response.
 
 `program_sources_json`: a JSON array of `{id, edition, source}` the caller has
 already fetched (closure included, any order). Rust validates ids, loads
@@ -445,9 +454,17 @@ behaviour.
    resource budgets, and `program_authorization_static` (the pure authorize
    primitive for arbitrary programs). The old `execute_proof` etc. stay exactly
    as they are, so CI and current Dart keep working.
-2. **Move orchestration to Dart**: implement `AleoNode` + rewrite `AleoProgram`
-   orchestration onto the pure primitives; keep method signatures stable.
-   Parity-test new Dart pipeline vs the old FFI one against testnet.
+2. **Move orchestration to Dart** *(done)*: `AleoNode`
+   (`packages/aleo_dart/lib/src/aleo_node.dart`) owns all node I/O with `dio` +
+   `CancelToken`; `AleoProgram` (`aleo_programs.dart`) composes the pure
+   primitives over it, pinning one consensus version across the whole transfer
+   (a mid-flow upgrade restarts the build). Public method signatures unchanged.
+   Plus the Rust exact-match guard (above). Offline-tested: `aleo_node_test.dart`
+   (the whole node class against a local `HttpServer`), `aleo_required_commitments_test.dart`,
+   and the `checked_static_query_*` Rust tests. End-to-end SNARK proving (the
+   private flow, fee, program paths) and the full live-node parity remain a
+   manual run (`test/transfer/aleo_phase2_e2e.dart`), still blocked on a live
+   testnet with includable transactions.
 3. **Delete the in-Rust network code** and the now-unused exports once Dart no
    longer calls them; drop `ureq`.
 4. **Remove the proving-parameter network dependency + re-point cross-compile**:
