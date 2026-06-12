@@ -38,11 +38,14 @@ typedef TypeJoinAuthorization = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>,
 
 // --- Pure primitives (node I/O lives in AleoNode) ----------------------------
 // These take no `network` argument: they compute over pre-fetched data and
-// issue no node RPC. The proving variants still synchronously download snarkVM
-// proving parameters on a cold cache (a separate, phase-4 concern). Phase 3
-// deleted the old blocking-HTTP exports, so these (shipped under temporary
-// `*_static` Rust symbols in phase 1) now bind the canonical Rust names; the
-// Dart method names keep the `Static` suffix as an internal label.
+// issue no node RPC. The `_static` proving variants still synchronously download
+// snarkVM proving parameters on a cold cache (a separate, phase-4 concern).
+// Phase 3 deleted the old blocking-HTTP exports; these keep their `_static` Rust
+// symbol names. Renaming them to the now-free canonical names is deferred to the
+// phase-4 lib redistribution: reusing a freed name whose ABI differs in an
+// already-distributed prebuilt library would turn a clean missing-symbol error
+// into a silent ABI mismatch, so the rename must land atomically with a
+// rebuilt/redistributed library (+ an ABI-version guard).
 
 /// One `Pointer<Utf8>` in, one out — the shape of `required_commitments`,
 /// `required_imports`, and `state_root_from_paths`.
@@ -51,13 +54,13 @@ typedef TypeOneArgString = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>);
 typedef TypeConsensusVersionForRust = ffi.Uint16 Function(ffi.Uint32);
 typedef TypeConsensusVersionForDart = int Function(int);
 
-// get_base_fee(execution, program_sources_json, height) -> u64
+// get_base_fee_static(execution, program_sources_json, height) -> u64
 typedef TypeGetBaseFeeStaticInRust = ffi.Uint64 Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Uint32);
 typedef TypeGetBaseFeeStaticInDart = int Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int);
 
-// execution_fee_authorization(
+// execution_fee_authorization_static(
 //   private_key, execution, fee_credits, fee_record, program_sources_json, height)
 typedef TypeExecutionFeeAuthStaticInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
@@ -74,14 +77,14 @@ typedef TypeExecutionFeeAuthStaticInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     int);
 
-// execute_proof / execute_fee_proof(
+// execute_proof_static / execute_fee_proof_static(
 //   authorization, height, state_paths_json, public_state_root)
 typedef TypeExecuteProofStaticInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Uint32, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 typedef TypeExecuteProofStaticInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, int, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
-// execute_program_proof(
+// execute_program_proof_static(
 //   authorization, program_sources_json, height, state_paths_json, public_state_root)
 typedef TypeExecuteProgramProofStaticInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
@@ -93,7 +96,7 @@ typedef TypeExecuteProgramProofStaticInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int, ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
-// program_authorization(
+// program_authorization_static(
 //   private_key, program_id, function_name, arguments, program_sources_json)
 typedef TypeProgramAuthStatic = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
@@ -224,7 +227,7 @@ class ProgramsRustFFI {
     int height,
   ) {
     final fn = dyLib.lookupFunction<TypeGetBaseFeeStaticInRust,
-        TypeGetBaseFeeStaticInDart>('get_base_fee');
+        TypeGetBaseFeeStaticInDart>('get_base_fee_static');
     return fn(execution, programSources, height);
   }
 
@@ -239,7 +242,7 @@ class ProgramsRustFFI {
     int height,
   ) {
     final fn = dyLib.lookupFunction<TypeExecutionFeeAuthStaticInRust,
-        TypeExecutionFeeAuthStaticInDart>('execution_fee_authorization');
+        TypeExecutionFeeAuthStaticInDart>('execution_fee_authorization_static');
     return fn(privateKey, execution, feeCredits, feeRecord, programSources,
         height);
   }
@@ -253,7 +256,7 @@ class ProgramsRustFFI {
     ffi.Pointer<Utf8> publicStateRoot,
   ) {
     final fn = dyLib.lookupFunction<TypeExecuteProofStaticInRust,
-        TypeExecuteProofStaticInDart>('execute_proof');
+        TypeExecuteProofStaticInDart>('execute_proof_static');
     return fn(authorization, height, statePathsJson, publicStateRoot);
   }
 
@@ -266,7 +269,7 @@ class ProgramsRustFFI {
     ffi.Pointer<Utf8> publicStateRoot,
   ) {
     final fn = dyLib.lookupFunction<TypeExecuteProofStaticInRust,
-        TypeExecuteProofStaticInDart>('execute_fee_proof');
+        TypeExecuteProofStaticInDart>('execute_fee_proof_static');
     return fn(authorization, height, statePathsJson, publicStateRoot);
   }
 
@@ -280,7 +283,7 @@ class ProgramsRustFFI {
     ffi.Pointer<Utf8> publicStateRoot,
   ) {
     final fn = dyLib.lookupFunction<TypeExecuteProgramProofStaticInRust,
-        TypeExecuteProgramProofStaticInDart>('execute_program_proof');
+        TypeExecuteProgramProofStaticInDart>('execute_program_proof_static');
     return fn(
         authorization, programSources, height, statePathsJson, publicStateRoot);
   }
@@ -297,7 +300,7 @@ class ProgramsRustFFI {
   ) {
     final fn =
         dyLib.lookupFunction<TypeProgramAuthStatic, TypeProgramAuthStatic>(
-            'program_authorization');
+            'program_authorization_static');
     return fn(privateKey, programId, functionName, arguments, programSources);
   }
 }

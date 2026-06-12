@@ -6,13 +6,14 @@ with `dio` + real `CancelToken` cancellation), rewrites the `AleoProgram`
 orchestration onto the pure primitives, and lands the Rust exact-match guard
 (`checked_static_query`: the supplied state paths must equal exactly
 `required_commitments`); phase 3 deletes the now-unused in-Rust node-RPC code
-(the 12 network exports + the HTTP machinery), drops the `ureq` dependency, and
-renames the `_static` proving/fee exports to canonical names. The FFI surface is
-now 29 functions + `free_string` and makes **zero node RPC calls**. Phase 4 (drop
-the proving-parameter `curl`/OpenSSL download) is not started — see "Proving
-parameters": the crate still links `curl`/`openssl-sys` for that (and `ureq`
-remains transitively via `snarkvm-ledger-query`, see "Result"), so phase 3 is
-"no node RPC", not "no HTTP stack".
+(the 12 network exports + the HTTP machinery) and drops the `ureq` dependency.
+The phase-1 `_static` proving/fee exports keep their names (the canonical rename
+is deferred to phase 4's lib redistribution — see "Deleted from Rust"). The FFI
+surface is now 29 functions + `free_string` and makes **zero node RPC calls**.
+Phase 4 (drop the proving-parameter `curl`/OpenSSL download) is not started — see
+"Proving parameters": the crate still links `curl`/`openssl-sys` for that (and
+`ureq` remains transitively via `snarkvm-ledger-query`, see "Result"), so phase 3
+is "no node RPC", not "no HTTP stack".
 Owner: aleo_ffi
 Supersedes: the in-Rust HTTP hardening accreted across PR #51 review rounds 5–13.
 
@@ -79,10 +80,11 @@ self-review, none blocking, all sequenced to a later phase:
   real on-chain state path, impractical offline) and the `execute_fee_proof_static`
   / `execute_program_proof_static` paths — all left to the phase-2 testnet parity
   run.
-- **Minor cleanup left for phase 3** (when the old path is deleted and `_static`
-  is renamed to canonical): `base_fee_at_height` and the three `execute_*_static`
-  share structure with the old exports. Kept duplicated for now to match the
-  file's per-export style and keep the diff easy to check against this spec.
+- **Minor cleanup left for phase 4** (when `_static` is renamed to canonical; the
+  old path itself is already deleted in phase 3): `base_fee_at_height` and the
+  three `execute_*_static` shared structure with the (now-deleted) old exports.
+  Left as-is to match the file's per-export style; the rename will tidy the
+  names alongside the lib redistribution.
 
 ## Why
 
@@ -207,11 +209,13 @@ would feed old callers into native code with the wrong signature. So phase 1
 ships the new functions under **distinct symbols** — `execute_proof_static`,
 `execute_fee_proof_static`, `execute_program_proof_static`,
 `get_base_fee_static`, `execution_fee_authorization_static` — alongside the
-untouched old exports. Only in phase 3, once Dart no longer looks up the old
-names, are the old exports deleted (and the `_static` names optionally renamed to
-the canonical ones in lockstep with the Dart `lookupFunction` calls, since a
-rename is itself an ABI change). The names above are the *target* shapes; read
-them with the `_static` suffix until phase 3.
+untouched old exports. In phase 3, once Dart no longer looks up the old names,
+the old exports are deleted. The `_static` names are **kept** (not renamed): a
+rename is itself an ABI change that reuses a freed name whose ABI differs in
+already-distributed prebuilt libraries, so it is deferred to phase 4 to land in
+lockstep with the Dart `lookupFunction` calls + a rebuilt library + an
+ABI-version guard. The names above are the *target* shapes; read them with the
+`_static` suffix until phase 4.
 
 **Root handling (no protocol parsing in Dart).** Dart has no `StatePath`
 parser, and Rust parses the paths anyway, so Rust — not Dart — derives the root:
@@ -406,18 +410,24 @@ caller JSON); the network program loader (`node_latest_edition`,
 the 12 network-touching exports (`build_transaction`, `try_transfer`, `try_join`,
 `execute_program`, `execute_program_proof`, `contract_execution`,
 `contract_fee_execution`, `execute_proof`, `execute_fee_proof`, `broadcast`,
-`get_base_fee`, `execution_fee_authorization` — the names freed here were then
-taken by the renamed `_static` variants). The worker-thread / in-flight / stalling
-node tests went with them.
+`get_base_fee`, `execution_fee_authorization`). The worker-thread / in-flight /
+stalling node tests went with them.
+
+The phase-1 proving/fee primitives **keep their `_static` symbol names** — those
+names never collided with an old export, so a stale prebuilt library (lacking
+them) fails Dart's `lookupFunction` with a clear missing-symbol error. Renaming
+them to the now-free canonical names is deferred to the phase-4 lib
+redistribution, where it can land atomically with a rebuilt/redistributed
+library + an ABI-version guard; reusing a freed name whose ABI differs in an
+already-distributed lib would turn that clean error into a silent ABI mismatch.
 
 **Kept** (not network): `LoadBudget`'s size + wall-clock budget did **not** move —
 the offline `add_programs_from_sources` parser already carries its own total-byte
 budget and `IMPORT_LOAD_DEADLINE` over its CPU-bound parse/Stack-build steps, so
-only the thread/in-flight machinery died. `check_total_fee` stays (used by the
-renamed `execution_fee_authorization`). New offline tests replaced the deleted
-network coverage: a per-program-source-size rejection and an import-cycle
-rejection on `add_programs_from_sources`, plus the FFI smoke test now reaches a
-renamed export (`get_base_fee`) through the C ABI.
+only the thread/in-flight machinery died. `check_total_fee` stays (used by
+`execution_fee_authorization_static`). New offline tests replaced the deleted
+network coverage: a per-program-source-size rejection (`add_programs_from_sources_rejects_oversized_source`)
+and an import-cycle rejection (`add_programs_from_sources_rejects_cycle`).
 
 Result: the Rust crate makes **zero RPC calls** — state, program sources, and
 broadcast all move to Dart. `aleo_ffi`'s **direct** `ureq` dependency (and all of
@@ -496,15 +506,19 @@ behaviour.
    manual run (`test/transfer/aleo_phase2_e2e.dart`), still blocked on a live
    testnet with includable transactions.
 3. **Delete the in-Rust network code** *(done)*: the now-unused node-RPC exports
-   and HTTP machinery are gone, `ureq` is dropped, and the `_static` proving/fee
-   exports are renamed to canonical names (the Dart `lookupFunction` strings
-   updated in lockstep; `AleoProgram`'s public method signatures unchanged). The
-   FFI surface is 29 functions + `free_string`.
+   and HTTP machinery are gone and `ureq` (direct dep) is dropped. The `_static`
+   proving/fee exports **keep their names** — renaming them to the freed canonical
+   names is deferred to step 4, since a rename reuses a symbol name whose ABI
+   differs in already-distributed prebuilt libraries (a silent ABI mismatch
+   instead of a clean missing-symbol error). `AleoProgram`'s public method
+   signatures are unchanged. The FFI surface is 29 functions + `free_string`.
 4. **Remove the proving-parameter network dependency + re-point cross-compile**:
    vendor/patch `snarkvm-parameters` to disable native remote fetch
    (pre-provision the keys/SRS), dropping `curl`/`openssl-sys` — see "Proving
    parameters". This is the actual no-OpenSSL prerequisite; folds into the
-   GPL-removal / mobile-build work.
+   GPL-removal / mobile-build work. Do the `_static`→canonical rename here, in
+   lockstep with the rebuilt/redistributed library + an ABI-version guard so a
+   version skew fails loudly rather than corrupting the ABI.
 
 ## Open questions / risks
 

@@ -629,13 +629,17 @@ pub unsafe extern "C" fn serial_number_string(
 // pre-fetched node data (`height`, `state_paths_json`, `public_state_root`,
 // `program_sources_json`) instead of a `url`/`network` to query, so these
 // exports issue no node RPC — all node I/O lives in the Dart `AleoNode`. Phase 3
-// deleted the old in-Rust HTTP path; these are now the canonical proving/fee
-// exports (phase 1 shipped them under temporary `_static` names while the old
-// blocking-HTTP exports still existed, since a cdylib cannot export two ABIs
-// under one symbol; the suffix is gone now that the old path is). NOTE: this is
-// still not "zero network" — snarkVM's proving lazily downloads proving keys /
-// the SRS via `curl` (no timeout) on a cold parameter cache, so the crate still
-// links curl/openssl; removing that is a separate task (phase 4, see the spec's
+// deleted the old in-Rust HTTP path (the 12 network exports). The proving/fee
+// primitives KEEP their `_static` symbol names: those names never collided with
+// an old export, so a stale prebuilt library (which lacks them) fails Dart's
+// `lookupFunction` with a clear missing-symbol error. Renaming them to the
+// now-free canonical names is deferred to the phase-4 lib redistribution, where
+// it can land atomically with a rebuilt/redistributed library + an ABI-version
+// guard — reusing a freed name whose ABI differs in an already-distributed lib
+// would turn that clean error into a silent ABI mismatch. NOTE: this is still
+// not "zero network" — snarkVM's proving lazily downloads proving keys / the SRS
+// via `curl` (no timeout) on a cold parameter cache, so the crate still links
+// curl/openssl; removing that is a separate task (phase 4, see the spec's
 // "Proving parameters" section).
 // ----------------------------------------------------------------------------
 
@@ -1066,14 +1070,14 @@ pub extern "C" fn consensus_version_for(height: u32) -> u16 {
     Net::CONSENSUS_VERSION(height).map(|version| version as u16).unwrap_or(0)
 }
 
-/// Pure variant of [`get_base_fee`]: `height` (→ consensus version) replaces the
+/// Pure variant of [`get_base_fee_static`]: `height` (→ consensus version) replaces the
 /// node fetch, and `program_sources_json` supplies the execution's root program
 /// (+ imports) needed to compute its cost — empty for a credits.aleo execution.
 /// Returns the base fee in microcredits, or 0 on failure.
 ///
 /// SAFETY: `execution`/`program_sources_json` are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn get_base_fee(
+pub unsafe extern "C" fn get_base_fee_static(
     execution: *const c_char,
     program_sources_json: *const c_char,
     height: u32,
@@ -1085,7 +1089,7 @@ pub unsafe extern "C" fn get_base_fee(
     inner().unwrap_or(0)
 }
 
-/// Pure variant of [`execution_fee_authorization`]: `height` replaces the node
+/// Pure variant of [`execution_fee_authorization_static`]: `height` replaces the node
 /// fetch used to derive the base fee, and `program_sources_json` supplies the
 /// execution's root program (+ imports) needed to compute that fee (empty for a
 /// credits.aleo execution). `fee_credits` is the priority fee; an empty
@@ -1095,7 +1099,7 @@ pub unsafe extern "C" fn get_base_fee(
 /// SAFETY: `private_key`/`execution`/`fee_record`/`program_sources_json` are
 /// NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn execution_fee_authorization(
+pub unsafe extern "C" fn execution_fee_authorization_static(
     private_key: *const c_char,
     execution: *const c_char,
     fee_credits: u64,
@@ -1135,7 +1139,7 @@ pub unsafe extern "C" fn execution_fee_authorization(
     }
 }
 
-/// Pure variant of [`execute_proof`]: proves an authorization against a
+/// Pure variant of [`execute_proof_static`]: proves an authorization against a
 /// [`StaticQuery`] built from pre-fetched `height` / `state_paths_json` /
 /// `public_state_root` instead of querying a node. Returns the serialized
 /// execution, or "" on failure.
@@ -1143,7 +1147,7 @@ pub unsafe extern "C" fn execution_fee_authorization(
 /// SAFETY: `authorization`/`state_paths_json`/`public_state_root` are
 /// NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn execute_proof(
+pub unsafe extern "C" fn execute_proof_static(
     authorization: *const c_char,
     height: u32,
     state_paths_json: *const c_char,
@@ -1168,7 +1172,7 @@ pub unsafe extern "C" fn execute_proof(
     }
 }
 
-/// Pure variant of [`execute_fee_proof`]: proves a fee authorization against a
+/// Pure variant of [`execute_fee_proof_static`]: proves a fee authorization against a
 /// [`StaticQuery`] built from pre-fetched node data. A private fee spends its
 /// own record, so its `state_paths_json` is its own snapshot (distinct from the
 /// execution's); a public fee passes empty paths + a `public_state_root`.
@@ -1177,7 +1181,7 @@ pub unsafe extern "C" fn execute_proof(
 /// SAFETY: `authorization`/`state_paths_json`/`public_state_root` are
 /// NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn execute_fee_proof(
+pub unsafe extern "C" fn execute_fee_proof_static(
     authorization: *const c_char,
     height: u32,
     state_paths_json: *const c_char,
@@ -1201,7 +1205,7 @@ pub unsafe extern "C" fn execute_fee_proof(
     }
 }
 
-/// Pure variant of [`execute_program_proof`]: the referenced program (and its
+/// Pure variant of [`execute_program_proof_static`]: the referenced program (and its
 /// import closure) is supplied in-memory via `program_sources_json` rather than
 /// fetched from a node, then the authorization is proved against a
 /// [`StaticQuery`] built from pre-fetched node data. Returns the serialized
@@ -1209,7 +1213,7 @@ pub unsafe extern "C" fn execute_fee_proof(
 ///
 /// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn execute_program_proof(
+pub unsafe extern "C" fn execute_program_proof_static(
     authorization: *const c_char,
     program_sources_json: *const c_char,
     height: u32,
@@ -1249,7 +1253,7 @@ pub unsafe extern "C" fn execute_program_proof(
 ///
 /// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn program_authorization(
+pub unsafe extern "C" fn program_authorization_static(
     private_key: *const c_char,
     program_id: *const c_char,
     function_name: *const c_char,
@@ -1540,7 +1544,7 @@ mod tests {
     use snarkvm_console::network::prelude::TestRng;
     use snarkvm_console::program::state_path::test_helpers::sample_global_state_path;
 
-    // The load-bearing assumption execute_proof relies on: a *global*
+    // The load-bearing assumption execute_proof_static relies on: a *global*
     // StatePath's transition-leaf id IS the record commitment, so static_query
     // can key the query map by it and proving finds each path by commitment.
     #[test]
@@ -1897,22 +1901,22 @@ mod tests {
     // can be costed). Malformed input returns 0 / "" without panicking across the
     // FFI boundary — and exercises the new 3-arg / 6-arg ABIs.
     #[test]
-    fn get_base_fee_malformed_returns_zero() {
+    fn get_base_fee_static_malformed_returns_zero() {
         unsafe {
             let execution = CString::new("not json").unwrap();
             let sources = CString::new("").unwrap();
-            assert_eq!(get_base_fee(execution.as_ptr(), sources.as_ptr(), 9_430_000), 0);
+            assert_eq!(get_base_fee_static(execution.as_ptr(), sources.as_ptr(), 9_430_000), 0);
         }
     }
 
     #[test]
-    fn execution_fee_authorization_malformed_returns_empty() {
+    fn execution_fee_authorization_static_malformed_returns_empty() {
         unsafe {
             let pk = CString::new(OWNER_KEY).unwrap();
             let execution = CString::new("not json").unwrap();
             let fee_record = CString::new("").unwrap();
             let sources = CString::new("").unwrap();
-            let ptr = execution_fee_authorization(
+            let ptr = execution_fee_authorization_static(
                 pk.as_ptr(),
                 execution.as_ptr(),
                 1000,
@@ -1926,8 +1930,8 @@ mod tests {
         }
     }
 
-    /// Calls the 5-arg program_authorization and returns the owned result.
-    fn call_program_authorization(
+    /// Calls the 5-arg program_authorization_static and returns the owned result.
+    fn call_program_authorization_static(
         private_key: &str,
         program_id: &str,
         function: &str,
@@ -1940,7 +1944,7 @@ mod tests {
             let function = CString::new(function).unwrap();
             let arguments = CString::new(arguments).unwrap();
             let sources = CString::new(sources).unwrap();
-            let ptr = program_authorization(
+            let ptr = program_authorization_static(
                 pk.as_ptr(),
                 program.as_ptr(),
                 function.as_ptr(),
@@ -1955,10 +1959,10 @@ mod tests {
 
     // A built-in program (credits.aleo) authorizes with no program sources.
     #[test]
-    fn program_authorization_builtin_no_sources() {
+    fn program_authorization_static_builtin_no_sources() {
         let args = serde_json::to_string(&vec![recipient_address(), "5u64".to_string()]).unwrap();
         let out =
-            call_program_authorization(OWNER_KEY, "credits.aleo", "transfer_public", &args, "");
+            call_program_authorization_static(OWNER_KEY, "credits.aleo", "transfer_public", &args, "");
         let auth: Authorization<Net> = serde_json::from_str(&out).unwrap();
         assert_eq!(auth.to_vec_deque().len(), 1);
     }
@@ -1966,26 +1970,26 @@ mod tests {
     // The path credits-only authorize exports can't reach: load a non-builtin
     // program from sources, then authorize its function offline.
     #[test]
-    fn program_authorization_loads_then_authorizes() {
+    fn program_authorization_static_loads_then_authorizes() {
         let sources = sources_json(&[("auth0.aleo", &[])]);
-        let out = call_program_authorization(OWNER_KEY, "auth0.aleo", "noop", "[]", &sources);
+        let out = call_program_authorization_static(OWNER_KEY, "auth0.aleo", "noop", "[]", &sources);
         let auth: Authorization<Net> = serde_json::from_str(&out).unwrap();
         assert!(!auth.to_vec_deque().is_empty(), "authorized a non-builtin function");
     }
 
     // Malformed input returns "" rather than panicking across the FFI boundary.
     #[test]
-    fn program_authorization_malformed_returns_empty() {
+    fn program_authorization_static_malformed_returns_empty() {
         // Bad arguments JSON.
         assert_eq!(
-            call_program_authorization(OWNER_KEY, "credits.aleo", "transfer_public", "nope", ""),
+            call_program_authorization_static(OWNER_KEY, "credits.aleo", "transfer_public", "nope", ""),
             ""
         );
         // Unknown program with no sources to load it.
-        assert_eq!(call_program_authorization(OWNER_KEY, "ghost.aleo", "go", "[]", ""), "");
+        assert_eq!(call_program_authorization_static(OWNER_KEY, "ghost.aleo", "go", "[]", ""), "");
     }
 
-    // End-to-end proof through execute_proof for a PUBLIC transfer: no
+    // End-to-end proof through execute_proof_static for a PUBLIC transfer: no
     // record inputs, so no state paths — proving only needs a height and a real
     // (non-zero) state root. This exercises static_query's public branch +
     // execute_authorization_raw for real and checks the proof carries the
@@ -1994,7 +1998,7 @@ mod tests {
     // needs a real on-chain state path).
     #[test]
     #[ignore = "proving: downloads keys + proves, run with `cargo test --release -- --ignored`"]
-    fn execute_proof_public_transfer_end_to_end() {
+    fn execute_proof_static_public_transfer_end_to_end() {
         let owner = owner();
         let vm = new_vm().unwrap();
         let auth = vm
@@ -2014,7 +2018,7 @@ mod tests {
             let auth_c = CString::new(auth_json).unwrap();
             let paths_c = CString::new("").unwrap();
             let root_c = CString::new(root).unwrap();
-            let ptr = execute_proof(auth_c.as_ptr(), 9_430_000, paths_c.as_ptr(), root_c.as_ptr());
+            let ptr = execute_proof_static(auth_c.as_ptr(), 9_430_000, paths_c.as_ptr(), root_c.as_ptr());
             let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
             free_string(ptr);
             out
