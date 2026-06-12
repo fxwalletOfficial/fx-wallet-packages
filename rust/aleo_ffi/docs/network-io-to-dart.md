@@ -7,15 +7,21 @@ Supersedes: the in-Rust HTTP hardening accreted across PR #51 review rounds 5–
 
 ## Phase 1 status (implemented)
 
-Phase 1 is strictly additive: it ships the pure, network-free primitives and
-helpers under new `_static` symbols alongside the untouched old exports
-(`required_commitments`, `required_imports`, `state_root_from_paths`,
-`consensus_version_for`, `get_base_fee_static`, `execution_fee_authorization_static`,
-`execute_proof_static`, `execute_fee_proof_static`, `execute_program_proof_static`,
-`program_authorization_static`).
-The pure helpers, the budgets, and the private-flow `StaticQuery` construction
-are unit-tested offline (real sampled `StatePath`s); the release cdylib's exported
-ABI is checked in CI.
+Phase 1 is strictly additive: it ships **ten** pure, network-free exports
+alongside the untouched old ones — four helpers (`required_commitments`,
+`required_imports`, `state_root_from_paths`, `consensus_version_for`) plus six
+`_static` proving/fee/authorize variants (`get_base_fee_static`,
+`execution_fee_authorization_static`, `execute_proof_static`,
+`execute_fee_proof_static`, `execute_program_proof_static`,
+`program_authorization_static`). The `_static` suffix only goes on variants that
+would otherwise collide with an existing old symbol; the four helpers are new
+names, so they need no suffix.
+The pure helpers, the size budgets (`state_paths_json` byte + entry caps;
+`program_sources_json` byte + program-count caps; the program-loader wall-clock
+deadline), and the private-flow `StaticQuery` construction are unit-tested
+offline (real sampled `StatePath`s); the release cdylib's exported ABI is checked
+in CI. Not yet tested: the deferred state-path exact-match (below) and anything
+Dart-side (phase 2).
 
 Four P1 issues from follow-up reviews were fixed in-phase (not deferred): (1)
 the fee API (`get_base_fee_static` / `execution_fee_authorization_static`) now
@@ -75,13 +81,17 @@ shape.
 Moving all HTTP to the Dart layer — which has a real async runtime with proper
 timeouts and cancellation — makes the Rust functions **pure compute** over
 pre-fetched inputs. That deletes the entire finding class instead of shrinking
-it: no `ureq`, no DNS, no worker threads, no deadlines, no retry/budget code in
-Rust at all.
+it: no `ureq`, no DNS, no worker threads, no network retries in Rust at all. (A
+size budget and a CPU wall-clock deadline stay on the offline program loader —
+parsing and Stack-building untrusted sources is still bounded work; see "Resource
+budgets survive the move".)
 
 ## Current network surface
 
-19 of the 31 exports are already pure (account, record, offline authorization
-and assembly). **12 touch the network:**
+After phase 1, 29 of the 41 exports are pure (account, record, offline
+authorization and assembly, plus the 10 new phase-1 exports). The **12 old
+network-touching exports** below still exist — phase 3 deletes them once Dart no
+longer calls them. (Before phase 1 it was 19 of 31.)
 
 | FFI export | Needs from node |
 |---|---|
@@ -180,15 +190,18 @@ response buffer or Rust's serde. Bounds, both sides:
 
 - *Dart (fetch side):* cap the `statePaths` response bytes and entry count
   before buffering the whole body.
-- *Rust (parse side):* check the raw `state_paths_json` byte length and entry
-  count **before** deserializing, then require the parsed paths' commitment set
-  to **exactly equal `required_commitments(authorization)`** — no extra, no
-  missing. This is both a correctness check (you prove inclusion for exactly the
-  records being spent) and a tight, protocol-grounded count bound: the required
-  commitments are bounded by the execution's inputs (`MAX_INPUTS` per transition
-  × `MAX_TRANSITIONS`), so a node cannot inflate the path count beyond what the
-  transaction actually needs. `public_state_root` is similarly length-checked
-  before parsing.
+- *Rust (parse side), phase 1 (implemented):* check the raw `state_paths_json`
+  byte length **before** deserializing (bounding serde memory), then the parsed
+  entry count **after** (≤ `MAX_INPUTS` per transition × `MAX_TRANSITIONS`, the
+  most any execution can require). `public_state_root` is length-checked before
+  parsing. A missing path fails closed (proving's `get_state_path_for_commitment`
+  errors).
+- *Rust (parse side), phase-2 target (not yet implemented):* additionally require
+  the parsed paths' commitment set to **exactly equal
+  `required_commitments(authorization)`** — no extra, no missing. This is a
+  stronger correctness check (prove inclusion for exactly the spent records) and
+  a tighter, protocol-grounded bound. Pinned by the phase-2 parity test before the
+  old node path is deleted (see deferred items).
 
 `program_sources_json`: a JSON array of `{id, edition, source}` the caller has
 already fetched (closure included, any order). Rust validates ids, loads
@@ -215,14 +228,15 @@ set rather than the network.
   Dart needs the snapshot root for logging/caching; not required for proving
   (the proving primitives derive it themselves, above).
 
-### Removed exports
+### Removed exports (planned, phase 3)
 
-The one-call orchestration functions that bundled network I/O —
-`build_transaction`, `try_transfer`, `try_join`, `execute_program` — are dropped
-from Rust and **re-implemented in Dart** as compositions of the pure primitives
-(authorize → fetch → prove → assemble → broadcast). `contract_execution` /
-`contract_fee_execution` likewise become Dart compositions over the program-proof
-primitives. `broadcast` is deleted (Dart does the POST).
+These still exist after phase 1; phase 3 removes them once the Dart orchestration
+no longer calls them. The one-call orchestration functions that bundle network
+I/O — `build_transaction`, `try_transfer`, `try_join`, `execute_program` — will be
+dropped from Rust and **re-implemented in Dart** as compositions of the pure
+primitives (authorize → fetch → prove → assemble → broadcast). `contract_execution`
+/ `contract_fee_execution` likewise become Dart compositions over the
+program-proof primitives. `broadcast` is deleted (Dart does the POST).
 
 ## State-root snapshot contract
 
@@ -332,17 +346,20 @@ sides**, even though the HTTP/worker-thread machinery is deleted:
 Only the *worker-thread / in-flight* machinery is dropped (no blocking I/O left
 in Rust to bound); the *size* and *wall-clock* parts persist.
 
-## Deleted from Rust
+## Deleted from Rust (planned, phase 3)
 
-`ureq` dependency; `http_agent`, `http_get`, `http_get_until`, `http_post`,
+When the in-Rust network code is removed: `ureq` dependency; `http_agent`,
+`http_get`, `http_get_until`, `http_post`,
 `request_once_bounded`, `InflightPermit`/`MAX_INFLIGHT_REQUESTS`; the
 *thread/in-flight* part of the load machinery (`get_once_bounded` plumbing) —
 **but not** `LoadBudget`'s size and wall-clock budget, which move to the
 `program_sources_json` parser (it keeps a deadline over its CPU-bound
 parse/Stack-build steps) per above; `NodeQuery`'s HTTP impl (replaced by building `StaticQuery`
 from caller JSON); `node_latest_edition`, `add_program_from_node` (network),
-`broadcast_to_node`. The worker-thread/deadline tests go with them; the
-program-count/byte-budget tests are kept and re-pointed at the parser.
+`broadcast_to_node`. The worker-thread / in-flight tests go with them. Already
+done in phase 1: the program-count/byte-budget tests and a wall-clock-deadline
+test point at the new `program_sources_json` parser (the loader keeps its CPU
+deadline, so that test stays rather than being deleted with the network code).
 
 Result: the Rust crate makes **zero network calls** and links no HTTP stack —
 which also simplifies the pending iOS/Android cross-compile (no curl/OpenSSL or
@@ -353,13 +370,14 @@ rustls needed; see the GPL-removal plan).
 1. **Add pure primitives + helpers under new symbol names, alongside the
    existing functions** (no removals, no symbol reuse — see "Phase-1 symbol
    names"). New exports: `required_commitments`, `required_imports`,
-   `state_root_from_paths`, `consensus_version_for(height)`, and the
+   `state_root_from_paths`, `consensus_version_for(height)`, the
    `*_static` proving/fee variants (`execute_proof_static`,
    `execute_fee_proof_static`, `execute_program_proof_static`,
    `get_base_fee_static`, `execution_fee_authorization_static`) carrying the
    `height, state_paths_json, public_state_root` shape and the program/path
-   resource budgets. The old `execute_proof` etc. stay exactly as they are, so
-   CI and current Dart keep working.
+   resource budgets, and `program_authorization_static` (the pure authorize
+   primitive for arbitrary programs). The old `execute_proof` etc. stay exactly
+   as they are, so CI and current Dart keep working.
 2. **Move orchestration to Dart**: implement `AleoNode` + rewrite `AleoProgram`
    orchestration onto the pure primitives; keep method signatures stable.
    Parity-test new Dart pipeline vs the old FFI one against testnet.
@@ -382,12 +400,14 @@ rustls needed; see the GPL-removal plan).
 - **Two snapshots per transaction**: the execution and a private fee each need
   their own inclusion snapshot (different commitment sets). The orchestration
   must not share one snapshot across both — pinned by a private-fee parity test.
-- **Resource budget parity**: the count/byte budget must reject the same
-  oversized closures Dart's walk does, and the `state_paths_json` parser must
-  reject path sets that don't exactly match `required_commitments`; tested on
-  both sides against synthetic oversized/mismatched inputs.
+- **Resource budget parity**: the Rust count/byte budget must reject the same
+  oversized closures the (phase-2) Dart walk does, and the `state_paths_json`
+  parser must reject path sets that don't exactly match `required_commitments`.
+  Phase 1 has the Rust size-budget tests (state-path byte + entry caps;
+  program-sources byte + count caps); the exact-match and the Dart-side budget
+  are **not yet implemented/tested** — both land in phase 2.
 - **Consensus-version pin**: a parity/regression test that a version change
   between the two snapshots restarts the whole flow rather than mixing versions.
-- **Effort**: ~12 FFI functions resigned, an `AleoNode` Dart class, and a
+- **Effort**: ~12 FFI functions redesigned, an `AleoNode` Dart class, and a
   parity pass. Bounded, but a real piece of work — hence its own phased PR set,
   not a rider on #51.

@@ -2732,6 +2732,41 @@ mod tests {
         assert!(error.to_string().contains("byte budget"), "got: {error}");
     }
 
+    // The state-paths entry cap rejects more paths than any execution can
+    // require, even when each path is small enough to clear the byte budget.
+    #[test]
+    fn state_paths_entry_cap_rejects_too_many() {
+        let mut rng = TestRng::default();
+        let one =
+            serde_json::to_string(&sample_global_state_path::<Net>(None, &mut rng).unwrap()).unwrap();
+        let json = format!("[{}]", vec![one; max_state_paths() + 1].join(","));
+        let error = parse_state_paths(&json).unwrap_err();
+        assert!(error.to_string().contains("entry budget"), "got: {error}");
+    }
+
+    // The program-sources total-byte cap rejects an oversized blob before serde.
+    #[test]
+    fn program_sources_byte_cap_rejects_oversized() {
+        let over = MAX_IMPORT_PROGRAMS * Net::MAX_PROGRAM_SIZE + 1;
+        let blob = "[".to_string() + &"x".repeat(over);
+        let vm = new_vm().unwrap();
+        let error = add_programs_from_sources(&vm, &blob).unwrap_err();
+        assert!(error.to_string().contains("byte budget"), "got: {error}");
+    }
+
+    // The program-sources count cap rejects too many programs (before any
+    // Program::from_str), bounding an unbounded import closure.
+    #[test]
+    fn program_sources_count_cap_rejects_too_many() {
+        let entries: Vec<serde_json::Value> = (0..=MAX_IMPORT_PROGRAMS)
+            .map(|i| serde_json::json!({ "id": format!("p{i}.aleo"), "edition": 1, "source": "x" }))
+            .collect();
+        let json = serde_json::to_string(&entries).unwrap();
+        let vm = new_vm().unwrap();
+        let error = add_programs_from_sources(&vm, &json).unwrap_err();
+        assert!(error.to_string().contains("program budget"), "got: {error}");
+    }
+
     /// Builds a `[{id, edition, source}]` program-sources JSON for `programs`.
     fn sources_json(programs: &[(&str, &[String])]) -> String {
         let entries: Vec<serde_json::Value> = programs
