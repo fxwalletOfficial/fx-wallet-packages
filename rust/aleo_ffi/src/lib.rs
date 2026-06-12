@@ -1578,13 +1578,23 @@ fn static_query(
     state_paths_json: &str,
     public_state_root: &str,
 ) -> anyhow::Result<StaticQuery<Net>> {
+    static_query_from_paths(height, parse_state_paths(state_paths_json)?, public_state_root)
+}
+
+/// [`static_query`] over already-parsed paths, so a caller that parsed the JSON
+/// once (the exact-match guard) does not pay the serde cost twice on a
+/// budget-sized blob.
+fn static_query_from_paths(
+    height: u32,
+    paths: Vec<StatePath<Net>>,
+    public_state_root: &str,
+) -> anyhow::Result<StaticQuery<Net>> {
     let public_state_root = public_state_root.trim();
     anyhow::ensure!(
         public_state_root.len() <= MAX_STATE_ROOT_BYTES,
         "public_state_root is {} bytes, over the {MAX_STATE_ROOT_BYTES}-byte budget",
         public_state_root.len()
     );
-    let paths = parse_state_paths(state_paths_json)?;
 
     if paths.is_empty() {
         anyhow::ensure!(
@@ -1636,10 +1646,11 @@ fn checked_static_query(
     public_state_root: &str,
 ) -> anyhow::Result<StaticQuery<Net>> {
     let expected: HashSet<String> = global_commitment_set(authorization).into_iter().collect();
-    let actual: HashSet<String> = parse_state_paths(state_paths_json)?
-        .iter()
-        .map(|path| path.transition_leaf().id().to_string())
-        .collect();
+    // Parse once, here, and hand the parsed paths to `static_query_from_paths`
+    // (rather than `static_query`, which would re-parse the budget-sized blob).
+    let paths = parse_state_paths(state_paths_json)?;
+    let actual: HashSet<String> =
+        paths.iter().map(|path| path.transition_leaf().id().to_string()).collect();
     anyhow::ensure!(
         actual == expected,
         "state paths' commitment set ({} entries) does not match the authorization's \
@@ -1647,7 +1658,7 @@ fn checked_static_query(
         actual.len(),
         expected.len()
     );
-    static_query(height, state_paths_json, public_state_root)
+    static_query_from_paths(height, paths, public_state_root)
 }
 
 /// Base (minimum) fee in microcredits for an execution at the given height. The

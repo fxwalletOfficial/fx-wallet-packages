@@ -212,6 +212,90 @@ void main() {
     // Cancellation actually fires (well under the server's 30s hold).
     expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
   });
+
+  // --- review fixes ---------------------------------------------------------
+
+  test('a malformed statePaths body surfaces as AleoNodeException', () async {
+    node.handler = (req) => _reply(req, 'not json at all {[');
+    await expectLater(
+        aleo().statePaths(['c1']), throwsA(isA<AleoNodeException>()));
+  });
+
+  test('a malformed program source body surfaces as AleoNodeException',
+      () async {
+    node.handler = (req) async {
+      if (req.uri.path.endsWith('/latest_edition')) {
+        await _reply(req, '1');
+      } else {
+        await _reply(req, 'definitely not json');
+      }
+    };
+    await expectLater(
+        aleo().programSource('x.aleo'), throwsA(isA<AleoNodeException>()));
+  });
+
+  test('a near-max program whose JSON wire form exceeds the decoded cap is accepted',
+      () async {
+    // 99000 newlines: decoded length 99000 (<= maxProgramSize), but the
+    // JSON-escaped wire body is ~198002 bytes — far past the old maxProgramSize+2
+    // streaming cap. The widened wire cap must let it through; the real bound is
+    // the decoded-length check.
+    final source = '\n' * 99000;
+    node.handler = (req) async {
+      if (req.uri.path.endsWith('/latest_edition')) {
+        await _reply(req, '1');
+      } else {
+        await _reply(req, jsonEncode(source));
+      }
+    };
+    final src = await aleo().programSource('big.aleo');
+    expect(src.source.length, 99000);
+  });
+
+  test('retries are bounded by the overall requestTimeout, not attempts × timeout',
+      () async {
+    // Always-retryable 503: without an overall budget this is ~3s of backoff
+    // (0.5+1.0+1.5) across 4 attempts; the overall deadline caps it near
+    // requestTimeout.
+    node.handler = (req) => _reply(req, 'busy', status: 503);
+    final sw = Stopwatch()..start();
+    await expectLater(
+        aleo(timeout: const Duration(milliseconds: 800)).latestHeight(),
+        throwsA(isA<AleoNodeException>()));
+    sw.stop();
+    expect(sw.elapsed, lessThan(const Duration(seconds: 2)));
+  });
+
+  test('programClosure is bounded by closureDeadline even when an import stalls',
+      () async {
+    // a.aleo resolves fast and imports b.aleo, which stalls forever. The
+    // deadline is threaded into the b.aleo fetch, so the closure fails near
+    // closureDeadline rather than the 10s requestTimeout / 30s stall.
+    node.handler = (req) async {
+      final id = req.uri.pathSegments[2];
+      if (id == 'a.aleo') {
+        if (req.uri.path.endsWith('/latest_edition')) {
+          await _reply(req, '1');
+        } else {
+          await _reply(req, jsonEncode('program a.aleo;'));
+        }
+      } else {
+        await Future<void>.delayed(const Duration(seconds: 30));
+        await _reply(req, '1');
+      }
+    };
+    final node2 = AleoNode(node.url,
+        network: 'testnet',
+        requestTimeout: const Duration(seconds: 10),
+        closureDeadline: const Duration(milliseconds: 600),
+        parseImports: (src) =>
+            _idOf(src) == 'a.aleo' ? ['b.aleo'] : const []);
+    final sw = Stopwatch()..start();
+    await expectLater(
+        node2.programClosure('a.aleo'), throwsA(isA<AleoNodeException>()));
+    sw.stop();
+    expect(sw.elapsed, lessThan(const Duration(seconds: 3)));
+  });
 }
 
 /// Extracts the program id from our fake `program <id>;` source bodies.
