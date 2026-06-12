@@ -43,6 +43,10 @@ class AleoNode {
 
   final Dio _dio;
 
+  /// Whether this AleoNode created [_dio] (and so must close it) or had one
+  /// injected (the caller owns its lifecycle).
+  final bool _ownsDio;
+
   /// Wall-clock budget for one logical read: every retry attempt and backoff
   /// together must fit inside it, so a stalling node cannot stretch a read to
   /// `getAttempts × timeout`. It also caps each *individual* request even under
@@ -107,14 +111,29 @@ class AleoNode {
     this.closureDeadline = const Duration(seconds: 120),
     this.parseImports,
   })  : base = '${url.replaceAll(RegExp(r'/+$'), '')}/$network',
-        _dio = dio ??
-            Dio(BaseOptions(
-              connectTimeout: const Duration(seconds: 15),
-              receiveTimeout: const Duration(seconds: 30),
-              // We read the raw bytes ourselves (bounded), so dio must not try
-              // to JSON-decode or buffer the body for us.
-              responseType: ResponseType.stream,
-            ));
+        _ownsDio = dio == null,
+        _dio = dio ?? defaultDio();
+
+  /// The streaming Dio AleoNode uses when none is injected. Exposed so a
+  /// long-lived owner (e.g. [AleoProgram]) can create one and share it across
+  /// many short-lived AleoNodes, instead of spawning — and leaking — a client
+  /// per operation.
+  static Dio defaultDio() => Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        // We read the raw bytes ourselves (bounded), so dio must not try to
+        // JSON-decode or buffer the body for us.
+        responseType: ResponseType.stream,
+      ));
+
+  /// Closes the underlying Dio and its pooled keep-alive connections — but only
+  /// if this AleoNode created it; a no-op for an injected Dio (the caller owns
+  /// it). Dio's IOHttpClientAdapter caches an HttpClient that only `Dio.close()`
+  /// tears down, so a client created per operation must be closed to avoid
+  /// accumulating idle sockets.
+  void close() {
+    if (_ownsDio) _dio.close(force: true);
+  }
 
   /// Current block height — selects the consensus version proving pins.
   Future<int> latestHeight() async {
@@ -174,20 +193,24 @@ class AleoNode {
   /// A program's source at its current on-chain edition. The edition and source
   /// are read in that order (`/program/{id}/latest_edition`, then
   /// `/program/{id}/{edition}`) so they stay consistent across a concurrent
-  /// upgrade. The decoded source must not exceed [maxProgramSize]. [deadline],
-  /// when supplied, bounds both reads against one shared budget (the closure
-  /// walk passes its own).
-  Future<({int edition, String source})> programSource(String id,
-      {DateTime? deadline}) async {
+  /// upgrade. The decoded source must not exceed [maxProgramSize].
+  Future<({int edition, String source})> programSource(String id) =>
+      _programSourceWithin(id, null);
+
+  /// [programSource] bounded by a shared monotonic [budget] (the closure walk
+  /// passes one across all its fetches; a standalone call passes `null`, giving
+  /// each fetch its own [requestTimeout]).
+  Future<({int edition, String source})> _programSourceWithin(
+      String id, _Budget? budget) async {
     final editionBody = await _getWithRetry('program/$id/latest_edition',
-        maxBytes: maxHeightBytes, deadline: deadline);
+        maxBytes: maxHeightBytes, budget: budget);
     final edition = int.tryParse(_unquote(editionBody));
     if (edition == null || edition < 0) {
       throw AleoNodeException(
           "program/$id/latest_edition returned a non-integer: $editionBody");
     }
     final sourceBody = await _getWithRetry('program/$id/$edition',
-        maxBytes: maxProgramSourceWireBytes, deadline: deadline);
+        maxBytes: maxProgramSourceWireBytes, budget: budget);
     final dynamic decoded;
     try {
       decoded = jsonDecode(sourceBody);
@@ -219,12 +242,12 @@ class AleoNode {
           'programClosure needs an import resolver (required_imports); '
           'construct AleoNode with parseImports');
     }
-    final deadline = DateTime.now().add(closureDeadline);
+    final budget = _Budget(closureDeadline);
     final fetched = <String, Map<String, dynamic>>{};
     final queue = <String>[rootId];
     var totalBytes = 0;
     while (queue.isNotEmpty) {
-      if (DateTime.now().isAfter(deadline)) {
+      if (budget.isExhausted) {
         throw AleoNodeException(
             'program closure load exceeded its $closureDeadline time budget');
       }
@@ -234,7 +257,7 @@ class AleoNode {
         throw AleoNodeException(
             'program closure exceeded its $maxImportPrograms-program budget');
       }
-      final program = await programSource(id, deadline: deadline);
+      final program = await _programSourceWithin(id, budget);
       // Aleo program sources are ASCII, so code-unit length == byte length; use
       // the UTF-8 byte length anyway so the budget faithfully mirrors the Rust
       // total-byte cap regardless of content.
@@ -287,11 +310,11 @@ class AleoNode {
   /// walk shares one across all its fetches). Each attempt is given only the
   /// time left, and a backoff never runs past the deadline.
   Future<String> _getWithRetry(String route,
-      {required int maxBytes, DateTime? deadline}) async {
-    final overall = deadline ?? DateTime.now().add(requestTimeout);
+      {required int maxBytes, _Budget? budget}) async {
+    final overall = budget ?? _Budget(requestTimeout);
     DioException? last;
     for (var attempt = 0; attempt < getAttempts; attempt++) {
-      final remaining = overall.difference(DateTime.now());
+      final remaining = overall.remaining;
       if (remaining <= Duration.zero) break;
       // Cap each individual request at requestTimeout even when the overall
       // budget is the larger closureDeadline, so one slow-but-progressing node
@@ -303,7 +326,7 @@ class AleoNode {
         return await _getOnce(route, maxBytes: maxBytes, timeout: attemptTimeout);
       } on DioException catch (e) {
         last = e;
-        final left = overall.difference(DateTime.now());
+        final left = overall.remaining;
         // A cancel here is our per-attempt timer firing — a single slow request,
         // not the whole read out of time (an over-budget body throws an
         // AleoNodeException, which is not caught here). So it is retryable while
@@ -402,4 +425,24 @@ class AleoNode {
     }
     return trimmed;
   }
+}
+
+/// A wall-clock budget measured with a monotonic [Stopwatch] rather than
+/// `DateTime.now()`. A system-clock adjustment mid-flight (NTP step, manual
+/// change) must not extend a deadline past its budget or expire it early, so
+/// elapsed time is read from a monotonic source — like the old Rust loader's
+/// `Instant`.
+class _Budget {
+  final Stopwatch _elapsed = Stopwatch()..start();
+  final Duration total;
+
+  _Budget(this.total);
+
+  /// Time left, never negative.
+  Duration get remaining {
+    final left = total - _elapsed.elapsed;
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  bool get isExhausted => remaining <= Duration.zero;
 }

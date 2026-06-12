@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:aleo_dart/src/aleo_node.dart';
@@ -29,6 +30,12 @@ import 'package:aleo_dart/src/aleo_utils.dart';
 class AleoProgram {
   late ProgramsRustFFI programsRustFFI;
 
+  /// One HTTP client shared by every node operation, created lazily. Each
+  /// operation builds a fresh [AleoNode] but they all reuse this Dio, so we do
+  /// not spin up — and leak — a client (and its pooled keep-alive sockets) per
+  /// operation. Released by [dispose].
+  Dio? _httpClient;
+
   /// How many times the whole transfer flow restarts if a consensus upgrade
   /// lands mid-build. A generous ceiling: upgrades are rare, so more than one
   /// retry means something is badly wrong rather than a real version churn.
@@ -38,13 +45,24 @@ class AleoProgram {
     this.programsRustFFI = ProgramsRustFFI(dyLib, network_raw);
   }
 
-  /// A node bound to [url_raw] and this program's network, with the pure
-  /// `required_imports` helper wired in for the program-closure walk.
+  /// A node bound to [url_raw] and this program's network, reusing the shared
+  /// HTTP client and wiring in the pure `required_imports` helper for the
+  /// program-closure walk. The node does not own the Dio (this program does),
+  /// so node teardown is handled here via [dispose].
   AleoNode _node(String url_raw) => AleoNode(
         url_raw,
         network: programsRustFFI.network,
+        dio: _httpClient ??= AleoNode.defaultDio(),
         parseImports: _requiredImports,
       );
+
+  /// Releases the shared HTTP client and its keep-alive connections. Call when
+  /// the app is done with this AleoProgram; a later operation lazily recreates
+  /// the client.
+  void dispose() {
+    _httpClient?.close(force: true);
+    _httpClient = null;
+  }
 
   // --- one-call flows (compose primitives + node I/O) -----------------------
 

@@ -368,6 +368,25 @@ void main() {
     await expectLater(
         aleo().latestHeight(), throwsA(isA<AleoNodeException>()));
   });
+
+  test('close() tears down a Dio the node created', () async {
+    node.handler = (req) => _reply(req, '1');
+    final owning = AleoNode(node.url, network: 'testnet');
+    expect(await owning.latestHeight(), 1); // works before close
+    owning.close();
+    // The created Dio (and its pooled client) is closed, so further use fails.
+    await expectLater(owning.latestHeight(), throwsA(anything));
+  });
+
+  test('close() leaves an injected Dio (owned by the caller) untouched',
+      () async {
+    node.handler = (req) => _reply(req, '7');
+    final injected = AleoNode.defaultDio();
+    final n = AleoNode(node.url, network: 'testnet', dio: injected);
+    n.close(); // no-op: the caller owns `injected`
+    expect(await n.latestHeight(), 7); // injected client still usable
+    injected.close(force: true);
+  });
 }
 
 /// Extracts the program id from our fake `program <id>;` source bodies.
