@@ -4,13 +4,17 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/transaction/sc/sc_lib.dart';
+import 'package:crypto_wallet_util/src/transaction/sc/sc_go_ffi_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_run_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/tx_data.dart';
 
-/// Bridge for calling the SC WASM module (`sc.wasm`).
+/// Bridge for computing SC transaction signing digests.
 ///
-/// The built-in [ScWasmRunBridge] uses `package:wasm_run` (wasmtime / wasmi).
-/// Web platforms can implement this with `package:wasm_interop`.
+/// Two implementations coexist:
+/// - [ScGoFfiBridge] (default): native Go library called through `dart:ffi`,
+///   fast, but requires a per-platform native library.
+/// - [ScWasmRunBridge]: interprets `sc.wasm` with `package:wasd`, pure Dart
+///   and runs everywhere, but slower.
 abstract class ScWasmBridge {
   Future<ScWasmResult> processUnsignedTransaction(
     ScUnsignedTransaction unsignedTx,
@@ -18,7 +22,7 @@ abstract class ScWasmBridge {
 }
 
 /// Base [ScWasmBridge] that serializes the unsigned transaction to JSON and
-/// delegates the actual WASM call to [processJson].
+/// delegates the actual digest computation to [processJson].
 abstract class ScWasmBridgeBase implements ScWasmBridge {
   @override
   Future<ScWasmResult> processUnsignedTransaction(
@@ -29,31 +33,42 @@ abstract class ScWasmBridgeBase implements ScWasmBridge {
         json.decode(resultJson) as Map<String, dynamic>);
   }
 
-  /// Platform-specific: pass the unsigned transaction JSON, call the WASM
-  /// module, and return the result JSON string.
-  ///
-  /// WASM exports used: `alloc`, `getUnsignedV2Transaction`, `resultPtr`,
-  /// `resultLen`, `release`.
+  /// Implementation-specific: take the unsigned transaction JSON, compute the
+  /// signing digests, and return the result transaction JSON string.
   Future<String> processJson(String jsonString);
 }
 
-/// Assembles an SC transaction through the WASM pipeline.
+/// Assembles an SC transaction through the signing-digest pipeline.
 ///
-/// The default factory [ScTransactionBuilder.create] auto-loads `sc.wasm`
-/// from the package bundle and uses [ScWasmRunBridge] under the hood.
+/// Two factories are available:
+/// - [ScTransactionBuilder.create]: pure-Dart WASM bridge ([ScWasmRunBridge]),
+///   the default; loads the bundled `sc.wasm`, no native library needed.
+/// - [ScTransactionBuilder.createWithFfi]: native Go FFI bridge
+///   ([ScGoFfiBridge]), much faster but requires a per-platform native library.
 ///
 /// ```dart
-/// final txData = await ScTransactionBuilder.create().build(unsignedTx);
+/// final builder = await ScTransactionBuilder.create();
+/// final txData = await builder.build(unsignedTx);
 /// ```
 class ScTransactionBuilder {
   final ScWasmBridge wasmBridge;
 
   ScTransactionBuilder({required this.wasmBridge});
 
-  /// Creates a builder with `sc.wasm` auto-loaded from the package bundle.
+  /// Creates a builder backed by the pure-Dart WASM bridge ([ScWasmRunBridge]),
+  /// loading `sc.wasm` from the package bundle. No native library required.
+  ///
+  /// This is the default and matches the long-standing behaviour; existing
+  /// callers keep running unchanged.
   static Future<ScTransactionBuilder> create() async {
     final wasmBytes = await _loadPackageWasm();
     return ScTransactionBuilder(wasmBridge: ScWasmRunBridge(wasmBytes));
+  }
+
+  /// Creates a builder backed by the native Go FFI bridge ([ScGoFfiBridge]),
+  /// which is much faster but requires a per-platform native library.
+  static Future<ScTransactionBuilder> createWithFfi() async {
+    return ScTransactionBuilder(wasmBridge: await ScGoFfiBridge.create());
   }
 
   static Future<Uint8List> _loadPackageWasm() async {

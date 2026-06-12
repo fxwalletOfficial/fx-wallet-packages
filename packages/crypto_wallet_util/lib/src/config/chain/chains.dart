@@ -36,5 +36,6 @@ export './regular/sui.dart';
 export './regular/trx.dart';
 export './regular/xrp.dart';
 export './regular/sc.dart';
+export './regular/scp.dart';
 export './regular/aptos.dart';
 export './regular/icp.dart';
