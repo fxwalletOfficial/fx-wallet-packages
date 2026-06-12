@@ -9,7 +9,6 @@ class ScWasmRunBridge extends ScWasmBridgeBase {
 
   Instance? _instance;
   Memory? _memory;
-  WASI? _wasi;
 
   ScWasmRunBridge(this._wasmBytes);
 
@@ -21,7 +20,6 @@ class ScWasmRunBridge extends ScWasmBridgeBase {
     final instance = Instance(module, wasi.imports);
     wasi.initialize(instance);
     _instance = instance;
-    _wasi = wasi;
 
     final memExport = _instance!.exports['memory']! as MemoryImportExportValue;
     _memory = memExport.ref;
@@ -71,6 +69,5 @@ class ScWasmRunBridge extends ScWasmBridgeBase {
   void dispose() {
     _instance = null;
     _memory = null;
-    _wasi = null;
   }
 }

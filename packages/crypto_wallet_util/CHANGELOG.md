@@ -287,7 +287,15 @@
 - No public API changes beyond the SDK floor; all 782 unit tests pass.
 
 
-## [Unreleased]
+## [2.0.1] - 2026-06-12
+### Added
+
+- SC (Sia): native Go FFI transaction bridge (`ScGoFfiBridge`) as a faster,
+  opt-in alternative to the WASM bridge. Select it via
+  `ScTransactionBuilder.createWithFfi()`. The default `create()` is unchanged
+  and still uses the WASM bridge (`ScWasmRunBridge`), so existing callers are
+  unaffected. The native library is currently bundled for macOS/arm64 only.
+
 ### Removed
 
 - Pruned dead code from the vendored `bitcoin_base_hd` fork that is never
