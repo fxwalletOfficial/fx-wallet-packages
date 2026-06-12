@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -28,18 +29,21 @@ void main() async {
   const expectedDigest =
       'c191c3f2478833e66eb8911038f7fbe4f1810ec16cb3f0628c0ccfe7a4bc2f4d';
 
-  // The native FFI library is only built for some platforms. Where it isn't
-  // available (e.g. Linux CI), skip the FFI cases instead of failing.
+  // The native FFI library is not bundled; a macOS/arm64 build is provided as a
+  // test fixture only. Run the FFI cases there and skip on other platforms.
+  const ffiLibPath = './test/native/libsc_transaction_darwin_arm64.dylib';
   String? ffiSkip;
-  try {
-    await ScGoFfiBridge.create();
-  } catch (_) {
-    ffiSkip = 'native SC library unavailable on this platform';
+  if (!Platform.isMacOS) {
+    ffiSkip = 'native SC library is only provided for macOS in tests';
+  } else if (!File(ffiLibPath).existsSync()) {
+    ffiSkip =
+        'native SC library not found at $ffiLibPath '
+        '(build it with lib/src/forked_lib/sia-wasi/build.sh)';
   }
 
   // The two bridges must behave identically; run the same suite against each.
   final bridges = <String, Future<ScWasmBridge> Function()>{
-    'ScGoFfiBridge': () => ScGoFfiBridge.create(),
+    'ScGoFfiBridge': () async => ScGoFfiBridge(DynamicLibrary.open(ffiLibPath)),
     'ScWasmRunBridge': () async => ScWasmRunBridge(wasmBytes),
   };
 

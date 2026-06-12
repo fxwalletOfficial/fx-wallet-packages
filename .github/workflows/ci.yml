@@ -13,14 +13,15 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
-    # Flutter first, then Dart: setup-dart runs last so its standalone SDK wins
-    # on PATH. melos `dart analyze` then uses Dart 3.11.4 (matching local dev),
-    # rather than the newer/stricter Dart bundled with Flutter stable, which
-    # promotes some pre-existing lints in vendored forks to fatal warnings.
+    # Flutter 3.41.7 bundles Dart 3.11.x, which `flutter test` needs to run
+    # crypto_wallet_util (it depends on wasd, Dart >=3.11). setup-dart runs last
+    # so its standalone 3.11.4 wins on PATH for `dart analyze`, matching local
+    # dev rather than a newer/stricter analyzer that flags pre-existing lints in
+    # the vendored forks as fatal warnings.
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.32.0'
+        flutter-version: '3.41.7'
 
     - name: Setup Dart
       uses: dart-lang/setup-dart@v1

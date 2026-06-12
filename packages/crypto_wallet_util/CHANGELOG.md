@@ -291,10 +291,11 @@
 ### Added
 
 - SC (Sia): native Go FFI transaction bridge (`ScGoFfiBridge`) as a faster,
-  opt-in alternative to the WASM bridge. Select it via
-  `ScTransactionBuilder.createWithFfi()`. The default `create()` is unchanged
+  opt-in alternative to the WASM bridge. The default `create()` is unchanged
   and still uses the WASM bridge (`ScWasmRunBridge`), so existing callers are
-  unaffected. The native library is currently bundled for macOS/arm64 only.
+  unaffected. The native library is **not** bundled: the caller builds it for
+  their platform (see `lib/src/forked_lib/sia-wasi/build.sh`), loads it, and
+  passes it via `ScTransactionBuilder.createWithFfi(DynamicLibrary)`.
 
 ### Changed
 

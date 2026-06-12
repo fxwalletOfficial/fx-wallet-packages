@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi' show DynamicLibrary;
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
@@ -11,10 +12,10 @@ import 'package:crypto_wallet_util/src/transaction/sc/tx_data.dart';
 /// Bridge for computing SC transaction signing digests.
 ///
 /// Two implementations coexist:
-/// - [ScGoFfiBridge] (default): native Go library called through `dart:ffi`,
-///   fast, but requires a per-platform native library.
-/// - [ScWasmRunBridge]: interprets `sc.wasm` with `package:wasd`, pure Dart
-///   and runs everywhere, but slower.
+/// - [ScWasmRunBridge] (default): interprets the bundled `sc.wasm` with
+///   `package:wasd`, pure Dart and runs everywhere, but slower.
+/// - [ScGoFfiBridge]: calls a native library through `dart:ffi`, much faster,
+///   but the caller must supply a library built for their platform.
 abstract class ScWasmBridge {
   Future<ScWasmResult> processUnsignedTransaction(
     ScUnsignedTransaction unsignedTx,
@@ -46,7 +47,8 @@ abstract class ScWasmBridgeBase implements ScWasmBridge {
 /// - [ScTransactionBuilder.create]: pure-Dart WASM bridge ([ScWasmRunBridge]),
 ///   the default; loads the bundled `sc.wasm`, no native library needed.
 /// - [ScTransactionBuilder.createWithFfi]: native Go FFI bridge
-///   ([ScGoFfiBridge]), much faster but requires a per-platform native library.
+///   ([ScGoFfiBridge]); much faster, but the caller passes the path to a
+///   native library they built for their platform.
 ///
 /// ```dart
 /// final builder = await ScTransactionBuilder.create();
@@ -68,9 +70,11 @@ class ScTransactionBuilder {
   }
 
   /// Creates a builder backed by the native Go FFI bridge ([ScGoFfiBridge]),
-  /// which is much faster but requires a per-platform native library.
-  static Future<ScTransactionBuilder> createWithFfi() async {
-    return ScTransactionBuilder(wasmBridge: await ScGoFfiBridge.create());
+  /// which is much faster. The caller supplies an already-loaded [library]
+  /// (e.g. `DynamicLibrary.open(path)`) built for the current platform — see
+  /// `lib/src/forked_lib/sia-wasi/build.sh`; this package does not bundle one.
+  static ScTransactionBuilder createWithFfi(DynamicLibrary library) {
+    return ScTransactionBuilder(wasmBridge: ScGoFfiBridge(library));
   }
 
   static Future<Uint8List> _loadPackageWasm() async {

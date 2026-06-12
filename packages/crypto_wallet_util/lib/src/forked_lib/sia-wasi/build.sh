@@ -44,8 +44,10 @@ case "$ARCH" in
     ;;
 esac
 
-# Output next to the Dart bridge so it resolves via the package URI at runtime.
-OUTPUT_DIR="../../transaction/sc/native"
+# Default output is the package's test-fixture dir (the macOS build is used by
+# sc_test). Consumers building for their own app should pass `-o <path>` to
+# place the library wherever they load it from.
+OUTPUT_DIR="../../../../test/native"
 mkdir -p "$OUTPUT_DIR"
 
 OUTPUT_FILE="$OUTPUT_DIR/libsc_transaction_${OS}_${ARCH}.${EXT}"
