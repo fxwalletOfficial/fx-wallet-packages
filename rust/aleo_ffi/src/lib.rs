@@ -2960,4 +2960,44 @@ mod tests {
         // Unknown program with no sources to load it.
         assert_eq!(call_program_authorization(OWNER_KEY, "ghost.aleo", "go", "[]", ""), "");
     }
+
+    // End-to-end proof through execute_proof_static for a PUBLIC transfer: no
+    // record inputs, so no state paths — proving only needs a height and a real
+    // (non-zero) state root. This exercises static_query's public branch +
+    // execute_authorization_raw for real and checks the proof carries the
+    // supplied root. Heavy (downloads proving keys + proves), hence #[ignore].
+    // The private-flow end-to-end stays for the phase-2 testnet parity run (it
+    // needs a real on-chain state path).
+    #[test]
+    #[ignore = "proving: downloads keys + proves, run with `cargo test --release -- --ignored`"]
+    fn execute_proof_static_public_transfer_end_to_end() {
+        let owner = owner();
+        let vm = new_vm().unwrap();
+        let auth = vm
+            .authorize(
+                &owner,
+                "credits.aleo",
+                "transfer_public",
+                vec![recipient_address(), "1u64".to_string()],
+                &mut rand::thread_rng(),
+            )
+            .unwrap();
+        let auth_json = serde_json::to_string(&auth).unwrap();
+        // Any valid, non-zero state root works for a public flow (no inclusion
+        // assignments to check it against; consensus checks it on-chain later).
+        let root = "sr1dz06ur5spdgzkguh4pr42mvft6u3nwsg5drh9rdja9v8jpcz3czsls9geg";
+        let out = unsafe {
+            let auth_c = CString::new(auth_json).unwrap();
+            let paths_c = CString::new("").unwrap();
+            let root_c = CString::new(root).unwrap();
+            let ptr = execute_proof_static(auth_c.as_ptr(), 9_430_000, paths_c.as_ptr(), root_c.as_ptr());
+            let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
+            free_string(ptr);
+            out
+        };
+        assert!(!out.is_empty(), "expected a serialized execution, got the error sentinel");
+        let execution: Execution<Net> = serde_json::from_str(&out).unwrap();
+        // The proof carries the root static_query was given.
+        assert_eq!(execution.global_state_root().to_string(), root);
+    }
 }
