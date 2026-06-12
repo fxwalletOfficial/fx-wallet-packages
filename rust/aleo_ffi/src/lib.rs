@@ -24,7 +24,7 @@ use snarkvm_console::program::{
 use snarkvm_console::types::Field;
 use snarkvm_console::program::StatePath;
 use snarkvm_ledger_block::{Execution, Fee, Transaction};
-use snarkvm_ledger_query::{QueryTrait, StaticQuery};
+use snarkvm_ledger_query::StaticQuery;
 use snarkvm_ledger_store::helpers::memory::ConsensusMemory;
 use snarkvm_ledger_store::ConsensusStore;
 use snarkvm_synthesizer::process::Authorization;
@@ -235,7 +235,6 @@ pub unsafe extern "C" fn decrypt_cipher_text(
     }
 }
 
-
 /// Decrypts a `transfer_private` `sender_ciphertext` field to the sender's
 /// Address, using the recipient's view key and the record's (public) nonce.
 /// Returns "" on failure.
@@ -350,239 +349,6 @@ fn new_vm() -> anyhow::Result<VM<Net, ConsensusMemory<Net>>> {
     VM::from(ConsensusStore::<Net, ConsensusMemory<Net>>::open(StorageMode::Production)?)
 }
 
-/// Shared HTTP agent. `.timeout()` bounds the request and body read (so a node
-/// that stalls or trickles bytes errors out), and every body is read via
-/// `into_string()`, which fails past 10 MiB rather than growing without limit.
-/// Connection setup is bounded separately by `timeout_connect`, and ureq cannot
-/// interrupt blocking DNS resolution at all — so neither is covered by the
-/// per-request `.timeout()`. `get_once_bounded` closes that gap by running the
-/// whole call on a worker thread the caller stops waiting for on deadline.
-fn http_agent() -> &'static ureq::Agent {
-    static AGENT: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
-    AGENT.get_or_init(|| {
-        ureq::AgentBuilder::new()
-            .timeout_connect(std::time::Duration::from_secs(10))
-            .timeout(std::time::Duration::from_secs(60))
-            .build()
-    })
-}
-
-/// Per-attempt ceiling on one HTTP request (connect, request, body read).
-/// Overridden downward when less of the caller's overall deadline remains.
-const HTTP_REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
-
-/// Number of attempts `http_get` makes against the (flaky) public node.
-const HTTP_GET_ATTEMPTS: u32 = 4;
-
-/// Default overall deadline for a standalone `http_get`, for callers without
-/// their own budget. Covers all attempts and their backoff, keeping the
-/// historical 4 x 60s retry envelope — but now as a hard bound rather than an
-/// incidental one.
-const HTTP_GET_DEADLINE: std::time::Duration = std::time::Duration::from_secs(240);
-
-/// Most request workers allowed in flight at once. A worker can outlive its
-/// caller when blocked on connection setup or DNS resolution (ended by the OS
-/// resolver, which ureq cannot interrupt — not by us), so without a ceiling a
-/// burst of such calls could pile up threads and stacks until `thread::spawn`
-/// itself fails. Over the ceiling, a request fails fast instead of spawning.
-const MAX_INFLIGHT_REQUESTS: usize = 16;
-
-static INFLIGHT_REQUESTS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-
-/// Counts one live request worker. The slot frees when the worker *thread*
-/// ends — which, for an abandoned worker stuck in DNS, is when the OS resolver
-/// finally returns, not when the caller stopped waiting — so the count tracks
-/// real live threads, capping accumulation rather than just concurrent callers.
-struct InflightPermit;
-
-impl InflightPermit {
-    fn acquire() -> Option<Self> {
-        use std::sync::atomic::Ordering::{Acquire, Relaxed};
-        let mut current = INFLIGHT_REQUESTS.load(Relaxed);
-        loop {
-            if current >= MAX_INFLIGHT_REQUESTS {
-                return None;
-            }
-            match INFLIGHT_REQUESTS.compare_exchange_weak(current, current + 1, Acquire, Relaxed) {
-                Ok(_) => return Some(Self),
-                Err(actual) => current = actual,
-            }
-        }
-    }
-}
-
-impl Drop for InflightPermit {
-    fn drop(&mut self) {
-        INFLIGHT_REQUESTS.fetch_sub(1, std::sync::atomic::Ordering::Release);
-    }
-}
-
-/// A GET, or a POST carrying a body. POST is issued at most once by callers
-/// (broadcasting a transaction is not idempotent — a retry could double-submit).
-enum HttpMethod {
-    Get,
-    Post(String),
-}
-
-/// Runs one request, bounding the caller's wait by `budget` *wherever* it
-/// blocks — including connection setup and DNS resolution, which ureq's own
-/// timeout cannot interrupt. The blocking call runs on a worker thread the
-/// caller waits at most `budget` for; an over-budget worker is left to finish
-/// on its own (bounded by ureq's timeouts for connect/read, or by the OS
-/// resolver for a DNS stall) and holds its in-flight permit until it does, so
-/// abandoned workers are capped at [`MAX_INFLIGHT_REQUESTS`] instead of able to
-/// accumulate without limit. This is what bounds the caller; ureq's timeouts
-/// alone cannot, because they do not cover connect-precedence and DNS.
-fn request_once_bounded(
-    method: HttpMethod,
-    url: &str,
-    budget: std::time::Duration,
-) -> anyhow::Result<String> {
-    let permit = InflightPermit::acquire()
-        .ok_or_else(|| anyhow::anyhow!("too many in-flight node requests (>{MAX_INFLIGHT_REQUESTS})"))?;
-    let request_timeout = budget.min(HTTP_REQUEST_TIMEOUT);
-    let url = url.to_string();
-    let (tx, rx) = std::sync::mpsc::channel();
-    // `Builder::spawn`, not `thread::spawn`: spawning panics on OS thread
-    // exhaustion, and a panic across this `extern "C"` boundary would abort the
-    // host app. Turn the failure into an error instead. (On `Err` the closure —
-    // and the permit it captured — is dropped, releasing the slot.)
-    std::thread::Builder::new().name("aleo-ffi-http".into()).spawn(move || {
-        // The permit rides with the worker, so the slot is held until the
-        // thread truly ends — even after the caller has abandoned us.
-        let _permit = permit;
-        let outcome = (|| -> anyhow::Result<String> {
-            let agent = http_agent();
-            let response = match method {
-                HttpMethod::Get => agent.get(&url).timeout(request_timeout).call()?,
-                HttpMethod::Post(body) => agent
-                    .post(&url)
-                    .timeout(request_timeout)
-                    .set("Content-Type", "application/json")
-                    .send_string(&body)?,
-            };
-            Ok(response.into_string()?)
-        })();
-        // The receiver is gone if we already timed out; that is expected.
-        let _ = tx.send(outcome);
-    })
-    .map_err(|e| anyhow::anyhow!("could not spawn request worker: {e}"))?;
-    match rx.recv_timeout(budget) {
-        Ok(outcome) => outcome,
-        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-            anyhow::bail!("request exceeded its {budget:?} budget (connect/DNS/read)")
-        }
-        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-            anyhow::bail!("request worker terminated unexpectedly")
-        }
-    }
-}
-
-/// HTTP GET with a few retries (the public node occasionally returns transient
-/// 5xx / connection errors), bounded by `deadline`: no attempt, retry, or
-/// backoff sleep runs past it, and each attempt — connect, DNS, request and
-/// body read alike — is bounded by the time left via [`get_once_bounded`].
-/// Passing an overall `deadline` lets a caller's budget (e.g. the import-graph
-/// load) cap the *total* time across every request it triggers, not just each
-/// one in isolation.
-fn http_get_until(url: &str, deadline: std::time::Instant) -> anyhow::Result<String> {
-    let mut last_error = None;
-    for attempt in 0..HTTP_GET_ATTEMPTS {
-        let remaining = deadline.saturating_duration_since(std::time::Instant::now());
-        if remaining.is_zero() {
-            break;
-        }
-        match request_once_bounded(HttpMethod::Get, url, remaining) {
-            Ok(body) => return Ok(body),
-            Err(error) => {
-                last_error = Some(error);
-                // Back off before retrying, but never past the deadline and not
-                // at all after the final attempt.
-                if attempt + 1 < HTTP_GET_ATTEMPTS {
-                    let backoff = std::time::Duration::from_millis(500 * (attempt as u64 + 1));
-                    let remaining = deadline.saturating_duration_since(std::time::Instant::now());
-                    if remaining.is_zero() {
-                        break;
-                    }
-                    std::thread::sleep(backoff.min(remaining));
-                }
-            }
-        }
-    }
-    Err(anyhow::anyhow!("GET {url} failed after retries: {last_error:?}"))
-}
-
-/// [`http_get_until`] with the default standalone deadline, for callers that
-/// have no overall budget of their own.
-fn http_get(url: &str) -> anyhow::Result<String> {
-    http_get_until(url, std::time::Instant::now() + HTTP_GET_DEADLINE)
-}
-
-/// Single bounded POST, through the same worker-thread executor as GET so a
-/// POST cannot hang the synchronous call on connect/DNS either. Not retried
-/// (a transaction broadcast is not idempotent).
-fn http_post(url: &str, body: &str) -> anyhow::Result<String> {
-    request_once_bounded(HttpMethod::Post(body.to_string()), url, HTTP_GET_DEADLINE)
-}
-
-/// REST query against `{url}/{network}`. snarkVM's own RestQuery derives the
-/// URL path from the network type (MainnetV0 -> `/mainnet`), but Aleo's testnet
-/// runs the network-0 protocol under a `/testnet` path, so we issue the
-/// requests ourselves with the caller-provided network path.
-struct NodeQuery {
-    base: String,
-}
-
-impl NodeQuery {
-    fn new(url: &str, network: &str) -> Self {
-        Self { base: format!("{}/{}", url.trim_end_matches('/'), network) }
-    }
-
-    fn get_json<T: serde::de::DeserializeOwned>(&self, route: &str) -> anyhow::Result<T> {
-        Ok(serde_json::from_str(http_get(&format!("{}/{route}", self.base))?.trim())?)
-    }
-}
-
-impl QueryTrait<Net> for NodeQuery {
-    fn current_state_root(&self) -> anyhow::Result<<Net as Network>::StateRoot> {
-        self.get_json("latest/stateRoot")
-    }
-
-    fn get_state_path_for_commitment(
-        &self,
-        commitment: &Field<Net>,
-    ) -> anyhow::Result<StatePath<Net>> {
-        self.get_json(&format!("statePath/{commitment}"))
-    }
-
-    fn get_state_paths_for_commitments(
-        &self,
-        commitments: &[Field<Net>],
-    ) -> anyhow::Result<Vec<StatePath<Net>>> {
-        // One batch request (the same `statePaths` route snarkVM's RestQuery
-        // uses) so every returned path is anchored to a single block: fetching
-        // per commitment can straddle a block boundary, and the inclusion
-        // prover rejects state paths that disagree on the global state root.
-        if commitments.is_empty() {
-            return Ok(Vec::new());
-        }
-        let commitments =
-            commitments.iter().map(|commitment| commitment.to_string()).collect::<Vec<_>>();
-        self.get_json(&format!("statePaths?commitments={}", commitments.join(",")))
-    }
-
-    fn current_block_height(&self) -> anyhow::Result<u32> {
-        self.get_json("latest/height")
-    }
-}
-
-/// Current block height from the node (used to select the consensus version).
-/// Goes through `NodeQuery` so it shares the retrying `http_get` (the public
-/// node returns transient 5xx/522), like every other node read.
-fn fetch_height(url: &str, network: &str) -> anyhow::Result<u32> {
-    NodeQuery::new(url, network).current_block_height()
-}
-
 /// Rejects a fee the network can never accept, *before* the expensive fee
 /// proving: snarkVM verification requires `fee.amount() <= N::MAX_FEE`, so a
 /// base + priority total past the cap could only produce a proof of a
@@ -597,17 +363,6 @@ fn check_total_fee(base_fee: u64, priority_fee: u64) -> anyhow::Result<()> {
         Net::MAX_FEE
     );
     Ok(())
-}
-
-/// Minimum (base) fee in microcredits for an execution at the node's height.
-fn base_fee_for(execution: &Execution<Net>, url: &str, network: &str) -> anyhow::Result<u64> {
-    let consensus_version = Net::CONSENSUS_VERSION(fetch_height(url, network)?)?;
-    let vm = new_vm()?;
-    let process = vm.process();
-    let process = process.read();
-    let (base_fee, _details) =
-        snarkvm_synthesizer::process::execution_cost(&process, execution, consensus_version)?;
-    Ok(base_fee)
 }
 
 /// Returns a plaintext record string suitable as a function input. Records are
@@ -651,67 +406,6 @@ fn transfer_inputs(
     })
 }
 
-/// Runs the whole split-proof flow for a credits.aleo function and returns the
-/// assembled transaction: authorize -> execute -> fee authorize -> fee execute
-/// -> assemble. `fee_credits` is the priority fee; empty `fee_record` = public fee.
-#[allow(clippy::too_many_arguments)]
-fn full_transaction(
-    private_key: &PrivateKey<Net>,
-    program_id: &str,
-    function: &str,
-    inputs: Vec<String>,
-    fee_credits: u64,
-    fee_record: &str,
-    url: &str,
-    network: &str,
-) -> anyhow::Result<String> {
-    let vm = new_vm()?;
-    add_program_from_node(&vm, program_id, url, network)?;
-    let query = NodeQuery::new(url, network);
-    let rng = &mut rand::thread_rng();
-
-    let authorization = vm.authorize(private_key, program_id, function, inputs, rng)?;
-    let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
-
-    let execution_id = execution.to_execution_id()?;
-    let base_fee = {
-        let consensus_version = Net::CONSENSUS_VERSION(query.current_block_height()?)?;
-        let process = vm.process();
-        let process = process.read();
-        snarkvm_synthesizer::process::execution_cost(&process, &execution, consensus_version)?.0
-    };
-    check_total_fee(base_fee, fee_credits)?;
-    let fee_authorization = if fee_record.trim().is_empty() {
-        vm.authorize_fee_public(private_key, base_fee, fee_credits, execution_id, rng)?
-    } else {
-        let record = plaintext_record_typed(fee_record, private_key)?;
-        vm.authorize_fee_private(private_key, record, base_fee, fee_credits, execution_id, rng)?
-    };
-    let fee = vm.execute_fee_authorization_raw(fee_authorization, &query, rng)?;
-
-    Ok(Transaction::from_execution(execution, Some(fee))?.to_string())
-}
-
-/// Reads a program's current on-chain edition from snarkOS's
-/// `/program/{id}/latest_edition` route, bounded by `deadline` (shared with the
-/// rest of the import-graph load).
-fn node_latest_edition(
-    base: &str,
-    program_id: &str,
-    deadline: std::time::Instant,
-) -> anyhow::Result<u16> {
-    let body = http_get_until(&format!("{base}/program/{program_id}/latest_edition"), deadline)?;
-    Ok(body.trim().trim_matches('"').parse()?)
-}
-
-/// A fetched program whose imports have not all been confirmed present yet.
-struct PendingProgram {
-    program: Program<Net>,
-    edition: u16,
-    /// Imports still to satisfy before this program can be added.
-    pending: Vec<ProgramID<Net>>,
-}
-
 /// Wall-clock ceiling on resolving one import graph from a node. A real
 /// closure loads in a second or two; this is a DoS guard, not a protocol
 /// limit, so it sits far above any honest case. Checked between fetches, each
@@ -727,79 +421,9 @@ const IMPORT_LOAD_DEADLINE: std::time::Duration = std::time::Duration::from_secs
 /// trade-off for not reintroducing a depth/length cap that would.
 const MAX_IMPORT_PROGRAMS: usize = 256;
 
-/// Resource budget for a single `add_program_from_node` load, bounding the two
-/// ways a hostile node can make an honest, acyclic, individually-valid import
-/// chain expensive: total time and total programs (hence memory).
-struct LoadBudget {
-    deadline: std::time::Instant,
-    remaining_programs: usize,
-}
-
-impl LoadBudget {
-    fn new() -> Self {
-        Self {
-            deadline: std::time::Instant::now() + IMPORT_LOAD_DEADLINE,
-            remaining_programs: MAX_IMPORT_PROGRAMS,
-        }
-    }
-
-    /// Fails if the time budget is spent. Cheap, so it gates not just fetches
-    /// but the CPU-bound parse and add-to-process steps, which on a deep chain
-    /// run many in a row after the final fetch.
-    fn check_time(&self) -> anyhow::Result<()> {
-        anyhow::ensure!(
-            std::time::Instant::now() < self.deadline,
-            "import load exceeded its {IMPORT_LOAD_DEADLINE:?} time budget"
-        );
-        Ok(())
-    }
-
-    /// Accounts for one program about to be fetched, failing if either budget
-    /// is spent.
-    fn charge_one_program(&mut self) -> anyhow::Result<()> {
-        self.check_time()?;
-        self.remaining_programs = self.remaining_programs.checked_sub(1).ok_or_else(|| {
-            anyhow::anyhow!("import load exceeded its {MAX_IMPORT_PROGRAMS}-program budget")
-        })?;
-        Ok(())
-    }
-}
-
 /// True for built-in programs and anything already loaded in the process.
 fn program_is_present(vm: &VM<Net, ConsensusMemory<Net>>, id: &ProgramID<Net>) -> bool {
     id.to_string() == "credits.aleo" || vm.process().read().contains_program(id)
-}
-
-/// Fetches `id`'s source at its current on-chain edition. The two are read in
-/// that order (`latest_edition`, then `/program/{id}/{edition}`) so they stay
-/// consistent even if the program is upgraded concurrently. The node is not
-/// trusted: the source may not exceed `MAX_PROGRAM_SIZE` (a larger one cannot
-/// be a valid on-chain program, so rejecting it never rejects a real one) and
-/// must actually declare `id`, so a node can neither flood memory with an
-/// oversized body nor substitute a different program for a requested import.
-fn fetch_program_at_latest_edition(
-    base: &str,
-    id: &ProgramID<Net>,
-    budget: &mut LoadBudget,
-) -> anyhow::Result<PendingProgram> {
-    budget.charge_one_program()?;
-    let edition = node_latest_edition(base, &id.to_string(), budget.deadline)?;
-    let body = http_get_until(&format!("{base}/program/{id}/{edition}"), budget.deadline)?;
-    let source: String = serde_json::from_str(body.trim())?;
-    anyhow::ensure!(
-        source.len() <= Net::MAX_PROGRAM_SIZE,
-        "node returned a {}-byte source for '{id}', over the {}-byte maximum",
-        source.len(),
-        Net::MAX_PROGRAM_SIZE
-    );
-    let program = Program::<Net>::from_str(&source)?;
-    // Parsing a (≤ MAX_PROGRAM_SIZE) source is CPU work; re-check after it.
-    budget.check_time()?;
-    if program.id() != id {
-        anyhow::bail!("node returned program '{}' for requested '{id}'", program.id());
-    }
-    let pending = program.imports().keys().cloned().collect();
-    Ok(PendingProgram { program, edition, pending })
 }
 
 /// Adds a fetched program to the process at its edition. Edition 0
@@ -831,348 +455,6 @@ fn add_fetched_program(
     Ok(())
 }
 
-/// Fetches a non-builtin program from the node and adds it to the VM, loading
-/// every imported program first (snarkVM rejects a program whose imports are
-/// not already present). A no-op for built-in programs like credits.aleo or any
-/// program already loaded.
-///
-/// The import graph is walked iteratively in post-order (imports before
-/// importers), so a hostile node cannot drive call-stack depth: the protocol
-/// caps a program's *direct* imports (parsing enforces `MAX_IMPORTS`) but puts
-/// no limit on transitive chain length, so arbitrarily deep legal chains must
-/// load. An import referring back to a program still being loaded is a cycle —
-/// impossible on-chain, where a program can only import programs deployed
-/// before it — and is rejected as a lying node. Because the protocol does not
-/// bound closure size, the whole walk runs against a [`LoadBudget`] (total time
-/// and program count) so an unbounded acyclic chain of distinct valid programs
-/// cannot block the synchronous call indefinitely or exhaust memory. The time
-/// budget gates the *start* of every fetch, parse and add; one in-flight
-/// `add_fetched_program` is not interrupted (see its docs), so the real
-/// overshoot past the deadline is at most a single program's add.
-fn add_program_from_node(
-    vm: &VM<Net, ConsensusMemory<Net>>,
-    program_id: &str,
-    url: &str,
-    network: &str,
-) -> anyhow::Result<()> {
-    add_program_from_node_within(vm, program_id, url, network, LoadBudget::new())
-}
-
-/// [`add_program_from_node`] with an explicit budget, so a caller (or test) can
-/// bound the whole load rather than take the default.
-fn add_program_from_node_within(
-    vm: &VM<Net, ConsensusMemory<Net>>,
-    program_id: &str,
-    url: &str,
-    network: &str,
-    mut budget: LoadBudget,
-) -> anyhow::Result<()> {
-    let requested = ProgramID::<Net>::from_str(program_id)?;
-    if program_is_present(vm, &requested) {
-        return Ok(());
-    }
-    let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    let budget = &mut budget;
-
-    // `stack` holds fetched programs whose imports are still being satisfied.
-    let mut stack = vec![fetch_program_at_latest_edition(&base, &requested, budget)?];
-    while let Some(frame) = stack.last_mut() {
-        // Gate every iteration — including the run of `add_fetched_program`
-        // calls that unwinds the stack after the last fetch, which is otherwise
-        // pure CPU work with no fetch (hence no charge) between adds.
-        budget.check_time()?;
-        match frame.pending.pop() {
-            Some(import_id) => {
-                // A stack entry is a program still waiting on its imports, so
-                // an import pointing back into the stack is a cycle.
-                if stack.iter().any(|frame| frame.program.id() == &import_id) {
-                    let chain = stack
-                        .iter()
-                        .map(|frame| frame.program.id().to_string())
-                        .collect::<Vec<_>>()
-                        .join(" -> ");
-                    anyhow::bail!("node returned an import cycle: {chain} -> {import_id}");
-                }
-                if !program_is_present(vm, &import_id) {
-                    stack.push(fetch_program_at_latest_edition(&base, &import_id, budget)?);
-                }
-            }
-            None => {
-                let done = stack.pop().expect("the loop condition saw a frame");
-                add_fetched_program(vm, &done.program, done.edition)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Authorizes and executes a program function, returning the serialized
-/// execution. Fetches the program if it isn't built in.
-fn program_execution(
-    private_key: &PrivateKey<Net>,
-    program_id: &str,
-    function: &str,
-    arguments: &str,
-    url: &str,
-    network: &str,
-) -> anyhow::Result<String> {
-    let inputs: Vec<String> = serde_json::from_str(arguments)?;
-    let vm = new_vm()?;
-    add_program_from_node(&vm, program_id, url, network)?;
-    let query = NodeQuery::new(url, network);
-    let rng = &mut rand::thread_rng();
-    let authorization = vm.authorize(private_key, program_id, function, inputs, rng)?;
-    let (execution, _response) = vm.execute_authorization_raw(authorization, &query, rng)?;
-    Ok(serde_json::to_string(&execution)?)
-}
-
-/// Produces the (public) fee proof for a serialized execution of `program_id`.
-/// The program is loaded so its per-transition cost can be computed.
-fn program_fee(
-    private_key: &PrivateKey<Net>,
-    priority_fee: u64,
-    execution: &str,
-    program_id: &str,
-    url: &str,
-    network: &str,
-) -> anyhow::Result<String> {
-    let execution: Execution<Net> = serde_json::from_str(execution)?;
-    let vm = new_vm()?;
-    add_program_from_node(&vm, program_id, url, network)?;
-    let query = NodeQuery::new(url, network);
-    let rng = &mut rand::thread_rng();
-    let execution_id = execution.to_execution_id()?;
-    let base_fee = {
-        let consensus_version = Net::CONSENSUS_VERSION(query.current_block_height()?)?;
-        let process = vm.process();
-        let process = process.read();
-        snarkvm_synthesizer::process::execution_cost(&process, &execution, consensus_version)?.0
-    };
-    check_total_fee(base_fee, priority_fee)?;
-    let fee_authorization =
-        vm.authorize_fee_public(private_key, base_fee, priority_fee, execution_id, rng)?;
-    let fee = vm.execute_fee_authorization_raw(fee_authorization, &query, rng)?;
-    Ok(serde_json::to_string(&fee)?)
-}
-
-/// POSTs a transaction to the node, returning the node's response body. Goes
-/// through the bounded executor, so a stalled/odd-DNS node fails the call
-/// instead of hanging the synchronous broadcast forever.
-fn broadcast_to_node(transaction: &str, url: &str, network: &str) -> anyhow::Result<String> {
-    let base = format!("{}/{}", url.trim_end_matches('/'), network);
-    http_post(&format!("{base}/transaction/broadcast"), transaction)
-}
-
-/// Builds a complete credits.aleo transfer transaction (without broadcasting).
-/// Returns "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn build_transaction(
-    private_key: *const c_char,
-    recipient: *const c_char,
-    transfer_type: *const c_char,
-    amount: u64,
-    fee_credits: u64,
-    url: *const c_char,
-    amount_record: *const c_char,
-    fee_record: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        let function = read_str(transfer_type);
-        let inputs = transfer_inputs(
-            function,
-            read_str(recipient),
-            amount,
-            read_str(amount_record),
-            &private_key,
-        )?;
-        full_transaction(
-            &private_key,
-            "credits.aleo",
-            function,
-            inputs,
-            fee_credits,
-            read_str(fee_record),
-            read_str(url),
-            read_str(network),
-        )
-    };
-    match inner() {
-        Ok(transaction) => to_cstring(transaction),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Builds and broadcasts a credits.aleo transfer, returning the node response.
-/// Returns "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn try_transfer(
-    private_key: *const c_char,
-    recipient: *const c_char,
-    transfer_type: *const c_char,
-    amount: u64,
-    fee_credits: u64,
-    url: *const c_char,
-    amount_record: *const c_char,
-    fee_record: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        let function = read_str(transfer_type);
-        let inputs = transfer_inputs(
-            function,
-            read_str(recipient),
-            amount,
-            read_str(amount_record),
-            &private_key,
-        )?;
-        let transaction = full_transaction(
-            &private_key,
-            "credits.aleo",
-            function,
-            inputs,
-            fee_credits,
-            read_str(fee_record),
-            read_str(url),
-            read_str(network),
-        )?;
-        broadcast_to_node(&transaction, read_str(url), read_str(network))
-    };
-    match inner() {
-        Ok(response) => to_cstring(response),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Executes an arbitrary program function and broadcasts the transaction.
-/// `arguments` is a JSON array of Aleo value strings. Returns the node response.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn execute_program(
-    private_key: *const c_char,
-    program_id: *const c_char,
-    function_name: *const c_char,
-    arguments: *const c_char,
-    fee: u64,
-    url: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        let inputs: Vec<String> = serde_json::from_str(read_str(arguments))?;
-        let transaction = full_transaction(
-            &private_key,
-            read_str(program_id),
-            read_str(function_name),
-            inputs,
-            fee,
-            "",
-            read_str(url),
-            read_str(network),
-        )?;
-        broadcast_to_node(&transaction, read_str(url), read_str(network))
-    };
-    match inner() {
-        Ok(response) => to_cstring(response),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Generates the execution proof for a previously built authorization that
-/// targets a non-builtin program. Unlike `execute_proof`, the referenced
-/// `program_id` (and its imports) is fetched from the node and loaded before
-/// the execution. Returns the serialized execution, or "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn execute_program_proof(
-    url: *const c_char,
-    authorization: *const c_char,
-    network: *const c_char,
-    program_id: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        let vm = new_vm()?;
-        add_program_from_node(&vm, read_str(program_id), read_str(url), read_str(network))?;
-        let query = NodeQuery::new(read_str(url), read_str(network));
-        let (execution, _response) =
-            vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
-        Ok(serde_json::to_string(&execution)?)
-    };
-    match inner() {
-        Ok(execution) => to_cstring(execution),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Like `execute_program_proof`: authorizes + executes a program function,
-/// returning the serialized execution (split-proof; fee comes separately via
-/// `contract_fee_execution`).
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn contract_execution(
-    private_key: *const c_char,
-    program_id: *const c_char,
-    function_name: *const c_char,
-    arguments: *const c_char,
-    url: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        program_execution(
-            &private_key,
-            read_str(program_id),
-            read_str(function_name),
-            read_str(arguments),
-            read_str(url),
-            read_str(network),
-        )
-    };
-    match inner() {
-        Ok(execution) => to_cstring(execution),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Produces the public fee proof for a contract execution. Returns "".
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn contract_fee_execution(
-    private_key: *const c_char,
-    fee: u64,
-    execution: *const c_char,
-    program_id: *const c_char,
-    url: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        program_fee(
-            &private_key,
-            fee,
-            read_str(execution),
-            read_str(program_id),
-            read_str(url),
-            read_str(network),
-        )
-    };
-    match inner() {
-        Ok(fee) => to_cstring(fee),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
 /// Builds an execution authorization for credits.aleo `join` (merging two
 /// private records). Offline. Returns "" on failure.
 ///
@@ -1198,44 +480,6 @@ pub unsafe extern "C" fn join_authorization(
     };
     match inner() {
         Ok(authorization) => to_cstring(authorization),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Builds, proves, and broadcasts a credits.aleo `join` of two private records.
-/// Returns the node response, or "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn try_join(
-    private_key: *const c_char,
-    record_1: *const c_char,
-    record_2: *const c_char,
-    fee_credits: u64,
-    fee_record: *const c_char,
-    url: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        let inputs = vec![
-            plaintext_record(read_str(record_1), &private_key)?,
-            plaintext_record(read_str(record_2), &private_key)?,
-        ];
-        let transaction = full_transaction(
-            &private_key,
-            "credits.aleo",
-            "join",
-            inputs,
-            fee_credits,
-            read_str(fee_record),
-            read_str(url),
-            read_str(network),
-        )?;
-        broadcast_to_node(&transaction, read_str(url), read_str(network))
-    };
-    match inner() {
-        Ok(response) => to_cstring(response),
         Err(_) => to_cstring(String::new()),
     }
 }
@@ -1271,131 +515,6 @@ pub unsafe extern "C" fn execution_authorization(
     };
     match inner() {
         Ok(authorization) => to_cstring(authorization),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Generates the execution proof for an authorization (the patched
-/// `execute_authorization_raw`). Queries `url`/`network` for the state root.
-/// Returns "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn execute_proof(
-    url: *const c_char,
-    authorization: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        let query = NodeQuery::new(read_str(url), read_str(network));
-        let vm = new_vm()?;
-        let (execution, _response) =
-            vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
-        Ok(serde_json::to_string(&execution)?)
-    };
-    match inner() {
-        Ok(execution) => to_cstring(execution),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Broadcasts a serialized transaction to the node, returning the node's
-/// response (the transaction id on success). Returns "" on transport failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn broadcast(
-    transaction: *const c_char,
-    url: *const c_char,
-    _transfer_type: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        broadcast_to_node(read_str(transaction), read_str(url), read_str(network))
-    };
-    match inner() {
-        Ok(response) => to_cstring(response),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Returns the base (minimum) fee in microcredits for a serialized execution,
-/// or 0 on failure. u64, like every fee crossing this ABI: snarkVM fees are
-/// u64 microcredits and can legitimately exceed i32.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn get_base_fee(
-    url: *const c_char,
-    execution: *const c_char,
-    network: *const c_char,
-) -> u64 {
-    let inner = || -> anyhow::Result<u64> {
-        let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
-        base_fee_for(&execution, read_str(url), read_str(network))
-    };
-    inner().unwrap_or(0)
-}
-
-/// Builds the fee authorization for an execution. `fee_credits` is the priority
-/// fee; the base fee is computed from the execution. An empty `fee_record` uses
-/// a public fee, otherwise a private fee spending that record. Returns "".
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn execution_fee_authorization(
-    private_key: *const c_char,
-    _transfer_type: *const c_char,
-    url: *const c_char,
-    fee_credits: u64,
-    fee_record: *const c_char,
-    execution: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
-        let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
-        let execution_id = execution.to_execution_id()?;
-        let base_fee = base_fee_for(&execution, read_str(url), read_str(network))?;
-        let priority_fee = fee_credits;
-        check_total_fee(base_fee, priority_fee)?;
-        let fee_record = read_str(fee_record);
-        let vm = new_vm()?;
-        let rng = &mut rand::thread_rng();
-        let authorization = if fee_record.trim().is_empty() {
-            vm.authorize_fee_public(&private_key, base_fee, priority_fee, execution_id, rng)?
-        } else {
-            let record = plaintext_record_typed(fee_record, &private_key)?;
-            vm.authorize_fee_private(&private_key, record, base_fee, priority_fee, execution_id, rng)?
-        };
-        Ok(serde_json::to_string(&authorization)?)
-    };
-    match inner() {
-        Ok(authorization) => to_cstring(authorization),
-        Err(_) => to_cstring(String::new()),
-    }
-}
-
-/// Generates the fee proof for a fee authorization (the patched
-/// `execute_fee_authorization_raw`). Returns "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
-#[no_mangle]
-pub unsafe extern "C" fn execute_fee_proof(
-    url: *const c_char,
-    authorization: *const c_char,
-    network: *const c_char,
-) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        let query = NodeQuery::new(read_str(url), read_str(network));
-        let vm = new_vm()?;
-        let fee = vm.execute_fee_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
-        Ok(serde_json::to_string(&fee)?)
-    };
-    match inner() {
-        Ok(fee) => to_cstring(fee),
         Err(_) => to_cstring(String::new()),
     }
 }
@@ -1505,18 +624,19 @@ pub unsafe extern "C" fn serial_number_string(
 }
 
 // ----------------------------------------------------------------------------
-// Phase 1 of the I/O-to-Dart migration (docs/network-io-to-dart.md): RPC-free
-// variants of the proving/fee surface, plus small helpers that let Dart discover
-// what to fetch. These take pre-fetched node data (`height`, `state_paths_json`,
-// `public_state_root`, `program_sources_json`) instead of a `url`/`network` to
-// query, so these exports issue no node RPC. NOTE: this is not yet "zero
-// network" — snarkVM's proving still lazily downloads proving keys / the SRS via
-// `curl` (no timeout) on a cold parameter cache, so the crate still links
-// curl/openssl; removing that is a separate task (see the spec's "Proving
-// parameters" section). They ship under *new* `_static` symbols alongside the
-// untouched old exports — a cdylib cannot export two ABIs under one symbol, and
-// Dart still looks up the old names; phase 3 deletes the old path once Dart no
-// longer does.
+// I/O-to-Dart migration (docs/network-io-to-dart.md): RPC-free proving/fee
+// surface, plus small helpers that let Dart discover what to fetch. These take
+// pre-fetched node data (`height`, `state_paths_json`, `public_state_root`,
+// `program_sources_json`) instead of a `url`/`network` to query, so these
+// exports issue no node RPC — all node I/O lives in the Dart `AleoNode`. Phase 3
+// deleted the old in-Rust HTTP path; these are now the canonical proving/fee
+// exports (phase 1 shipped them under temporary `_static` names while the old
+// blocking-HTTP exports still existed, since a cdylib cannot export two ABIs
+// under one symbol; the suffix is gone now that the old path is). NOTE: this is
+// still not "zero network" — snarkVM's proving lazily downloads proving keys /
+// the SRS via `curl` (no timeout) on a cold parameter cache, so the crate still
+// links curl/openssl; removing that is a separate task (phase 4, see the spec's
+// "Proving parameters" section).
 // ----------------------------------------------------------------------------
 
 /// Assumed serialized size of one `StatePath`, used *only* as a factor to derive
@@ -1661,9 +781,9 @@ fn checked_static_query(
     static_query_from_paths(height, paths, public_state_root)
 }
 
-/// Base (minimum) fee in microcredits for an execution at the given height. The
-/// pure analogue of [`base_fee_for`]: `height` selects the consensus version
-/// instead of a node fetch. `program_sources_json` supplies the execution's root
+/// Base (minimum) fee in microcredits for an execution at the given height:
+/// `height` selects the consensus version instead of a node fetch (the node I/O
+/// now lives in Dart). `program_sources_json` supplies the execution's root
 /// program (and its imports) — snarkVM's `execution_cost` reads each transition's
 /// program `Stack`, so a non-builtin execution needs them loaded first. Empty
 /// for a credits.aleo execution (the program is built in).
@@ -1691,9 +811,10 @@ struct ProgramSourceEntry {
 }
 
 /// Adds programs supplied as in-memory sources (the whole import closure, in any
-/// order) to the VM, imports-before-importers — the offline analogue of
-/// [`add_program_from_node`]. Applies the same per-program id-match and
-/// `MAX_PROGRAM_SIZE` checks, the program-count and total-byte budget, and a
+/// order) to the VM, imports-before-importers — the offline program loader (the
+/// node fetch now lives in Dart, which supplies the closure as JSON). Applies a
+/// per-program id-match and `MAX_PROGRAM_SIZE` check, the program-count and
+/// total-byte budget, and a
 /// wall-clock deadline. The deadline matters even with no network I/O left:
 /// `Program::from_str` and `add_program_with_edition` (Stack construction) are
 /// expensive, uninterruptible CPU work, so a hostile closure of up to
@@ -1952,7 +1073,7 @@ pub extern "C" fn consensus_version_for(height: u32) -> u16 {
 ///
 /// SAFETY: `execution`/`program_sources_json` are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn get_base_fee_static(
+pub unsafe extern "C" fn get_base_fee(
     execution: *const c_char,
     program_sources_json: *const c_char,
     height: u32,
@@ -1974,7 +1095,7 @@ pub unsafe extern "C" fn get_base_fee_static(
 /// SAFETY: `private_key`/`execution`/`fee_record`/`program_sources_json` are
 /// NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn execution_fee_authorization_static(
+pub unsafe extern "C" fn execution_fee_authorization(
     private_key: *const c_char,
     execution: *const c_char,
     fee_credits: u64,
@@ -2022,7 +1143,7 @@ pub unsafe extern "C" fn execution_fee_authorization_static(
 /// SAFETY: `authorization`/`state_paths_json`/`public_state_root` are
 /// NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn execute_proof_static(
+pub unsafe extern "C" fn execute_proof(
     authorization: *const c_char,
     height: u32,
     state_paths_json: *const c_char,
@@ -2056,7 +1177,7 @@ pub unsafe extern "C" fn execute_proof_static(
 /// SAFETY: `authorization`/`state_paths_json`/`public_state_root` are
 /// NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn execute_fee_proof_static(
+pub unsafe extern "C" fn execute_fee_proof(
     authorization: *const c_char,
     height: u32,
     state_paths_json: *const c_char,
@@ -2088,7 +1209,7 @@ pub unsafe extern "C" fn execute_fee_proof_static(
 ///
 /// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn execute_program_proof_static(
+pub unsafe extern "C" fn execute_program_proof(
     authorization: *const c_char,
     program_sources_json: *const c_char,
     height: u32,
@@ -2128,7 +1249,7 @@ pub unsafe extern "C" fn execute_program_proof_static(
 ///
 /// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn program_authorization_static(
+pub unsafe extern "C" fn program_authorization(
     private_key: *const c_char,
     program_id: *const c_char,
     function_name: *const c_char,
@@ -2158,6 +1279,10 @@ pub unsafe extern "C" fn program_authorization_static(
 #[cfg(test)]
 mod tests {
     use super::*;
+    // The non-test code never names `QueryTrait` (it hands `StaticQuery` to
+    // snarkVM, which calls the trait internally); only these tests assert on the
+    // query directly, so the import lives here rather than at module scope.
+    use snarkvm_ledger_query::QueryTrait;
 
     // record[2] from packages/aleo_dart/test/_diff_records.dart, owned by OWNER_KEY.
     const TEST_RECORD: &str = "record1qyqspdn8f6lh4eum9a36l93mnxh5vcqssjsep9z4lp4vpya2efgmjdsvqyxx66trwfhkxun9v35hguerqqpqzq9yu3tvsnj4x0a7e2w9w204aya09thraeckdlsn59pve6fnnd3eqv0n7jpp5rsxn48jdjj3z55vhmp42f8hxp7vk5d2430vuvk3fzrsx0w9wqw";
@@ -2260,295 +1385,11 @@ mod tests {
         }
     }
 
-    /// Serves canned `path -> body` responses on a local port, so the
-    /// node-facing program loader can be exercised without a network.
-    fn serve_canned(routes: std::collections::HashMap<String, String>) -> String {
-        use std::io::{Read, Write};
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let address = format!("http://{}", listener.local_addr().unwrap());
-        std::thread::spawn(move || {
-            for stream in listener.incoming() {
-                let Ok(mut stream) = stream else { continue };
-                let mut buffer = [0u8; 4096];
-                let read = stream.read(&mut buffer).unwrap_or(0);
-                let request = String::from_utf8_lossy(&buffer[..read]).into_owned();
-                let path = request.split_whitespace().nth(1).unwrap_or("").to_string();
-                let (status, body) = match routes.get(&path) {
-                    Some(body) => ("200 OK", body.clone()),
-                    None => ("404 Not Found", String::new()),
-                };
-                let _ = write!(
-                    stream,
-                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-            }
-        });
-        address
-    }
-
-    /// Like [`serve_canned`] but computes each response from the request path,
-    /// so a test can model an *unbounded* node (e.g. an endless distinct import
-    /// chain) without materializing infinite routes.
-    fn serve_dynamic<F>(handler: F) -> String
-    where
-        F: Fn(&str) -> Option<String> + Send + 'static,
-    {
-        use std::io::{Read, Write};
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let address = format!("http://{}", listener.local_addr().unwrap());
-        std::thread::spawn(move || {
-            for stream in listener.incoming() {
-                let Ok(mut stream) = stream else { continue };
-                let mut buffer = [0u8; 4096];
-                let read = stream.read(&mut buffer).unwrap_or(0);
-                let request = String::from_utf8_lossy(&buffer[..read]).into_owned();
-                let path = request.split_whitespace().nth(1).unwrap_or("");
-                let (status, body) = match handler(path) {
-                    Some(body) => ("200 OK", body),
-                    None => ("404 Not Found", String::new()),
-                };
-                let _ = write!(
-                    stream,
-                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-            }
-        });
-        address
-    }
-
     /// Source for a minimal valid program named `id` importing `imports`.
     fn program_source(id: &str, imports: &[String]) -> String {
         let imports_block =
             imports.iter().map(|import| format!("import {import};\n")).collect::<String>();
         format!("{imports_block}\nprogram {id};\n\nfunction noop:\n    add 1u8 1u8 into r0;\n")
-    }
-
-    /// Registers the `latest_edition` and source routes for a minimal valid
-    /// program named `id` importing `imports`.
-    fn program_routes(
-        routes: &mut std::collections::HashMap<String, String>,
-        id: &str,
-        imports: &[String],
-    ) {
-        let source = program_source(id, imports);
-        routes.insert(format!("/testnet/program/{id}/latest_edition"), "1".to_string());
-        routes.insert(format!("/testnet/program/{id}/1"), serde_json::to_string(&source).unwrap());
-    }
-
-    // A node claiming `a.aleo -> b.aleo -> a.aleo` must be rejected, not
-    // walked forever: such a cycle is impossible on-chain (programs can only
-    // import programs deployed before them), so it can only be a lying node.
-    #[test]
-    fn import_cycle_from_node_rejected() {
-        let mut routes = std::collections::HashMap::new();
-        program_routes(&mut routes, "cyclea.aleo", &["cycleb.aleo".to_string()]);
-        program_routes(&mut routes, "cycleb.aleo", &["cyclea.aleo".to_string()]);
-        let url = serve_canned(routes);
-        let vm = new_vm().unwrap();
-        let error = add_program_from_node(&vm, "cyclea.aleo", &url, "testnet").unwrap_err();
-        assert!(error.to_string().contains("import cycle"), "got: {error}");
-    }
-
-    // The returned source must declare the requested ID: a node answering the
-    // request for one program with another must be rejected.
-    #[test]
-    fn node_substituting_a_program_rejected() {
-        let mut routes = std::collections::HashMap::new();
-        program_routes(&mut routes, "evil.aleo", &[]);
-        let evil_body = routes["/testnet/program/evil.aleo/1"].clone();
-        routes.insert("/testnet/program/honest.aleo/latest_edition".to_string(), "1".to_string());
-        routes.insert("/testnet/program/honest.aleo/1".to_string(), evil_body);
-        let url = serve_canned(routes);
-        let vm = new_vm().unwrap();
-        let error = add_program_from_node(&vm, "honest.aleo", &url, "testnet").unwrap_err();
-        assert!(error.to_string().contains("returned program"), "got: {error}");
-    }
-
-    // The protocol caps a program's direct imports, not transitive chain
-    // depth, so a legal chain deeper than any fixed guess must still load
-    // (and must not grow the call stack while doing so).
-    #[test]
-    fn deep_import_chain_loads() {
-        const DEPTH: usize = 20;
-        let mut routes = std::collections::HashMap::new();
-        for i in 0..DEPTH {
-            let imports = if i + 1 < DEPTH {
-                vec![format!("deep{}.aleo", i + 1)]
-            } else {
-                Vec::new()
-            };
-            program_routes(&mut routes, &format!("deep{i}.aleo"), &imports);
-        }
-        let url = serve_canned(routes);
-        let vm = new_vm().unwrap();
-        add_program_from_node(&vm, "deep0.aleo", &url, "testnet").unwrap();
-        let process = vm.process();
-        let process = process.read();
-        assert!(process.contains_program(&ProgramID::from_str("deep0.aleo").unwrap()));
-        assert!(process
-            .contains_program(&ProgramID::from_str(&format!("deep{}.aleo", DEPTH - 1)).unwrap()));
-    }
-
-    // An acyclic but endless chain of distinct, individually-valid programs
-    // (no cycle, each within protocol limits) must still terminate, on the
-    // program-count budget, rather than fetch forever or exhaust memory.
-    #[test]
-    fn unbounded_import_chain_hits_budget() {
-        // Every `deepN.aleo` validly imports `deep{N+1}.aleo`, without end.
-        let url = serve_dynamic(|path| {
-            let parts: Vec<&str> = path.trim_start_matches('/').split('/').collect();
-            // ["testnet", "program", "deepN.aleo", "latest_edition" | "1"]
-            if parts.len() != 4 || parts[1] != "program" {
-                return None;
-            }
-            let id = parts[2];
-            if parts[3] == "latest_edition" {
-                return Some("1".to_string());
-            }
-            let n: usize = id.strip_prefix("deep")?.strip_suffix(".aleo")?.parse().ok()?;
-            let source = program_source(id, &[format!("deep{}.aleo", n + 1)]);
-            Some(serde_json::to_string(&source).unwrap())
-        });
-        let vm = new_vm().unwrap();
-        let error = add_program_from_node(&vm, "deep0.aleo", &url, "testnet").unwrap_err();
-        assert!(error.to_string().contains("program budget"), "got: {error}");
-    }
-
-    /// Accepts connections and never replies, so a client's per-request timeout
-    /// / overall deadline — not the server — is what ends the call.
-    fn serve_stalling() -> String {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let address = format!("http://{}", listener.local_addr().unwrap());
-        std::thread::spawn(move || {
-            for stream in listener.incoming() {
-                let Ok(stream) = stream else { continue };
-                // Hold the socket open a while without responding, then drop it.
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_secs(30));
-                    drop(stream);
-                });
-            }
-        });
-        address
-    }
-
-    // A deadline already in the past makes no request at all and returns at
-    // once (the URL is never contacted).
-    #[test]
-    fn http_get_past_deadline_returns_immediately() {
-        let started = std::time::Instant::now();
-        let result =
-            http_get_until("http://203.0.113.1/never", started - std::time::Duration::from_secs(1));
-        assert!(result.is_err());
-        assert!(started.elapsed() < std::time::Duration::from_secs(1), "took {:?}", started.elapsed());
-    }
-
-    // A stalling node must not hold the call past the deadline: without the
-    // deadline plumbing this would block ~4 x 60s, here it ends in ~1s.
-    #[test]
-    fn http_get_bounded_by_deadline_against_stalling_node() {
-        let url = serve_stalling();
-        let started = std::time::Instant::now();
-        let result =
-            http_get_until(&format!("{url}/x"), started + std::time::Duration::from_secs(1));
-        assert!(result.is_err());
-        assert!(started.elapsed() < std::time::Duration::from_secs(15), "took {:?}", started.elapsed());
-    }
-
-    // POST (broadcast) goes through the same bounded executor, so a stalling
-    // node bounds it too instead of hanging the synchronous broadcast forever.
-    #[test]
-    fn post_bounded_against_stalling_node() {
-        let url = serve_stalling();
-        let started = std::time::Instant::now();
-        let result = request_once_bounded(
-            HttpMethod::Post("{}".to_string()),
-            &format!("{url}/x"),
-            std::time::Duration::from_secs(1),
-        );
-        assert!(result.is_err());
-        assert!(started.elapsed() < std::time::Duration::from_secs(15), "took {:?}", started.elapsed());
-    }
-
-    // The in-flight permit caps concurrency: once the ceiling is held, the next
-    // acquire is refused; freeing a permit lets a later one through. Acquire
-    // up-to-refusal rather than from a fixed base, since other tests share the
-    // global counter.
-    #[test]
-    fn inflight_permit_caps_then_recovers() {
-        let mut held = Vec::new();
-        while held.len() <= MAX_INFLIGHT_REQUESTS {
-            match InflightPermit::acquire() {
-                Some(permit) => held.push(permit),
-                None => break,
-            }
-        }
-        assert!(held.len() <= MAX_INFLIGHT_REQUESTS, "never exceeds the cap");
-        assert!(!held.is_empty(), "acquired at least one");
-        held.clear(); // free them all
-        assert!(InflightPermit::acquire().is_some(), "freed slots are reusable");
-    }
-
-    // The whole import-graph load — not just one request — is bounded by the
-    // budget's deadline, even when each fetch would otherwise stall for minutes.
-    // The bound comes from the worker thread, so it holds wherever the request
-    // blocks (connect / DNS / read), not just on the part ureq can time out.
-    #[test]
-    fn import_load_bounded_by_budget_deadline() {
-        let url = serve_stalling();
-        let vm = new_vm().unwrap();
-        let budget = LoadBudget {
-            deadline: std::time::Instant::now() + std::time::Duration::from_secs(1),
-            remaining_programs: MAX_IMPORT_PROGRAMS,
-        };
-        let started = std::time::Instant::now();
-        let error =
-            add_program_from_node_within(&vm, "stall.aleo", &url, "testnet", budget).unwrap_err();
-        assert!(started.elapsed() < std::time::Duration::from_secs(15), "took {:?}", started.elapsed());
-        // Ended on the network/deadline, not by loading anything.
-        assert!(!vm.process().read().contains_program(&ProgramID::from_str("stall.aleo").unwrap()));
-        let _ = error;
-    }
-
-    // check_time gates the CPU-bound parse/add phase (not just fetches), so an
-    // already-spent time budget refuses to load even an instantly-served,
-    // protocol-valid program rather than running the add phase unchecked.
-    #[test]
-    fn spent_time_budget_loads_nothing() {
-        assert!(LoadBudget::new().check_time().is_ok());
-        let spent = LoadBudget {
-            deadline: std::time::Instant::now() - std::time::Duration::from_secs(1),
-            remaining_programs: MAX_IMPORT_PROGRAMS,
-        };
-        assert!(spent.check_time().is_err());
-
-        let mut routes = std::collections::HashMap::new();
-        program_routes(&mut routes, "solo.aleo", &[]);
-        let url = serve_canned(routes);
-        let vm = new_vm().unwrap();
-        let error =
-            add_program_from_node_within(&vm, "solo.aleo", &url, "testnet", spent).unwrap_err();
-        assert!(error.to_string().contains("time budget"), "got: {error}");
-        assert!(!vm.process().read().contains_program(&ProgramID::from_str("solo.aleo").unwrap()));
-    }
-
-    // A source larger than the protocol maximum can't be a real program, so it
-    // must be rejected (bounding per-fetch memory) rather than parsed.
-    #[test]
-    fn oversized_program_source_rejected() {
-        let mut routes = std::collections::HashMap::new();
-        let bloated = format!("program big.aleo;\n{}", " ".repeat(Net::MAX_PROGRAM_SIZE + 1));
-        routes.insert("/testnet/program/big.aleo/latest_edition".to_string(), "1".to_string());
-        routes.insert(
-            "/testnet/program/big.aleo/1".to_string(),
-            serde_json::to_string(&bloated).unwrap(),
-        );
-        let url = serve_canned(routes);
-        let vm = new_vm().unwrap();
-        let error = add_program_from_node(&vm, "big.aleo", &url, "testnet").unwrap_err();
-        assert!(error.to_string().contains("maximum"), "got: {error}");
     }
 
     // A fee the network would reject must fail before proving, and the
@@ -2582,35 +1423,6 @@ mod tests {
             free_string(pk_ptr);
             free_string(addr_ptr);
         }
-    }
-
-    // latest_edition reports a program's current edition (token_registry = 1).
-    #[test]
-    #[ignore = "network: run with `cargo test -- --ignored`"]
-    fn node_latest_edition_reads_current_edition() {
-        let base = std::env::var("ALEO_NODE_URL")
-            .unwrap_or_else(|_| "https://api.explorer.provable.com/v1".to_string())
-            + "/testnet";
-        let deadline = std::time::Instant::now() + HTTP_GET_DEADLINE;
-        assert_eq!(node_latest_edition(&base, "token_registry.aleo", deadline).unwrap(), 1);
-    }
-
-    // Loading a program pulls in its non-builtin imports recursively
-    // (wrapped_credits.aleo imports token_registry.aleo). Hits the public node.
-    #[test]
-    #[ignore = "network: run with `cargo test -- --ignored`"]
-    fn add_program_loads_imports_recursively() {
-        let url = std::env::var("ALEO_NODE_URL")
-            .unwrap_or_else(|_| "https://api.explorer.provable.com/v1".to_string());
-        let vm = new_vm().unwrap();
-        add_program_from_node(&vm, "wrapped_credits.aleo", &url, "testnet").unwrap();
-        let process = vm.process();
-        let process = process.read();
-        assert!(process.contains_program(&ProgramID::from_str("wrapped_credits.aleo").unwrap()));
-        assert!(
-            process.contains_program(&ProgramID::from_str("token_registry.aleo").unwrap()),
-            "recursive import token_registry.aleo was not loaded"
-        );
     }
 
     // ---- Phase 1 (I/O-to-Dart) pure primitives + helpers --------------------
@@ -2728,7 +1540,7 @@ mod tests {
     use snarkvm_console::network::prelude::TestRng;
     use snarkvm_console::program::state_path::test_helpers::sample_global_state_path;
 
-    // The load-bearing assumption execute_proof_static relies on: a *global*
+    // The load-bearing assumption execute_proof relies on: a *global*
     // StatePath's transition-leaf id IS the record commitment, so static_query
     // can key the query map by it and proving finds each path by commitment.
     #[test]
@@ -2955,6 +1767,45 @@ mod tests {
         assert!(error.to_string().contains("declares"), "got: {error}");
     }
 
+    // A single program source over MAX_PROGRAM_SIZE is rejected before it is even
+    // parsed (the per-entry size guard). The offline analogue of the old
+    // node-fetched `oversized_program_source_rejected`: the total-byte budget is
+    // generous (256 × MAX_PROGRAM_SIZE), so this trips the per-program bound, not
+    // the aggregate one, and `MAX_PROGRAM_SIZE` is a real protocol constant so it
+    // never rejects an honest program.
+    #[test]
+    fn add_programs_from_sources_rejects_oversized_source() {
+        let bloated = format!("program big.aleo;\n{}", " ".repeat(Net::MAX_PROGRAM_SIZE));
+        assert!(bloated.len() > Net::MAX_PROGRAM_SIZE);
+        let json = serde_json::to_string(&serde_json::json!([
+            { "id": "big.aleo", "edition": 1, "source": bloated }
+        ]))
+        .unwrap();
+        let vm = new_vm().unwrap();
+        let error = add_programs_from_sources(&vm, &json).unwrap_err();
+        assert!(error.to_string().contains("maximum"), "got: {error}");
+    }
+
+    // A cycle in the supplied closure (a imports b, b imports a) is rejected: with
+    // neither program built in or added yet, neither is ever "ready", so the walk
+    // stalls with programs left unadded. The offline analogue of the old
+    // `import_cycle_from_node_rejected` — and a guard that a still-pending program
+    // is not mistaken for an already-present one.
+    #[test]
+    fn add_programs_from_sources_rejects_cycle() {
+        let json = sources_json(&[
+            ("cyclea.aleo", &["cycleb.aleo".to_string()]),
+            ("cycleb.aleo", &["cyclea.aleo".to_string()]),
+        ]);
+        let vm = new_vm().unwrap();
+        let error = add_programs_from_sources(&vm, &json).unwrap_err();
+        assert!(
+            error.to_string().contains("unresolved imports or an import cycle"),
+            "got: {error}"
+        );
+        assert!(!vm.process().read().contains_program(&ProgramID::from_str("cyclea.aleo").unwrap()));
+    }
+
     // An empty source set is a no-op (public flows supply no programs).
     #[test]
     fn add_programs_from_sources_empty_is_noop() {
@@ -3046,22 +1897,22 @@ mod tests {
     // can be costed). Malformed input returns 0 / "" without panicking across the
     // FFI boundary — and exercises the new 3-arg / 6-arg ABIs.
     #[test]
-    fn get_base_fee_static_malformed_returns_zero() {
+    fn get_base_fee_malformed_returns_zero() {
         unsafe {
             let execution = CString::new("not json").unwrap();
             let sources = CString::new("").unwrap();
-            assert_eq!(get_base_fee_static(execution.as_ptr(), sources.as_ptr(), 9_430_000), 0);
+            assert_eq!(get_base_fee(execution.as_ptr(), sources.as_ptr(), 9_430_000), 0);
         }
     }
 
     #[test]
-    fn execution_fee_authorization_static_malformed_returns_empty() {
+    fn execution_fee_authorization_malformed_returns_empty() {
         unsafe {
             let pk = CString::new(OWNER_KEY).unwrap();
             let execution = CString::new("not json").unwrap();
             let fee_record = CString::new("").unwrap();
             let sources = CString::new("").unwrap();
-            let ptr = execution_fee_authorization_static(
+            let ptr = execution_fee_authorization(
                 pk.as_ptr(),
                 execution.as_ptr(),
                 1000,
@@ -3075,7 +1926,7 @@ mod tests {
         }
     }
 
-    /// Calls the 5-arg program_authorization_static and returns the owned result.
+    /// Calls the 5-arg program_authorization and returns the owned result.
     fn call_program_authorization(
         private_key: &str,
         program_id: &str,
@@ -3089,7 +1940,7 @@ mod tests {
             let function = CString::new(function).unwrap();
             let arguments = CString::new(arguments).unwrap();
             let sources = CString::new(sources).unwrap();
-            let ptr = program_authorization_static(
+            let ptr = program_authorization(
                 pk.as_ptr(),
                 program.as_ptr(),
                 function.as_ptr(),
@@ -3104,7 +1955,7 @@ mod tests {
 
     // A built-in program (credits.aleo) authorizes with no program sources.
     #[test]
-    fn program_authorization_static_builtin_no_sources() {
+    fn program_authorization_builtin_no_sources() {
         let args = serde_json::to_string(&vec![recipient_address(), "5u64".to_string()]).unwrap();
         let out =
             call_program_authorization(OWNER_KEY, "credits.aleo", "transfer_public", &args, "");
@@ -3115,7 +1966,7 @@ mod tests {
     // The path credits-only authorize exports can't reach: load a non-builtin
     // program from sources, then authorize its function offline.
     #[test]
-    fn program_authorization_static_loads_then_authorizes() {
+    fn program_authorization_loads_then_authorizes() {
         let sources = sources_json(&[("auth0.aleo", &[])]);
         let out = call_program_authorization(OWNER_KEY, "auth0.aleo", "noop", "[]", &sources);
         let auth: Authorization<Net> = serde_json::from_str(&out).unwrap();
@@ -3124,7 +1975,7 @@ mod tests {
 
     // Malformed input returns "" rather than panicking across the FFI boundary.
     #[test]
-    fn program_authorization_static_malformed_returns_empty() {
+    fn program_authorization_malformed_returns_empty() {
         // Bad arguments JSON.
         assert_eq!(
             call_program_authorization(OWNER_KEY, "credits.aleo", "transfer_public", "nope", ""),
@@ -3134,7 +1985,7 @@ mod tests {
         assert_eq!(call_program_authorization(OWNER_KEY, "ghost.aleo", "go", "[]", ""), "");
     }
 
-    // End-to-end proof through execute_proof_static for a PUBLIC transfer: no
+    // End-to-end proof through execute_proof for a PUBLIC transfer: no
     // record inputs, so no state paths — proving only needs a height and a real
     // (non-zero) state root. This exercises static_query's public branch +
     // execute_authorization_raw for real and checks the proof carries the
@@ -3143,7 +1994,7 @@ mod tests {
     // needs a real on-chain state path).
     #[test]
     #[ignore = "proving: downloads keys + proves, run with `cargo test --release -- --ignored`"]
-    fn execute_proof_static_public_transfer_end_to_end() {
+    fn execute_proof_public_transfer_end_to_end() {
         let owner = owner();
         let vm = new_vm().unwrap();
         let auth = vm
@@ -3163,7 +2014,7 @@ mod tests {
             let auth_c = CString::new(auth_json).unwrap();
             let paths_c = CString::new("").unwrap();
             let root_c = CString::new(root).unwrap();
-            let ptr = execute_proof_static(auth_c.as_ptr(), 9_430_000, paths_c.as_ptr(), root_c.as_ptr());
+            let ptr = execute_proof(auth_c.as_ptr(), 9_430_000, paths_c.as_ptr(), root_c.as_ptr());
             let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
             free_string(ptr);
             out

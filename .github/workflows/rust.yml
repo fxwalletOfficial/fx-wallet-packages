@@ -48,26 +48,26 @@ jobs:
           test -f "$lib" || { echo "release cdylib not found"; exit 1; }
           syms=$(nm -D --defined-only "$lib")
           missing=0
-          # The original 31 FFI functions + free_string, then the 10 phase-1
-          # (I/O-to-Dart) pure primitives + helpers exported alongside them.
+          # Phase 3 deleted the 12 in-Rust node-RPC exports (the node I/O moved to
+          # the Dart AleoNode) and renamed the phase-1 `*_static` proving/fee
+          # variants to canonical names. The surface is now 29 FFI functions +
+          # free_string: 19 offline/account/record originals (31 - 12 deleted) plus
+          # the 10 phase-1 I/O-to-Dart primitives/helpers (now canonically named).
           for f in numbers_add seed_to_private_key private_key_to_address \
                    private_key_to_view_key view_key_to_address sign_message verify \
                    get_token_owner_hash is_owner decrypt_cipher_text \
                    serial_number_string encrypt_private_key decrypt_to_private_key \
                    decrypt_sender_ciphertext build_transaction_offline \
-                   execution_authorization execute_proof execution_fee_authorization \
-                   execute_fee_proof get_base_fee broadcast build_transaction \
-                   try_transfer join_authorization try_join execute_program \
-                   execute_program_proof contract_execution contract_fee_execution \
+                   execution_authorization join_authorization \
                    upgrade_authorization build_upgrade_transaction_offline free_string \
                    required_commitments required_imports state_root_from_paths \
-                   consensus_version_for get_base_fee_static \
-                   execution_fee_authorization_static execute_proof_static \
-                   execute_fee_proof_static execute_program_proof_static \
-                   program_authorization_static; do
+                   consensus_version_for get_base_fee \
+                   execution_fee_authorization execute_proof \
+                   execute_fee_proof execute_program_proof \
+                   program_authorization; do
             echo "$syms" | grep -qw "$f" || { echo "MISSING SYMBOL: $f"; missing=1; }
           done
-          test "$missing" -eq 0 && echo "all 41 FFI functions + free_string exported"
+          test "$missing" -eq 0 && echo "all 29 FFI functions + free_string exported"
 
       # Run the Dart wrapper's FFI-backed tests against the cdylib built above,
       # so Dart/Rust signature mismatches, string-ownership bugs and wrapper
