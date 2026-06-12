@@ -1515,10 +1515,11 @@ pub unsafe extern "C" fn serial_number_string(
 // looks up the old names; phase 3 deletes the old path once Dart no longer does.
 // ----------------------------------------------------------------------------
 
-/// Generous per-`StatePath` byte ceiling. A real serialized state path is a few
-/// KB; this only bounds memory a hostile node could force before we parse, so it
-/// sits well above any honest path. Multiplied by the entry cap below to bound
-/// the whole `state_paths_json` blob.
+/// Assumed serialized size of one `StatePath`, used *only* as a factor to derive
+/// the overall `state_paths_json` byte cap (× [`max_state_paths`]); there is no
+/// per-path size check. A real serialized state path is a few KB, so this sits
+/// well above any honest path — the whole-blob cap is what bounds memory before
+/// serde.
 const MAX_STATE_PATH_BYTES: usize = 16 * 1024;
 
 /// Generous byte ceiling on a `public_state_root` string (a bech32 `sr1…` root

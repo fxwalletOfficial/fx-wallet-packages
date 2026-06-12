@@ -13,9 +13,12 @@ alongside the untouched old ones — four helpers (`required_commitments`,
 `_static` proving/fee/authorize variants (`get_base_fee_static`,
 `execution_fee_authorization_static`, `execute_proof_static`,
 `execute_fee_proof_static`, `execute_program_proof_static`,
-`program_authorization_static`). The `_static` suffix only goes on variants that
-would otherwise collide with an existing old symbol; the four helpers are new
-names, so they need no suffix.
+`program_authorization_static`). Five of those carry `_static` because they would
+otherwise collide with an existing old symbol of the same name (`execute_proof`,
+`execute_fee_proof`, `execute_program_proof`, `get_base_fee`,
+`execution_fee_authorization`); `program_authorization_static` has **no** old
+counterpart and takes the suffix only for naming consistency across the new
+static API. The four helpers are new names, so they need no suffix.
 The pure helpers, the size budgets (`state_paths_json` byte + entry caps;
 `program_sources_json` byte + program-count caps; the program-loader wall-clock
 deadline), and the private-flow `StaticQuery` construction are unit-tested
@@ -155,6 +158,17 @@ for the consensus version, so it cannot be omitted:
   execution needs it (empty for a credits.aleo execution).
 - `execution_fee_authorization(private_key, execution, fee_credits, fee_record, program_sources_json, height)`
   — base fee derived from `height` over the loaded program(s), pure.
+
+Plus one offline **authorize** primitive (not a proving primitive, so no
+`height`), the entry point for arbitrary-program flows that the credits-only
+`execution_authorization` / `join_authorization` / `upgrade_authorization` don't
+cover:
+
+- `program_authorization(private_key, program_id, function, arguments, program_sources_json)`
+  — loads the program (+ imports) from sources, then `vm.authorize`; `arguments`
+  is a JSON array of Aleo value strings (record inputs already plaintext). Shipped
+  as `program_authorization_static` (no old symbol to collide with; the suffix is
+  only for naming consistency).
 
 **Phase-1 symbol names — these cannot reuse the old symbols.** `execute_proof`,
 `execute_fee_proof`, `execute_program_proof` already exist as exports with the
