@@ -297,11 +297,44 @@ void main() {
     expect(sw.elapsed, lessThan(const Duration(seconds: 3)));
   });
 
-  test('a single closure request is capped at requestTimeout, not closureDeadline',
+  test('a per-request timeout inside a closure retries while budget remains',
       () async {
-    // closureDeadline is large (10s); requestTimeout is small (500ms). A
-    // stalling import must fail at ~requestTimeout, so one slow node cannot
-    // occupy the whole closure budget.
+    // b.aleo's first edition request stalls past requestTimeout, then succeeds.
+    // The per-attempt timeout must NOT be fatal while the closure budget has
+    // room — the request is retried and the closure completes.
+    var bEditionHits = 0;
+    node.handler = (req) async {
+      final id = req.uri.pathSegments[2];
+      final isEdition = req.uri.path.endsWith('/latest_edition');
+      if (id == 'a.aleo') {
+        await _reply(req, isEdition ? '1' : jsonEncode('program a.aleo;'));
+      } else if (isEdition) {
+        bEditionHits++;
+        if (bEditionHits == 1) {
+          await Future<void>.delayed(const Duration(seconds: 30));
+        }
+        await _reply(req, '1');
+      } else {
+        await _reply(req, jsonEncode('program b.aleo;'));
+      }
+    };
+    final node2 = AleoNode(node.url,
+        network: 'testnet',
+        requestTimeout: const Duration(milliseconds: 400),
+        closureDeadline: const Duration(seconds: 10),
+        parseImports: (src) =>
+            _idOf(src) == 'a.aleo' ? ['b.aleo'] : const []);
+    final closure = await node2.programClosure('a.aleo');
+    expect((jsonDecode(closure) as List), hasLength(2));
+    expect(bEditionHits, greaterThanOrEqualTo(2)); // first timed out, retried
+  });
+
+  test('a permanently stalling closure import is bounded by closureDeadline across retries',
+      () async {
+    // closureDeadline (2s) is the binding bound; each request is capped at
+    // requestTimeout (400ms) and retried, so the closure fails near
+    // closureDeadline — not the 30s stall — having made multiple attempts.
+    var bEditionHits = 0;
     node.handler = (req) async {
       final id = req.uri.pathSegments[2];
       if (id == 'a.aleo') {
@@ -311,22 +344,23 @@ void main() {
           await _reply(req, jsonEncode('program a.aleo;'));
         }
       } else {
+        if (req.uri.path.endsWith('/latest_edition')) bEditionHits++;
         await Future<void>.delayed(const Duration(seconds: 30));
         await _reply(req, '1');
       }
     };
     final node2 = AleoNode(node.url,
         network: 'testnet',
-        requestTimeout: const Duration(milliseconds: 500),
-        closureDeadline: const Duration(seconds: 10),
+        requestTimeout: const Duration(milliseconds: 400),
+        closureDeadline: const Duration(seconds: 2),
         parseImports: (src) =>
             _idOf(src) == 'a.aleo' ? ['b.aleo'] : const []);
     final sw = Stopwatch()..start();
     await expectLater(
         node2.programClosure('a.aleo'), throwsA(isA<AleoNodeException>()));
     sw.stop();
-    // ~500ms (the per-request cap), not the 10s closureDeadline / 30s stall.
-    expect(sw.elapsed, lessThan(const Duration(seconds: 3)));
+    expect(sw.elapsed, lessThan(const Duration(seconds: 4))); // ~2s, not 30s
+    expect(bEditionHits, greaterThan(1)); // capped per request + retried
   });
 
   test('latestHeight rejects a height past u32 range', () async {

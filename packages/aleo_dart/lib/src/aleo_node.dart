@@ -303,11 +303,19 @@ class AleoNode {
         return await _getOnce(route, maxBytes: maxBytes, timeout: attemptTimeout);
       } on DioException catch (e) {
         last = e;
-        if (!_isRetryable(e) || attempt + 1 == getAttempts) {
+        final left = overall.difference(DateTime.now());
+        // A cancel here is our per-attempt timer firing — a single slow request,
+        // not the whole read out of time (an over-budget body throws an
+        // AleoNodeException, which is not caught here). So it is retryable while
+        // the overall budget still has room: otherwise a slow first import would
+        // never get a second try even with most of the closure budget left.
+        // Non-cancel failures defer to _isRetryable.
+        final retryable = CancelToken.isCancel(e)
+            ? left > Duration.zero
+            : _isRetryable(e);
+        if (!retryable || attempt + 1 == getAttempts || left <= Duration.zero) {
           throw _wrap(route, e);
         }
-        final left = overall.difference(DateTime.now());
-        if (left <= Duration.zero) break;
         final backoff = Duration(milliseconds: 500 * (attempt + 1));
         await Future<void>.delayed(backoff < left ? backoff : left);
       }
@@ -357,10 +365,9 @@ class AleoNode {
 
   /// Retry only on errors a retry could actually fix: connection/timeout
   /// failures and 5xx (the public node's transient 522). A 4xx is the node
-  /// rejecting our input — retrying just repeats it. A cancel (our overall
-  /// timeout) is never retryable: the overall deadline has passed.
+  /// rejecting our input — retrying just repeats it. Cancels (our per-attempt
+  /// timer) are classified by the caller against the overall budget, not here.
   bool _isRetryable(DioException e) {
-    if (CancelToken.isCancel(e)) return false;
     switch (e.type) {
       case DioExceptionType.connectionError:
       case DioExceptionType.connectionTimeout:
