@@ -24,6 +24,17 @@ serde = "1"
 serde_json = "1"
 ureq = { version = "2.7.1", features = ["json"] }
 
+[dev-dependencies]
+# Enables snarkVM's `state_path::test_helpers::sample_global_state_path`, so the
+# private-flow StaticQuery path can be unit-tested offline with real StatePaths
+# (no chain/node). This uses snarkvm-console-program's `test` feature — which is
+# empty (`test = []`) and, crucially, does NOT pull in `snarkvm-console-network`'s
+# `test` feature, so the consensus-version *heights* stay at their production
+# values (network/test swaps them for test heights, which would break
+# consensus_version_for and silently change proving's version selection).
+# Test-only: dev-dependencies are excluded from the release cdylib.
+snarkvm-console-program = { version = "=4.5.0", features = ["test"] }
+
 # Expose VM::execute_authorization_raw / execute_fee_authorization_raw (private
 # upstream) for the split-proof flow. Apache-2.0; verbatim + a 2-line pub patch.
 [patch.crates-io]

@@ -10,6 +10,7 @@
 // Group 1 of the rewrite: account / key operations. These need only
 // snarkvm-console (no VM, no snarkVM visibility patch).
 
+use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::slice;
 
@@ -17,11 +18,13 @@ use rand::rngs::OsRng;
 use snarkvm_console::account::{Address, PrivateKey, Signature, ViewKey};
 use snarkvm_console::network::MainnetV0;
 use snarkvm_console::prelude::*;
-use snarkvm_console::program::{Ciphertext, Identifier, Literal, Plaintext, ProgramID, Record};
+use snarkvm_console::program::{
+    Ciphertext, Identifier, InputID, Literal, Plaintext, ProgramID, Record,
+};
 use snarkvm_console::types::Field;
 use snarkvm_console::program::StatePath;
 use snarkvm_ledger_block::{Execution, Fee, Transaction};
-use snarkvm_ledger_query::QueryTrait;
+use snarkvm_ledger_query::{QueryTrait, StaticQuery};
 use snarkvm_ledger_store::helpers::memory::ConsensusMemory;
 use snarkvm_ledger_store::ConsensusStore;
 use snarkvm_synthesizer::process::Authorization;
@@ -1501,6 +1504,598 @@ pub unsafe extern "C" fn serial_number_string(
     to_cstring(result.unwrap_or_default())
 }
 
+// ----------------------------------------------------------------------------
+// Phase 1 of the I/O-to-Dart migration (docs/network-io-to-dart.md): RPC-free
+// variants of the proving/fee surface, plus small helpers that let Dart discover
+// what to fetch. These take pre-fetched node data (`height`, `state_paths_json`,
+// `public_state_root`, `program_sources_json`) instead of a `url`/`network` to
+// query, so these exports issue no node RPC. NOTE: this is not yet "zero
+// network" — snarkVM's proving still lazily downloads proving keys / the SRS via
+// `curl` (no timeout) on a cold parameter cache, so the crate still links
+// curl/openssl; removing that is a separate task (see the spec's "Proving
+// parameters" section). They ship under *new* `_static` symbols alongside the
+// untouched old exports — a cdylib cannot export two ABIs under one symbol, and
+// Dart still looks up the old names; phase 3 deletes the old path once Dart no
+// longer does.
+// ----------------------------------------------------------------------------
+
+/// Assumed serialized size of one `StatePath`, used *only* as a factor to derive
+/// the overall `state_paths_json` byte cap (× [`max_state_paths`]); there is no
+/// per-path size check. A real serialized state path is a few KB, so this sits
+/// well above any honest path — the whole-blob cap is what bounds memory before
+/// serde.
+const MAX_STATE_PATH_BYTES: usize = 16 * 1024;
+
+/// Generous byte ceiling on a `public_state_root` string (a bech32 `sr1…` root
+/// is ~63 chars); bounds untrusted input before parsing.
+const MAX_STATE_ROOT_BYTES: usize = 256;
+
+/// The most state paths a single execution can legitimately require: at most
+/// `MAX_INPUTS` record inputs per transition across at most `MAX_TRANSITIONS`
+/// transitions. The protocol bounds the required commitments to this, so it is a
+/// tight, protocol-grounded entry cap on the node-supplied `state_paths_json`.
+fn max_state_paths() -> usize {
+    Net::MAX_INPUTS.saturating_mul(Transaction::<Net>::MAX_TRANSITIONS)
+}
+
+/// Parses node-supplied state paths, rejecting an oversized blob *before* serde
+/// (byte budget) and an over-long array *after* (entry budget). An empty/blank
+/// input is an empty set (a public flow with no record inputs).
+fn parse_state_paths(state_paths_json: &str) -> anyhow::Result<Vec<StatePath<Net>>> {
+    let state_paths_json = state_paths_json.trim();
+    if state_paths_json.is_empty() {
+        return Ok(Vec::new());
+    }
+    let byte_budget = max_state_paths().saturating_mul(MAX_STATE_PATH_BYTES);
+    anyhow::ensure!(
+        state_paths_json.len() <= byte_budget,
+        "state_paths_json is {} bytes, over the {byte_budget}-byte budget",
+        state_paths_json.len()
+    );
+    let paths: Vec<StatePath<Net>> = serde_json::from_str(state_paths_json)?;
+    anyhow::ensure!(
+        paths.len() <= max_state_paths(),
+        "state_paths_json has {} entries, over the {}-entry budget",
+        paths.len(),
+        max_state_paths()
+    );
+    Ok(paths)
+}
+
+/// Builds the offline [`StaticQuery`] the proving primitives run against, from
+/// pre-fetched node data. Dart only ever passes opaque strings it got from the
+/// node; Rust derives and verifies the global state root here:
+///
+/// - **Private flow** (non-empty `state_paths_json`): every path must agree on
+///   its `global_state_root`; that shared root is used and the map is keyed by
+///   each path's record commitment (`transition_leaf().id()`). If
+///   `public_state_root` is also supplied it must equal the derived root.
+/// - **Public flow** (empty `state_paths_json`): there is no path to derive
+///   from, so the caller's `public_state_root` (the `latest/stateRoot` it
+///   fetched) is used directly.
+fn static_query(
+    height: u32,
+    state_paths_json: &str,
+    public_state_root: &str,
+) -> anyhow::Result<StaticQuery<Net>> {
+    let public_state_root = public_state_root.trim();
+    anyhow::ensure!(
+        public_state_root.len() <= MAX_STATE_ROOT_BYTES,
+        "public_state_root is {} bytes, over the {MAX_STATE_ROOT_BYTES}-byte budget",
+        public_state_root.len()
+    );
+    let paths = parse_state_paths(state_paths_json)?;
+
+    if paths.is_empty() {
+        anyhow::ensure!(
+            !public_state_root.is_empty(),
+            "public flow (no state paths) requires a public_state_root"
+        );
+        let state_root = <Net as Network>::StateRoot::from_str(public_state_root)?;
+        return Ok(StaticQuery::new(height, state_root, HashMap::new()));
+    }
+
+    // Private flow: derive the snapshot root from the paths; all must agree.
+    let state_root = paths[0].global_state_root();
+    let mut state_paths = HashMap::with_capacity(paths.len());
+    for path in paths {
+        anyhow::ensure!(
+            path.global_state_root() == state_root,
+            "state paths disagree on the global state root"
+        );
+        // A global state path proves an output record's commitment is on-chain;
+        // that commitment is the transition leaf's id, which is how the query
+        // looks paths up during proving.
+        let commitment = path.transition_leaf().id();
+        anyhow::ensure!(
+            state_paths.insert(commitment, path).is_none(),
+            "duplicate state path for commitment {commitment}"
+        );
+    }
+    if !public_state_root.is_empty() {
+        let supplied = <Net as Network>::StateRoot::from_str(public_state_root)?;
+        anyhow::ensure!(
+            supplied == state_root,
+            "public_state_root disagrees with the state paths' derived root"
+        );
+    }
+    Ok(StaticQuery::new(height, state_root, state_paths))
+}
+
+/// Base (minimum) fee in microcredits for an execution at the given height. The
+/// pure analogue of [`base_fee_for`]: `height` selects the consensus version
+/// instead of a node fetch. `program_sources_json` supplies the execution's root
+/// program (and its imports) — snarkVM's `execution_cost` reads each transition's
+/// program `Stack`, so a non-builtin execution needs them loaded first. Empty
+/// for a credits.aleo execution (the program is built in).
+fn base_fee_at_height(
+    execution: &Execution<Net>,
+    program_sources_json: &str,
+    height: u32,
+) -> anyhow::Result<u64> {
+    let consensus_version = Net::CONSENSUS_VERSION(height)?;
+    let vm = new_vm()?;
+    add_programs_from_sources(&vm, program_sources_json)?;
+    let process = vm.process();
+    let process = process.read();
+    let (base_fee, _details) =
+        snarkvm_synthesizer::process::execution_cost(&process, execution, consensus_version)?;
+    Ok(base_fee)
+}
+
+/// One `{id, edition, source}` entry of a caller-supplied program closure.
+#[derive(serde::Deserialize)]
+struct ProgramSourceEntry {
+    id: String,
+    edition: u16,
+    source: String,
+}
+
+/// Adds programs supplied as in-memory sources (the whole import closure, in any
+/// order) to the VM, imports-before-importers — the offline analogue of
+/// [`add_program_from_node`]. Applies the same per-program id-match and
+/// `MAX_PROGRAM_SIZE` checks, the program-count and total-byte budget, and a
+/// wall-clock deadline. The deadline matters even with no network I/O left:
+/// `Program::from_str` and `add_program_with_edition` (Stack construction) are
+/// expensive, uninterruptible CPU work, so a hostile closure of up to
+/// `MAX_IMPORT_PROGRAMS` large-but-valid programs could otherwise block this
+/// synchronous FFI call for a long time — and the Dart-side network timeout
+/// cannot interrupt work already inside the FFI. Only the *thread/in-flight*
+/// machinery is dropped (no blocking I/O left to bound). A missing import or an
+/// import cycle in the supplied set is rejected as the walk stalls with programs
+/// left unadded.
+fn add_programs_from_sources(
+    vm: &VM<Net, ConsensusMemory<Net>>,
+    program_sources_json: &str,
+) -> anyhow::Result<()> {
+    add_programs_from_sources_within(
+        vm,
+        program_sources_json,
+        std::time::Instant::now() + IMPORT_LOAD_DEADLINE,
+    )
+}
+
+/// [`add_programs_from_sources`] with an explicit `deadline`, so a caller (or
+/// test) can bound the whole load. The deadline is checked before each
+/// `Program::from_str` and before each program is added, so an over-budget call
+/// stops starting new CPU-bound work instead of parsing/building all of them; a
+/// single in-flight add still runs to completion (snarkVM exposes no way to
+/// interrupt it), an overshoot of at most one program.
+fn add_programs_from_sources_within(
+    vm: &VM<Net, ConsensusMemory<Net>>,
+    program_sources_json: &str,
+    deadline: std::time::Instant,
+) -> anyhow::Result<()> {
+    let program_sources_json = program_sources_json.trim();
+    if program_sources_json.is_empty() {
+        return Ok(());
+    }
+    // Total-byte budget before serde: `MAX_PROGRAM_SIZE` caps a single program,
+    // not the set, so an unbounded acyclic closure is bounded here in aggregate.
+    let byte_budget = MAX_IMPORT_PROGRAMS.saturating_mul(Net::MAX_PROGRAM_SIZE);
+    anyhow::ensure!(
+        program_sources_json.len() <= byte_budget,
+        "program_sources_json is {} bytes, over the {byte_budget}-byte budget",
+        program_sources_json.len()
+    );
+    let entries: Vec<ProgramSourceEntry> = serde_json::from_str(program_sources_json)?;
+    anyhow::ensure!(
+        entries.len() <= MAX_IMPORT_PROGRAMS,
+        "program_sources_json has {} programs, over the {MAX_IMPORT_PROGRAMS}-program budget",
+        entries.len()
+    );
+
+    // Parse and validate each program; the node is not trusted, so a source over
+    // the protocol maximum or one not declaring its claimed id is rejected.
+    // Parsing is uninterruptible CPU work, so gate every one on the deadline.
+    let mut pending: HashMap<ProgramID<Net>, (Program<Net>, u16)> = HashMap::new();
+    for entry in entries {
+        anyhow::ensure!(
+            std::time::Instant::now() < deadline,
+            "program load exceeded its {IMPORT_LOAD_DEADLINE:?} time budget"
+        );
+        anyhow::ensure!(
+            entry.source.len() <= Net::MAX_PROGRAM_SIZE,
+            "program '{}' source is {} bytes, over the {}-byte maximum",
+            entry.id,
+            entry.source.len(),
+            Net::MAX_PROGRAM_SIZE
+        );
+        let program = Program::<Net>::from_str(&entry.source)?;
+        let declared = ProgramID::<Net>::from_str(&entry.id)?;
+        anyhow::ensure!(
+            program.id() == &declared,
+            "program source declares '{}' but the entry id is '{declared}'",
+            program.id()
+        );
+        anyhow::ensure!(
+            pending.insert(declared, (program, entry.edition)).is_none(),
+            "duplicate program '{declared}' in program_sources_json"
+        );
+    }
+
+    // Add in dependency order: each pass adds every program whose imports are all
+    // already present (built-in or added on an earlier pass). If a pass adds
+    // nothing while programs remain, an import is missing from the supplied set
+    // or the set has a cycle — either way the caller's closure is rejected.
+    while !pending.is_empty() {
+        let ready: Vec<ProgramID<Net>> = pending
+            .iter()
+            .filter(|(_, (program, _))| {
+                program.imports().keys().all(|import| program_is_present(vm, import))
+            })
+            .map(|(id, _)| *id)
+            .collect();
+        anyhow::ensure!(
+            !ready.is_empty(),
+            "program_sources_json has unresolved imports or an import cycle"
+        );
+        for id in ready {
+            // `add_program_with_edition` builds the program's Stack — real CPU
+            // work snarkVM cannot interrupt — so gate every add on the deadline.
+            anyhow::ensure!(
+                std::time::Instant::now() < deadline,
+                "program load exceeded its {IMPORT_LOAD_DEADLINE:?} time budget"
+            );
+            let (program, edition) = pending.remove(&id).expect("a ready id is pending");
+            add_fetched_program(vm, &program, edition)?;
+        }
+    }
+    Ok(())
+}
+
+/// Given each transition's record-input and record-output commitments **in
+/// execution order**, returns the global (on-chain) input commitments. Mirrors
+/// snarkVM's `Inclusion::insert_transition`: an input record is *local* only if
+/// an *earlier* transition output it — a later transition's output never makes
+/// an earlier input local (that would drop a real on-chain commitment and miss
+/// its state path). Split out so the order-sensitive logic is unit-tested.
+fn global_input_commitments(transitions: &[(Vec<String>, Vec<String>)]) -> Vec<String> {
+    let mut local: HashSet<String> = HashSet::new();
+    let mut global = Vec::new();
+    for (inputs, outputs) in transitions {
+        // Judge this transition's inputs against outputs accumulated so far...
+        for commitment in inputs {
+            if !local.contains(commitment) {
+                global.push(commitment.clone());
+            }
+        }
+        // ...then add this transition's outputs (visible only to later ones).
+        for commitment in outputs {
+            local.insert(commitment.clone());
+        }
+    }
+    global
+}
+
+/// The input-record commitments whose state paths the caller must fetch before
+/// proving this authorization. Empty for public flows (no record inputs).
+/// Pure: read from the authorization itself, no VM/synthesis or network.
+///
+/// This mirrors exactly what proving asks the query for: `Trace::prepare`
+/// collects the input-record commitments whose record is NOT an output of an
+/// *earlier* transition in the same transaction (a "local" record, which is not
+/// on-chain and has no state path). `vm.authorize` already populates the
+/// authorization's transitions (with their record outputs). Requests are stored
+/// pre-order and transitions in execution order, so they are paired by `tcm`
+/// (the same key `Authorization::try_from` uses), and the local filter is
+/// applied in execution order — a later transition's output cannot retroactively
+/// make an earlier input local. For the single-request credits flows (transfer /
+/// join / upgrade) the outputs are freshly-created records, so nothing is
+/// dropped; for a composite program that spends a record minted by an earlier
+/// transition, that local commitment is correctly excluded.
+///
+/// SAFETY: `authorization` is a NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn required_commitments(authorization: *const c_char) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
+        // Pair each request's record-input commitments with its transition by
+        // tcm: requests are pre-order and transitions execution-order, so they
+        // can't be zipped positionally.
+        let mut inputs_by_tcm: HashMap<String, Vec<String>> = HashMap::new();
+        for request in authorization.to_vec_deque() {
+            let entry = inputs_by_tcm.entry(request.tcm().to_string()).or_default();
+            for input_id in request.input_ids() {
+                if let InputID::Record(commitment, ..) = input_id {
+                    entry.push(commitment.to_string());
+                }
+            }
+        }
+        // Walk transitions in execution order, building (inputs, outputs) per
+        // transition for the order-sensitive local filter.
+        let mut ordered = Vec::new();
+        for (_, transition) in authorization.transitions() {
+            let inputs =
+                inputs_by_tcm.get(&transition.tcm().to_string()).cloned().unwrap_or_default();
+            let outputs = transition
+                .outputs()
+                .iter()
+                .filter_map(|output| output.commitment().map(|commitment| commitment.to_string()))
+                .collect();
+            ordered.push((inputs, outputs));
+        }
+        Ok(serde_json::to_string(&global_input_commitments(&ordered))?)
+    };
+    match inner() {
+        Ok(commitments) => to_cstring(commitments),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
+/// The direct imports of a program, as a JSON array of program ids, so Dart can
+/// walk the closure it must fetch (Dart recurses; this stays a pure per-program
+/// function). Returns "" on a malformed/oversized source.
+///
+/// SAFETY: `program_source` is a NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn required_imports(program_source: *const c_char) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let source = read_str(program_source);
+        anyhow::ensure!(
+            source.len() <= Net::MAX_PROGRAM_SIZE,
+            "program source is {} bytes, over the {}-byte maximum",
+            source.len(),
+            Net::MAX_PROGRAM_SIZE
+        );
+        let program = Program::<Net>::from_str(source)?;
+        let imports: Vec<String> = program.imports().keys().map(|id| id.to_string()).collect();
+        Ok(serde_json::to_string(&imports)?)
+    };
+    match inner() {
+        Ok(imports) => to_cstring(imports),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
+/// The global state root shared by a non-empty batch of state paths — a
+/// convenience for callers that want the snapshot root for logging/caching
+/// (proving derives it itself). Returns "" if the paths are empty or disagree.
+///
+/// SAFETY: `state_paths_json` is a NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn state_root_from_paths(state_paths_json: *const c_char) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let paths = parse_state_paths(read_str(state_paths_json))?;
+        let state_root =
+            paths.first().ok_or_else(|| anyhow::anyhow!("no state paths"))?.global_state_root();
+        for path in &paths {
+            anyhow::ensure!(
+                path.global_state_root() == state_root,
+                "state paths disagree on the global state root"
+            );
+        }
+        Ok(state_root.to_string())
+    };
+    match inner() {
+        Ok(root) => to_cstring(root),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
+/// The consensus version active at `height`, so Dart can pin one version for a
+/// whole transaction without hardcoding upgrade heights. Returns 0 on failure
+/// (only height 0 with no V1 mapping, which never happens for the live network).
+#[no_mangle]
+pub extern "C" fn consensus_version_for(height: u32) -> u16 {
+    Net::CONSENSUS_VERSION(height).map(|version| version as u16).unwrap_or(0)
+}
+
+/// Pure variant of [`get_base_fee`]: `height` (→ consensus version) replaces the
+/// node fetch, and `program_sources_json` supplies the execution's root program
+/// (+ imports) needed to compute its cost — empty for a credits.aleo execution.
+/// Returns the base fee in microcredits, or 0 on failure.
+///
+/// SAFETY: `execution`/`program_sources_json` are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn get_base_fee_static(
+    execution: *const c_char,
+    program_sources_json: *const c_char,
+    height: u32,
+) -> u64 {
+    let inner = || -> anyhow::Result<u64> {
+        let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
+        base_fee_at_height(&execution, read_str(program_sources_json), height)
+    };
+    inner().unwrap_or(0)
+}
+
+/// Pure variant of [`execution_fee_authorization`]: `height` replaces the node
+/// fetch used to derive the base fee, and `program_sources_json` supplies the
+/// execution's root program (+ imports) needed to compute that fee (empty for a
+/// credits.aleo execution). `fee_credits` is the priority fee; an empty
+/// `fee_record` uses a public fee, otherwise a private fee spending that record.
+/// Returns "" on failure.
+///
+/// SAFETY: `private_key`/`execution`/`fee_record`/`program_sources_json` are
+/// NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execution_fee_authorization_static(
+    private_key: *const c_char,
+    execution: *const c_char,
+    fee_credits: u64,
+    fee_record: *const c_char,
+    program_sources_json: *const c_char,
+    height: u32,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let execution: Execution<Net> = serde_json::from_str(read_str(execution))?;
+        let execution_id = execution.to_execution_id()?;
+        // One VM loads the execution's program(s) so its cost can be computed,
+        // then authorizes the fee (credits.aleo is built in) — no second VM.
+        let consensus_version = Net::CONSENSUS_VERSION(height)?;
+        let vm = new_vm()?;
+        add_programs_from_sources(&vm, read_str(program_sources_json))?;
+        let base_fee = {
+            let process = vm.process();
+            let process = process.read();
+            snarkvm_synthesizer::process::execution_cost(&process, &execution, consensus_version)?.0
+        };
+        let priority_fee = fee_credits;
+        check_total_fee(base_fee, priority_fee)?;
+        let fee_record = read_str(fee_record);
+        let rng = &mut rand::thread_rng();
+        let authorization = if fee_record.trim().is_empty() {
+            vm.authorize_fee_public(&private_key, base_fee, priority_fee, execution_id, rng)?
+        } else {
+            let record = plaintext_record_typed(fee_record, &private_key)?;
+            vm.authorize_fee_private(&private_key, record, base_fee, priority_fee, execution_id, rng)?
+        };
+        Ok(serde_json::to_string(&authorization)?)
+    };
+    match inner() {
+        Ok(authorization) => to_cstring(authorization),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
+/// Pure variant of [`execute_proof`]: proves an authorization against a
+/// [`StaticQuery`] built from pre-fetched `height` / `state_paths_json` /
+/// `public_state_root` instead of querying a node. Returns the serialized
+/// execution, or "" on failure.
+///
+/// SAFETY: `authorization`/`state_paths_json`/`public_state_root` are
+/// NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_proof_static(
+    authorization: *const c_char,
+    height: u32,
+    state_paths_json: *const c_char,
+    public_state_root: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
+        let query = static_query(height, read_str(state_paths_json), read_str(public_state_root))?;
+        let vm = new_vm()?;
+        let (execution, _response) =
+            vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&execution)?)
+    };
+    match inner() {
+        Ok(execution) => to_cstring(execution),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
+/// Pure variant of [`execute_fee_proof`]: proves a fee authorization against a
+/// [`StaticQuery`] built from pre-fetched node data. A private fee spends its
+/// own record, so its `state_paths_json` is its own snapshot (distinct from the
+/// execution's); a public fee passes empty paths + a `public_state_root`.
+/// Returns the serialized fee, or "" on failure.
+///
+/// SAFETY: `authorization`/`state_paths_json`/`public_state_root` are
+/// NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_fee_proof_static(
+    authorization: *const c_char,
+    height: u32,
+    state_paths_json: *const c_char,
+    public_state_root: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
+        let query = static_query(height, read_str(state_paths_json), read_str(public_state_root))?;
+        let vm = new_vm()?;
+        let fee = vm.execute_fee_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&fee)?)
+    };
+    match inner() {
+        Ok(fee) => to_cstring(fee),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
+/// Pure variant of [`execute_program_proof`]: the referenced program (and its
+/// import closure) is supplied in-memory via `program_sources_json` rather than
+/// fetched from a node, then the authorization is proved against a
+/// [`StaticQuery`] built from pre-fetched node data. Returns the serialized
+/// execution, or "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_program_proof_static(
+    authorization: *const c_char,
+    program_sources_json: *const c_char,
+    height: u32,
+    state_paths_json: *const c_char,
+    public_state_root: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
+        let vm = new_vm()?;
+        add_programs_from_sources(&vm, read_str(program_sources_json))?;
+        let query = static_query(height, read_str(state_paths_json), read_str(public_state_root))?;
+        let (execution, _response) =
+            vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&execution)?)
+    };
+    match inner() {
+        Ok(execution) => to_cstring(execution),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
+/// Builds an execution authorization for an arbitrary program function, offline.
+/// The referenced program (and its imports) is supplied in-memory via
+/// `program_sources_json` and loaded before authorizing — `vm.authorize` reads
+/// the program's `Stack`, so a non-builtin function cannot be authorized without
+/// it. `arguments` is a JSON array of Aleo value strings (record inputs already
+/// decrypted to plaintext by the caller, as on the old `contract_execution`
+/// path). This is the pure-FFI authorize step the phase-2 Dart orchestration
+/// uses for arbitrary programs, replacing the network-bound
+/// `contract_execution` / `execute_program`. Empty `program_sources_json` works
+/// for a built-in program (credits.aleo). Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn program_authorization_static(
+    private_key: *const c_char,
+    program_id: *const c_char,
+    function_name: *const c_char,
+    arguments: *const c_char,
+    program_sources_json: *const c_char,
+) -> *mut c_char {
+    let inner = || -> anyhow::Result<String> {
+        let private_key = PrivateKey::<Net>::from_str(read_str(private_key))?;
+        let inputs: Vec<String> = serde_json::from_str(read_str(arguments))?;
+        let vm = new_vm()?;
+        add_programs_from_sources(&vm, read_str(program_sources_json))?;
+        let authorization = vm.authorize(
+            &private_key,
+            read_str(program_id),
+            read_str(function_name),
+            inputs,
+            &mut rand::thread_rng(),
+        )?;
+        Ok(serde_json::to_string(&authorization)?)
+    };
+    match inner() {
+        Ok(authorization) => to_cstring(authorization),
+        Err(_) => to_cstring(String::new()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1957,5 +2552,492 @@ mod tests {
             process.contains_program(&ProgramID::from_str("token_registry.aleo").unwrap()),
             "recursive import token_registry.aleo was not loaded"
         );
+    }
+
+    // ---- Phase 1 (I/O-to-Dart) pure primitives + helpers --------------------
+
+    /// Calls a `*const c_char -> *mut c_char` export with `arg` and returns the
+    /// owned result, freeing the returned buffer.
+    fn call_str(f: unsafe extern "C" fn(*const c_char) -> *mut c_char, arg: &str) -> String {
+        unsafe {
+            let c = CString::new(arg).unwrap();
+            let ptr = f(c.as_ptr());
+            let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
+            free_string(ptr);
+            out
+        }
+    }
+
+    fn recipient_address() -> String {
+        Address::<Net>::try_from(&other_key()).unwrap().to_string()
+    }
+
+    // A public transfer spends no records, so it needs no state paths: "[]".
+    #[test]
+    fn required_commitments_public_transfer_is_empty() {
+        let vm = new_vm().unwrap();
+        let authorization = vm
+            .authorize(
+                &owner(),
+                "credits.aleo",
+                "transfer_public",
+                vec![recipient_address(), "5u64".to_string()],
+                &mut rand::thread_rng(),
+            )
+            .unwrap();
+        let out = call_str(required_commitments, &serde_json::to_string(&authorization).unwrap());
+        assert_eq!(out, "[]");
+    }
+
+    // A private transfer spends one record, so required_commitments returns that
+    // record's commitment (a field), which Dart fetches a state path for.
+    #[test]
+    fn required_commitments_private_transfer_has_one() {
+        let owner = owner();
+        let record = plaintext_record(TEST_RECORD, &owner).unwrap();
+        let vm = new_vm().unwrap();
+        let authorization = vm
+            .authorize(
+                &owner,
+                "credits.aleo",
+                "transfer_private",
+                vec![record, recipient_address(), "5u64".to_string()],
+                &mut rand::thread_rng(),
+            )
+            .unwrap();
+        let out = call_str(required_commitments, &serde_json::to_string(&authorization).unwrap());
+        let commitments: Vec<String> = serde_json::from_str(&out).unwrap();
+        assert_eq!(commitments.len(), 1, "got {out}");
+        // Each entry is a field element.
+        Field::<Net>::from_str(&commitments[0]).unwrap();
+    }
+
+    // Malformed authorization JSON returns "" (no panic across the FFI boundary).
+    #[test]
+    fn required_commitments_malformed_returns_empty() {
+        assert_eq!(call_str(required_commitments, "not json"), "");
+    }
+
+    // required_imports lists a program's direct imports.
+    #[test]
+    fn required_imports_lists_direct_imports() {
+        let source = program_source("importer.aleo", &["dep1.aleo".to_string(), "dep2.aleo".to_string()]);
+        let out = call_str(required_imports, &source);
+        let mut imports: Vec<String> = serde_json::from_str(&out).unwrap();
+        imports.sort();
+        assert_eq!(imports, vec!["dep1.aleo".to_string(), "dep2.aleo".to_string()]);
+    }
+
+    // A program with no imports yields an empty array.
+    #[test]
+    fn required_imports_none_is_empty() {
+        let source = program_source("leaf.aleo", &[]);
+        assert_eq!(call_str(required_imports, &source), "[]");
+    }
+
+    // consensus_version_for maps heights to versions at the documented boundaries.
+    #[test]
+    fn consensus_version_for_known_heights() {
+        assert_eq!(consensus_version_for(0), 1); // V1 at genesis
+        assert_eq!(consensus_version_for(2_800_000), 2); // exact V2 boundary
+        assert_eq!(consensus_version_for(2_800_000 - 1), 1); // just below V2
+        assert_eq!(consensus_version_for(9_430_000), 8); // V8 (inclusion upgrade)
+        assert!(consensus_version_for(u32::MAX) >= 13, "latest version at far future height");
+    }
+
+    // No paths (empty or "[]") -> "" (there is no shared root to report).
+    #[test]
+    fn state_root_from_paths_empty_is_empty() {
+        assert_eq!(call_str(state_root_from_paths, ""), "");
+        assert_eq!(call_str(state_root_from_paths, "[]"), "");
+    }
+
+    // The public flow builds the query from the supplied root and height; with no
+    // root it fails (a real, non-zero root is mandatory even with no inclusions).
+    #[test]
+    fn static_query_public_flow_uses_supplied_root() {
+        let root = "sr1dz06ur5spdgzkguh4pr42mvft6u3nwsg5drh9rdja9v8jpcz3czsls9geg";
+        let query = static_query(123, "", root).unwrap();
+        assert_eq!(query.current_block_height().unwrap(), 123);
+        assert_eq!(query.current_state_root().unwrap().to_string(), root);
+        assert!(static_query(123, "", "").is_err(), "public flow needs a root");
+    }
+
+    // The private-flow StaticQuery path is exercised with real (sampled)
+    // StatePaths, so it is covered offline ahead of the phase-2 testnet parity
+    // run (full SNARK proving still needs a live node + proving keys).
+    use snarkvm_console::network::prelude::TestRng;
+    use snarkvm_console::program::state_path::test_helpers::sample_global_state_path;
+
+    // The load-bearing assumption execute_proof_static relies on: a *global*
+    // StatePath's transition-leaf id IS the record commitment, so static_query
+    // can key the query map by it and proving finds each path by commitment.
+    #[test]
+    fn static_query_private_flow_derives_root_and_keys_by_commitment() {
+        let mut rng = TestRng::default();
+        let commitment = Field::<Net>::new(Uniform::rand(&mut rng));
+        let path = sample_global_state_path::<Net>(Some(commitment), &mut rng).unwrap();
+        // The identity the keying depends on.
+        assert_eq!(path.transition_leaf().id(), commitment);
+        let root = path.global_state_root();
+        let json = serde_json::to_string(&vec![path]).unwrap();
+
+        let query = static_query(99, &json, "").unwrap();
+        assert_eq!(query.current_block_height().unwrap(), 99);
+        // Root is derived from the path, not fetched separately.
+        assert_eq!(query.current_state_root().unwrap().to_string(), root.to_string());
+        // Proving looks the path up by commitment exactly like this.
+        assert!(query.get_state_path_for_commitment(&commitment).is_ok());
+        // An unknown commitment is not found -> proving fails closed.
+        let unknown = Field::<Net>::new(Uniform::rand(&mut rng));
+        assert!(query.get_state_path_for_commitment(&unknown).is_err());
+    }
+
+    // Paths from different blocks (different global state roots) are rejected,
+    // not silently proved against a mixed root.
+    #[test]
+    fn static_query_private_flow_rejects_disagreeing_roots() {
+        let mut rng = TestRng::default();
+        let p1 = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let p2 = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![p1, p2]).unwrap();
+        let error = static_query(1, &json, "").map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("disagree on the global state root"), "got: {error}");
+    }
+
+    // A supplied public_state_root that disagrees with the paths' derived root
+    // is rejected (the snapshot must be internally consistent).
+    #[test]
+    fn static_query_private_flow_rejects_mismatched_public_root() {
+        let mut rng = TestRng::default();
+        let path = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![path]).unwrap();
+        let wrong = "sr1dz06ur5spdgzkguh4pr42mvft6u3nwsg5drh9rdja9v8jpcz3czsls9geg";
+        let error = static_query(1, &json, wrong).map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("disagrees"), "got: {error}");
+    }
+
+    // A repeated commitment would silently drop a path from the map, so it is
+    // rejected outright rather than proving with a missing inclusion.
+    #[test]
+    fn static_query_private_flow_rejects_duplicate_commitment() {
+        let mut rng = TestRng::default();
+        let path = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![path.clone(), path]).unwrap();
+        let error = static_query(1, &json, "").map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("duplicate state path"), "got: {error}");
+    }
+
+    // The state-paths byte budget rejects an oversized blob before parsing.
+    #[test]
+    fn state_paths_byte_budget_rejects_oversized() {
+        let over = max_state_paths() * MAX_STATE_PATH_BYTES + 1;
+        let blob = "[".to_string() + &"a".repeat(over);
+        let error = parse_state_paths(&blob).unwrap_err();
+        assert!(error.to_string().contains("byte budget"), "got: {error}");
+    }
+
+    // The state-paths entry cap rejects more paths than any execution can
+    // require, even when each path is small enough to clear the byte budget.
+    #[test]
+    fn state_paths_entry_cap_rejects_too_many() {
+        let mut rng = TestRng::default();
+        let one =
+            serde_json::to_string(&sample_global_state_path::<Net>(None, &mut rng).unwrap()).unwrap();
+        let json = format!("[{}]", vec![one; max_state_paths() + 1].join(","));
+        let error = parse_state_paths(&json).unwrap_err();
+        assert!(error.to_string().contains("entry budget"), "got: {error}");
+    }
+
+    // The program-sources total-byte cap rejects an oversized blob before serde.
+    #[test]
+    fn program_sources_byte_cap_rejects_oversized() {
+        let over = MAX_IMPORT_PROGRAMS * Net::MAX_PROGRAM_SIZE + 1;
+        let blob = "[".to_string() + &"x".repeat(over);
+        let vm = new_vm().unwrap();
+        let error = add_programs_from_sources(&vm, &blob).unwrap_err();
+        assert!(error.to_string().contains("byte budget"), "got: {error}");
+    }
+
+    // The program-sources count cap rejects too many programs (before any
+    // Program::from_str), bounding an unbounded import closure.
+    #[test]
+    fn program_sources_count_cap_rejects_too_many() {
+        let entries: Vec<serde_json::Value> = (0..=MAX_IMPORT_PROGRAMS)
+            .map(|i| serde_json::json!({ "id": format!("p{i}.aleo"), "edition": 1, "source": "x" }))
+            .collect();
+        let json = serde_json::to_string(&entries).unwrap();
+        let vm = new_vm().unwrap();
+        let error = add_programs_from_sources(&vm, &json).unwrap_err();
+        assert!(error.to_string().contains("program budget"), "got: {error}");
+    }
+
+    /// Builds a `[{id, edition, source}]` program-sources JSON for `programs`.
+    fn sources_json(programs: &[(&str, &[String])]) -> String {
+        let entries: Vec<serde_json::Value> = programs
+            .iter()
+            .map(|(id, imports)| {
+                serde_json::json!({ "id": id, "edition": 1, "source": program_source(id, imports) })
+            })
+            .collect();
+        serde_json::to_string(&entries).unwrap()
+    }
+
+    // Programs supplied out of order are added imports-before-importers.
+    #[test]
+    fn add_programs_from_sources_orders_imports() {
+        let json = sources_json(&[
+            ("imp0.aleo", &["dep0.aleo".to_string()]),
+            ("dep0.aleo", &[]),
+        ]);
+        let vm = new_vm().unwrap();
+        add_programs_from_sources(&vm, &json).unwrap();
+        let process = vm.process();
+        let process = process.read();
+        assert!(process.contains_program(&ProgramID::from_str("imp0.aleo").unwrap()));
+        assert!(process.contains_program(&ProgramID::from_str("dep0.aleo").unwrap()));
+    }
+
+    // A closure missing a transitively-imported program is rejected (the walk
+    // stalls), rather than adding a program whose imports are absent.
+    #[test]
+    fn add_programs_from_sources_rejects_missing_import() {
+        let json = sources_json(&[("imp1.aleo", &["missing.aleo".to_string()])]);
+        let vm = new_vm().unwrap();
+        let error = add_programs_from_sources(&vm, &json).unwrap_err();
+        assert!(error.to_string().contains("unresolved imports"), "got: {error}");
+    }
+
+    // A source that doesn't declare its claimed id is rejected (a lying caller,
+    // mirroring the node-substitution guard on the old path).
+    #[test]
+    fn add_programs_from_sources_rejects_id_mismatch() {
+        let evil = program_source("evil.aleo", &[]);
+        let json = serde_json::to_string(&serde_json::json!([
+            { "id": "honest.aleo", "edition": 1, "source": evil }
+        ]))
+        .unwrap();
+        let vm = new_vm().unwrap();
+        let error = add_programs_from_sources(&vm, &json).unwrap_err();
+        assert!(error.to_string().contains("declares"), "got: {error}");
+    }
+
+    // An empty source set is a no-op (public flows supply no programs).
+    #[test]
+    fn add_programs_from_sources_empty_is_noop() {
+        let vm = new_vm().unwrap();
+        add_programs_from_sources(&vm, "").unwrap();
+        add_programs_from_sources(&vm, "[]").unwrap();
+    }
+
+    // Parse + Stack build is uninterruptible CPU work even with no network, so an
+    // expired deadline stops the load before building anything — the Dart-side
+    // timeout can't reach work already inside the FFI, so the bound must be here.
+    #[test]
+    fn add_programs_from_sources_bounded_by_deadline() {
+        let json = sources_json(&[("solo.aleo", &[])]);
+        let vm = new_vm().unwrap();
+        let expired = std::time::Instant::now() - std::time::Duration::from_secs(1);
+        let error = add_programs_from_sources_within(&vm, &json, expired).unwrap_err();
+        assert!(error.to_string().contains("time budget"), "got: {error}");
+        assert!(!vm.process().read().contains_program(&ProgramID::from_str("solo.aleo").unwrap()));
+    }
+
+    // The local filter is order-sensitive, mirroring Inclusion::insert_transition.
+    #[test]
+    fn global_input_commitments_is_order_sensitive() {
+        // An earlier transition's output makes a later input local -> dropped.
+        let earlier_output_then_spend = vec![
+            (vec![], vec!["c_local".to_string()]),     // T0 outputs c_local
+            (vec!["c_local".to_string()], vec![]),     // T1 spends it (earlier output)
+        ];
+        assert!(global_input_commitments(&earlier_output_then_spend).is_empty());
+
+        // A LATER transition's output must NOT make an earlier input local: the
+        // input is a real on-chain commitment and still needs its state path.
+        // (This is the case the old all-outputs-minus-all-inputs logic got wrong.)
+        let spend_then_later_output = vec![
+            (vec!["c_chain".to_string()], vec![]),     // T0 spends c_chain (on-chain)
+            (vec![], vec!["c_chain".to_string()]),     // T1 outputs the same commitment
+        ];
+        assert_eq!(
+            global_input_commitments(&spend_then_later_output),
+            vec!["c_chain".to_string()]
+        );
+
+        // A plain global input with unrelated outputs stays global.
+        let global_with_fresh_outputs =
+            vec![(vec!["c_in".to_string()], vec!["c_out".to_string()])];
+        assert_eq!(global_input_commitments(&global_with_fresh_outputs), vec!["c_in".to_string()]);
+    }
+
+    // On a real authorization, required_commitments returns the global inputs and
+    // never a record the transaction itself creates (a transition output) — so a
+    // composite program's local record can never be sent to the node as a path
+    // request. (transfer_private's outputs are fresh, so nothing is dropped here;
+    // the drop path is covered by the unit test above.)
+    #[test]
+    fn required_commitments_excludes_transition_outputs() {
+        let owner = owner();
+        let record = plaintext_record(TEST_RECORD, &owner).unwrap();
+        let vm = new_vm().unwrap();
+        let auth = vm
+            .authorize(
+                &owner,
+                "credits.aleo",
+                "transfer_private",
+                vec![record, recipient_address(), "5u64".to_string()],
+                &mut rand::thread_rng(),
+            )
+            .unwrap();
+        // The transaction's own output-record commitments (the local set).
+        let mut outputs = HashSet::new();
+        for (_, transition) in auth.transitions() {
+            for output in transition.outputs() {
+                if let Some(commitment) = output.commitment() {
+                    outputs.insert(commitment.to_string());
+                }
+            }
+        }
+        assert!(!outputs.is_empty(), "transfer_private creates output records");
+
+        let out = call_str(required_commitments, &serde_json::to_string(&auth).unwrap());
+        let required: Vec<String> = serde_json::from_str(&out).unwrap();
+        assert_eq!(required.len(), 1, "the one spent record; got {out}");
+        for commitment in &required {
+            assert!(!outputs.contains(commitment), "leaked a local output: {commitment}");
+        }
+    }
+
+    // The static fee API takes program_sources_json (so non-builtin executions
+    // can be costed). Malformed input returns 0 / "" without panicking across the
+    // FFI boundary — and exercises the new 3-arg / 6-arg ABIs.
+    #[test]
+    fn get_base_fee_static_malformed_returns_zero() {
+        unsafe {
+            let execution = CString::new("not json").unwrap();
+            let sources = CString::new("").unwrap();
+            assert_eq!(get_base_fee_static(execution.as_ptr(), sources.as_ptr(), 9_430_000), 0);
+        }
+    }
+
+    #[test]
+    fn execution_fee_authorization_static_malformed_returns_empty() {
+        unsafe {
+            let pk = CString::new(OWNER_KEY).unwrap();
+            let execution = CString::new("not json").unwrap();
+            let fee_record = CString::new("").unwrap();
+            let sources = CString::new("").unwrap();
+            let ptr = execution_fee_authorization_static(
+                pk.as_ptr(),
+                execution.as_ptr(),
+                1000,
+                fee_record.as_ptr(),
+                sources.as_ptr(),
+                9_430_000,
+            );
+            let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
+            free_string(ptr);
+            assert_eq!(out, "");
+        }
+    }
+
+    /// Calls the 5-arg program_authorization_static and returns the owned result.
+    fn call_program_authorization(
+        private_key: &str,
+        program_id: &str,
+        function: &str,
+        arguments: &str,
+        sources: &str,
+    ) -> String {
+        unsafe {
+            let pk = CString::new(private_key).unwrap();
+            let program = CString::new(program_id).unwrap();
+            let function = CString::new(function).unwrap();
+            let arguments = CString::new(arguments).unwrap();
+            let sources = CString::new(sources).unwrap();
+            let ptr = program_authorization_static(
+                pk.as_ptr(),
+                program.as_ptr(),
+                function.as_ptr(),
+                arguments.as_ptr(),
+                sources.as_ptr(),
+            );
+            let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
+            free_string(ptr);
+            out
+        }
+    }
+
+    // A built-in program (credits.aleo) authorizes with no program sources.
+    #[test]
+    fn program_authorization_static_builtin_no_sources() {
+        let args = serde_json::to_string(&vec![recipient_address(), "5u64".to_string()]).unwrap();
+        let out =
+            call_program_authorization(OWNER_KEY, "credits.aleo", "transfer_public", &args, "");
+        let auth: Authorization<Net> = serde_json::from_str(&out).unwrap();
+        assert_eq!(auth.to_vec_deque().len(), 1);
+    }
+
+    // The path credits-only authorize exports can't reach: load a non-builtin
+    // program from sources, then authorize its function offline.
+    #[test]
+    fn program_authorization_static_loads_then_authorizes() {
+        let sources = sources_json(&[("auth0.aleo", &[])]);
+        let out = call_program_authorization(OWNER_KEY, "auth0.aleo", "noop", "[]", &sources);
+        let auth: Authorization<Net> = serde_json::from_str(&out).unwrap();
+        assert!(!auth.to_vec_deque().is_empty(), "authorized a non-builtin function");
+    }
+
+    // Malformed input returns "" rather than panicking across the FFI boundary.
+    #[test]
+    fn program_authorization_static_malformed_returns_empty() {
+        // Bad arguments JSON.
+        assert_eq!(
+            call_program_authorization(OWNER_KEY, "credits.aleo", "transfer_public", "nope", ""),
+            ""
+        );
+        // Unknown program with no sources to load it.
+        assert_eq!(call_program_authorization(OWNER_KEY, "ghost.aleo", "go", "[]", ""), "");
+    }
+
+    // End-to-end proof through execute_proof_static for a PUBLIC transfer: no
+    // record inputs, so no state paths — proving only needs a height and a real
+    // (non-zero) state root. This exercises static_query's public branch +
+    // execute_authorization_raw for real and checks the proof carries the
+    // supplied root. Heavy (downloads proving keys + proves), hence #[ignore].
+    // The private-flow end-to-end stays for the phase-2 testnet parity run (it
+    // needs a real on-chain state path).
+    #[test]
+    #[ignore = "proving: downloads keys + proves, run with `cargo test --release -- --ignored`"]
+    fn execute_proof_static_public_transfer_end_to_end() {
+        let owner = owner();
+        let vm = new_vm().unwrap();
+        let auth = vm
+            .authorize(
+                &owner,
+                "credits.aleo",
+                "transfer_public",
+                vec![recipient_address(), "1u64".to_string()],
+                &mut rand::thread_rng(),
+            )
+            .unwrap();
+        let auth_json = serde_json::to_string(&auth).unwrap();
+        // Any valid, non-zero state root works for a public flow (no inclusion
+        // assignments to check it against; consensus checks it on-chain later).
+        let root = "sr1dz06ur5spdgzkguh4pr42mvft6u3nwsg5drh9rdja9v8jpcz3czsls9geg";
+        let out = unsafe {
+            let auth_c = CString::new(auth_json).unwrap();
+            let paths_c = CString::new("").unwrap();
+            let root_c = CString::new(root).unwrap();
+            let ptr = execute_proof_static(auth_c.as_ptr(), 9_430_000, paths_c.as_ptr(), root_c.as_ptr());
+            let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
+            free_string(ptr);
+            out
+        };
+        assert!(!out.is_empty(), "expected a serialized execution, got the error sentinel");
+        let execution: Execution<Net> = serde_json::from_str(&out).unwrap();
+        // The proof carries the root static_query was given.
+        assert_eq!(execution.global_state_root().to_string(), root);
     }
 }

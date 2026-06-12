@@ -1,8 +1,74 @@
 # Design: move network I/O out of `aleo_ffi` into Dart
 
-Status: **proposed** (spec only; no code yet)
+Status: **phase 1 implemented** (the `_static` exports + helpers; old exports
+untouched). Phases 2–4 not started.
 Owner: aleo_ffi
 Supersedes: the in-Rust HTTP hardening accreted across PR #51 review rounds 5–13.
+
+## Phase 1 status (implemented)
+
+Phase 1 is strictly additive: it ships **ten** pure, RPC-free exports (they
+issue no node RPC; proving's parameter download is a separate, still-open matter
+— see "Proving parameters") alongside the untouched old ones — four helpers (`required_commitments`,
+`required_imports`, `state_root_from_paths`, `consensus_version_for`) plus six
+`_static` proving/fee/authorize variants (`get_base_fee_static`,
+`execution_fee_authorization_static`, `execute_proof_static`,
+`execute_fee_proof_static`, `execute_program_proof_static`,
+`program_authorization_static`). Five of those carry `_static` because they would
+otherwise collide with an existing old symbol of the same name (`execute_proof`,
+`execute_fee_proof`, `execute_program_proof`, `get_base_fee`,
+`execution_fee_authorization`); `program_authorization_static` has **no** old
+counterpart and takes the suffix only for naming consistency across the new
+static API. The four helpers are new names, so they need no suffix.
+The pure helpers, the size budgets (`state_paths_json` byte + entry caps;
+`program_sources_json` byte + program-count caps; the program-loader wall-clock
+deadline), and the private-flow `StaticQuery` construction are unit-tested
+offline (real sampled `StatePath`s); the release cdylib's exported ABI is checked
+in CI. Not yet tested: the deferred state-path exact-match (below) and anything
+Dart-side (phase 2).
+
+Four P1 issues from follow-up reviews were fixed in-phase (not deferred): (1)
+the fee API (`get_base_fee_static` / `execution_fee_authorization_static`) now
+takes `program_sources_json` and loads the execution's root program, since
+snarkVM's `execution_cost` reads each transition's program `Stack` (without it a
+non-credits execution returned fee 0 / ""); (2) `required_commitments` now
+excludes a composite program's intra-transaction ("local") record by walking the
+authorization's transitions in execution order (paired to requests by `tcm`) and
+dropping an input only if an *earlier* transition output it — mirroring
+`Inclusion::insert_transition` exactly, not an order-insensitive all-outputs
+subtraction that could drop a real on-chain input matching a *later* output
+(`vm.authorize` already populates the transitions, so this is exact and offline); (3) `add_programs_from_sources` keeps a wall-clock deadline
+over its CPU-bound parse / Stack-build steps — moving HTTP to Dart removed the
+*network* stall, but a hostile closure of large valid programs is still
+uninterruptible CPU work the Dart timeout cannot reach; and (4) added
+`program_authorization_static(private_key, program_id, function, arguments,
+program_sources_json)` — the pure authorize primitive for *arbitrary* programs
+(load the program from sources, then `vm.authorize`). Without it phase 2 had no
+offline entry point for non-credits flows and would have to keep calling the
+network-bound `contract_execution` / `execute_program`; the credits-only
+`execution_authorization` / `join_authorization` / `upgrade_authorization`
+don't cover it.
+
+The following are **intentionally deferred** — surfaced by a high-effort
+self-review, none blocking, all sequenced to a later phase:
+
+- **No exact-match of state paths to `required_commitments`.** The proving
+  primitives rely on a byte+entry budget plus `StaticQuery`'s missing-path
+  fail-closed, not this spec's "the parsed paths' commitment set exactly equals
+  `required_commitments`". Pinned by the phase-2 parity test before the old node
+  path is deleted.
+- **End-to-end SNARK proving is only partly covered.** `execute_proof_static`
+  for a *public* transfer is proved end-to-end (the `#[ignore]`d
+  `execute_proof_static_public_transfer_end_to_end`, run with proving keys), and
+  the private-flow `StaticQuery` mechanism is covered offline with real sampled
+  `StatePath`s. Still **not** end-to-end: the *private* execution flow (needs a
+  real on-chain state path, impractical offline) and the `execute_fee_proof_static`
+  / `execute_program_proof_static` paths — all left to the phase-2 testnet parity
+  run.
+- **Minor cleanup left for phase 3** (when the old path is deleted and `_static`
+  is renamed to canonical): `base_fee_at_height` and the three `execute_*_static`
+  share structure with the old exports. Kept duplicated for now to match the
+  file's per-export style and keep the diff easy to check against this spec.
 
 ## Why
 
@@ -16,16 +82,31 @@ review finds the next one. The worker-thread + budget machinery is the best
 in-process approximation, but it is machinery defending an inherently leaky
 shape.
 
-Moving all HTTP to the Dart layer — which has a real async runtime with proper
-timeouts and cancellation — makes the Rust functions **pure compute** over
-pre-fetched inputs. That deletes the entire finding class instead of shrinking
-it: no `ureq`, no DNS, no worker threads, no deadlines, no retry/budget code in
-Rust at all.
+Moving all node RPC to the Dart layer — which has a real async runtime with
+proper timeouts and cancellation — makes the Rust functions compute over
+pre-fetched inputs (the network I/O still left in Rust, snarkVM's
+proving-parameter download, is a separate matter called out in "Proving
+parameters"). That deletes the entire **RPC** finding class instead of shrinking
+it: no `ureq`, no node-RPC DNS, no worker threads, no node-RPC retries in Rust.
+(The proving-parameter download is the exception — it still does DNS and retries
+a list of URLs; see "Proving parameters". A size budget and a CPU wall-clock
+deadline also stay on the offline program loader — parsing and Stack-building
+untrusted sources is still bounded work; see "Resource budgets survive the
+move".)
 
 ## Current network surface
 
-19 of the 31 exports are already pure (account, record, offline authorization
-and assembly). **12 touch the network:**
+After phase 1, **26 of the 41 exports** are RPC- and network-free (account,
+record, offline authorization and assembly, plus 7 of the 10 new phase-1
+exports). **15 can touch the network:** the **12 old network-touching exports**
+in the table below (still present — phase 3 deletes them once Dart no longer
+calls them), **plus** the 3 new proving primitives `execute_proof_static`,
+`execute_fee_proof_static`, `execute_program_proof_static` — they issue no node
+RPC, but proving can synchronously download proving keys / the SRS on a cold
+cache (see "Proving parameters"). The other 7 new exports (the four helpers,
+`get_base_fee_static`, `execution_fee_authorization_static`,
+`program_authorization_static`) don't prove, so they touch nothing. (Before phase
+1 it was 19 of 31.)
 
 | FFI export | Needs from node |
 |---|---|
@@ -67,8 +148,10 @@ StaticQuery::new(block_height: u32,
 `current_state_root`, `get_state_paths_for_commitments`, **and
 `current_block_height`** on the query (height selects the consensus version and
 feeds inclusion `prepare`), all of which `StaticQuery` answers from its
-preloaded data. So proving is fully offline once the caller supplies
-`{height, state_root, state_paths}` — note `height` is required, not optional:
+preloaded data. So proving needs no **node RPC** once the caller supplies
+`{height, state_root, state_paths}` (it still loads proving keys / the SRS, which
+snarkVM downloads on a cold cache — see "Proving parameters", so "offline" is not
+yet literal) — note `height` is required, not optional:
 `StaticQuery::new` takes it as its first argument and a wrong/absent height
 yields an invalid query.
 
@@ -80,12 +163,27 @@ Every proving primitive takes `height` — proving reads `current_block_height`
 for the consensus version, so it cannot be omitted:
 
 - `execute_proof(authorization, height, state_paths_json, public_state_root)`
-  — builds the `StaticQuery` and proves; no HTTP.
+  — builds the `StaticQuery` and proves; no node RPC (proving may still download
+  proving keys / the SRS on a cold cache — see "Proving parameters").
 - `execute_fee_proof(authorization, height, state_paths_json, public_state_root)`.
 - `execute_program_proof(authorization, program_sources_json, height, state_paths_json, public_state_root)`.
-- `get_base_fee(execution, height)` — height in, fee out, pure.
-- `execution_fee_authorization(private_key, execution, fee_credits, fee_record, height)`
-  — base fee derived from `height`, pure.
+- `get_base_fee(execution, program_sources_json, height)` — height in, fee out,
+  pure. `program_sources_json` loads the execution's root program: snarkVM's
+  `execution_cost` reads each transition's program `Stack`, so a non-credits
+  execution needs it (empty for a credits.aleo execution).
+- `execution_fee_authorization(private_key, execution, fee_credits, fee_record, program_sources_json, height)`
+  — base fee derived from `height` over the loaded program(s), pure.
+
+Plus one offline **authorize** primitive (not a proving primitive, so no
+`height`), the entry point for arbitrary-program flows that the credits-only
+`execution_authorization` / `join_authorization` / `upgrade_authorization` don't
+cover:
+
+- `program_authorization(private_key, program_id, function, arguments, program_sources_json)`
+  — loads the program (+ imports) from sources, then `vm.authorize`; `arguments`
+  is a JSON array of Aleo value strings (record inputs already plaintext). Shipped
+  as `program_authorization_static` (no old symbol to collide with; the suffix is
+  only for naming consistency).
 
 **Phase-1 symbol names — these cannot reuse the old symbols.** `execute_proof`,
 `execute_fee_proof`, `execute_program_proof` already exist as exports with the
@@ -121,15 +219,18 @@ response buffer or Rust's serde. Bounds, both sides:
 
 - *Dart (fetch side):* cap the `statePaths` response bytes and entry count
   before buffering the whole body.
-- *Rust (parse side):* check the raw `state_paths_json` byte length and entry
-  count **before** deserializing, then require the parsed paths' commitment set
-  to **exactly equal `required_commitments(authorization)`** — no extra, no
-  missing. This is both a correctness check (you prove inclusion for exactly the
-  records being spent) and a tight, protocol-grounded count bound: the required
-  commitments are bounded by the execution's inputs (`MAX_INPUTS` per transition
-  × `MAX_TRANSITIONS`), so a node cannot inflate the path count beyond what the
-  transaction actually needs. `public_state_root` is similarly length-checked
-  before parsing.
+- *Rust (parse side), phase 1 (implemented):* check the raw `state_paths_json`
+  byte length **before** deserializing (bounding serde memory), then the parsed
+  entry count **after** (≤ `MAX_INPUTS` per transition × `MAX_TRANSITIONS`, the
+  most any execution can require). `public_state_root` is length-checked before
+  parsing. A missing path fails closed (proving's `get_state_path_for_commitment`
+  errors).
+- *Rust (parse side), phase-2 target (not yet implemented):* additionally require
+  the parsed paths' commitment set to **exactly equal
+  `required_commitments(authorization)`** — no extra, no missing. This is a
+  stronger correctness check (prove inclusion for exactly the spent records) and
+  a tighter, protocol-grounded bound. Pinned by the phase-2 parity test before the
+  old node path is deleted (see deferred items).
 
 `program_sources_json`: a JSON array of `{id, edition, source}` the caller has
 already fetched (closure included, any order). Rust validates ids, loads
@@ -140,9 +241,13 @@ set rather than the network.
 
 ### New pure helpers (so Dart knows what to fetch)
 
-- `required_commitments(authorization_json) -> JSON [field]` — the input-record
-  commitments whose state paths the caller must fetch before proving. Empty for
-  public transfers. **Called once per authorization** — both the execution
+- `required_commitments(authorization_json) -> JSON [field]` — the **global**
+  input-record commitments whose state paths the caller must fetch before
+  proving: each transition's record inputs, dropping any whose record was output
+  by an *earlier* transition in the same transaction (a "local" record — proving
+  builds its inclusion path itself and the node has no path for it). The filter
+  is applied in execution order (transitions paired to requests by `tcm`), so a
+  later output can't drop an earlier on-chain input. Empty for public transfers. **Called once per authorization** — both the execution
   authorization and (separately) the fee authorization, since a private fee
   spends its own record (see the example flow).
 - `required_imports(program_source) -> JSON [program_id]` — direct imports of a
@@ -152,14 +257,15 @@ set rather than the network.
   Dart needs the snapshot root for logging/caching; not required for proving
   (the proving primitives derive it themselves, above).
 
-### Removed exports
+### Removed exports (planned, phase 3)
 
-The one-call orchestration functions that bundled network I/O —
-`build_transaction`, `try_transfer`, `try_join`, `execute_program` — are dropped
-from Rust and **re-implemented in Dart** as compositions of the pure primitives
-(authorize → fetch → prove → assemble → broadcast). `contract_execution` /
-`contract_fee_execution` likewise become Dart compositions over the program-proof
-primitives. `broadcast` is deleted (Dart does the POST).
+These still exist after phase 1; phase 3 removes them once the Dart orchestration
+no longer calls them. The one-call orchestration functions that bundle network
+I/O — `build_transaction`, `try_transfer`, `try_join`, `execute_program` — will be
+dropped from Rust and **re-implemented in Dart** as compositions of the pure
+primitives (authorize → fetch → prove → assemble → broadcast). `contract_execution`
+/ `contract_fee_execution` likewise become Dart compositions over the
+program-proof primitives. `broadcast` is deleted (Dart does the POST).
 
 ## State-root snapshot contract
 
@@ -250,7 +356,7 @@ contain: a node can still answer an endless *acyclic* chain of distinct valid
 programs. Now the Dart closure walk would fetch forever, and the assembled
 `program_sources_json` would grow without limit — `MAX_PROGRAM_SIZE` caps one
 program, not the set. So the **count + total-byte budget is kept, on both
-sides**, even though the HTTP/threading/deadline machinery is deleted:
+sides**, even though the HTTP/worker-thread machinery is deleted:
 
 - **Dart (fetch side):** the closure walk via `required_imports` enforces a
   max-program-count and cumulative-byte budget (and a wall-clock budget, now
@@ -258,45 +364,97 @@ sides**, even though the HTTP/threading/deadline machinery is deleted:
   unbounded chain.
 - **Rust (parse side):** parsing `program_sources_json` re-checks a program
   count cap and a total-byte cap (not just per-program `MAX_PROGRAM_SIZE`),
-  since Rust must not trust the caller's set blindly either.
+  **and keeps a wall-clock deadline** gating each `Program::from_str` and each
+  `add_program_with_edition` (Stack build) — both are expensive, uninterruptible
+  CPU work, so a hostile-but-valid closure of up to `MAX_IMPORT_PROGRAMS` large
+  programs must not be able to block the synchronous FFI call. The Dart-side
+  timeout can only bound the *fetch*; it cannot interrupt work already inside the
+  FFI, so the CPU bound has to live in Rust. Rust must not trust the caller's set
+  blindly either.
 
-Only the *time/deadline* and *worker-thread* parts of the budget are dropped
-(no blocking I/O left in Rust to bound); the *size* parts persist.
+Only the *worker-thread / in-flight* machinery is dropped (no **RPC** blocking
+I/O left in Rust to bound — the proving-parameter download is separate, see
+"Proving parameters"); the *size* and *wall-clock* parts persist.
 
-## Deleted from Rust
+## Deleted from Rust (planned, phase 3)
 
-`ureq` dependency; `http_agent`, `http_get`, `http_get_until`, `http_post`,
+When the in-Rust network code is removed: `ureq` dependency; `http_agent`,
+`http_get`, `http_get_until`, `http_post`,
 `request_once_bounded`, `InflightPermit`/`MAX_INFLIGHT_REQUESTS`; the
-*time/thread* part of `LoadBudget` (the wall-clock deadline, `get_once_bounded`
-plumbing) — **but not** its size budget, which moves to the `program_sources_json`
-parser per above; `NodeQuery`'s HTTP impl (replaced by building `StaticQuery`
+*thread/in-flight* part of the load machinery (`get_once_bounded` plumbing) —
+**but not** `LoadBudget`'s size and wall-clock budget, which move to the
+`program_sources_json` parser (it keeps a deadline over its CPU-bound
+parse/Stack-build steps) per above; `NodeQuery`'s HTTP impl (replaced by building `StaticQuery`
 from caller JSON); `node_latest_edition`, `add_program_from_node` (network),
-`broadcast_to_node`. The worker-thread/deadline tests go with them; the
-program-count/byte-budget tests are kept and re-pointed at the parser.
+`broadcast_to_node`. The worker-thread / in-flight tests go with them. Already
+done in phase 1: the program-count/byte-budget tests and a wall-clock-deadline
+test point at the new `program_sources_json` parser (the loader keeps its CPU
+deadline, so that test stays rather than being deleted with the network code).
 
-Result: the Rust crate makes **zero network calls** and links no HTTP stack —
-which also simplifies the pending iOS/Android cross-compile (no curl/OpenSSL or
-rustls needed; see the GPL-removal plan).
+Result: the Rust crate makes **zero RPC calls** — state, program sources, and
+broadcast all move to Dart. **One network *dependency* is NOT yet removed** (it
+can fetch several parameter files, each retrying a list of URLs) (see
+"Proving parameters" below): snarkVM's `snarkvm-parameters` still lazily
+downloads proving keys / the Varuna SRS via `curl` (synchronous, no timeout) on
+a cold parameter cache, so the crate still links `curl` + `openssl-sys`.
+Eliminating it — pre-provisioning the parameters with remote fetch disabled — is
+its own task and the actual prerequisite for the no-OpenSSL iOS/Android
+cross-compile in the GPL-removal plan.
+
+## Proving parameters (open gap — the network I/O still in Rust)
+
+This phase's premise is "Rust does no network I/O." That holds for **node RPC**
+(state / program sources / broadcast), but **not** for snarkVM's proving
+parameters, an issue this design originally overlooked:
+
+- The proving primitives (`execute_*_static`) call `execute_authorization_raw`,
+  which proves; proving needs the credits.aleo proving keys and the Varuna SRS.
+- `snarkvm-parameters` loads these (several files — a proving key per credits
+  function plus the SRS) from `aleo_std::aleo_dir()` and, on a **cold cache**,
+  downloads **each missing one** with `curl::easy` — **synchronous, with no
+  timeout** (`transfer.perform()`), each retrying a list of URLs.
+- `curl` (and thus `openssl-sys`) is an unconditional `cfg(not(wasm),
+  not(sgx))` dependency of `snarkvm-parameters`; **no Cargo feature disables it**
+  on native targets. So removing `ureq` does not stop the crate linking
+  curl/OpenSSL, and a cold-cache prove can still block on the network.
+
+This is **not introduced by phase 1** — the old network-bound `execute_proof`
+downloads parameters the same way — but it does mean the early "zero-network /
+no HTTP stack" claims were wrong, and it is the real blocker for the no-OpenSSL
+mobile cross-compile.
+
+**Fix (its own task, sequenced as phase 4 / part of the GPL-removal mobile
+build):** vendor `snarkvm-parameters` (as we already vendor `snarkvm-synthesizer`)
+and make native targets take the `RemoteFetchDisabled` path that wasm/sgx already
+use — return an error instead of fetching — then drop the `curl`/`openssl-sys`
+dependency. Parameters are pre-provisioned: bundled with the app, or downloaded
+once by the Dart layer (with `dio` timeout/cancel) into `aleo_dir()` before the
+first prove. Until then, the parameter download remains snarkVM's default
+behaviour.
 
 ## Migration plan (phased, each independently shippable)
 
 1. **Add pure primitives + helpers under new symbol names, alongside the
    existing functions** (no removals, no symbol reuse — see "Phase-1 symbol
    names"). New exports: `required_commitments`, `required_imports`,
-   `state_root_from_paths`, `consensus_version_for(height)`, and the
+   `state_root_from_paths`, `consensus_version_for(height)`, the
    `*_static` proving/fee variants (`execute_proof_static`,
    `execute_fee_proof_static`, `execute_program_proof_static`,
    `get_base_fee_static`, `execution_fee_authorization_static`) carrying the
    `height, state_paths_json, public_state_root` shape and the program/path
-   resource budgets. The old `execute_proof` etc. stay exactly as they are, so
-   CI and current Dart keep working.
+   resource budgets, and `program_authorization_static` (the pure authorize
+   primitive for arbitrary programs). The old `execute_proof` etc. stay exactly
+   as they are, so CI and current Dart keep working.
 2. **Move orchestration to Dart**: implement `AleoNode` + rewrite `AleoProgram`
    orchestration onto the pure primitives; keep method signatures stable.
    Parity-test new Dart pipeline vs the old FFI one against testnet.
 3. **Delete the in-Rust network code** and the now-unused exports once Dart no
    longer calls them; drop `ureq`.
-4. **Re-point cross-compile** (no HTTP stack) — folds into the GPL-removal /
-   mobile-build work.
+4. **Remove the proving-parameter network dependency + re-point cross-compile**:
+   vendor/patch `snarkvm-parameters` to disable native remote fetch
+   (pre-provision the keys/SRS), dropping `curl`/`openssl-sys` — see "Proving
+   parameters". This is the actual no-OpenSSL prerequisite; folds into the
+   GPL-removal / mobile-build work.
 
 ## Open questions / risks
 
@@ -312,12 +470,14 @@ rustls needed; see the GPL-removal plan).
 - **Two snapshots per transaction**: the execution and a private fee each need
   their own inclusion snapshot (different commitment sets). The orchestration
   must not share one snapshot across both — pinned by a private-fee parity test.
-- **Resource budget parity**: the count/byte budget must reject the same
-  oversized closures Dart's walk does, and the `state_paths_json` parser must
-  reject path sets that don't exactly match `required_commitments`; tested on
-  both sides against synthetic oversized/mismatched inputs.
+- **Resource budget parity**: the Rust count/byte budget must reject the same
+  oversized closures the (phase-2) Dart walk does, and the `state_paths_json`
+  parser must reject path sets that don't exactly match `required_commitments`.
+  Phase 1 has the Rust size-budget tests (state-path byte + entry caps;
+  program-sources byte + count caps); the exact-match and the Dart-side budget
+  are **not yet implemented/tested** — both land in phase 2.
 - **Consensus-version pin**: a parity/regression test that a version change
   between the two snapshots restarts the whole flow rather than mixing versions.
-- **Effort**: ~12 FFI functions resigned, an `AleoNode` Dart class, and a
+- **Effort**: ~12 FFI functions redesigned, an `AleoNode` Dart class, and a
   parity pass. Bounded, but a real piece of work — hence its own phased PR set,
   not a rider on #51.

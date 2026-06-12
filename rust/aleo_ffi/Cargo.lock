@@ -83,6 +83,7 @@ dependencies = [
  "serde",
  "serde_json",
  "snarkvm-console",
+ "snarkvm-console-program",
  "snarkvm-ledger-block",
  "snarkvm-ledger-query",
  "snarkvm-ledger-store",
