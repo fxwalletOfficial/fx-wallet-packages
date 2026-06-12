@@ -296,6 +296,44 @@ void main() {
     sw.stop();
     expect(sw.elapsed, lessThan(const Duration(seconds: 3)));
   });
+
+  test('a single closure request is capped at requestTimeout, not closureDeadline',
+      () async {
+    // closureDeadline is large (10s); requestTimeout is small (500ms). A
+    // stalling import must fail at ~requestTimeout, so one slow node cannot
+    // occupy the whole closure budget.
+    node.handler = (req) async {
+      final id = req.uri.pathSegments[2];
+      if (id == 'a.aleo') {
+        if (req.uri.path.endsWith('/latest_edition')) {
+          await _reply(req, '1');
+        } else {
+          await _reply(req, jsonEncode('program a.aleo;'));
+        }
+      } else {
+        await Future<void>.delayed(const Duration(seconds: 30));
+        await _reply(req, '1');
+      }
+    };
+    final node2 = AleoNode(node.url,
+        network: 'testnet',
+        requestTimeout: const Duration(milliseconds: 500),
+        closureDeadline: const Duration(seconds: 10),
+        parseImports: (src) =>
+            _idOf(src) == 'a.aleo' ? ['b.aleo'] : const []);
+    final sw = Stopwatch()..start();
+    await expectLater(
+        node2.programClosure('a.aleo'), throwsA(isA<AleoNodeException>()));
+    sw.stop();
+    // ~500ms (the per-request cap), not the 10s closureDeadline / 30s stall.
+    expect(sw.elapsed, lessThan(const Duration(seconds: 3)));
+  });
+
+  test('latestHeight rejects a height past u32 range', () async {
+    node.handler = (req) => _reply(req, '4294967296'); // 2^32, over u32::MAX
+    await expectLater(
+        aleo().latestHeight(), throwsA(isA<AleoNodeException>()));
+  });
 }
 
 /// Extracts the program id from our fake `program <id>;` source bodies.

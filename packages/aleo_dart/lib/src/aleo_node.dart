@@ -43,10 +43,12 @@ class AleoNode {
 
   final Dio _dio;
 
-  /// **Overall** wall-clock budget for one logical read — every retry attempt
-  /// and every backoff together must fit inside it, so a stalling node cannot
-  /// stretch a read to `getAttempts × timeout`. On expiry the in-flight
-  /// request's [CancelToken] is cancelled, aborting the socket.
+  /// Wall-clock budget for one logical read: every retry attempt and backoff
+  /// together must fit inside it, so a stalling node cannot stretch a read to
+  /// `getAttempts × timeout`. It also caps each *individual* request even under
+  /// the larger [closureDeadline] — so one slow-but-progressing import cannot
+  /// occupy the whole closure budget. On expiry the in-flight request's
+  /// [CancelToken] is cancelled, aborting the socket.
   final Duration requestTimeout;
 
   /// Retries for an idempotent GET (the public node returns transient 5xx/522).
@@ -118,8 +120,13 @@ class AleoNode {
   Future<int> latestHeight() async {
     final body = await _getWithRetry('latest/height', maxBytes: maxHeightBytes);
     final height = int.tryParse(_unquote(body));
-    if (height == null || height < 0) {
-      throw AleoNodeException('latest/height returned a non-integer: $body');
+    // Block heights are u32 on-chain and are marshalled to the FFI as Uint32; a
+    // value past u32::MAX is a lying/buggy node and would silently truncate to a
+    // different height (and thus the wrong consensus version), so reject it here
+    // at the trust boundary rather than let it through.
+    if (height == null || height < 0 || height > 0xFFFFFFFF) {
+      throw AleoNodeException(
+          'latest/height out of u32 range or non-integer: $body');
     }
     return height;
   }
@@ -286,8 +293,14 @@ class AleoNode {
     for (var attempt = 0; attempt < getAttempts; attempt++) {
       final remaining = overall.difference(DateTime.now());
       if (remaining <= Duration.zero) break;
+      // Cap each individual request at requestTimeout even when the overall
+      // budget is the larger closureDeadline, so one slow-but-progressing node
+      // cannot occupy the whole closure budget (mirrors the old Rust
+      // http_get_until's per-attempt `budget.min(HTTP_REQUEST_TIMEOUT)`).
+      final attemptTimeout =
+          remaining < requestTimeout ? remaining : requestTimeout;
       try {
-        return await _getOnce(route, maxBytes: maxBytes, timeout: remaining);
+        return await _getOnce(route, maxBytes: maxBytes, timeout: attemptTimeout);
       } on DioException catch (e) {
         last = e;
         if (!_isRetryable(e) || attempt + 1 == getAttempts) {
