@@ -7,8 +7,9 @@ Supersedes: the in-Rust HTTP hardening accreted across PR #51 review rounds 5–
 
 ## Phase 1 status (implemented)
 
-Phase 1 is strictly additive: it ships **ten** pure, network-free exports
-alongside the untouched old ones — four helpers (`required_commitments`,
+Phase 1 is strictly additive: it ships **ten** pure, RPC-free exports (they
+issue no node RPC; proving's parameter download is a separate, still-open matter
+— see "Proving parameters") alongside the untouched old ones — four helpers (`required_commitments`,
 `required_imports`, `state_root_from_paths`, `consensus_version_for`) plus six
 `_static` proving/fee/authorize variants (`get_base_fee_static`,
 `execution_fee_authorization_static`, `execute_proof_static`,
@@ -81,9 +82,11 @@ review finds the next one. The worker-thread + budget machinery is the best
 in-process approximation, but it is machinery defending an inherently leaky
 shape.
 
-Moving all HTTP to the Dart layer — which has a real async runtime with proper
-timeouts and cancellation — makes the Rust functions **pure compute** over
-pre-fetched inputs. That deletes the entire finding class instead of shrinking
+Moving all node RPC to the Dart layer — which has a real async runtime with
+proper timeouts and cancellation — makes the Rust functions compute over
+pre-fetched inputs (the one network call left, snarkVM's proving-parameter
+download, is a separate matter called out in "Proving parameters"). That deletes
+the entire RPC finding class instead of shrinking
 it: no `ureq`, no DNS, no worker threads, no network retries in Rust at all. (A
 size budget and a CPU wall-clock deadline stay on the offline program loader —
 parsing and Stack-building untrusted sources is still bounded work; see "Resource
@@ -375,9 +378,44 @@ done in phase 1: the program-count/byte-budget tests and a wall-clock-deadline
 test point at the new `program_sources_json` parser (the loader keeps its CPU
 deadline, so that test stays rather than being deleted with the network code).
 
-Result: the Rust crate makes **zero network calls** and links no HTTP stack —
-which also simplifies the pending iOS/Android cross-compile (no curl/OpenSSL or
-rustls needed; see the GPL-removal plan).
+Result: the Rust crate makes **zero RPC calls** — state, program sources, and
+broadcast all move to Dart. **One network dependency is NOT yet removed** (see
+"Proving parameters" below): snarkVM's `snarkvm-parameters` still lazily
+downloads proving keys / the Varuna SRS via `curl` (synchronous, no timeout) on
+a cold parameter cache, so the crate still links `curl` + `openssl-sys`.
+Eliminating it — pre-provisioning the parameters with remote fetch disabled — is
+its own task and the actual prerequisite for the no-OpenSSL iOS/Android
+cross-compile in the GPL-removal plan.
+
+## Proving parameters (open gap — the one network call left in Rust)
+
+This phase's premise is "Rust does no network I/O." That holds for **node RPC**
+(state / program sources / broadcast), but **not** for snarkVM's proving
+parameters, an issue this design originally overlooked:
+
+- The proving primitives (`execute_*_static`) call `execute_authorization_raw`,
+  which proves; proving needs the credits.aleo proving keys and the Varuna SRS.
+- `snarkvm-parameters` loads these from `aleo_std::aleo_dir()` and, on a **cold
+  cache**, downloads the missing file with `curl::easy` — **synchronous, with no
+  timeout** (`transfer.perform()`), retrying a list of URLs.
+- `curl` (and thus `openssl-sys`) is an unconditional `cfg(not(wasm),
+  not(sgx))` dependency of `snarkvm-parameters`; **no Cargo feature disables it**
+  on native targets. So removing `ureq` does not stop the crate linking
+  curl/OpenSSL, and a cold-cache prove can still block on the network.
+
+This is **not introduced by phase 1** — the old network-bound `execute_proof`
+downloads parameters the same way — but it does mean the early "zero-network /
+no HTTP stack" claims were wrong, and it is the real blocker for the no-OpenSSL
+mobile cross-compile.
+
+**Fix (its own task, sequenced as phase 4 / part of the GPL-removal mobile
+build):** vendor `snarkvm-parameters` (as we already vendor `snarkvm-synthesizer`)
+and make native targets take the `RemoteFetchDisabled` path that wasm/sgx already
+use — return an error instead of fetching — then drop the `curl`/`openssl-sys`
+dependency. Parameters are pre-provisioned: bundled with the app, or downloaded
+once by the Dart layer (with `dio` timeout/cancel) into `aleo_dir()` before the
+first prove. Until then, the parameter download remains snarkVM's default
+behaviour.
 
 ## Migration plan (phased, each independently shippable)
 
@@ -397,8 +435,11 @@ rustls needed; see the GPL-removal plan).
    Parity-test new Dart pipeline vs the old FFI one against testnet.
 3. **Delete the in-Rust network code** and the now-unused exports once Dart no
    longer calls them; drop `ureq`.
-4. **Re-point cross-compile** (no HTTP stack) — folds into the GPL-removal /
-   mobile-build work.
+4. **Remove the proving-parameter network dependency + re-point cross-compile**:
+   vendor/patch `snarkvm-parameters` to disable native remote fetch
+   (pre-provision the keys/SRS), dropping `curl`/`openssl-sys` — see "Proving
+   parameters". This is the actual no-OpenSSL prerequisite; folds into the
+   GPL-removal / mobile-build work.
 
 ## Open questions / risks
 

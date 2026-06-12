@@ -1505,14 +1505,18 @@ pub unsafe extern "C" fn serial_number_string(
 }
 
 // ----------------------------------------------------------------------------
-// Phase 1 of the I/O-to-Dart migration (docs/network-io-to-dart.md): pure,
-// network-free variants of the proving/fee surface, plus small helpers that let
-// Dart discover what to fetch. These take pre-fetched node data
-// (`height`, `state_paths_json`, `public_state_root`, `program_sources_json`)
-// instead of a `url`/`network` to query, so the Rust side makes zero network
-// calls. They ship under *new* `_static` symbols alongside the untouched old
-// exports — a cdylib cannot export two ABIs under one symbol, and Dart still
-// looks up the old names; phase 3 deletes the old path once Dart no longer does.
+// Phase 1 of the I/O-to-Dart migration (docs/network-io-to-dart.md): RPC-free
+// variants of the proving/fee surface, plus small helpers that let Dart discover
+// what to fetch. These take pre-fetched node data (`height`, `state_paths_json`,
+// `public_state_root`, `program_sources_json`) instead of a `url`/`network` to
+// query, so these exports issue no node RPC. NOTE: this is not yet "zero
+// network" — snarkVM's proving still lazily downloads proving keys / the SRS via
+// `curl` (no timeout) on a cold parameter cache, so the crate still links
+// curl/openssl; removing that is a separate task (see the spec's "Proving
+// parameters" section). They ship under *new* `_static` symbols alongside the
+// untouched old exports — a cdylib cannot export two ABIs under one symbol, and
+// Dart still looks up the old names; phase 3 deletes the old path once Dart no
+// longer does.
 // ----------------------------------------------------------------------------
 
 /// Assumed serialized size of one `StatePath`, used *only* as a factor to derive
