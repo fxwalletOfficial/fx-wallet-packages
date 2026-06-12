@@ -29,7 +29,7 @@ dependencies:
   bech32m_i: ^0.2.2
   decimal: ^3.2.4
   blockchain_utils: ^6.0.0
-  wasm_run: ^0.1.0+2
+  wasd: ^0.2.0
 
 dev_dependencies:
   test: ^1.6.2
