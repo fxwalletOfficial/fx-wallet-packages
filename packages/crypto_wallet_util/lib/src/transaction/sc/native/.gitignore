@@ -1,0 +1,2 @@
+# Generated C headers from c-shared builds; the dynamic libraries are tracked.
+*.h

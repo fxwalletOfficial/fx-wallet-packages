@@ -59,6 +59,10 @@ CGO_ENABLED=1 GOOS="$OS" GOARCH="$ARCH" go build \
   -ldflags="-s -w" \
   .
 
+# c-shared also emits a C header next to the library; Dart FFI looks symbols up
+# by name and doesn't need it, so drop it to keep the tree clean.
+rm -f "${OUTPUT_FILE%.*}.h"
+
 echo "✓ Build complete: $OUTPUT_FILE"
 echo ""
 echo "File size: $(du -h "$OUTPUT_FILE" | cut -f1)"
