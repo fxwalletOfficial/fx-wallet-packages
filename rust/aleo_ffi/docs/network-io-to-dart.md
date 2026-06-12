@@ -47,9 +47,14 @@ self-review, none blocking, all sequenced to a later phase:
   fail-closed, not this spec's "the parsed paths' commitment set exactly equals
   `required_commitments`". Pinned by the phase-2 parity test before the old node
   path is deleted.
-- **End-to-end SNARK proving of `execute_*_static` is not unit-tested** (needs a
-  live node + proving keys); the private-flow `StaticQuery` mechanism *is*
-  covered offline with real sampled `StatePath`s.
+- **End-to-end SNARK proving is only partly covered.** `execute_proof_static`
+  for a *public* transfer is proved end-to-end (the `#[ignore]`d
+  `execute_proof_static_public_transfer_end_to_end`, run with proving keys), and
+  the private-flow `StaticQuery` mechanism is covered offline with real sampled
+  `StatePath`s. Still **not** end-to-end: the *private* execution flow (needs a
+  real on-chain state path, impractical offline) and the `execute_fee_proof_static`
+  / `execute_program_proof_static` paths — all left to the phase-2 testnet parity
+  run.
 - **Minor cleanup left for phase 3** (when the old path is deleted and `_static`
   is renamed to canonical): `base_fee_at_height` and the three `execute_*_static`
   share structure with the old exports. Kept duplicated for now to match the
