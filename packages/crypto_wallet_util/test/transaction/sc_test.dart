@@ -16,8 +16,10 @@ void main() async {
   /// Load the same unsigned transaction fixture used in the JS reference
   /// script (`FIXED_UNSIGNED_TX`).
   final unsignedJson = json.decode(
-      File('./test/transaction/data/sc_unsigned.json')
-          .readAsStringSync(encoding: utf8));
+    File(
+      './test/transaction/data/sc_unsigned.json',
+    ).readAsStringSync(encoding: utf8),
+  );
   final unsignedTx = ScUnsignedTransaction.fromJson(unsignedJson);
 
   // Known value from the JS reference:
@@ -72,8 +74,10 @@ void main() async {
         expect(signer.verify(), isTrue);
 
         // Signature is written into satisfiedPolicy.signatures as hex
-        final sigs = (txData.transaction['siacoinInputs'] as List)
-            .first['satisfiedPolicy']['signatures'] as List;
+        final sigs =
+            (txData.transaction['siacoinInputs'] as List)
+                    .first['satisfiedPolicy']['signatures']
+                as List;
         expect(sigs.first, isNotEmpty);
 
         watch.stop();

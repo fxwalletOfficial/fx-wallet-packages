@@ -11,16 +11,14 @@ class ScGoFfiBridge extends ScWasmBridgeBase {
   final ffi.DynamicLibrary _lib;
 
   late final _processScTransaction = _lib.lookupFunction<
-      ffi.Int32 Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>),
-      int Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>)>(
-    'process_sc_transaction',
-  );
+    ffi.Int32 Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>),
+    int Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>)
+  >('process_sc_transaction');
 
   late final _freeString = _lib.lookupFunction<
-      ffi.Void Function(ffi.Pointer<Utf8>),
-      void Function(ffi.Pointer<Utf8>)>(
-    'free_string',
-  );
+    ffi.Void Function(ffi.Pointer<Utf8>),
+    void Function(ffi.Pointer<Utf8>)
+  >('free_string');
 
   ScGoFfiBridge(this._lib);
 
@@ -51,7 +49,9 @@ class ScGoFfiBridge extends ScWasmBridgeBase {
     } else if (Platform.isIOS) {
       return 'libsc_transaction_ios_arm64.dylib';
     }
-    throw UnsupportedError('Platform ${Platform.operatingSystem} not supported');
+    throw UnsupportedError(
+      'Platform ${Platform.operatingSystem} not supported',
+    );
   }
 
   /// Resolves the native library, preferring the copy bundled in the package
@@ -61,7 +61,9 @@ class ScGoFfiBridge extends ScWasmBridgeBase {
     final libName = _libraryName();
 
     final pkgUri = await Isolate.resolvePackageUri(
-      Uri.parse('package:crypto_wallet_util/src/transaction/sc/native/$libName'),
+      Uri.parse(
+        'package:crypto_wallet_util/src/transaction/sc/native/$libName',
+      ),
     );
     if (pkgUri != null && pkgUri.scheme == 'file') {
       final file = File.fromUri(pkgUri);
@@ -76,8 +78,9 @@ class ScGoFfiBridge extends ScWasmBridgeBase {
     }
 
     throw StateError(
-        'Could not find SC native library "$libName". Build it with '
-        'lib/src/forked_lib/sia-wasi/build.sh');
+      'Could not find SC native library "$libName". Build it with '
+      'lib/src/forked_lib/sia-wasi/build.sh',
+    );
   }
 
   @override

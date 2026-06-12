@@ -26,11 +26,13 @@ abstract class ScWasmBridge {
 abstract class ScWasmBridgeBase implements ScWasmBridge {
   @override
   Future<ScWasmResult> processUnsignedTransaction(
-      ScUnsignedTransaction unsignedTx) async {
+    ScUnsignedTransaction unsignedTx,
+  ) async {
     final jsonString = json.encode(unsignedTx.toJson());
     final resultJson = await processJson(jsonString);
     return ScWasmResult.fromJson(
-        json.decode(resultJson) as Map<String, dynamic>);
+      json.decode(resultJson) as Map<String, dynamic>,
+    );
   }
 
   /// Implementation-specific: take the unsigned transaction JSON, compute the
@@ -93,9 +95,6 @@ class ScTransactionBuilder {
 
   Future<ScTxData> build(ScUnsignedTransaction unsignedTx) async {
     final result = await wasmBridge.processUnsignedTransaction(unsignedTx);
-    return ScTxData(
-      transaction: result.transaction,
-      toSign: result.toSign,
-    );
+    return ScTxData(transaction: result.transaction, toSign: result.toSign);
   }
 }

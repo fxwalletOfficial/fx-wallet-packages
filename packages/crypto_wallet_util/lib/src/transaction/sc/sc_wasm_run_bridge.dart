@@ -33,7 +33,8 @@ class ScWasmRunBridge extends ScWasmBridgeBase {
       int v => v,
       BigInt v => v.toInt(),
       num v => v.toInt(),
-      _ => throw StateError(
+      _ =>
+        throw StateError(
           'Expected WASM integer result, got ${value.runtimeType}.',
         ),
     };
@@ -56,8 +57,10 @@ class ScWasmRunBridge extends ScWasmBridgeBase {
       final resultPtr = _toInt(_getFunc('resultPtr')([packed]));
       final resultLen = _toInt(_getFunc('resultLen')([packed]));
 
-      final resultBytes =
-          memory.buffer.asUint8List().sublist(resultPtr, resultPtr + resultLen);
+      final resultBytes = memory.buffer.asUint8List().sublist(
+        resultPtr,
+        resultPtr + resultLen,
+      );
       _getFunc('release')([resultPtr]);
 
       return utf8.decode(resultBytes);
