@@ -1622,6 +1622,34 @@ fn static_query(
     Ok(StaticQuery::new(height, state_root, state_paths))
 }
 
+/// [`static_query`] with the phase-2 exact-match guard: the supplied state
+/// paths' commitment set must equal exactly the commitments `authorization`
+/// will prove inclusion for (`global_commitment_set`) — no missing path (proving
+/// would fail anyway) and, crucially, no *extra* one. Without this, an untrusted
+/// node could pad the response with unrelated valid state paths; the byte/entry
+/// budget bounds size but not relevance. This is the tighter, protocol-grounded
+/// bound the phase-1 primitives deferred to phase 2.
+fn checked_static_query(
+    authorization: &Authorization<Net>,
+    height: u32,
+    state_paths_json: &str,
+    public_state_root: &str,
+) -> anyhow::Result<StaticQuery<Net>> {
+    let expected: HashSet<String> = global_commitment_set(authorization).into_iter().collect();
+    let actual: HashSet<String> = parse_state_paths(state_paths_json)?
+        .iter()
+        .map(|path| path.transition_leaf().id().to_string())
+        .collect();
+    anyhow::ensure!(
+        actual == expected,
+        "state paths' commitment set ({} entries) does not match the authorization's \
+         {} required commitment(s)",
+        actual.len(),
+        expected.len()
+    );
+    static_query(height, state_paths_json, public_state_root)
+}
+
 /// Base (minimum) fee in microcredits for an execution at the given height. The
 /// pure analogue of [`base_fee_for`]: `height` selects the consensus version
 /// instead of a node fetch. `program_sources_json` supplies the execution's root
@@ -1788,6 +1816,36 @@ fn global_input_commitments(transitions: &[(Vec<String>, Vec<String>)]) -> Vec<S
     global
 }
 
+/// The global input-record commitments an authorization will prove inclusion
+/// for — exactly the keys `static_query`'s map must contain. Shared by the
+/// [`required_commitments`] export (what Dart fetches state paths for) and the
+/// proving primitives' exact-match guard (so a node can supply neither extra nor
+/// missing paths). The `tcm` pairing + execution-order local filter mirror
+/// `Inclusion::insert_transition`; see [`required_commitments`].
+fn global_commitment_set(authorization: &Authorization<Net>) -> Vec<String> {
+    let mut inputs_by_tcm: HashMap<String, Vec<String>> = HashMap::new();
+    for request in authorization.to_vec_deque() {
+        let entry = inputs_by_tcm.entry(request.tcm().to_string()).or_default();
+        for input_id in request.input_ids() {
+            if let InputID::Record(commitment, ..) = input_id {
+                entry.push(commitment.to_string());
+            }
+        }
+    }
+    let mut ordered = Vec::new();
+    for (_, transition) in authorization.transitions() {
+        let inputs =
+            inputs_by_tcm.get(&transition.tcm().to_string()).cloned().unwrap_or_default();
+        let outputs = transition
+            .outputs()
+            .iter()
+            .filter_map(|output| output.commitment().map(|commitment| commitment.to_string()))
+            .collect();
+        ordered.push((inputs, outputs));
+    }
+    global_input_commitments(&ordered)
+}
+
 /// The input-record commitments whose state paths the caller must fetch before
 /// proving this authorization. Empty for public flows (no record inputs).
 /// Pure: read from the authorization itself, no VM/synthesis or network.
@@ -1810,32 +1868,7 @@ fn global_input_commitments(transitions: &[(Vec<String>, Vec<String>)]) -> Vec<S
 pub unsafe extern "C" fn required_commitments(authorization: *const c_char) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        // Pair each request's record-input commitments with its transition by
-        // tcm: requests are pre-order and transitions execution-order, so they
-        // can't be zipped positionally.
-        let mut inputs_by_tcm: HashMap<String, Vec<String>> = HashMap::new();
-        for request in authorization.to_vec_deque() {
-            let entry = inputs_by_tcm.entry(request.tcm().to_string()).or_default();
-            for input_id in request.input_ids() {
-                if let InputID::Record(commitment, ..) = input_id {
-                    entry.push(commitment.to_string());
-                }
-            }
-        }
-        // Walk transitions in execution order, building (inputs, outputs) per
-        // transition for the order-sensitive local filter.
-        let mut ordered = Vec::new();
-        for (_, transition) in authorization.transitions() {
-            let inputs =
-                inputs_by_tcm.get(&transition.tcm().to_string()).cloned().unwrap_or_default();
-            let outputs = transition
-                .outputs()
-                .iter()
-                .filter_map(|output| output.commitment().map(|commitment| commitment.to_string()))
-                .collect();
-            ordered.push((inputs, outputs));
-        }
-        Ok(serde_json::to_string(&global_input_commitments(&ordered))?)
+        Ok(serde_json::to_string(&global_commitment_set(&authorization))?)
     };
     match inner() {
         Ok(commitments) => to_cstring(commitments),
@@ -1986,7 +2019,12 @@ pub unsafe extern "C" fn execute_proof_static(
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        let query = static_query(height, read_str(state_paths_json), read_str(public_state_root))?;
+        let query = checked_static_query(
+            &authorization,
+            height,
+            read_str(state_paths_json),
+            read_str(public_state_root),
+        )?;
         let vm = new_vm()?;
         let (execution, _response) =
             vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
@@ -2015,7 +2053,12 @@ pub unsafe extern "C" fn execute_fee_proof_static(
 ) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
         let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        let query = static_query(height, read_str(state_paths_json), read_str(public_state_root))?;
+        let query = checked_static_query(
+            &authorization,
+            height,
+            read_str(state_paths_json),
+            read_str(public_state_root),
+        )?;
         let vm = new_vm()?;
         let fee = vm.execute_fee_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
         Ok(serde_json::to_string(&fee)?)
@@ -2045,7 +2088,12 @@ pub unsafe extern "C" fn execute_program_proof_static(
         let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
         let vm = new_vm()?;
         add_programs_from_sources(&vm, read_str(program_sources_json))?;
-        let query = static_query(height, read_str(state_paths_json), read_str(public_state_root))?;
+        let query = checked_static_query(
+            &authorization,
+            height,
+            read_str(state_paths_json),
+            read_str(public_state_root),
+        )?;
         let (execution, _response) =
             vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
         Ok(serde_json::to_string(&execution)?)
@@ -2726,6 +2774,80 @@ mod tests {
         let json = serde_json::to_string(&vec![path.clone(), path]).unwrap();
         let error = static_query(1, &json, "").map(|_| ()).unwrap_err();
         assert!(error.to_string().contains("duplicate state path"), "got: {error}");
+    }
+
+    // An offline credits.aleo authorization for one of the test account's
+    // private records — the spent record's commitment is the single member of
+    // its `global_commitment_set`, which the exact-match guard pins.
+    fn private_transfer_authorization() -> Authorization<Net> {
+        let owner = owner();
+        let recipient = Address::<Net>::try_from(&other_key()).unwrap().to_string();
+        let inputs =
+            transfer_inputs("transfer_private", &recipient, 1, TEST_RECORD, &owner).unwrap();
+        let vm = new_vm().unwrap();
+        vm.authorize(&owner, "credits.aleo", "transfer_private", inputs, &mut TestRng::default())
+            .unwrap()
+    }
+
+    // The phase-2 exact-match: the supplied state paths' commitment set must be
+    // exactly the authorization's required commitments — a matching single path
+    // is accepted.
+    #[test]
+    fn checked_static_query_accepts_exact_match() {
+        let mut rng = TestRng::default();
+        let auth = private_transfer_authorization();
+        let commitments = global_commitment_set(&auth);
+        assert_eq!(commitments.len(), 1, "transfer_private spends exactly one record");
+        let commitment = Field::<Net>::from_str(&commitments[0]).unwrap();
+        let path = sample_global_state_path::<Net>(Some(commitment), &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![path]).unwrap();
+        assert!(checked_static_query(&auth, 100, &json, "").is_ok());
+    }
+
+    // An *extra* unrelated path (which the size budget alone would let through)
+    // is rejected: a node cannot pad the snapshot with irrelevant inclusions.
+    #[test]
+    fn checked_static_query_rejects_extra_path() {
+        let mut rng = TestRng::default();
+        let auth = private_transfer_authorization();
+        let commitment = Field::<Net>::from_str(&global_commitment_set(&auth)[0]).unwrap();
+        let wanted = sample_global_state_path::<Net>(Some(commitment), &mut rng).unwrap();
+        let extra = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![wanted, extra]).unwrap();
+        let error = checked_static_query(&auth, 100, &json, "").map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("does not match"), "got: {error}");
+    }
+
+    // A missing path (here, none at all) is likewise rejected up front, rather
+    // than relying on proving to fail later.
+    #[test]
+    fn checked_static_query_rejects_missing_path() {
+        let auth = private_transfer_authorization();
+        assert_eq!(global_commitment_set(&auth).len(), 1);
+        let error = checked_static_query(&auth, 100, "[]", "").map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("does not match"), "got: {error}");
+    }
+
+    // A public transfer has no record inputs, so its required set is empty: the
+    // matching call passes empty paths + a root, and any path is an extra.
+    #[test]
+    fn checked_static_query_public_flow_is_empty_set() {
+        let mut rng = TestRng::default();
+        let owner = owner();
+        let recipient = Address::<Net>::try_from(&other_key()).unwrap().to_string();
+        let inputs = transfer_inputs("transfer_public", &recipient, 1, "", &owner).unwrap();
+        let vm = new_vm().unwrap();
+        let auth = vm
+            .authorize(&owner, "credits.aleo", "transfer_public", inputs, &mut TestRng::default())
+            .unwrap();
+        assert!(global_commitment_set(&auth).is_empty());
+        let root = "sr1dz06ur5spdgzkguh4pr42mvft6u3nwsg5drh9rdja9v8jpcz3czsls9geg";
+        assert!(checked_static_query(&auth, 1, "", root).is_ok());
+        // Any path supplied for a public flow is an unexpected extra.
+        let path = sample_global_state_path::<Net>(None, &mut rng).unwrap();
+        let json = serde_json::to_string(&vec![path]).unwrap();
+        let error = checked_static_query(&auth, 1, &json, "").map(|_| ()).unwrap_err();
+        assert!(error.to_string().contains("does not match"), "got: {error}");
     }
 
     // The state-paths byte budget rejects an oversized blob before parsing.
