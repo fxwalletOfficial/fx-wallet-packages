@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:aleo_dart/aleo.dart';
+import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 
 /// A scriptable local node: each test installs a handler over the REST routes
@@ -408,6 +409,94 @@ void main() {
     n.close(); // no-op: the caller owns `injected`
     expect(await n.latestHeight(), 7); // injected client still usable
     injected.close(force: true);
+  });
+
+  test('broadcast does not retry (a POST is not idempotent)', () async {
+    var hits = 0;
+    node.handler = (req) async {
+      hits++;
+      await _reply(req, 'busy', status: 503);
+    };
+    await expectLater(
+        aleo().broadcast('{"tx":"x"}'), throwsA(isA<AleoNodeException>()));
+    expect(hits, 1); // posted once, surfaced the failure, never re-submitted
+  });
+
+  test('latestHeight rejects a non-integer body', () async {
+    node.handler = (req) => _reply(req, 'not-a-number');
+    await expectLater(
+        aleo().latestHeight(), throwsA(isA<AleoNodeException>()));
+  });
+
+  test('an invalid-UTF-8 body surfaces as AleoNodeException', () async {
+    node.handler = (req) async {
+      req.response.statusCode = 200;
+      req.response.add([0xC3, 0x28]); // invalid UTF-8 sequence
+      await req.response.close();
+    };
+    await expectLater(
+        aleo().latestStateRoot(), throwsA(isA<AleoNodeException>()));
+  });
+
+  test('programClosure rejects a chain past the program-count budget', () async {
+    // An endless distinct-program chain (prog0 -> prog1 -> ...): the count
+    // budget must stop it rather than fetch forever.
+    node.handler = (req) async {
+      final id = req.uri.pathSegments[2];
+      if (req.uri.path.endsWith('/latest_edition')) {
+        await _reply(req, '1');
+      } else {
+        await _reply(req, jsonEncode('program $id;'));
+      }
+    };
+    String next(String src) {
+      final n = int.parse(_idOf(src).replaceFirst('prog', '').replaceFirst('.aleo', ''));
+      return 'prog${n + 1}.aleo';
+    }
+    final node2 = AleoNode(node.url,
+        network: 'testnet', parseImports: (src) => [next(src)]);
+    await expectLater(node2.programClosure('prog0.aleo'),
+        throwsA(isA<AleoNodeException>()));
+  });
+
+  // The retry row of the request-lifecycle contract, table-driven so every
+  // failure × budget cell is pinned in one place (the dimension five review
+  // rounds each chipped at).
+  group('retryableGet contract', () {
+    final ro = RequestOptions(path: 'test');
+    DioException badResponse(int status) => DioException(
+        requestOptions: ro,
+        type: DioExceptionType.badResponse,
+        response: Response(requestOptions: ro, statusCode: status));
+    DioException typed(DioExceptionType t) =>
+        DioException(requestOptions: ro, type: t);
+    final cancel = DioException(requestOptions: ro, type: DioExceptionType.cancel);
+    final noStatus = DioException(
+        requestOptions: ro, type: DioExceptionType.badResponse);
+
+    // (label, exception, budgetRemains, expectedRetry)
+    final cases = <(String, DioException, bool, bool)>[
+      ('5xx with budget', badResponse(503), true, true),
+      ('500 with budget', badResponse(500), true, true),
+      ('5xx without budget', badResponse(503), false, false),
+      ('4xx never retries', badResponse(404), true, false),
+      ('400 never retries', badResponse(400), true, false),
+      ('badResponse without a status code', noStatus, true, false),
+      ('connectionError with budget', typed(DioExceptionType.connectionError), true, true),
+      ('connectionTimeout with budget', typed(DioExceptionType.connectionTimeout), true, true),
+      ('sendTimeout with budget', typed(DioExceptionType.sendTimeout), true, true),
+      ('receiveTimeout with budget', typed(DioExceptionType.receiveTimeout), true, true),
+      ('connectionError without budget', typed(DioExceptionType.connectionError), false, false),
+      ('per-attempt timeout (cancel) with budget', cancel, true, true),
+      ('per-attempt timeout (cancel) without budget', cancel, false, false),
+      ('unknown error never retries', typed(DioExceptionType.unknown), true, false),
+    ];
+
+    for (final (label, e, budget, expected) in cases) {
+      test('$label -> ${expected ? 'retry' : 'stop'}', () {
+        expect(AleoNode.retryableGet(e, budgetRemains: budget), expected);
+      });
+    }
   });
 }
 

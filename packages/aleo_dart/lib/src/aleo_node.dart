@@ -35,6 +35,34 @@ class AleoNodeException implements Exception {
 /// Untrusted node responses are budget-checked here on the fetch side, mirroring
 /// the Rust parser's caps, and streamed so an oversized or endless body is
 /// rejected — and the request cancelled — before it can exhaust memory.
+///
+/// ## Request lifecycle contract
+///
+/// One place to reason about *what bounds a read* — the dimension five review
+/// rounds each chipped at. Pinned by the table-driven tests in
+/// `aleo_node_test.dart`:
+///
+/// - **Budget (one logical read).** Each read runs under a single monotonic
+///   [_Budget] (a [Stopwatch], so a system-clock step cannot lengthen or shorten
+///   it): [requestTimeout] for the single-request reads *and* the two-request
+///   [programSource]; [closureDeadline] for the whole [programClosure] walk,
+///   shared across every fetch. Each individual request is additionally capped
+///   at [requestTimeout] (`min(remaining, requestTimeout)`), so one slow request
+///   cannot eat the larger closure budget.
+/// - **Retry (GET only).** Retried *while budget remains*: 5xx, connection /
+///   socket timeouts, and a per-attempt timeout (the request was merely slow).
+///   Not retried: 4xx (the node rejected our input), an over-budget body (a
+///   separate AleoNodeException path), an exhausted overall budget, and any POST
+///   — [broadcast] is never retried (a transaction broadcast is not idempotent).
+///   The whole rule is [retryableGet].
+/// - **Cancellation.** A per-attempt timeout and an over-budget body both
+///   `cancel()` the [CancelToken], aborting the socket — not merely the await.
+/// - **Untrusted body.** Streamed and rejected with [AleoNodeException] on: the
+///   byte / entry budgets, malformed JSON, invalid UTF-8, a height outside u32,
+///   and an oversized decoded program source.
+/// - **Client ownership.** A self-created [Dio] is closed by [close]; an injected
+///   one belongs to the caller. [AleoProgram] shares one client across
+///   operations and frees it via its `dispose`.
 class AleoNode {
   /// `{url}/{network}` — the REST base every route hangs off. Aleo's testnet
   /// runs the network-0 protocol under a `/testnet` path, so the network
@@ -330,16 +358,8 @@ class AleoNode {
       } on DioException catch (e) {
         last = e;
         final left = overall.remaining;
-        // A cancel here is our per-attempt timer firing — a single slow request,
-        // not the whole read out of time (an over-budget body throws an
-        // AleoNodeException, which is not caught here). So it is retryable while
-        // the overall budget still has room: otherwise a slow first import would
-        // never get a second try even with most of the closure budget left.
-        // Non-cancel failures defer to _isRetryable.
-        final retryable = CancelToken.isCancel(e)
-            ? left > Duration.zero
-            : _isRetryable(e);
-        if (!retryable || attempt + 1 == getAttempts || left <= Duration.zero) {
+        if (!retryableGet(e, budgetRemains: left > Duration.zero) ||
+            attempt + 1 == getAttempts) {
           throw _wrap(route, e);
         }
         final backoff = Duration(milliseconds: 500 * (attempt + 1));
@@ -389,11 +409,21 @@ class AleoNode {
     }
   }
 
-  /// Retry only on errors a retry could actually fix: connection/timeout
-  /// failures and 5xx (the public node's transient 522). A 4xx is the node
-  /// rejecting our input — retrying just repeats it. Cancels (our per-attempt
-  /// timer) are classified by the caller against the overall budget, not here.
-  bool _isRetryable(DioException e) {
+  /// The whole "should this GET attempt be retried" rule — the single source of
+  /// truth for the contract's retry row (see the class doc), so the policy lives
+  /// in one table-tested place rather than scattered across the loop.
+  ///
+  /// - `budgetRemains == false` → never (the overall budget is spent).
+  /// - a cancel → yes (it is our per-attempt timer firing on a merely-slow
+  ///   request; an over-budget body throws [AleoNodeException], not a
+  ///   [DioException], so it never reaches here).
+  /// - connection / socket-timeout failures and 5xx → yes.
+  /// - 4xx and everything else → no.
+  ///
+  /// POST/[broadcast] never calls this — it does not retry.
+  static bool retryableGet(DioException e, {required bool budgetRemains}) {
+    if (!budgetRemains) return false;
+    if (CancelToken.isCancel(e)) return true;
     switch (e.type) {
       case DioExceptionType.connectionError:
       case DioExceptionType.connectionTimeout:
@@ -401,8 +431,7 @@ class AleoNode {
       case DioExceptionType.receiveTimeout:
         return true;
       case DioExceptionType.badResponse:
-        final status = e.response?.statusCode ?? 0;
-        return status >= 500;
+        return (e.response?.statusCode ?? 0) >= 500;
       default:
         return false;
     }
