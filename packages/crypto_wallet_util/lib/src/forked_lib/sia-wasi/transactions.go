@@ -2,12 +2,16 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
 )
 
+// signingState returns a minimal consensus state sufficient for computing the
+// V2 input signature hash. Only the V2 hardfork being active and a post-fork
+// height matter for InputSigHash; the exact values (AllowHeight 500, Height
+// 1000) are arbitrary as long as Height >= AllowHeight, and are pinned to match
+// the reference sc.wasm output (golden-tested in sc_test/scp_test).
 func signingState() *consensus.State {
 	network := new(consensus.Network)
 	network.HardforkV2.AllowHeight = 500
@@ -18,25 +22,6 @@ func signingState() *consensus.State {
 		},
 		Network: network,
 	}
-}
-
-func unsignedTransactionJSON(jsonTxn string, sigIndicesLen int) ([]byte, error) {
-	var txn types.Transaction
-	if err := json.Unmarshal([]byte(jsonTxn), &txn); err != nil {
-		return nil, err
-	}
-	if sigIndicesLen < 0 || sigIndicesLen > len(txn.Signatures) {
-		return nil, fmt.Errorf("signature index length %d out of range", sigIndicesLen)
-	}
-
-	cs := signingState()
-	for i := 0; i < sigIndicesLen; i++ {
-		sigHash := cs.WholeSigHash(txn, txn.Signatures[i].ParentID, 0, 0, nil)
-		sig := sigHash
-		txn.Signatures[i].Signature = sig[:]
-	}
-
-	return json.Marshal(txn)
 }
 
 func unsignedV2TransactionJSON(jsonTxn string) ([]byte, error) {

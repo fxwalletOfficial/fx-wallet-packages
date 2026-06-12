@@ -4,7 +4,7 @@ version: 2.0.1
 homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packages/wallet_crypto_util
 
 environment:
-  sdk: '>=3.7.0 <4.0.0'
+  sdk: '>=3.11.0 <4.0.0'
 
 dependencies:
   bip340: ^0.3.1

@@ -23,7 +23,19 @@ class ScpSigHash {
 
   /// Compute a single signing digest for the given [signatureEntry].
   static Uint8List _sigHash(
-      ScpUnsignedTransaction txn, ScpTransactionSignature signatureEntry) {
+    ScpUnsignedTransaction txn,
+    ScpTransactionSignature signatureEntry,
+  ) {
+    // This implementation only covers the `wholeTransaction == true` case and
+    // assumes no file contracts / storage proofs / siafund elements (those are
+    // hardcoded as empty below). Anything else would silently produce a wrong
+    // digest, so fail loudly instead.
+    if (!signatureEntry.coveredFields.wholeTransaction) {
+      throw StateError(
+        'ScpSigHash only supports coveredFields.wholeTransaction == true.',
+      );
+    }
+
     final parts = <Uint8List>[];
 
     // siacoinInputs
@@ -124,11 +136,7 @@ class ScpSigHash {
 
     final keyBytes = _hexToBytes(keyHex);
 
-    return _concat([
-      algorithmBytes,
-      _encodeInt(keyBytes.length),
-      keyBytes,
-    ]);
+    return _concat([algorithmBytes, _encodeInt(keyBytes.length), keyBytes]);
   }
 
   /// Encode a currency value as Sia's variable-length encoding:
@@ -147,23 +155,19 @@ class ScpSigHash {
     }
 
     final bytes = hex.isEmpty ? Uint8List(0) : _hexToBytes(hex);
-    return _concat([
-      _encodeInt(bytes.length),
-      bytes,
-    ]);
+    return _concat([_encodeInt(bytes.length), bytes]);
   }
 
   /// Encode arbitrary data (base64 string): `[int64le(byteLength), bytes]`.
   static Uint8List _encodeArbitraryData(String base64Value) {
     final bytes = base64.decode(base64Value);
-    return _concat([
-      _encodeInt(bytes.length),
-      bytes,
-    ]);
+    return _concat([_encodeInt(bytes.length), bytes]);
   }
 
   /// Encode an integer as 8-byte little-endian (matching JS `writeInt32LE` into
-  /// an 8-byte buffer).
+  /// an 8-byte buffer). Only the low 32 bits are written, so this is correct
+  /// for the lengths/indices/counts used here (all < 2^32) but would truncate
+  /// values >= 2^32.
   static Uint8List _encodeInt(int value) {
     final bytes = ByteData(8);
     bytes.setInt32(0, value, Endian.little);

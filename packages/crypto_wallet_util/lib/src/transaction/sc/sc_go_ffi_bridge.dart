@@ -38,14 +38,15 @@ class ScGoFfiBridge extends ScWasmBridgeBase {
       final arch = Abi.current() == Abi.linuxArm64 ? 'arm64' : 'amd64';
       return 'libsc_transaction_linux_$arch.so';
     } else if (Platform.isWindows) {
-      return 'sc_transaction_windows_amd64.dll';
+      // Names follow build.sh: `lib` prefix + Go GOARCH (amd64/arm64).
+      return 'libsc_transaction_windows_amd64.dll';
     } else if (Platform.isAndroid) {
       if (Abi.current() == Abi.androidArm64) {
         return 'libsc_transaction_android_arm64.so';
       } else if (Abi.current() == Abi.androidArm) {
         return 'libsc_transaction_android_arm.so';
       }
-      return 'libsc_transaction_android_x86_64.so';
+      return 'libsc_transaction_android_amd64.so';
     } else if (Platform.isIOS) {
       return 'libsc_transaction_ios_arm64.dylib';
     }
@@ -90,12 +91,19 @@ class ScGoFfiBridge extends ScWasmBridgeBase {
 
     try {
       final result = _processScTransaction(inputPtr, outputPtrPtr);
+      final outputPtr = outputPtrPtr.value;
 
       if (result != 0) {
-        throw StateError('Go library call failed with code $result');
+        // On failure Go still allocates an error-JSON string; read it for the
+        // message and free it so it doesn't leak.
+        var detail = '';
+        if (outputPtr != ffi.nullptr) {
+          detail = ': ${outputPtr.toDartString()}';
+          _freeString(outputPtr);
+        }
+        throw StateError('Go library call failed with code $result$detail');
       }
 
-      final outputPtr = outputPtrPtr.value;
       if (outputPtr == ffi.nullptr) {
         throw StateError('Go library returned null output');
       }

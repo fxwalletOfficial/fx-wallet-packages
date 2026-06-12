@@ -296,6 +296,12 @@
   and still uses the WASM bridge (`ScWasmRunBridge`), so existing callers are
   unaffected. The native library is currently bundled for macOS/arm64 only.
 
+### Changed
+
+- Minimum Dart SDK raised to `>=3.11.0` (required by the `wasd` WASM
+  interpreter that backs the default SC bridge). Consumers on Dart 3.7–3.10
+  must upgrade.
+
 ### Removed
 
 - Pruned dead code from the vendored `bitcoin_base_hd` fork that is never
