@@ -193,15 +193,18 @@ class AleoNode {
   /// A program's source at its current on-chain edition. The edition and source
   /// are read in that order (`/program/{id}/latest_edition`, then
   /// `/program/{id}/{edition}`) so they stay consistent across a concurrent
-  /// upgrade. The decoded source must not exceed [maxProgramSize].
+  /// upgrade. The decoded source must not exceed [maxProgramSize]. Both reads
+  /// share **one** [requestTimeout] budget — programSource is one logical read,
+  /// not two — so it cannot stretch to ~2× requestTimeout, matching the
+  /// single-request reads.
   Future<({int edition, String source})> programSource(String id) =>
-      _programSourceWithin(id, null);
+      _programSourceWithin(id, _Budget(requestTimeout));
 
-  /// [programSource] bounded by a shared monotonic [budget] (the closure walk
-  /// passes one across all its fetches; a standalone call passes `null`, giving
-  /// each fetch its own [requestTimeout]).
+  /// [programSource] bounded by a shared monotonic [budget] across both of its
+  /// reads (the standalone entry point passes a fresh `_Budget(requestTimeout)`;
+  /// the closure walk passes its own budget, shared across every fetch).
   Future<({int edition, String source})> _programSourceWithin(
-      String id, _Budget? budget) async {
+      String id, _Budget budget) async {
     final editionBody = await _getWithRetry('program/$id/latest_edition',
         maxBytes: maxHeightBytes, budget: budget);
     final edition = int.tryParse(_unquote(editionBody));

@@ -221,6 +221,28 @@ void main() {
         aleo().statePaths(['c1']), throwsA(isA<AleoNodeException>()));
   });
 
+  test('programSource shares one requestTimeout budget across both reads',
+      () async {
+    // Each of the two GETs (edition, then source) delays 600ms. They must share
+    // one ~800ms budget — programSource is one logical read — so the second runs
+    // out of time, rather than getting its own fresh 800ms (which would let the
+    // whole call succeed at ~1.2s, ~2× requestTimeout).
+    node.handler = (req) async {
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      if (req.uri.path.endsWith('/latest_edition')) {
+        await _reply(req, '1');
+      } else {
+        await _reply(req, jsonEncode('program x.aleo;'));
+      }
+    };
+    final sw = Stopwatch()..start();
+    await expectLater(
+        aleo(timeout: const Duration(milliseconds: 800)).programSource('x.aleo'),
+        throwsA(isA<AleoNodeException>()));
+    sw.stop();
+    expect(sw.elapsed, lessThan(const Duration(seconds: 1))); // ~800ms, not ~1.2s
+  });
+
   test('a malformed program source body surfaces as AleoNodeException',
       () async {
     node.handler = (req) async {
