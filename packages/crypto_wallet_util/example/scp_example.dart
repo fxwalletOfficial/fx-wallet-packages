@@ -150,7 +150,7 @@ void main() async {
 
   print('\n5. Broadcasting signed SCP transaction');
   final bcReq = await HttpClient().postUrl(
-    Uri.parse('${apiBase!}/coin/scp/broadcast'),
+    Uri.parse('$apiBase/coin/scp/broadcast'),
   );
   bcReq.headers.set('Content-Type', 'application/json');
   bcReq.headers.set('User-Agent', 'fx-wallet');
