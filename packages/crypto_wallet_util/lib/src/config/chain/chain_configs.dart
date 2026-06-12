@@ -33,6 +33,7 @@ final List<ConfChain> chainConfigs = [
   DOTChain(),
   NEARChain(),
   SCChain(),
+  SCPChain(),
   SUIChain(),
   TRXChain(),
   XRPChain(),
@@ -46,7 +47,7 @@ final List<ConfChain> chainConfigs = [
 ConfChain getChainConfig(String name) {
   if (name == 'kaspa') return KASChain();
   if (name == 'karlsen') return KLSChain();
-  if (name == 'scp') return SCChain();
+  if (name == 'scp') return SCPChain();
   for (final chainConfig in chainConfigs) {
     if (chainConfig.name == name) {
       return chainConfig;

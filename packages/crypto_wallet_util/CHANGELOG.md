@@ -287,7 +287,22 @@
 - No public API changes beyond the SDK floor; all 782 unit tests pass.
 
 
-## [Unreleased]
+## [2.0.1] - 2026-06-12
+### Added
+
+- SC (Sia): native Go FFI transaction bridge (`ScGoFfiBridge`) as a faster,
+  opt-in alternative to the WASM bridge. The default `create()` is unchanged
+  and still uses the WASM bridge (`ScWasmRunBridge`), so existing callers are
+  unaffected. The native library is **not** bundled: the caller builds it for
+  their platform (see `lib/src/forked_lib/sia-wasi/build.sh`), loads it, and
+  passes it via `ScTransactionBuilder.createWithFfi(DynamicLibrary)`.
+
+### Changed
+
+- Minimum Dart SDK raised to `>=3.11.0` (required by the `wasd` WASM
+  interpreter that backs the default SC bridge). Consumers on Dart 3.7–3.10
+  must upgrade.
+
 ### Removed
 
 - Pruned dead code from the vendored `bitcoin_base_hd` fork that is never

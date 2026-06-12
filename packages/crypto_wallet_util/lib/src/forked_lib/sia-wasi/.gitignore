@@ -1,0 +1,4 @@
+# Stray binary left by `go build ./...` (build.sh uses -o and doesn't create it)
+/wasi
+# Generated C headers from c-shared builds (not needed by Dart FFI)
+*.h
