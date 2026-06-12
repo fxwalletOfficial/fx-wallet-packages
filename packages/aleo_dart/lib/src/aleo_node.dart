@@ -1,0 +1,340 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+
+/// Thrown for any node-I/O failure: a transport error, a timeout/cancellation,
+/// a non-2xx status, a malformed body, or a response that blows a safety
+/// budget. The phase-1 FFI primitives collapse every error to `""`, so moving
+/// node I/O here is also what finally lets a caller tell a network failure
+/// apart from bad input.
+class AleoNodeException implements Exception {
+  final String message;
+  AleoNodeException(this.message);
+
+  @override
+  String toString() => 'AleoNodeException: $message';
+}
+
+/// Owns all Aleo node REST I/O for the phase-2 orchestration, replacing the
+/// blocking HTTP that used to live inside the synchronous FFI calls (PR #51's
+/// recurring DoS/timeout finding class). The node provides exactly four reads —
+/// block height, state root, state paths for a commitment set, and a program's
+/// source at its current edition — plus the one write, broadcast.
+///
+/// Every request carries a dio [CancelToken] so a timeout actually *aborts* the
+/// underlying socket: `Future.timeout` only stops awaiting and leaks the
+/// connection, which would recreate the abandoned-worker leak we are leaving
+/// Rust to escape. dio's own [BaseOptions.connectTimeout] / `receiveTimeout`
+/// bound the connect and inter-chunk read phases; an outer [requestTimeout]
+/// timer cancels the whole request wherever it blocks (including a stalled
+/// body the per-chunk timeout never trips).
+///
+/// Untrusted node responses are budget-checked here on the fetch side, mirroring
+/// the Rust parser's caps, so an oversized or endless response is rejected
+/// before it can exhaust memory — the size budgets survive the move to Dart even
+/// though the worker-thread machinery does not.
+class AleoNode {
+  /// `{url}/{network}` — the REST base every route hangs off. Aleo's testnet
+  /// runs the network-0 protocol under a `/testnet` path, so the network
+  /// segment is caller-supplied rather than derived from the snarkVM type.
+  final String base;
+
+  final Dio _dio;
+
+  /// Overall per-request wall-clock bound. On expiry the request's
+  /// [CancelToken] is cancelled, aborting the socket — not merely the await.
+  final Duration requestTimeout;
+
+  /// Retries for an idempotent GET (the public node returns transient 5xx/522).
+  /// A POST (broadcast) is never retried — re-submitting a transaction is not
+  /// idempotent.
+  final int getAttempts;
+
+  /// Wall-clock ceiling on resolving one program import closure. A DoS guard,
+  /// not a protocol limit, so it sits far above any honest closure.
+  final Duration closureDeadline;
+
+  /// Resolves a program's direct imports from its source, so [programClosure]
+  /// can walk the closure it must fetch. Supplied by [AleoProgram] as the pure
+  /// `required_imports` FFI helper; kept as an injected callback so this class
+  /// has no FFI dependency (and can be unit-tested with a fake resolver).
+  final List<String> Function(String source)? parseImports;
+
+  // --- Untrusted-response budgets (mirror the Rust parser in aleo_ffi) -------
+
+  /// `MAX_INPUTS` (16) record inputs per transition across at most
+  /// `Transaction::MAX_TRANSITIONS` (32) transitions — the most state paths any
+  /// execution can require.
+  static const int maxStatePaths = 16 * 32;
+
+  /// Per-path byte budget; the array byte cap is `maxStatePaths * this`.
+  static const int maxStatePathBytes = 16 * 1024;
+
+  /// `latest/stateRoot` is a single `sr1…` string.
+  static const int maxStateRootBytes = 256;
+
+  /// `latest/height` is a small decimal; bound it generously anyway.
+  static const int maxHeightBytes = 64;
+
+  /// `MAX_IMPORT_PROGRAMS` — the program-count cap on one import closure.
+  static const int maxImportPrograms = 256;
+
+  /// `Net::MAX_PROGRAM_SIZE` — the per-program source byte cap; a larger body
+  /// cannot be a valid on-chain program.
+  static const int maxProgramSize = 100 * 1000;
+
+  AleoNode(
+    String url, {
+    String network = 'testnet',
+    Dio? dio,
+    this.requestTimeout = const Duration(seconds: 30),
+    this.getAttempts = 4,
+    this.closureDeadline = const Duration(seconds: 120),
+    this.parseImports,
+  })  : base = '${url.replaceAll(RegExp(r'/+$'), '')}/$network',
+        _dio = dio ??
+            Dio(BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 30),
+              // We read the raw bytes ourselves (bounded), so dio must not try
+              // to JSON-decode or buffer the body for us.
+              responseType: ResponseType.stream,
+            ));
+
+  /// Current block height — selects the consensus version proving pins.
+  Future<int> latestHeight() async {
+    final body = await _getWithRetry('latest/height', maxBytes: maxHeightBytes);
+    final height = int.tryParse(_unquote(body));
+    if (height == null || height < 0) {
+      throw AleoNodeException('latest/height returned a non-integer: $body');
+    }
+    return height;
+  }
+
+  /// Latest global state root (the opaque `sr1…` string), for public flows that
+  /// have no state path to derive it from. Passed straight through to the FFI.
+  Future<String> latestStateRoot() async {
+    final body =
+        await _getWithRetry('latest/stateRoot', maxBytes: maxStateRootBytes);
+    final root = _unquote(body);
+    if (root.isEmpty) {
+      throw AleoNodeException('latest/stateRoot returned an empty root');
+    }
+    return root;
+  }
+
+  /// State paths for [commitments] (the global input-record commitments
+  /// `required_commitments` reported), as the raw JSON array the FFI's
+  /// `*_static` primitives parse. One batch request so every path is anchored to
+  /// a single block — per-commitment fetches can straddle a block and the
+  /// inclusion prover rejects paths that disagree on the root. Returns `[]` for
+  /// an empty set (a public flow), without a request.
+  Future<String> statePaths(List<String> commitments) async {
+    if (commitments.isEmpty) return '[]';
+    final route = 'statePaths?commitments=${commitments.join(',')}';
+    final body = await _getWithRetry(route,
+        maxBytes: maxStatePaths * maxStatePathBytes);
+    final decoded = jsonDecode(body);
+    if (decoded is! List) {
+      throw AleoNodeException('statePaths response was not a JSON array');
+    }
+    if (decoded.length > maxStatePaths) {
+      throw AleoNodeException(
+          'statePaths returned ${decoded.length} entries, over the '
+          '$maxStatePaths-entry budget');
+    }
+    return body.trim();
+  }
+
+  /// A program's source at its current on-chain edition. The edition and source
+  /// are read in that order (`/program/{id}/latest_edition`, then
+  /// `/program/{id}/{edition}`) so they stay consistent across a concurrent
+  /// upgrade. The source must not exceed [maxProgramSize] — a larger body cannot
+  /// be a valid on-chain program, so rejecting it never drops a real one.
+  Future<({int edition, String source})> programSource(String id) async {
+    final editionBody = await _getWithRetry(
+        'program/$id/latest_edition',
+        maxBytes: maxHeightBytes);
+    final edition = int.tryParse(_unquote(editionBody));
+    if (edition == null || edition < 0) {
+      throw AleoNodeException(
+          "program/$id/latest_edition returned a non-integer: $editionBody");
+    }
+    final sourceBody = await _getWithRetry('program/$id/$edition',
+        maxBytes: maxProgramSize + 2 /* surrounding quotes */);
+    final decoded = jsonDecode(sourceBody);
+    if (decoded is! String) {
+      throw AleoNodeException('program/$id/$edition was not a JSON string');
+    }
+    if (decoded.length > maxProgramSize) {
+      throw AleoNodeException(
+          "program '$id' source is ${decoded.length} bytes, over the "
+          '$maxProgramSize-byte maximum');
+    }
+    return (edition: edition, source: decoded);
+  }
+
+  /// The full import closure of [rootId] as the `program_sources_json` the FFI
+  /// program-proof primitives load: a JSON array of `{id, edition, source}`,
+  /// imports included, any order (Rust adds them imports-before-importers).
+  /// `credits.aleo` is built in and never fetched. Bounded on every axis a
+  /// hostile node can stretch an honest, acyclic, individually-valid chain:
+  /// program count, cumulative bytes, and wall-clock time.
+  Future<String> programClosure(String rootId) async {
+    final resolve = parseImports;
+    if (resolve == null) {
+      throw AleoNodeException(
+          'programClosure needs an import resolver (required_imports); '
+          'construct AleoNode with parseImports');
+    }
+    final deadline = DateTime.now().add(closureDeadline);
+    final fetched = <String, Map<String, dynamic>>{};
+    final queue = <String>[rootId];
+    var totalBytes = 0;
+    while (queue.isNotEmpty) {
+      if (DateTime.now().isAfter(deadline)) {
+        throw AleoNodeException(
+            'program closure load exceeded its $closureDeadline time budget');
+      }
+      final id = queue.removeAt(0);
+      if (id == 'credits.aleo' || fetched.containsKey(id)) continue;
+      if (fetched.length >= maxImportPrograms) {
+        throw AleoNodeException(
+            'program closure exceeded its $maxImportPrograms-program budget');
+      }
+      final program = await programSource(id);
+      totalBytes += program.source.length;
+      if (totalBytes > maxImportPrograms * maxProgramSize) {
+        throw AleoNodeException(
+            'program closure exceeded its total-byte budget');
+      }
+      fetched[id] = {
+        'id': id,
+        'edition': program.edition,
+        'source': program.source,
+      };
+      queue.addAll(resolve(program.source));
+    }
+    return jsonEncode(fetched.values.toList());
+  }
+
+  /// Broadcasts a serialized transaction, returning the node's response (the
+  /// `at1…` transaction id on success). Not retried.
+  Future<String> broadcast(String transaction) async {
+    final token = CancelToken();
+    final timer = Timer(requestTimeout,
+        () => token.cancel('broadcast exceeded $requestTimeout'));
+    try {
+      final resp = await _dio.post<ResponseBody>(
+        '$base/transaction/broadcast',
+        data: transaction,
+        options: Options(
+          contentType: 'application/json',
+          responseType: ResponseType.stream,
+        ),
+        cancelToken: token,
+      );
+      final body = await _readBounded(resp.data!, maxBytes: maxStateRootBytes);
+      return _unquote(body);
+    } on DioException catch (e) {
+      throw _wrap('transaction/broadcast', e);
+    } finally {
+      timer.cancel();
+    }
+  }
+
+  // --- internals ------------------------------------------------------------
+
+  /// GET `route` with a bounded body and a few retries on a transient failure,
+  /// the whole sequence capped by [requestTimeout] per attempt and aborted via
+  /// the cancel token wherever it blocks.
+  Future<String> _getWithRetry(String route,
+      {required int maxBytes}) async {
+    DioException? last;
+    for (var attempt = 0; attempt < getAttempts; attempt++) {
+      try {
+        return await _getOnce(route, maxBytes: maxBytes);
+      } on DioException catch (e) {
+        last = e;
+        if (!_isRetryable(e) || attempt + 1 == getAttempts) {
+          throw _wrap(route, e);
+        }
+        await Future<void>.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+      }
+    }
+    throw _wrap(route, last!); // unreachable; the loop returns or throws.
+  }
+
+  Future<String> _getOnce(String route, {required int maxBytes}) async {
+    final token = CancelToken();
+    final timer = Timer(
+        requestTimeout, () => token.cancel('$route exceeded $requestTimeout'));
+    try {
+      final resp = await _dio.get<ResponseBody>(
+        '$base/$route',
+        options: Options(responseType: ResponseType.stream),
+        cancelToken: token,
+      );
+      return await _readBounded(resp.data!, maxBytes: maxBytes);
+    } finally {
+      timer.cancel();
+    }
+  }
+
+  /// Streams a response body, accumulating into memory but aborting (and
+  /// cancelling the request) the instant it passes [maxBytes], so a malicious
+  /// node cannot exhaust the heap with one giant body.
+  Future<String> _readBounded(ResponseBody body,
+      {required int maxBytes}) async {
+    final builder = BytesBuilder(copy: false);
+    await for (final Uint8List chunk in body.stream) {
+      builder.add(chunk);
+      if (builder.length > maxBytes) {
+        throw AleoNodeException(
+            'node response exceeded its $maxBytes-byte budget');
+      }
+    }
+    return utf8.decode(builder.takeBytes());
+  }
+
+  /// Retry only on errors a retry could actually fix: connection/timeout
+  /// failures and 5xx (the public node's transient 522). A 4xx is the node
+  /// rejecting our input — retrying just repeats it.
+  bool _isRetryable(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionError:
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return true;
+      case DioExceptionType.badResponse:
+        final status = e.response?.statusCode ?? 0;
+        return status >= 500;
+      default:
+        return false;
+    }
+  }
+
+  AleoNodeException _wrap(String route, DioException e) {
+    if (CancelToken.isCancel(e)) {
+      return AleoNodeException('$route timed out after $requestTimeout');
+    }
+    final status = e.response?.statusCode;
+    final suffix = status != null ? ' (HTTP $status)' : '';
+    return AleoNodeException('$route request failed$suffix: ${e.message}');
+  }
+
+  /// Strips one layer of surrounding double quotes from a JSON-string body
+  /// (`"sr1…"` -> `sr1…`), leaving a bare value untouched.
+  static String _unquote(String body) {
+    final trimmed = body.trim();
+    if (trimmed.length >= 2 &&
+        trimmed.startsWith('"') &&
+        trimmed.endsWith('"')) {
+      return trimmed.substring(1, trimmed.length - 1);
+    }
+    return trimmed;
+  }
+}

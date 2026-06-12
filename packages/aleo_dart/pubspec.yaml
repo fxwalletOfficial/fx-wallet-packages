@@ -9,12 +9,15 @@ environment:
 dependencies:
   bip39: ^1.0.6
   crypto: ^3.0.0
+  # Owns all node REST I/O for AleoProgram's orchestration (AleoNode), with real
+  # request cancellation via CancelToken. Previously the blocking HTTP lived
+  # inside the synchronous FFI calls; phase 2 moves it to this Dart layer.
+  dio: ^5.4.1
   ffi: ^2.1.4
   path: ^1.8.0
 
 dev_dependencies:
   convert: ^3.1.2
-  dio: ^5.4.1
   lints: ^3.0.0
   test: ^1.24.0
   web_socket_channel: ^2.4.0

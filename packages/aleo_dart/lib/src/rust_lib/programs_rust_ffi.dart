@@ -147,6 +147,69 @@ typedef TypeContractFeeExecutionInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
 
+// --- Phase-1 pure primitives (network I/O moved to AleoNode) -----------------
+// These take no `network` argument: they compute over pre-fetched data and
+// issue no node RPC. The `_static` proving variants still synchronously download
+// snarkVM proving parameters on a cold cache (a separate, phase-4 concern).
+
+/// One `Pointer<Utf8>` in, one out — the shape of `required_commitments`,
+/// `required_imports`, and `state_root_from_paths`.
+typedef TypeOneArgString = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>);
+
+typedef TypeConsensusVersionForRust = ffi.Uint16 Function(ffi.Uint32);
+typedef TypeConsensusVersionForDart = int Function(int);
+
+// get_base_fee_static(execution, program_sources_json, height) -> u64
+typedef TypeGetBaseFeeStaticInRust = ffi.Uint64 Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Uint32);
+typedef TypeGetBaseFeeStaticInDart = int Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int);
+
+// execution_fee_authorization_static(
+//   private_key, execution, fee_credits, fee_record, program_sources_json, height)
+typedef TypeExecutionFeeAuthStaticInRust = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Uint64,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Uint32);
+typedef TypeExecutionFeeAuthStaticInDart = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    int,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    int);
+
+// execute_proof_static / execute_fee_proof_static(
+//   authorization, height, state_paths_json, public_state_root)
+typedef TypeExecuteProofStaticInRust = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Uint32, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+typedef TypeExecuteProofStaticInDart = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, int, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
+// execute_program_proof_static(
+//   authorization, program_sources_json, height, state_paths_json, public_state_root)
+typedef TypeExecuteProgramProofStaticInRust = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Uint32,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+typedef TypeExecuteProgramProofStaticInDart = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int, ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
+// program_authorization_static(
+//   private_key, program_id, function_name, arguments, program_sources_json)
+typedef TypeProgramAuthStatic = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>,
+    ffi.Pointer<Utf8>);
+
 class ProgramsRustFFI {
   final ffi.DynamicLibrary dyLib;
   final String network;
@@ -400,5 +463,127 @@ class ProgramsRustFFI {
         TypeContractFeeExecutionInDart>('contract_fee_execution');
     return _withNetwork((network) =>
         rustFunction(private_key, fee, execution, program_id, url, network));
+  }
+
+  // --- Phase-1 pure primitives ----------------------------------------------
+  // Synchronous: they compute over caller-supplied data and pass no `network`.
+  // The string-returning ones hand back a Rust-allocated pointer the caller
+  // releases through `takeNativeString`, exactly like the older exports.
+
+  /// The global input-record commitments whose state paths the caller must
+  /// fetch before proving, as a JSON `[field]`. Empty for a public flow.
+  ffi.Pointer<Utf8> requiredCommitments(ffi.Pointer<Utf8> authorization) {
+    final fn = dyLib.lookupFunction<TypeOneArgString, TypeOneArgString>(
+        'required_commitments');
+    return fn(authorization);
+  }
+
+  /// The direct imports of a program source, as a JSON `[program_id]`, so the
+  /// closure walk knows what else to fetch.
+  ffi.Pointer<Utf8> requiredImports(ffi.Pointer<Utf8> programSource) {
+    final fn = dyLib.lookupFunction<TypeOneArgString, TypeOneArgString>(
+        'required_imports');
+    return fn(programSource);
+  }
+
+  /// The shared global state root of a non-empty batch of state paths (for
+  /// logging/caching; proving derives it itself). "" if empty or disagreeing.
+  ffi.Pointer<Utf8> stateRootFromPaths(ffi.Pointer<Utf8> statePathsJson) {
+    final fn = dyLib.lookupFunction<TypeOneArgString, TypeOneArgString>(
+        'state_root_from_paths');
+    return fn(statePathsJson);
+  }
+
+  /// The consensus version active at [height] — Dart pins one for a whole
+  /// transaction without hardcoding upgrade heights.
+  int consensusVersionFor(int height) {
+    final fn = dyLib.lookupFunction<TypeConsensusVersionForRust,
+        TypeConsensusVersionForDart>('consensus_version_for');
+    return fn(height);
+  }
+
+  /// Base fee (microcredits) for an [execution] at [height]. [programSources]
+  /// supplies the execution's root program (empty for credits.aleo).
+  int getBaseFeeStatic(
+    ffi.Pointer<Utf8> execution,
+    ffi.Pointer<Utf8> programSources,
+    int height,
+  ) {
+    final fn = dyLib.lookupFunction<TypeGetBaseFeeStaticInRust,
+        TypeGetBaseFeeStaticInDart>('get_base_fee_static');
+    return fn(execution, programSources, height);
+  }
+
+  /// Authorizes the fee for a proven [execution] at [height]. An empty
+  /// [feeRecord] is a public fee, otherwise a private fee spending that record.
+  ffi.Pointer<Utf8> executionFeeAuthorizationStatic(
+    ffi.Pointer<Utf8> privateKey,
+    ffi.Pointer<Utf8> execution,
+    int feeCredits,
+    ffi.Pointer<Utf8> feeRecord,
+    ffi.Pointer<Utf8> programSources,
+    int height,
+  ) {
+    final fn = dyLib.lookupFunction<TypeExecutionFeeAuthStaticInRust,
+        TypeExecutionFeeAuthStaticInDart>('execution_fee_authorization_static');
+    return fn(privateKey, execution, feeCredits, feeRecord, programSources,
+        height);
+  }
+
+  /// Proves an [authorization] against a StaticQuery built from pre-fetched
+  /// [height] / [statePathsJson] / [publicStateRoot].
+  ffi.Pointer<Utf8> executeProofStatic(
+    ffi.Pointer<Utf8> authorization,
+    int height,
+    ffi.Pointer<Utf8> statePathsJson,
+    ffi.Pointer<Utf8> publicStateRoot,
+  ) {
+    final fn = dyLib.lookupFunction<TypeExecuteProofStaticInRust,
+        TypeExecuteProofStaticInDart>('execute_proof_static');
+    return fn(authorization, height, statePathsJson, publicStateRoot);
+  }
+
+  /// Proves a fee [authorization] against its own pre-fetched snapshot (a
+  /// private fee spends its own record, so its paths differ from the execution's).
+  ffi.Pointer<Utf8> executeFeeProofStatic(
+    ffi.Pointer<Utf8> authorization,
+    int height,
+    ffi.Pointer<Utf8> statePathsJson,
+    ffi.Pointer<Utf8> publicStateRoot,
+  ) {
+    final fn = dyLib.lookupFunction<TypeExecuteProofStaticInRust,
+        TypeExecuteProofStaticInDart>('execute_fee_proof_static');
+    return fn(authorization, height, statePathsJson, publicStateRoot);
+  }
+
+  /// Like [executeProofStatic] but the referenced program (+ closure) is
+  /// supplied in-memory via [programSources] rather than fetched from a node.
+  ffi.Pointer<Utf8> executeProgramProofStatic(
+    ffi.Pointer<Utf8> authorization,
+    ffi.Pointer<Utf8> programSources,
+    int height,
+    ffi.Pointer<Utf8> statePathsJson,
+    ffi.Pointer<Utf8> publicStateRoot,
+  ) {
+    final fn = dyLib.lookupFunction<TypeExecuteProgramProofStaticInRust,
+        TypeExecuteProgramProofStaticInDart>('execute_program_proof_static');
+    return fn(
+        authorization, programSources, height, statePathsJson, publicStateRoot);
+  }
+
+  /// Builds an execution authorization for an arbitrary program function offline.
+  /// [arguments] is a JSON array of Aleo value strings (record inputs already
+  /// plaintext); [programSources] supplies the program (empty for credits.aleo).
+  ffi.Pointer<Utf8> programAuthorizationStatic(
+    ffi.Pointer<Utf8> privateKey,
+    ffi.Pointer<Utf8> programId,
+    ffi.Pointer<Utf8> functionName,
+    ffi.Pointer<Utf8> arguments,
+    ffi.Pointer<Utf8> programSources,
+  ) {
+    final fn =
+        dyLib.lookupFunction<TypeProgramAuthStatic, TypeProgramAuthStatic>(
+            'program_authorization_static');
+    return fn(privateKey, programId, functionName, arguments, programSources);
   }
 }
