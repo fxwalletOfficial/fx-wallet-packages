@@ -84,20 +84,29 @@ shape.
 
 Moving all node RPC to the Dart layer — which has a real async runtime with
 proper timeouts and cancellation — makes the Rust functions compute over
-pre-fetched inputs (the one network call left, snarkVM's proving-parameter
-download, is a separate matter called out in "Proving parameters"). That deletes
-the entire RPC finding class instead of shrinking
-it: no `ureq`, no DNS, no worker threads, no network retries in Rust at all. (A
-size budget and a CPU wall-clock deadline stay on the offline program loader —
-parsing and Stack-building untrusted sources is still bounded work; see "Resource
-budgets survive the move".)
+pre-fetched inputs (the network I/O still left in Rust, snarkVM's
+proving-parameter download, is a separate matter called out in "Proving
+parameters"). That deletes the entire **RPC** finding class instead of shrinking
+it: no `ureq`, no node-RPC DNS, no worker threads, no node-RPC retries in Rust.
+(The proving-parameter download is the exception — it still does DNS and retries
+a list of URLs; see "Proving parameters". A size budget and a CPU wall-clock
+deadline also stay on the offline program loader — parsing and Stack-building
+untrusted sources is still bounded work; see "Resource budgets survive the
+move".)
 
 ## Current network surface
 
-After phase 1, 29 of the 41 exports are pure (account, record, offline
-authorization and assembly, plus the 10 new phase-1 exports). The **12 old
-network-touching exports** below still exist — phase 3 deletes them once Dart no
-longer calls them. (Before phase 1 it was 19 of 31.)
+After phase 1, **26 of the 41 exports** are RPC- and network-free (account,
+record, offline authorization and assembly, plus 7 of the 10 new phase-1
+exports). **15 can touch the network:** the **12 old network-touching exports**
+in the table below (still present — phase 3 deletes them once Dart no longer
+calls them), **plus** the 3 new proving primitives `execute_proof_static`,
+`execute_fee_proof_static`, `execute_program_proof_static` — they issue no node
+RPC, but proving can synchronously download proving keys / the SRS on a cold
+cache (see "Proving parameters"). The other 7 new exports (the four helpers,
+`get_base_fee_static`, `execution_fee_authorization_static`,
+`program_authorization_static`) don't prove, so they touch nothing. (Before phase
+1 it was 19 of 31.)
 
 | FFI export | Needs from node |
 |---|---|
@@ -139,8 +148,10 @@ StaticQuery::new(block_height: u32,
 `current_state_root`, `get_state_paths_for_commitments`, **and
 `current_block_height`** on the query (height selects the consensus version and
 feeds inclusion `prepare`), all of which `StaticQuery` answers from its
-preloaded data. So proving is fully offline once the caller supplies
-`{height, state_root, state_paths}` — note `height` is required, not optional:
+preloaded data. So proving needs no **node RPC** once the caller supplies
+`{height, state_root, state_paths}` (it still loads proving keys / the SRS, which
+snarkVM downloads on a cold cache — see "Proving parameters", so "offline" is not
+yet literal) — note `height` is required, not optional:
 `StaticQuery::new` takes it as its first argument and a wrong/absent height
 yields an invalid query.
 
@@ -152,7 +163,8 @@ Every proving primitive takes `height` — proving reads `current_block_height`
 for the consensus version, so it cannot be omitted:
 
 - `execute_proof(authorization, height, state_paths_json, public_state_root)`
-  — builds the `StaticQuery` and proves; no HTTP.
+  — builds the `StaticQuery` and proves; no node RPC (proving may still download
+  proving keys / the SRS on a cold cache — see "Proving parameters").
 - `execute_fee_proof(authorization, height, state_paths_json, public_state_root)`.
 - `execute_program_proof(authorization, program_sources_json, height, state_paths_json, public_state_root)`.
 - `get_base_fee(execution, program_sources_json, height)` — height in, fee out,
@@ -360,8 +372,9 @@ sides**, even though the HTTP/worker-thread machinery is deleted:
   FFI, so the CPU bound has to live in Rust. Rust must not trust the caller's set
   blindly either.
 
-Only the *worker-thread / in-flight* machinery is dropped (no blocking I/O left
-in Rust to bound); the *size* and *wall-clock* parts persist.
+Only the *worker-thread / in-flight* machinery is dropped (no **RPC** blocking
+I/O left in Rust to bound — the proving-parameter download is separate, see
+"Proving parameters"); the *size* and *wall-clock* parts persist.
 
 ## Deleted from Rust (planned, phase 3)
 
@@ -379,7 +392,8 @@ test point at the new `program_sources_json` parser (the loader keeps its CPU
 deadline, so that test stays rather than being deleted with the network code).
 
 Result: the Rust crate makes **zero RPC calls** — state, program sources, and
-broadcast all move to Dart. **One network dependency is NOT yet removed** (see
+broadcast all move to Dart. **One network *dependency* is NOT yet removed** (it
+can fetch several parameter files, each retrying a list of URLs) (see
 "Proving parameters" below): snarkVM's `snarkvm-parameters` still lazily
 downloads proving keys / the Varuna SRS via `curl` (synchronous, no timeout) on
 a cold parameter cache, so the crate still links `curl` + `openssl-sys`.
@@ -387,7 +401,7 @@ Eliminating it — pre-provisioning the parameters with remote fetch disabled �
 its own task and the actual prerequisite for the no-OpenSSL iOS/Android
 cross-compile in the GPL-removal plan.
 
-## Proving parameters (open gap — the one network call left in Rust)
+## Proving parameters (open gap — the network I/O still in Rust)
 
 This phase's premise is "Rust does no network I/O." That holds for **node RPC**
 (state / program sources / broadcast), but **not** for snarkVM's proving
@@ -395,9 +409,10 @@ parameters, an issue this design originally overlooked:
 
 - The proving primitives (`execute_*_static`) call `execute_authorization_raw`,
   which proves; proving needs the credits.aleo proving keys and the Varuna SRS.
-- `snarkvm-parameters` loads these from `aleo_std::aleo_dir()` and, on a **cold
-  cache**, downloads the missing file with `curl::easy` — **synchronous, with no
-  timeout** (`transfer.perform()`), retrying a list of URLs.
+- `snarkvm-parameters` loads these (several files — a proving key per credits
+  function plus the SRS) from `aleo_std::aleo_dir()` and, on a **cold cache**,
+  downloads **each missing one** with `curl::easy` — **synchronous, with no
+  timeout** (`transfer.perform()`), each retrying a list of URLs.
 - `curl` (and thus `openssl-sys`) is an unconditional `cfg(not(wasm),
   not(sgx))` dependency of `snarkvm-parameters`; **no Cargo feature disables it**
   on native targets. So removing `ureq` does not stop the crate linking
