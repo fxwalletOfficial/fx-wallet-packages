@@ -1,0 +1,190 @@
+# Split-feature patch for snarkvm-ledger-query 4.5.0 (Apache-2.0).
+#
+# Moves the ureq-backed REST query out of the `query` feature into a new
+# opt-in `rest` feature, so the default `query` build (which only uses
+# StaticQuery) links no HTTP stack. Apply on top of a verbatim crates.io
+# 4.5.0 extraction. See rust/vendor/README.md.
+#
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -50,6 +50,14 @@
+     "dep:snarkvm-ledger-block",
+     "dep:snarkvm-ledger-store",
+     "dep:snarkvm-synthesizer-program",
++]
++# Local split-feature patch (fx-wallet, Apache-2.0): the `ureq`-backed REST query
++# is moved out of `query` into this opt-in `rest` feature, so the default build —
++# which only ever uses `StaticQuery` — links no HTTP stack. `rest` implies `query`
++# (RestQuery needs the block/store/program types `query` brings). See
++# `rust/vendor/README.md` and `rust/vendor/ledger-query-split-rest.patch`.
++rest = [
++    "query",
+     "dep:ureq",
+ ]
+ serial = [
+--- a/src/query.rs
++++ b/src/query.rs
+@@ -26,15 +26,19 @@
+ 
+ use anyhow::{Context, Result};
+ // ureq re-exports the `http` crate.
++#[cfg(feature = "rest")]
+ use ureq::http;
+ 
+ mod static_;
+ pub use static_::StaticQuery;
+ 
++#[cfg(feature = "rest")]
+ mod rest;
++#[cfg(feature = "rest")]
+ pub use rest::RestQuery;
+ 
+ /// Make the REST error type available public as it can be used for any API endpoint.
++#[cfg(feature = "rest")]
+ pub use rest::RestError;
+ 
+ /// Allows inspecting the state of the blockstain using either local state or a remote endpoint.
+@@ -43,6 +47,7 @@
+     /// Query state in a local block store.
+     VM(BlockStore<N, B>),
+     /// Query state using a node's REST API.
++    #[cfg(feature = "rest")]
+     REST(RestQuery<N>),
+     // Return static state for testing and performance.
+     STATIC(StaticQuery<N>),
+@@ -63,6 +68,7 @@
+ }
+ 
+ /// Initialize the `Query` object from an endpoint URL. The URI should point to a snarkOS node's REST API.
++#[cfg(feature = "rest")]
+ impl<N: Network, B: BlockStorage<N>> From<http::Uri> for Query<N, B> {
+     fn from(uri: http::Uri) -> Self {
+         Self::REST(RestQuery::from(uri))
+@@ -105,8 +111,13 @@
+         if str_representation.trim().starts_with('{') {
+             let static_query =
+                 str_representation.parse::<StaticQuery<N>>().with_context(|| "Failed to parse static query")?;
+-            Ok(Self::STATIC(static_query))
+-        } else {
++            return Ok(Self::STATIC(static_query));
++        }
++        // Otherwise the string is a node URL, which only the REST query understands.
++        #[cfg(not(feature = "rest"))]
++        bail!("REST queries are unavailable: this build was compiled without the `rest` feature");
++        #[cfg(feature = "rest")]
++        {
+             let rest_query = RestQuery::from_str(str_representation).with_context(|| "Failed to parse query")?;
+             Ok(Self::REST(rest_query))
+         }
+@@ -119,6 +130,7 @@
+     fn current_state_root(&self) -> Result<N::StateRoot> {
+         match self {
+             Self::VM(block_store) => Ok(block_store.current_state_root()),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.current_state_root(),
+             Self::STATIC(query) => query.current_state_root(),
+         }
+@@ -129,6 +141,7 @@
+     async fn current_state_root_async(&self) -> Result<N::StateRoot> {
+         match self {
+             Self::VM(block_store) => Ok(block_store.current_state_root()),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.current_state_root_async().await,
+             Self::STATIC(query) => query.current_state_root_async().await,
+         }
+@@ -138,6 +151,7 @@
+     fn get_state_path_for_commitment(&self, commitment: &Field<N>) -> Result<StatePath<N>> {
+         match self {
+             Self::VM(block_store) => block_store.get_state_path_for_commitment(commitment),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.get_state_path_for_commitment(commitment),
+             Self::STATIC(query) => query.get_state_path_for_commitment(commitment),
+         }
+@@ -148,6 +162,7 @@
+     async fn get_state_path_for_commitment_async(&self, commitment: &Field<N>) -> Result<StatePath<N>> {
+         match self {
+             Self::VM(block_store) => block_store.get_state_path_for_commitment(commitment),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.get_state_path_for_commitment_async(commitment).await,
+             Self::STATIC(query) => query.get_state_path_for_commitment_async(commitment).await,
+         }
+@@ -162,6 +177,7 @@
+ 
+         match self {
+             Self::VM(block_store) => block_store.get_state_paths_for_commitments(commitments),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.get_state_paths_for_commitments(commitments),
+             Self::STATIC(query) => query.get_state_paths_for_commitments(commitments),
+         }
+@@ -172,6 +188,7 @@
+     async fn get_state_paths_for_commitments_async(&self, commitments: &[Field<N>]) -> Result<Vec<StatePath<N>>> {
+         match self {
+             Self::VM(block_store) => block_store.get_state_paths_for_commitments(commitments),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.get_state_paths_for_commitments_async(commitments).await,
+             Self::STATIC(query) => query.get_state_paths_for_commitments(commitments),
+         }
+@@ -181,6 +198,7 @@
+     fn current_block_height(&self) -> Result<u32> {
+         match self {
+             Self::VM(block_store) => Ok(block_store.max_height().unwrap_or_default()),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.current_block_height(),
+             Self::STATIC(query) => query.current_block_height(),
+         }
+@@ -191,6 +209,7 @@
+     async fn current_block_height_async(&self) -> Result<u32> {
+         match self {
+             Self::VM(block_store) => Ok(block_store.max_height().unwrap_or_default()),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.current_block_height_async().await,
+             Self::STATIC(query) => query.current_block_height_async().await,
+         }
+@@ -205,6 +224,7 @@
+                 let txn = block_store.get_transaction(transaction_id)?;
+                 txn.ok_or_else(|| anyhow!("Transaction {transaction_id} not in local storage"))
+             }
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.get_transaction(transaction_id),
+             Self::STATIC(_query) => bail!("get_transaction is not supported by StaticQuery"),
+         }
+@@ -218,6 +238,7 @@
+                 let txn = block_store.get_transaction(transaction_id)?;
+                 txn.ok_or_else(|| anyhow!("Transaction {transaction_id} not in local storage"))
+             }
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.get_transaction_async(transaction_id).await,
+             Self::STATIC(_query) => bail!("get_transaction is not supported by StaticQuery"),
+         }
+@@ -229,6 +250,7 @@
+             Self::VM(block_store) => block_store
+                 .get_latest_program(program_id)?
+                 .ok_or_else(|| anyhow!("Program {program_id} not found in storage")),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.get_program(program_id),
+             Self::STATIC(_query) => bail!("get_program is not supported by StaticQuery"),
+         }
+@@ -241,6 +263,7 @@
+             Self::VM(block_store) => block_store
+                 .get_latest_program(program_id)?
+                 .with_context(|| format!("Program {program_id} not found in storage")),
++            #[cfg(feature = "rest")]
+             Self::REST(query) => query.get_program_async(program_id).await,
+             Self::STATIC(_query) => bail!("get_program_async is not supported by StaticQuery"),
+         }
+@@ -275,6 +298,7 @@
+         assert!(result.is_err());
+     }
+ 
++    #[cfg(feature = "rest")]
+     #[test]
+     fn test_rest_url_parse_invalid_scheme() {
+         let str = "ftp://localhost:3030";
+@@ -283,6 +307,7 @@
+         assert!(result.is_err());
+     }
+ 
++    #[cfg(feature = "rest")]
+     #[test]
+     fn test_rest_url_parse_invalid_host() {
+         let str = "http://:3030";

@@ -1,0 +1,4 @@
+# Build output from checking a vendored crate standalone (e.g. when re-applying
+# its patch during a snarkVM upgrade). The crates are consumed via
+# [patch.crates-io] from rust/aleo_ffi, which builds into rust/aleo_ffi/target.
+*/target/

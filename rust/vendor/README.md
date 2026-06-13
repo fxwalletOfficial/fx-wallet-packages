@@ -27,3 +27,42 @@ Consumed via `[patch.crates-io]` in `rust/aleo_rust/Cargo.toml`. The clean-room
 
 License note: snarkvm-synthesizer is Apache-2.0, so modifying and vendoring it
 is permitted with attribution; its LICENSE.md is preserved in the directory.
+
+## snarkvm-ledger-query 4.5.0 (Apache-2.0)
+
+Verbatim copy of `snarkvm-ledger-query` 4.5.0 from crates.io with a **split-feature
+change** (see `ledger-query-split-rest.patch`): the `ureq`-backed REST query is
+moved out of the `query` feature into a new opt-in `rest = ["query", "dep:ureq"]`
+feature. `default = ["query"]` (no `rest`). The REST surface in `src/query.rs`
+(`mod rest`, the `Query::REST` variant + its match arms, `From<http::Uri>`, the
+`FromStr` URL branch, `use ureq::http`) is gated behind `#[cfg(feature = "rest")]`.
+
+### Why
+
+`aleo_ffi` only ever uses `StaticQuery` (all node HTTP I/O now lives in the Dart
+`AleoNode` — see `rust/aleo_ffi/docs/network-io-to-dart.md`). Upstream's `query`
+feature unconditionally pulls `ureq` (and thus `rustls`), so the default build
+links an HTTP stack it never calls. Splitting `ureq` into `rest` lets `aleo_ffi`
+depend with `default-features = false, features = ["query"]` and drop the
+transitive `ureq`/`rustls` entirely — Phase 4 workstream **B** (`docs/phase4-plan.md`).
+This is a pure build-graph change: zero behavior change, the exported symbol set
+is unchanged. (Removing `curl`/`openssl-sys`, pulled by `snarkvm-parameters`, is
+the separate workstream **A**.)
+
+Consumed via `[patch.crates-io]` in `rust/aleo_ffi/Cargo.toml`; the patch applies
+tree-wide, so `snarkvm-synthesizer`/`-process` also resolve to this copy and no
+longer pull `ureq` either.
+
+### Maintenance
+
+- Upgrading snarkVM: download the new crate source (`crates.io` tarball),
+  re-apply `ledger-query-split-rest.patch`, replace this directory, refresh the
+  lockfiles. Verify with `cargo tree -i ureq` / `-i rustls` (must be empty) from
+  `rust/aleo_ffi`.
+- The REST code is preserved (only feature-gated), so enabling `rest` restores
+  upstream behavior verbatim. Feature combinations `query` (default), `rest`,
+  `async`, and `async,rest` all compile; `--no-default-features` does not, which
+  matches unpatched upstream (the crate needs at least `query`).
+
+License note: snarkvm-ledger-query is Apache-2.0, so modifying and vendoring it
+is permitted with attribution; its LICENSE.md is preserved in the directory.

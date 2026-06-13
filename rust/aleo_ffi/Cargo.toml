@@ -15,7 +15,9 @@ crate-type = ["cdylib", "rlib"]
 snarkvm-console = "=4.5.0"
 snarkvm-ledger-block = "=4.5.0"
 snarkvm-ledger-store = "=4.5.0"
-snarkvm-ledger-query = "=4.5.0"
+# `query` only (StaticQuery) — never `rest`, so no transitive `ureq`/rustls HTTP
+# stack. Backed by the vendored split-feature patch below. See vendor/README.md.
+snarkvm-ledger-query = { version = "=4.5.0", default-features = false, features = ["query"] }
 snarkvm-synthesizer = "=4.5.0"
 aleo-std-storage = "=1.0.3"
 anyhow = "1"
@@ -38,3 +40,7 @@ snarkvm-console-program = { version = "=4.5.0", features = ["test"] }
 # upstream) for the split-proof flow. Apache-2.0; verbatim + a 2-line pub patch.
 [patch.crates-io]
 snarkvm-synthesizer = { path = "../vendor/snarkvm-synthesizer-4.5.0" }
+# Split-feature fork: move the ureq-backed REST query behind an opt-in `rest`
+# feature so the default `query` build links no HTTP stack. Verbatim 4.5.0 + the
+# 2-file `ledger-query-split-rest.patch`; Apache-2.0. See vendor/README.md.
+snarkvm-ledger-query = { path = "../vendor/snarkvm-ledger-query-4.5.0" }
