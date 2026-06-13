@@ -6,6 +6,12 @@ description = "Apache-2.0 clean-room FFI bindings for Aleo, built directly on sn
 license = "Apache-2.0"
 edition = "2021"
 
+# Keep unwinding in release so the FFI's `catch_unwind` boundary works: a poisoned
+# snarkVM parameter `lazy_static` (missing/corrupt proving key) must surface as a
+# `restart_required` envelope, never abort the process. (Phase 4 §8 Contract 1.)
+[profile.release]
+panic = "unwind"
+
 [lib]
 name = "aleo_rust"
 # rlib in addition to cdylib so `cargo test` can build a unit-test harness.

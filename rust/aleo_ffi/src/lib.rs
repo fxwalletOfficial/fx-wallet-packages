@@ -1280,6 +1280,91 @@ pub unsafe extern "C" fn program_authorization_static(
     }
 }
 
+// ── Phase 4 FFI result envelope (docs/phase4-plan.md §8 Contract 1) ──────────
+//
+// New (PR2+) exports return a tagged, fail-closed JSON envelope instead of the
+// legacy ""-on-failure convention, so the Dart side can tell success from every
+// failure mode and never mistakes a non-empty error string for a proof. All such
+// exports run through `ffi_envelope`, which catches any unwinding panic — e.g. a
+// poisoned snarkVM parameter `lazy_static` — and reports it as the non-retryable
+// `restart_required` rather than letting it unwind across the C ABI (UB/abort).
+//
+//   ok:    {"ok":true, …}                       // per-export fields: `data`, `missing`, …
+//   error: {"ok":false,"code":…,"message":…}
+struct Envelope(serde_json::Value);
+
+impl Envelope {
+    /// `{"ok":true}` with no payload.
+    fn ok() -> Self {
+        Self(serde_json::json!({ "ok": true }))
+    }
+
+    /// `{"ok":true,"data":<data>}`.
+    fn ok_data(data: impl serde::Serialize) -> Self {
+        Self(serde_json::json!({ "ok": true, "data": data }))
+    }
+
+    /// `{"ok":false,"code":<code>,"message":<message>}`.
+    fn err(code: &str, message: impl Into<String>) -> Self {
+        Self(serde_json::json!({ "ok": false, "code": code, "message": message.into() }))
+    }
+
+    /// Serializes to the wire JSON. Infallible: a (never-expected) serialization
+    /// failure collapses to a constant fail-closed envelope rather than panicking
+    /// inside the panic-handling path.
+    fn to_json(&self) -> String {
+        serde_json::to_string(&self.0).unwrap_or_else(|_| {
+            r#"{"ok":false,"code":"restart_required","message":"envelope serialization failed"}"#
+                .to_string()
+        })
+    }
+}
+
+/// Runs `f` under `catch_unwind` and renders its [`Envelope`] (or a
+/// `restart_required` envelope on panic) to an owned C string. This is the single
+/// choke point that keeps panics from crossing the C ABI; `[profile.release]
+/// panic = "unwind"` (Cargo.toml) keeps it effective in release builds.
+///
+/// `AssertUnwindSafe` is sound here: the closures only borrow caller-provided
+/// input and compute over snarkVM types. aleo_ffi holds no lock or invariant a
+/// panic could leave inconsistent — the only cross-call state is snarkVM's
+/// process-global parameter cache, whose poisoning is exactly what
+/// `restart_required` signals to the caller.
+fn ffi_envelope(f: impl FnOnce() -> Envelope) -> *mut c_char {
+    let env = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f))
+        .unwrap_or_else(|_| Envelope::err("restart_required", "panic during FFI call"));
+    to_cstring(env.to_json())
+}
+
+/// Overrides the directory proving parameters are read from / written to (e.g. a
+/// mobile app sandbox; snarkVM has no env override). Set-once — see §8 Contract 2.
+/// `{"ok":true}` | `{"ok":false,"code":"param_dir_locked|invalid_path|restart_required","message":…}`.
+///
+/// SAFETY: `path` is null or a valid NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn ffi_set_parameter_dir(path: *const c_char) -> *mut c_char {
+    ffi_envelope(|| {
+        let path = unsafe { read_str(path) };
+        match snarkvm_parameters::set_parameter_dir(std::path::Path::new(path)) {
+            Ok(()) => Envelope::ok(),
+            Err(snarkvm_parameters::ParamDirError::InvalidPath) => {
+                Envelope::err("invalid_path", "parameter directory is empty or could not be created")
+            }
+            Err(snarkvm_parameters::ParamDirError::Locked) => Envelope::err(
+                "param_dir_locked",
+                "parameter directory is already set, or parameter loading has already begun",
+            ),
+        }
+    })
+}
+
+/// Reports the directory proving parameters load from (the override if set, else
+/// the default `~/.aleo`). `{"ok":true,"data":"<path>"}`.
+#[no_mangle]
+pub extern "C" fn ffi_aleo_dir() -> *mut c_char {
+    ffi_envelope(|| Envelope::ok_data(snarkvm_parameters::effective_parameter_dir().to_string_lossy().into_owned()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2027,5 +2112,127 @@ mod tests {
         let execution: Execution<Net> = serde_json::from_str(&out).unwrap();
         // The proof carries the root static_query was given.
         assert_eq!(execution.global_state_root().to_string(), root);
+    }
+}
+
+#[cfg(test)]
+mod param_dir_tests {
+    //! Tests for the parameter-directory FFI (§8 Contract 1 envelope + Contract 2
+    //! set-once). The directory lives in a process-global `OnceLock`, so the
+    //! mutating scenarios must each run in their own subprocess — the harness
+    //! re-execs this test binary with `ALEO_FFI_PARAM_DIR_SCENARIO` set.
+    use super::*;
+    use std::ffi::CString;
+
+    fn parse(ptr: *mut c_char) -> serde_json::Value {
+        let s = unsafe { CStr::from_ptr(ptr) }.to_str().unwrap().to_owned();
+        unsafe { free_string(ptr) };
+        serde_json::from_str(&s).unwrap_or_else(|_| panic!("non-JSON envelope: {s:?}"))
+    }
+
+    fn set_dir(path: &str) -> serde_json::Value {
+        let c = CString::new(path).unwrap();
+        parse(unsafe { ffi_set_parameter_dir(c.as_ptr()) })
+    }
+
+    fn aleo_dir() -> serde_json::Value {
+        parse(ffi_aleo_dir())
+    }
+
+    // ── In-process: pure / non-mutating (safe to share the parent's OnceLock) ──
+
+    #[test]
+    fn envelope_shapes() {
+        // Assert parsed fields, not the raw string: key ordering depends on whether
+        // serde_json's `preserve_order` is unified on across the build.
+        let json = |e: Envelope| serde_json::from_str::<serde_json::Value>(&e.to_json()).unwrap();
+
+        let ok = json(Envelope::ok());
+        assert_eq!(ok["ok"], true);
+
+        let okd = json(Envelope::ok_data("x"));
+        assert_eq!(okd["ok"], true);
+        assert_eq!(okd["data"], "x");
+
+        let err = json(Envelope::err("invalid_path", "nope"));
+        assert_eq!(err["ok"], false);
+        assert_eq!(err["code"], "invalid_path");
+        assert_eq!(err["message"], "nope");
+    }
+
+    #[test]
+    fn set_parameter_dir_empty_is_invalid_path() {
+        // An empty path is rejected before the OnceLock is touched, so this is
+        // safe to run in the shared parent process.
+        let r = set_dir("");
+        assert_eq!(r["ok"], false);
+        assert_eq!(r["code"], "invalid_path");
+    }
+
+    #[test]
+    fn aleo_dir_reports_a_nonempty_path() {
+        let r = aleo_dir();
+        assert_eq!(r["ok"], true);
+        assert!(!r["data"].as_str().unwrap().is_empty());
+    }
+
+    // ── Subprocess: the set-once state machine (mutates the global OnceLock) ────
+
+    /// Re-exec this test binary so the scenario runs with a fresh, unset OnceLock.
+    fn run_scenario(scenario: &str) -> std::process::Output {
+        let exe = std::env::current_exe().expect("current_exe");
+        std::process::Command::new(exe)
+            .args(["--exact", "--nocapture", "param_dir_tests::scenario_runner"])
+            .env("ALEO_FFI_PARAM_DIR_SCENARIO", scenario)
+            .output()
+            .expect("spawn subprocess")
+    }
+
+    /// Dispatches a mutating scenario when re-execed; a no-op (passing) test under
+    /// a normal `cargo test`, where the env var is unset.
+    #[test]
+    fn scenario_runner() {
+        let Ok(scenario) = std::env::var("ALEO_FFI_PARAM_DIR_SCENARIO") else { return };
+        match scenario.as_str() {
+            "first_then_idempotent_then_locked" => {
+                let base = std::env::temp_dir();
+                let a = base.join(format!("aleo_ffi_pd_a_{}", std::process::id()));
+                let b = base.join(format!("aleo_ffi_pd_b_{}", std::process::id()));
+                std::fs::create_dir_all(&a).unwrap();
+                std::fs::create_dir_all(&b).unwrap();
+
+                // First set wins.
+                let r = set_dir(a.to_str().unwrap());
+                assert_eq!(r["ok"], true, "first set: {r}");
+
+                // aleo_dir now reports the override, canonicalized.
+                let d = aleo_dir();
+                assert_eq!(d["data"].as_str().unwrap(), a.canonicalize().unwrap().to_str().unwrap());
+
+                // Same path again -> idempotent ok.
+                let r = set_dir(a.to_str().unwrap());
+                assert_eq!(r["ok"], true, "idempotent: {r}");
+
+                // A different path -> locked.
+                let r = set_dir(b.to_str().unwrap());
+                assert_eq!(r["ok"], false, "different path should be rejected: {r}");
+                assert_eq!(r["code"], "param_dir_locked", "{r}");
+
+                let _ = std::fs::remove_dir_all(&a);
+                let _ = std::fs::remove_dir_all(&b);
+            }
+            other => panic!("unknown scenario {other}"),
+        }
+    }
+
+    #[test]
+    fn set_parameter_dir_first_then_idempotent_then_locked() {
+        let out = run_scenario("first_then_idempotent_then_locked");
+        assert!(
+            out.status.success(),
+            "subprocess failed.\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
     }
 }
