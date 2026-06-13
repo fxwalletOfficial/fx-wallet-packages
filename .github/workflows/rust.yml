@@ -48,12 +48,16 @@ jobs:
           lib=target/release/libaleo_rust.so
           test -f "$lib" || { echo "release cdylib not found"; exit 1; }
           # Phase 3 deleted the 12 in-Rust node-RPC exports (the node I/O moved to
-          # the Dart AleoNode). The surface is now 29 FFI functions + free_string:
+          # the Dart AleoNode). The phase-3 surface is 29 FFI functions + free_string:
           # 19 offline/account/record originals (31 - 12 deleted) plus the 10
           # phase-1 I/O-to-Dart primitives/helpers (the proving/fee ones keep their
-          # `_static` names; the canonical rename is deferred to phase 4). The full
-          # EXACT exported set is compared (not just presence), so CI also fails if
-          # a deleted RPC symbol survives or an unexpected symbol appears.
+          # `_static` names; the canonical rename is deferred to phase 4). Phase 4
+          # PR2 adds the parameter-directory control exports (ffi_set_parameter_dir,
+          # ffi_aleo_dir) and the network-aware checked proving exports
+          # (execute_proof_checked, execute_fee_proof_checked,
+          # execute_program_proof_checked) → 34 functions + free_string. The full
+          # EXACT exported set is compared (not just presence), so CI also fails if a
+          # deleted RPC symbol survives or an unexpected symbol appears.
           expected=$(printf '%s\n' \
             numbers_add seed_to_private_key private_key_to_address \
             private_key_to_view_key view_key_to_address sign_message verify \
@@ -64,7 +68,8 @@ jobs:
             required_commitments required_imports state_root_from_paths \
             consensus_version_for get_base_fee_static execution_fee_authorization_static \
             execute_proof_static execute_fee_proof_static execute_program_proof_static \
-            program_authorization_static | sort -u)
+            program_authorization_static ffi_set_parameter_dir ffi_aleo_dir \
+            execute_proof_checked execute_fee_proof_checked execute_program_proof_checked | sort -u)
           # Exported defined symbols, minus the ELF runtime symbols the linker adds
           # to any shared object (not part of our C API).
           runtime='_init|_fini|__bss_start|_edata|_end|__bss_start__|_bss_end__|__bss_end__|_edata__|__data_start|__dso_handle|_IO_stdin_used|__TMC_END__'
@@ -77,7 +82,7 @@ jobs:
             comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$actual")
             exit 1
           fi
-          echo "exported FFI symbol set matches exactly (29 functions + free_string)"
+          echo "exported FFI symbol set matches exactly (34 functions + free_string)"
 
       # Run the Dart wrapper's FFI-backed tests against the cdylib built above,
       # so Dart/Rust signature mismatches, string-ownership bugs and wrapper

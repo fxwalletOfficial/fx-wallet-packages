@@ -6,6 +6,12 @@ description = "Apache-2.0 clean-room FFI bindings for Aleo, built directly on sn
 license = "Apache-2.0"
 edition = "2021"
 
+# Keep unwinding in release so the FFI's `catch_unwind` boundary works: a poisoned
+# snarkVM parameter `lazy_static` (missing/corrupt proving key) must surface as a
+# `restart_required` envelope, never abort the process. (Phase 4 §8 Contract 1.)
+[profile.release]
+panic = "unwind"
+
 [lib]
 name = "aleo_rust"
 # rlib in addition to cdylib so `cargo test` can build a unit-test harness.
@@ -19,6 +25,10 @@ snarkvm-ledger-store = "=4.5.0"
 # stack. Backed by the vendored split-feature patch below. See vendor/README.md.
 snarkvm-ledger-query = { version = "=4.5.0", default-features = false, features = ["query"] }
 snarkvm-synthesizer = "=4.5.0"
+# Direct dep so the FFI can drive parameter provisioning: set the param dir
+# (mobile sandbox) and run preflight. Vendored + patched below to own the
+# param-dir state (curl download path is untouched in this PR; removed in PR3/A).
+snarkvm-parameters = "=4.5.0"
 aleo-std-storage = "=1.0.3"
 anyhow = "1"
 rand = "0.8.5"
@@ -44,3 +54,8 @@ snarkvm-synthesizer = { path = "../vendor/snarkvm-synthesizer-4.5.0" }
 # feature so the default `query` build links no HTTP stack. Verbatim 4.5.0 + the
 # 2-file `ledger-query-split-rest.patch`; Apache-2.0. See vendor/README.md.
 snarkvm-ledger-query = { path = "../vendor/snarkvm-ledger-query-4.5.0" }
+# Param-dir ownership: process-global override of the directory proving keys load
+# from (snarkVM has no env override), so the Dart layer can provision into the
+# mobile app sandbox. Verbatim 4.5.0 + parameters-param-dir.patch; Apache-2.0.
+# (curl/openssl removal is the separate workstream A / PR3.) See vendor/README.md.
+snarkvm-parameters = { path = "../vendor/snarkvm-parameters-4.5.0" }
