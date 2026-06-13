@@ -81,6 +81,7 @@ dependencies = [
  "snarkvm-ledger-block",
  "snarkvm-ledger-query",
  "snarkvm-ledger-store",
+ "snarkvm-parameters",
  "snarkvm-synthesizer",
 ]
 
@@ -1827,8 +1828,6 @@ dependencies = [
 [[package]]
 name = "snarkvm-parameters"
 version = "4.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0969bee3d4c8b033bde17d35df2db9fbc92d2e7d2aceb01af6a59ebf32e455be"
 dependencies = [
  "aleo-std",
  "anyhow",
