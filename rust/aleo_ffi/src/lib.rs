@@ -1491,11 +1491,16 @@ fn execute_program_proof_checked_inner<N: Network>(
     // credits.aleo is built in, so a credits-only flow supplies an empty program
     // closure — the Dart `AleoNode.programClosure` returns "[]" for credits.aleo,
     // not "". Reject only a closure that actually contains program entries (a
-    // custom program, §8 Contract 3); "" and "[]" are both an empty closure.
-    // A malformed non-empty value is not a valid empty closure → rejected too.
+    // custom program, §8 Contract 3); "" and "[]" (any whitespace) are both empty.
+    // Detect emptiness WITHOUT deserializing the array: a direct FFI caller could
+    // otherwise force unbounded allocation/parsing of input that is rejected anyway
+    // (a non-empty or malformed value fails the `[ ... ]`-empty check, fail-closed).
     let closure = program_sources_json.trim();
     let is_empty_closure = closure.is_empty()
-        || serde_json::from_str::<Vec<serde_json::Value>>(closure).is_ok_and(|entries| entries.is_empty());
+        || closure
+            .strip_prefix('[')
+            .and_then(|rest| rest.strip_suffix(']'))
+            .is_some_and(|inner| inner.trim().is_empty());
     if !is_empty_closure {
         return Envelope::err("unsupported_feature", "custom-program proving is not supported in this version");
     }
@@ -2456,6 +2461,29 @@ mod tests {
         });
         assert_ne!(env["code"], "unsupported_feature", "empty array closure must not be rejected: {env}");
         assert_eq!(env["code"], "invalid_input", "{env}");
+    }
+
+    #[test]
+    fn execute_program_proof_checked_rejects_non_array_closure() {
+        // A non-array (or malformed) closure is rejected without deserializing it.
+        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
+        let n = CString::new("mainnet").unwrap();
+        let a = CString::new(auth).unwrap();
+        let empty = CString::new("").unwrap();
+        for bad in ["{}", "[ ", "not json"] {
+            let sources = CString::new(bad).unwrap();
+            let env = call_envelope(unsafe {
+                execute_program_proof_checked(
+                    n.as_ptr(),
+                    a.as_ptr(),
+                    sources.as_ptr(),
+                    17_000_000,
+                    empty.as_ptr(),
+                    empty.as_ptr(),
+                )
+            });
+            assert_eq!(env["code"], "unsupported_feature", "input {bad:?} → {env}");
+        }
     }
 
     #[test]

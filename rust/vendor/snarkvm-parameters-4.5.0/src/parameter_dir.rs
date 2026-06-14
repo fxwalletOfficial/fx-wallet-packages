@@ -103,10 +103,15 @@ pub fn set_parameter_dir(path: &Path) -> Result<(), ParamDirError> {
 /// macro immediately before the first parameter read, so a later
 /// [`set_parameter_dir`] to a different path is rejected rather than silently
 /// mismatching the static cache.
+///
+/// On the first load with no override, the default is **resolved once and stored**
+/// in `state.dir` — `aleo_std::aleo_dir()` re-reads `HOME` on every call, so
+/// without persisting it a later environment change could move where subsequent
+/// parameters load from, breaking the immutable-directory contract.
 pub fn parameter_dir_for_load() -> PathBuf {
     let mut state = lock();
     state.load_started = true;
-    state.dir.clone().unwrap_or_else(default_dir)
+    state.dir.get_or_insert_with(default_dir).clone()
 }
 
 /// The directory parameters load from (the override if set, else the default
