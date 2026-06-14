@@ -57,6 +57,18 @@ fn default_dir() -> PathBuf {
     }
 }
 
+/// The default directory, **created and canonicalized** — matching the explicit
+/// override path ([`set_parameter_dir`]) so the frozen directory is a stable
+/// physical path. `aleo_std::aleo_dir()` is `$HOME/.aleo`, which may be a symlink;
+/// resolving it once means a later re-point cannot move where parameters load
+/// from. Falls back to the raw path if it cannot be created/canonicalized (the
+/// load macro then creates it on store).
+fn resolve_default_dir() -> PathBuf {
+    let dir = default_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    dir.canonicalize().unwrap_or(dir)
+}
+
 /// Locks the shared state, recovering (rather than propagating) a poisoned lock —
 /// the critical sections are trivial and cannot leave inconsistent state.
 fn lock() -> std::sync::MutexGuard<'static, State> {
@@ -111,7 +123,7 @@ pub fn set_parameter_dir(path: &Path) -> Result<(), ParamDirError> {
 pub fn parameter_dir_for_load() -> PathBuf {
     let mut state = lock();
     state.load_started = true;
-    state.dir.get_or_insert_with(default_dir).clone()
+    state.dir.get_or_insert_with(resolve_default_dir).clone()
 }
 
 /// The directory parameters load from (the override if set, else the default
