@@ -172,12 +172,12 @@ macro_rules! impl_load_bytes_logic_remote {
     ($remote_urls: expr, $local_dir: expr, $filename: expr, $metadata: expr, $expected_checksum: expr, $expected_size: expr) => {
         cfg_if::cfg_if! {
             if #[cfg(all(feature = "filesystem", not(feature="wasm")))] {
-                // fx-wallet param-dir patch (NOT upstream): freeze the parameter
-                // directory on first read, then read from the (overridable)
-                // effective dir instead of the hard-wired `aleo_std::aleo_dir()`.
-                $crate::mark_parameter_load_started();
-                // Compose the correct file path for the parameter file.
-                let mut file_path = $crate::effective_parameter_dir();
+                // fx-wallet param-dir patch (NOT upstream): atomically freeze the
+                // parameter directory on first read and read it, from the
+                // (overridable) effective dir instead of the hard-wired
+                // `aleo_std::aleo_dir()`. One lock guards "freeze + read" and
+                // `set_parameter_dir`, so they cannot interleave.
+                let mut file_path = $crate::parameter_dir_for_load();
                 file_path.push($local_dir);
                 file_path.push($filename);
 

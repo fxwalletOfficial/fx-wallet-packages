@@ -36,7 +36,7 @@ pub use errors::*;
 // `rust/vendor/parameters-param-dir.patch`.
 mod parameter_dir;
 pub use parameter_dir::{
-    effective_parameter_dir, mark_parameter_load_started, set_parameter_dir, ParamDirError,
+    effective_parameter_dir, parameter_dir_for_load, set_parameter_dir, ParamDirError,
 };
 
 pub mod canary;

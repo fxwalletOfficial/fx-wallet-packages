@@ -83,12 +83,14 @@ actually reads the files (so it can enforce the set-once rule against snarkVM's
 static parameter cache). The patch adds:
 
 - `parameter_dir.rs`: a process-global `set_parameter_dir(path)` /
-  `effective_parameter_dir()` with a set-once contract (create-then-canonicalize,
-  idempotent same-path, `Locked` on a different path or after loading has begun)
-  — Phase 4 §8 Contract 2.
+  `parameter_dir_for_load()` / `effective_parameter_dir()` with a set-once
+  contract (create-then-canonicalize, idempotent same-path, `Locked` on a
+  different path or after loading has begun) — Phase 4 §8 Contract 2. "Choose a
+  directory" and "begin loading" share **one mutex**, so a `set_parameter_dir` and
+  the first load cannot interleave (no set-after-load-start TOCTOU).
 - `macros.rs`: the `impl_load_bytes_logic_remote!` local-read path now reads from
-  `effective_parameter_dir()` (not `aleo_std::aleo_dir()`) and calls
-  `mark_parameter_load_started()` first.
+  `parameter_dir_for_load()` (not `aleo_std::aleo_dir()`), which atomically freezes
+  the directory and returns it.
 
 The macro's **size + SHA-256 checksum guards are unchanged**, so a Dart-provisioned
 parameter that is missing/corrupt is still rejected by this crate — the trust

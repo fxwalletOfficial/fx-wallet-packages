@@ -4,8 +4,10 @@
 # from / download into, so the Dart layer can point reads at the mobile app
 # sandbox (upstream hard-wires aleo_std::aleo_dir() = ~/.aleo, with no env
 # override). The size+checksum guards in the load macro are UNCHANGED, so the
-# trust boundary stays in Rust. The curl download path is untouched here; it
-# is removed in workstream A (PR3). Apply on top of a verbatim 4.5.0 extraction.
+# trust boundary stays in Rust. The 'choose dir' and 'begin load' transitions
+# share one mutex (see src/parameter_dir.rs) so they cannot interleave. The
+# curl download path is untouched here; it is removed in workstream A (PR3).
+# Apply on top of a verbatim 4.5.0 extraction.
 #
 # New file: src/parameter_dir.rs (the param-dir state machine, Contract 2).
 #
@@ -20,7 +22,7 @@
 +// `rust/vendor/parameters-param-dir.patch`.
 +mod parameter_dir;
 +pub use parameter_dir::{
-+    effective_parameter_dir, mark_parameter_load_started, set_parameter_dir, ParamDirError,
++    effective_parameter_dir, parameter_dir_for_load, set_parameter_dir, ParamDirError,
 +};
 +
  pub mod canary;
@@ -32,13 +34,14 @@
      ($remote_urls: expr, $local_dir: expr, $filename: expr, $metadata: expr, $expected_checksum: expr, $expected_size: expr) => {
          cfg_if::cfg_if! {
              if #[cfg(all(feature = "filesystem", not(feature="wasm")))] {
-+                // fx-wallet param-dir patch (NOT upstream): freeze the parameter
-+                // directory on first read, then read from the (overridable)
-+                // effective dir instead of the hard-wired `aleo_std::aleo_dir()`.
-+                $crate::mark_parameter_load_started();
-                 // Compose the correct file path for the parameter file.
+-                // Compose the correct file path for the parameter file.
 -                let mut file_path = aleo_std::aleo_dir();
-+                let mut file_path = $crate::effective_parameter_dir();
++                // fx-wallet param-dir patch (NOT upstream): atomically freeze the
++                // parameter directory on first read and read it, from the
++                // (overridable) effective dir instead of the hard-wired
++                // `aleo_std::aleo_dir()`. One lock guards "freeze + read" and
++                // `set_parameter_dir`, so they cannot interleave.
++                let mut file_path = $crate::parameter_dir_for_load();
                  file_path.push($local_dir);
                  file_path.push($filename);
  

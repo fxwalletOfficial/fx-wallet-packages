@@ -37,12 +37,19 @@ use aleo_std_storage::StorageMode;
 /// these account operations.
 type Net = MainnetV0;
 
-/// Borrows a C string as `&str`. Invalid UTF-8 yields "" rather than panicking,
-/// so malformed input is handled by the caller's normal "" error path instead
-/// of unwinding across the FFI boundary (which aborts the process).
+/// Borrows a C string as `&str`. A null pointer or invalid UTF-8 yields "" rather
+/// than reading out of bounds / panicking, so malformed or absent input is handled
+/// by the caller's normal "" / error path instead of undefined behaviour or
+/// unwinding across the FFI boundary (which aborts the process). `CStr::from_ptr`
+/// is UB on null, and that UB happens before — and cannot be caught by — the
+/// `catch_unwind` envelope wrapper, so the null check must live here.
 ///
-/// SAFETY: `p` must be a valid NUL-terminated C string for the duration of the call.
+/// SAFETY: `p` is null, or a valid NUL-terminated C string for the duration of the
+/// call.
 unsafe fn read_str<'a>(p: *const c_char) -> &'a str {
+    if p.is_null() {
+        return "";
+    }
     CStr::from_ptr(p).to_str().unwrap_or("")
 }
 
@@ -1481,9 +1488,15 @@ fn execute_program_proof_checked_inner<N: Network>(
     state_paths_json: &str,
     public_state_root: &str,
 ) -> Envelope {
-    // credits.aleo is built in, so a credits-only flow supplies no program
-    // sources; a non-empty closure means a custom program (§8 Contract 3).
-    if !program_sources_json.trim().is_empty() {
+    // credits.aleo is built in, so a credits-only flow supplies an empty program
+    // closure — the Dart `AleoNode.programClosure` returns "[]" for credits.aleo,
+    // not "". Reject only a closure that actually contains program entries (a
+    // custom program, §8 Contract 3); "" and "[]" are both an empty closure.
+    // A malformed non-empty value is not a valid empty closure → rejected too.
+    let closure = program_sources_json.trim();
+    let is_empty_closure = closure.is_empty()
+        || serde_json::from_str::<Vec<serde_json::Value>>(closure).is_ok_and(|entries| entries.is_empty());
+    if !is_empty_closure {
         return Envelope::err("unsupported_feature", "custom-program proving is not supported in this version");
     }
     let authorization = match checked_proving_preconditions::<N>(authorization, height) {
@@ -2419,6 +2432,49 @@ mod tests {
         assert_eq!(env["ok"], false);
         assert_eq!(env["code"], "unsupported_feature");
     }
+
+    #[test]
+    fn execute_program_proof_checked_accepts_empty_array_closure() {
+        // "[]" is an empty closure (what AleoNode.programClosure returns for
+        // credits.aleo), not a custom program — it must pass the closure gate. The
+        // call then fails on the empty private-flow state paths (invalid_input),
+        // which proves it got *past* the unsupported_feature check.
+        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
+        let n = CString::new("mainnet").unwrap();
+        let a = CString::new(auth).unwrap();
+        let sources = CString::new("[]").unwrap();
+        let empty = CString::new("").unwrap();
+        let env = call_envelope(unsafe {
+            execute_program_proof_checked(
+                n.as_ptr(),
+                a.as_ptr(),
+                sources.as_ptr(),
+                17_000_000,
+                empty.as_ptr(),
+                empty.as_ptr(),
+            )
+        });
+        assert_ne!(env["code"], "unsupported_feature", "empty array closure must not be rejected: {env}");
+        assert_eq!(env["code"], "invalid_input", "{env}");
+    }
+
+    #[test]
+    fn execute_proof_checked_handles_null_pointers() {
+        // The new exports document null as allowed; `read_str` maps null to "" so
+        // `CStr::from_ptr` is never called on null (which would be UB, uncatchable
+        // by the envelope wrapper). A null network reads as "" → unsupported_network.
+        let env = call_envelope(unsafe {
+            execute_proof_checked(
+                std::ptr::null(),
+                std::ptr::null(),
+                17_000_000,
+                std::ptr::null(),
+                std::ptr::null(),
+            )
+        });
+        assert_eq!(env["ok"], false);
+        assert_eq!(env["code"], "unsupported_network");
+    }
 }
 
 #[cfg(test)]
@@ -2527,6 +2583,24 @@ mod param_dir_tests {
                 let _ = std::fs::remove_dir_all(&a);
                 let _ = std::fs::remove_dir_all(&b);
             }
+            "load_started_then_set_locked" => {
+                // Simulate the load macro beginning a read (which atomically freezes
+                // the directory at the default), then a later set to a *different*
+                // dir must be rejected — the TOCTOU the single lock closes.
+                let frozen = snarkvm_parameters::parameter_dir_for_load();
+                let other = std::env::temp_dir().join(format!("aleo_ffi_pd_post_load_{}", std::process::id()));
+                std::fs::create_dir_all(&other).unwrap();
+
+                let r = set_dir(other.to_str().unwrap());
+                assert_eq!(r["ok"], false, "set after load-started must be rejected: {r}");
+                assert_eq!(r["code"], "param_dir_locked", "{r}");
+
+                // The effective dir is still the frozen (default) one, not the rejected path.
+                let d = aleo_dir();
+                assert_eq!(d["data"].as_str().unwrap(), frozen.to_str().unwrap());
+
+                let _ = std::fs::remove_dir_all(&other);
+            }
             other => panic!("unknown scenario {other}"),
         }
     }
@@ -2534,6 +2608,17 @@ mod param_dir_tests {
     #[test]
     fn set_parameter_dir_first_then_idempotent_then_locked() {
         let out = run_scenario("first_then_idempotent_then_locked");
+        assert!(
+            out.status.success(),
+            "subprocess failed.\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
+    }
+
+    #[test]
+    fn set_parameter_dir_rejected_after_load_started() {
+        let out = run_scenario("load_started_then_set_locked");
         assert!(
             out.status.success(),
             "subprocess failed.\nstdout:\n{}\nstderr:\n{}",
