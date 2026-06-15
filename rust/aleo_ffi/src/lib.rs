@@ -1440,8 +1440,23 @@ fn max_authorization_bytes<N: Network>() -> usize {
     N::MAX_TRANSACTION_SIZE
 }
 
-/// Shared parse + credits-only + consensus gate for the checked proving exports.
-/// Returns the parsed authorization, or an error envelope to return as-is.
+/// Rejects a structurally-degenerate authorization that snarkVM would still prove.
+/// Deserialization checks that the input `requests`/`transitions` arrays are the
+/// same length, but then collects transitions into an `IndexMap` keyed by
+/// transition ID — so duplicating a valid request+transition pair keeps the extra
+/// request while silently folding the duplicate transition. The proving path then
+/// consumes only the requests it needs and ignores the rest, which would yield a
+/// successful proof that omits a request the caller supplied. Require: non-empty,
+/// at most `MAX_TRANSITIONS` requests, and exactly one transition per request (no
+/// fold) — `len()` is the request count, `transitions()` the deduped map.
+fn authorization_is_well_formed<N: Network>(authorization: &Authorization<N>) -> bool {
+    !authorization.is_empty()
+        && authorization.len() <= Transaction::<N>::MAX_TRANSITIONS
+        && authorization.transitions().len() == authorization.len()
+}
+
+/// Shared parse + structure + credits-only + consensus gate for the checked
+/// proving exports. Returns the parsed authorization, or an error envelope.
 fn checked_proving_preconditions<N: Network>(authorization: &str, height: u32) -> Result<Authorization<N>, Envelope> {
     let cap = max_authorization_bytes::<N>();
     if authorization.len() > cap {
@@ -1452,6 +1467,12 @@ fn checked_proving_preconditions<N: Network>(authorization: &str, height: u32) -
     }
     let authorization: Authorization<N> = serde_json::from_str(authorization)
         .map_err(|e| Envelope::err("invalid_input", format!("invalid authorization: {e}")))?;
+    if !authorization_is_well_formed(&authorization) {
+        return Err(Envelope::err(
+            "invalid_input",
+            "malformed authorization: empty, over MAX_TRANSITIONS, or has duplicate/folded transitions",
+        ));
+    }
     if !authorization_is_credits_only(&authorization) {
         return Err(Envelope::err("unsupported_feature", "only credits.aleo proving is supported in this version"));
     }
@@ -2512,6 +2533,27 @@ mod tests {
             });
             assert_eq!(env["code"], "unsupported_feature", "input {bad:?} → {env}");
         }
+    }
+
+    #[test]
+    fn execute_proof_checked_rejects_duplicate_transition() {
+        // Duplicate the single request + transition: snarkVM's try_from accepts it
+        // (the input arrays are still equal length), but the transition IndexMap
+        // folds the duplicate, leaving more requests (2) than transitions (1). The
+        // structure check must reject this before proving silently ignores the
+        // extra request.
+        let auth = private_transfer_authorization();
+        let mut value: serde_json::Value = serde_json::from_str(&serde_json::to_string(&auth).unwrap()).unwrap();
+        for key in ["requests", "transitions"] {
+            let arr = value[key].as_array_mut().expect("array field");
+            let first = arr[0].clone();
+            arr.push(first);
+        }
+        let degenerate = serde_json::to_string(&value).unwrap();
+        let env = execute_proof_checked_call("mainnet", &degenerate, 17_000_000);
+        assert_eq!(env["ok"], false);
+        assert_eq!(env["code"], "invalid_input", "{env}");
+        assert!(env["message"].as_str().unwrap().contains("malformed"), "{env}");
     }
 
     #[test]
