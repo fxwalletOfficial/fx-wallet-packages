@@ -1424,9 +1424,27 @@ fn consensus_supported<N: Network>(height: u32) -> Result<(), Envelope> {
     }
 }
 
+/// Generous DoS ceiling on a serialized authorization, applied *before* serde
+/// (which first builds a complete `serde_json::Value`), so an untrusted oversized
+/// blob — a direct FFI caller can pass anything — cannot exhaust memory before
+/// validation (an OOM cannot be turned into an envelope by `catch_unwind`).
+/// Protocol-grounded: at most `MAX_TRANSITIONS` transitions, each bounded by the
+/// network's `MAX_TRANSACTION_SIZE`, which is far above any honest per-transition
+/// authorization JSON.
+fn max_authorization_bytes<N: Network>() -> usize {
+    Transaction::<N>::MAX_TRANSITIONS.saturating_mul(N::MAX_TRANSACTION_SIZE)
+}
+
 /// Shared parse + credits-only + consensus gate for the checked proving exports.
 /// Returns the parsed authorization, or an error envelope to return as-is.
 fn checked_proving_preconditions<N: Network>(authorization: &str, height: u32) -> Result<Authorization<N>, Envelope> {
+    let cap = max_authorization_bytes::<N>();
+    if authorization.len() > cap {
+        return Err(Envelope::err(
+            "invalid_input",
+            format!("authorization is {} bytes, over the {cap}-byte budget", authorization.len()),
+        ));
+    }
     let authorization: Authorization<N> = serde_json::from_str(authorization)
         .map_err(|e| Envelope::err("invalid_input", format!("invalid authorization: {e}")))?;
     if !authorization_is_credits_only(&authorization) {
@@ -2492,6 +2510,19 @@ mod tests {
     }
 
     #[test]
+    fn execute_proof_checked_rejects_oversized_authorization() {
+        // An authorization past the byte budget is rejected BEFORE serde, so an
+        // untrusted blob can't OOM the deserializer. The string is > the cap
+        // (MAX_TRANSITIONS * MAX_TRANSACTION_SIZE) but still small enough to test.
+        let cap = max_authorization_bytes::<Net>();
+        let huge = "x".repeat(cap + 1);
+        let env = execute_proof_checked_call("mainnet", &huge, 17_000_000);
+        assert_eq!(env["ok"], false);
+        assert_eq!(env["code"], "invalid_input");
+        assert!(env["message"].as_str().unwrap().contains("budget"), "{env}");
+    }
+
+    #[test]
     fn execute_proof_checked_handles_null_pointers() {
         // The new exports document null as allowed; `read_str` maps null to "" so
         // `CStr::from_ptr` is never called on null (which would be UB, uncatchable
@@ -2620,7 +2651,7 @@ mod param_dir_tests {
                 // Simulate the load macro beginning a read (which atomically freezes
                 // the directory at the default), then a later set to a *different*
                 // dir must be rejected — the TOCTOU the single lock closes.
-                let frozen = snarkvm_parameters::parameter_dir_for_load();
+                let frozen = snarkvm_parameters::parameter_dir_for_load().unwrap();
                 let other = std::env::temp_dir().join(format!("aleo_ffi_pd_post_load_{}", std::process::id()));
                 std::fs::create_dir_all(&other).unwrap();
 

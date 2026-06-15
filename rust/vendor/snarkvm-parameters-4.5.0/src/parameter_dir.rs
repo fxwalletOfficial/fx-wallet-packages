@@ -20,6 +20,7 @@
 //
 // See `rust/vendor/README.md` and `rust/vendor/parameters-param-dir.patch`.
 
+use crate::errors::ParameterError;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -61,12 +62,19 @@ fn default_dir() -> PathBuf {
 /// override path ([`set_parameter_dir`]) so the frozen directory is a stable
 /// physical path. `aleo_std::aleo_dir()` is `$HOME/.aleo`, which may be a symlink;
 /// resolving it once means a later re-point cannot move where parameters load
-/// from. Falls back to the raw path if it cannot be created/canonicalized (the
-/// load macro then creates it on store).
-fn resolve_default_dir() -> PathBuf {
+/// from.
+///
+/// **Fail closed:** if the directory cannot be created or canonicalized (e.g. a
+/// dangling `~/.aleo` symlink that could later become loadable and then be
+/// re-pointed between reads), this is a hard error — surfaced as a parameter-load
+/// failure (→ `restart_required` at the FFI boundary) — rather than freezing an
+/// uncanonicalized raw path.
+fn resolve_default_dir() -> Result<PathBuf, ParameterError> {
     let dir = default_dir();
-    let _ = std::fs::create_dir_all(&dir);
-    dir.canonicalize().unwrap_or(dir)
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| ParameterError::Message(format!("failed to create parameter dir {dir:?}: {e}")))?;
+    dir.canonicalize()
+        .map_err(|e| ParameterError::Message(format!("failed to canonicalize parameter dir {dir:?}: {e}")))
 }
 
 /// Locks the shared state, recovering (rather than propagating) a poisoned lock —
@@ -119,11 +127,15 @@ pub fn set_parameter_dir(path: &Path) -> Result<(), ParamDirError> {
 /// On the first load with no override, the default is **resolved once and stored**
 /// in `state.dir` — `aleo_std::aleo_dir()` re-reads `HOME` on every call, so
 /// without persisting it a later environment change could move where subsequent
-/// parameters load from, breaking the immutable-directory contract.
-pub fn parameter_dir_for_load() -> PathBuf {
+/// parameters load from, breaking the immutable-directory contract. Returns an
+/// error (fail closed) if the default cannot be created/canonicalized.
+pub fn parameter_dir_for_load() -> Result<PathBuf, ParameterError> {
     let mut state = lock();
     state.load_started = true;
-    state.dir.get_or_insert_with(resolve_default_dir).clone()
+    if state.dir.is_none() {
+        state.dir = Some(resolve_default_dir()?);
+    }
+    Ok(state.dir.clone().expect("dir is Some after resolving the default above"))
 }
 
 /// The directory parameters load from (the override if set, else the default

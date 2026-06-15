@@ -5,9 +5,10 @@
 # sandbox (upstream hard-wires aleo_std::aleo_dir() = ~/.aleo, with no env
 # override). The size+checksum guards in the load macro are UNCHANGED, so the
 # trust boundary stays in Rust. The 'choose dir' and 'begin load' transitions
-# share one mutex (see src/parameter_dir.rs) so they cannot interleave. The
-# curl download path is untouched here; it is removed in workstream A (PR3).
-# Apply on top of a verbatim 4.5.0 extraction.
+# share one mutex (see src/parameter_dir.rs) so they cannot interleave, and a
+# default dir that can't be created/canonicalized fails closed (no raw-path
+# freeze). The curl download path is untouched here; it is removed in
+# workstream A (PR3). Apply on top of a verbatim 4.5.0 extraction.
 #
 # New file: src/parameter_dir.rs (the param-dir state machine, Contract 2).
 #
@@ -30,7 +31,7 @@
  pub mod mainnet;
 --- a/src/macros.rs
 +++ b/src/macros.rs
-@@ -172,8 +172,12 @@
+@@ -172,8 +172,13 @@
      ($remote_urls: expr, $local_dir: expr, $filename: expr, $metadata: expr, $expected_checksum: expr, $expected_size: expr) => {
          cfg_if::cfg_if! {
              if #[cfg(all(feature = "filesystem", not(feature="wasm")))] {
@@ -40,8 +41,9 @@
 +                // parameter directory on first read and read it, from the
 +                // (overridable) effective dir instead of the hard-wired
 +                // `aleo_std::aleo_dir()`. One lock guards "freeze + read" and
-+                // `set_parameter_dir`, so they cannot interleave.
-+                let mut file_path = $crate::parameter_dir_for_load();
++                // `set_parameter_dir`, so they cannot interleave. Fail closed if the
++                // default dir can't be created/canonicalized (no raw-path freeze).
++                let mut file_path = $crate::parameter_dir_for_load()?;
                  file_path.push($local_dir);
                  file_path.push($filename);
  

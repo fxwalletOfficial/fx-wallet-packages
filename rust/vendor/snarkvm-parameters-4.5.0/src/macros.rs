@@ -176,8 +176,9 @@ macro_rules! impl_load_bytes_logic_remote {
                 // parameter directory on first read and read it, from the
                 // (overridable) effective dir instead of the hard-wired
                 // `aleo_std::aleo_dir()`. One lock guards "freeze + read" and
-                // `set_parameter_dir`, so they cannot interleave.
-                let mut file_path = $crate::parameter_dir_for_load();
+                // `set_parameter_dir`, so they cannot interleave. Fail closed if the
+                // default dir can't be created/canonicalized (no raw-path freeze).
+                let mut file_path = $crate::parameter_dir_for_load()?;
                 file_path.push($local_dir);
                 file_path.push($filename);
 
