@@ -1,6 +1,6 @@
 import 'package:blockchain_utils/base58/base58_base.dart';
 import 'package:blockchain_utils/bech32/bch_bech32.dart';
-import 'package:blockchain_utils/compare/compare.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:blockchain_utils/crypto/quick_crypto.dart';
 import 'core.dart';
 
@@ -22,14 +22,14 @@ List<int>? decodeLegacyAddress(String address, BitcoinAddressType type,
   List<int> checksum = decode.sublist(decode.length - 4);
   List<int> hash = QuickCrypto.sha256DoubleHash(data).sublist(0, 4);
 
-  if (!bytesEqual(checksum, hash)) {
+  if (!BytesUtils.bytesEqual(checksum, hash)) {
     return null;
   }
   final addrBytes =
       decode.sublist(1, decode.length - Base58Const.checksumByteLen);
   switch (type) {
     case BitcoinAddressType.p2pkh:
-      if (bytesEqual(networkPrefix, network.p2pkhNetVer)) {
+      if (BytesUtils.bytesEqual(networkPrefix, network.p2pkhNetVer)) {
         return addrBytes;
       }
       return null;
@@ -38,7 +38,7 @@ List<int>? decodeLegacyAddress(String address, BitcoinAddressType type,
     case BitcoinAddressType.p2pkInP2sh:
     case BitcoinAddressType.p2wshInP2sh:
     case BitcoinAddressType.p2wpkhInP2sh:
-      if (bytesEqual(networkPrefix, network.p2shNetVer)) {
+      if (BytesUtils.bytesEqual(networkPrefix, network.p2shNetVer)) {
         return addrBytes;
       }
       return null;
@@ -73,8 +73,8 @@ List<int>? decodeBchAddress(
     }
 
     final decode = BchBech32Decoder.decode(hrp, address);
-    if (bytesEqual(decode.item1, netVersion)) {
-      return decode.item2;
+    if (BytesUtils.bytesEqual(decode.$1, netVersion)) {
+      return decode.$2;
     }
     return null;
   } catch (e) {

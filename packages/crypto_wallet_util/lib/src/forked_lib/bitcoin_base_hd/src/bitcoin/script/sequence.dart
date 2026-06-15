@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:blockchain_utils/binary/binary_operation.dart';
-import 'package:blockchain_utils/numbers/int_utils.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 import '../script/op_code/constant.dart';
 
@@ -14,7 +13,7 @@ class Sequence {
   Sequence(
       {required this.seqType, required this.value, this.isTypeBlock = true}) {
     if (seqType == BitcoinOpCodeConst.TYPE_RELATIVE_TIMELOCK &&
-        (value < 1 || value > mask16)) {
+        (value < 1 || value > BinaryOps.mask16)) {
       throw ArgumentError('Sequence should be between 1 and 65535');
     }
   }

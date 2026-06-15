@@ -48,8 +48,6 @@ class AddressUtils {
         return RegExp(conf.regExp).hasMatch(address);
       case AddressType.NONE:
         return RegExp(COMMON_REG).hasMatch(address);
-      default:
-        return RegExp(COMMON_REG).hasMatch(address);
     }
   }
 

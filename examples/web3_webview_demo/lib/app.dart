@@ -1,0 +1,140 @@
+import 'package:flutter/material.dart';
+
+import 'package:web3_webview_demo/pages/browser_page.dart';
+import 'package:web3_webview_demo/pages/home_page.dart';
+import 'package:web3_webview_demo/pages/log_page.dart';
+import 'package:web3_webview_demo/pages/settings_page.dart';
+import 'package:web3_webview_demo/services/bridge_log.dart';
+import 'package:web3_webview_demo/services/eth_signer.dart';
+import 'package:web3_webview_demo/services/recent_visits.dart';
+import 'package:web3_webview_demo/services/sol_signer.dart';
+import 'package:web3_webview_demo/services/wallet_state.dart';
+
+/// Root widget. Hosts the two long-lived services ([WalletState],
+/// [BridgeLog]) at the top of the tree via the matching `*Scope`
+/// [InheritedNotifier]s so every descendant can read or subscribe without
+/// pulling in a third-party state-management package.
+class DemoApp extends StatefulWidget {
+  const DemoApp({
+    super.key,
+    WalletState? walletState,
+    BridgeLog? bridgeLog,
+    RecentVisits? recentVisits,
+    this.ethSigner = const Web3DartEthSigner(),
+    this.solSigner = const Ed25519SolSigner(),
+  })  : _walletState = walletState,
+        _bridgeLog = bridgeLog,
+        _recentVisits = recentVisits;
+
+  // Tests inject their own instances so each `pumpWidget` starts from a
+  // known state; production code constructs the defaults in [initState].
+  final WalletState? _walletState;
+  final BridgeLog? _bridgeLog;
+  final RecentVisits? _recentVisits;
+
+  /// Signers are injectable so Phase 4 / 5 can swap the deterministic
+  /// [MockEthSigner] / [MockSolSigner] for the real `web3dart` / ed25519
+  /// implementations without touching the routing wiring.
+  final EthSigner ethSigner;
+  final SolSigner solSigner;
+
+  @override
+  State<DemoApp> createState() => _DemoAppState();
+}
+
+class _DemoAppState extends State<DemoApp> {
+  late final WalletState _walletState;
+  late final BridgeLog _bridgeLog;
+  late final RecentVisits _recentVisits;
+
+  @override
+  void initState() {
+    super.initState();
+    _walletState = widget._walletState ?? WalletState();
+    _bridgeLog = widget._bridgeLog ?? BridgeLog();
+    _recentVisits = widget._recentVisits ?? RecentVisits();
+  }
+
+  @override
+  void dispose() {
+    if (widget._walletState == null) _walletState.dispose();
+    if (widget._bridgeLog == null) _bridgeLog.dispose();
+    if (widget._recentVisits == null) _recentVisits.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WalletStateScope(
+      notifier: _walletState,
+      child: BridgeLogScope(
+        notifier: _bridgeLog,
+        child: RecentVisitsScope(
+          notifier: _recentVisits,
+          child: MaterialApp(
+            title: 'Flutter Web3 WebView Demo',
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+              useMaterial3: true,
+            ),
+            initialRoute: '/',
+            onGenerateRoute: _onGenerateRoute,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case '/':
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const HomePage(),
+        );
+      case '/settings':
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const SettingsPage(),
+        );
+      case '/log':
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const LogPage(),
+        );
+      case '/browser':
+        final args = settings.arguments;
+        if (args is! BrowserPageArgs) {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const _RouteErrorPage(
+                message: 'Browser route requires a BrowserPageArgs'),
+          );
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => BrowserPage(
+            args: args,
+            ethSigner: widget.ethSigner,
+            solSigner: widget.solSigner,
+          ),
+        );
+      default:
+        return null;
+    }
+  }
+}
+
+class _RouteErrorPage extends StatelessWidget {
+  const _RouteErrorPage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Routing error')),
+      body: Center(child: Text(message)),
+    );
+  }
+}

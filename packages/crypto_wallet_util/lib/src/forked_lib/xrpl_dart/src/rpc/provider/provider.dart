@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:blockchain_utils/blockchain_utils.dart';
+import 'package:blockchain_utils/blockchain_utils.dart' hide RPCError;
 import 'package:crypto_wallet_util/src/forked_lib/xrpl_dart/xrpl_dart.dart';
 
 typedef OnGenerateRpc = Future<RpcService> Function(

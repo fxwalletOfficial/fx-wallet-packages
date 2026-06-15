@@ -13,8 +13,8 @@ class _StObjectUtils {
   static Map<String, dynamic> _handleXAddress(String field, String xaddress) {
     final classicAddressTag = XRPAddressUtils.decodeXAddress(xaddress, null);
     final classicAddress =
-        XRPAddressUtils.hashToAddress(classicAddressTag.item1);
-    final tag = classicAddressTag.item2;
+        XRPAddressUtils.hashToAddress(classicAddressTag.bytes);
+    final tag = classicAddressTag.tag;
     String? tagFieldName;
     if (field == _destination) {
       tagFieldName = _destTag;

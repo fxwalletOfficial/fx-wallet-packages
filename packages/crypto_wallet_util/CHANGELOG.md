@@ -257,3 +257,44 @@
 - SC transaction assembly with WASM integration (`package:wasm_run`).
 - SC transaction signer (Ed25519) and builder.
 - SC send example.
+
+
+## [2.0.0] - 2026-06-09
+### BREAKING
+
+- Upgrade `blockchain_utils` from `^1.4.1` to `^6.0.0`. Resolves the dependency
+  conflict reported in #20 (consumers using `bitcoin_base 7.x` / `xrpl_dart 7.x`,
+  which require `blockchain_utils ^6.0.0`).
+- Minimum Dart SDK raised to `>=3.7.0` (required by `blockchain_utils 6.0.0`).
+
+### Changed
+
+- Migrated the vendored `bitcoin_base_hd` and `xrpl_dart` forks to the
+  `blockchain_utils` 6.x API: relocated utility imports to the package barrel,
+  `Tuple`/`item1,item2` → Dart records (`$1`,`$2`), `mask*`/`writeUintXLE` →
+  `BinaryOps.*`, `bytesEqual`/`iterableIsEqual` → `BytesUtils`/`CompareUtils`,
+  `Secp256k1*KeyEcdsa` → `Secp256k1*Key`, `BitcoinSigner`/`BitcoinVerifier` →
+  `BitcoinKeySigner`/`BitcoinSignatureVerifier`, `BigintUtils.orderLen` →
+  `BigintUtils.bitlengthInBytes`.
+- ECDSA / Taproot / message signing outputs verified byte-for-byte identical to
+  the pre-upgrade implementation; XRP secp256k1 family-seed derivation and
+  classic/X-address conversion pinned with characterization tests.
+- `Bech32Validations` / `SegwitValidations` declared as `mixin` (Dart 3 language
+  level no longer permits using a plain class as a mixin).
+
+### Notes
+
+- No public API changes beyond the SDK floor; all 782 unit tests pass.
+
+
+## [Unreleased]
+### Removed
+
+- Pruned dead code from the vendored `bitcoin_base_hd` fork that is never
+  reached by this package (BTC/LTC/BCH only use `ECPrivate`):
+  - the entire `provider/` subtree (Electrum/HTTP API providers and the
+    `BitcoinTransactionBuilder` / BCH builder) and `utils/btc_utils.dart`
+    (~2.2k lines).
+  - `ECPublic.verifyTransactionSignature` and
+    `ECPublic.verifySchnorrTransactionSignature` (unused; their post-upgrade
+    bodies had latent argument-shape issues).

@@ -1,14 +1,19 @@
 import 'dart:typed_data';
 
+import 'package:bc_ur_dart/src/models/key/crypto_coin_info.dart';
 import 'package:bc_ur_dart/src/models/key/crypto_hdkey.dart';
+import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/utils.dart';
+import 'package:cbor/cbor.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart' show BIP32;
 import 'package:test/test.dart';
 
 void main() {
   group('CryptoHDKeyUR', () {
     test('should create from wallet correctly', () {
-      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final wallet = BIP32.fromBase58(
+          'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
       final path = "m/44'/60'/0'";
       final name = 'test-wallet';
 
@@ -39,7 +44,8 @@ void main() {
     });
 
     test('should encode to UR correctly', () {
-      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final wallet = BIP32.fromBase58(
+          'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
       final path = "m/44'/60'/0'";
       final name = 'test-wallet';
 
@@ -71,8 +77,51 @@ void main() {
       expect(parsed.path, "m/44'/501'/0'");
     });
 
+    test('should reject malformed secp256k1 public keys with chain code', () {
+      final ur = UR.fromCBOR(
+        type: RegistryType.CRYPTO_HDKEY.type,
+        value: CborMap({
+          CborSmallInt(3): CborBytes(Uint8List(33)),
+          CborSmallInt(4): CborBytes(Uint8List(32)),
+          CborSmallInt(5): CryptoCoinInfo(
+            coinType: CoinType.BTC,
+            network: CoinType.MAINNET,
+          ).toCborValue(),
+          CborSmallInt(6): CborMap({
+            CborSmallInt(1): CborList(getPath("m/44'/0'/0'")),
+          }, tags: [
+            304
+          ]),
+          CborSmallInt(9): CborString('bad-btc-wallet'),
+        }),
+      );
+
+      expect(
+        () => CryptoHDKeyUR.fromUR(ur: ur),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('toString should keep empty keys and JSON escape note', () {
+      final hdkey = CryptoHDKeyUR.fromWallet(
+        name: '',
+        path: "m/44'/501'/0'",
+        publicKey: Uint8List(33),
+        chainCode: Uint8List(32),
+        note: 'line "one"\\two',
+      );
+
+      final parsed = CryptoHDKeyUR.fromUR(ur: UR.decode(hdkey.encode()));
+      final text = parsed.toString();
+
+      expect(text, contains('"name":""'));
+      expect(text, contains('"note":"line \\"one\\"\\\\two"'));
+      expect(text, contains('"childrenPath":""'));
+    });
+
     test('should preserve xfp format marker', () {
-      final wallet = BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
+      final wallet = BIP32.fromBase58(
+          'xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB');
       final hdkey = CryptoHDKeyUR.fromWallet(
         name: 'test-wallet',
         path: "m/44'/60'/0'",

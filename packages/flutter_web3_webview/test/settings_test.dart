@@ -11,7 +11,8 @@ void main() {
     });
 
     test('should create Web3Settings with custom values', () {
-      final ethSettings = Web3EthSettings(chainId: 1, icon: 'eth.png', rdns: 'eth.example.com');
+      final ethSettings =
+          Web3EthSettings(chainId: 1, icon: 'eth.png', rdns: 'eth.example.com');
       final solSettings = Web3SolSettings(icon: 'sol.png');
       final settings = Web3Settings(
         name: 'Test App',

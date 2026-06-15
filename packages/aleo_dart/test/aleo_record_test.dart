@@ -1,11 +1,18 @@
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
-// final String libPosition = './aleo_rust/libaleo_rust.so';
-// final dyLib = DyLib.getDyLibByPosition(libPosition);
-final dyLib = DyLib.getDyLibFromCargo();
-final rust = AleoRecord(dyLib);
+import 'support/test_dylib.dart';
+
 void main() {
+  // final String libPosition = './aleo_rust/libaleo_rust.so';
+  // final dyLib = DyLib.getDyLibByPosition(libPosition);
+  final dyLib = tryLoadAleoLib();
+  if (dyLib == null) {
+    test('aleo_dart record FFI tests', () {}, skip: nativeLibMissingReason);
+    return;
+  }
+  final rust = AleoRecord(dyLib);
+
   final privateKey =
       'APrivateKey1zkpAYS46Dq4rnt9wdohyWMwdmjmTeMJKPZdp5AhvjXZDsVG';
   test('encrypt and decrypt key ', () {

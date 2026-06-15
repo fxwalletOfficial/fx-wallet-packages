@@ -1,6 +1,4 @@
-import 'package:blockchain_utils/binary/binary_operation.dart';
-import 'package:blockchain_utils/binary/utils.dart';
-import 'package:blockchain_utils/numbers/int_utils.dart';
+import 'package:blockchain_utils/blockchain_utils.dart' hide DynamicByteTracker;
 
 import '../address/legacy_address.dart';
 import '../script/op_code/constant_lib.dart';
@@ -48,7 +46,7 @@ class Script {
             .join());
         index = index + bytesToRead;
       } else if (!hasSegwit && byte == 0x4d) {
-        int bytesToRead = readUint16LE(scriptRaw, index + 1);
+        int bytesToRead = BinaryOps.readUint16LE(scriptRaw, index + 1);
 
         index = index + 3;
         commands.add(scriptRaw
@@ -57,7 +55,7 @@ class Script {
             .join());
         index = index + bytesToRead;
       } else if (!hasSegwit && byte == 0x4e) {
-        int bytesToRead = readUint32LE(scriptRaw, index + 1);
+        int bytesToRead = BinaryOps.readUint32LE(scriptRaw, index + 1);
 
         index = index + 5;
         commands.add(scriptRaw
@@ -68,8 +66,8 @@ class Script {
       } else {
         final viAndSize =
             IntUtils.decodeVarint(scriptRaw.sublist(index, index + 9));
-        int dataSize = viAndSize.item1;
-        int size = viAndSize.item2;
+        int dataSize = viAndSize.$1;
+        int size = viAndSize.$2;
         final lastIndex = (index + size + dataSize) > scriptRaw.length
             ? scriptRaw.length
             : (index + size + dataSize);

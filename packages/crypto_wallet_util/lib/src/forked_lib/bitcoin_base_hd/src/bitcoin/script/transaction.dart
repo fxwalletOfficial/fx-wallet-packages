@@ -1,10 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:blockchain_utils/binary/binary_operation.dart';
-import 'package:blockchain_utils/binary/utils.dart';
+import 'package:blockchain_utils/blockchain_utils.dart' hide DynamicByteTracker;
 import 'package:blockchain_utils/crypto/quick_crypto.dart';
-import 'package:blockchain_utils/numbers/bigint_utils.dart';
-import 'package:blockchain_utils/numbers/int_utils.dart';
 
 import 'input.dart';
 import 'output.dart';
@@ -75,40 +72,40 @@ class BtcTransaction {
       cursor += 2;
     }
     final vi = IntUtils.decodeVarint(rawtx.sublist(cursor, cursor + 9));
-    cursor += vi.item2;
+    cursor += vi.$2;
 
     List<TxInput> inputs = [];
-    for (int index = 0; index < vi.item1; index++) {
+    for (int index = 0; index < vi.$1; index++) {
       final inp =
           TxInput.fromRaw(raw: raw, hasSegwit: hasSegwit, cursor: cursor);
 
-      inputs.add(inp.item1);
-      cursor = inp.item2;
+      inputs.add(inp.$1);
+      cursor = inp.$2;
     }
 
     List<TxOutput> outputs = [];
     final viOut = IntUtils.decodeVarint(rawtx.sublist(cursor, cursor + 9));
-    cursor += viOut.item2;
-    for (int index = 0; index < viOut.item1; index++) {
+    cursor += viOut.$2;
+    for (int index = 0; index < viOut.$1; index++) {
       final inp =
           TxOutput.fromRaw(raw: raw, hasSegwit: hasSegwit, cursor: cursor);
-      outputs.add(inp.item1);
-      cursor = inp.item2;
+      outputs.add(inp.$1);
+      cursor = inp.$2;
     }
     List<TxWitnessInput> witnesses = [];
     // if (hasSegwit) {
     //   for (int n = 0; n < inputs.length; n++) {
     //     final wVi = IntUtils.decodeVarint(rawtx.sublist(cursor, cursor + 9));
-    //     cursor += wVi.item2;
+    //     cursor += wVi.$2;
     //     List<String> witnessesTmp = [];
-    //     for (int n = 0; n < wVi.item1; n++) {
+    //     for (int n = 0; n < wVi.$1; n++) {
     //       List<int> witness = <int>[];
     //       final wtVi = IntUtils.decodeVarint(rawtx.sublist(cursor, cursor + 9));
-    //       if (wtVi.item1 != 0) {
+    //       if (wtVi.$1 != 0) {
     //         witness = rawtx.sublist(
-    //             cursor + wtVi.item2, cursor + wtVi.item1 + wtVi.item2);
+    //             cursor + wtVi.$2, cursor + wtVi.$1 + wtVi.$2);
     //       }
-    //       cursor += wtVi.item1 + wtVi.item2;
+    //       cursor += wtVi.$1 + wtVi.$2;
     //       witnessesTmp.add(BytesUtils.toHexString(witness));
     //     }
 
@@ -413,7 +410,7 @@ class BtcTransaction {
     } else {
       int index = txIndex;
       List<int> indexBytes = List<int>.filled(4, 0);
-      writeUint32LE(index, indexBytes);
+      BinaryOps.writeUint32LE(index, indexBytes);
       txForSign.add(indexBytes);
     }
     if (sighashSingle) {
@@ -433,7 +430,7 @@ class BtcTransaction {
           [leafVar, ...IntUtils.prependVarint(script?.toBytes() ?? <int>[])]);
       txForSign.add(taggedHash(leafVarBytes, "TapLeaf"));
       txForSign.add([0]);
-      txForSign.add(List<int>.filled(4, mask8));
+      txForSign.add(List<int>.filled(4, BinaryOps.mask8));
     }
     final bytes = txForSign.toBytes();
 

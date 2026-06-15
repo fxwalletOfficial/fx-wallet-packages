@@ -160,7 +160,8 @@ class ECPublic {
         publicKey.point as ProjectiveECCPoint,
         script: scriptBytes);
     return BytesUtils.toHexString(
-        BigintUtils.toBytes(pubKey.x, length: publicKey.point.curve.baselen));
+        BigintUtils.toBytes(pubKey.x,
+        length: (publicKey.point as ProjectiveECCPoint).curve.baselen));
   }
 
   /// toXOnlyHex extracts and returns the x-coordinate (first 32 bytes) of the ECPublic key
@@ -172,21 +173,8 @@ class ECPublic {
   /// returns true if the message was signed with this public key's
   bool verify(List<int> message, List<int> signature,
       {String messagePrefix = '\x18Bitcoin Signed Message:\n'}) {
-    final verifyKey = BitcoinVerifier.fromKeyBytes(toBytes());
-    return verifyKey.verifyMessage(message, messagePrefix, signature);
-  }
-
-  /// returns true if the message was signed with this public key's
-  bool verifyTransactionSignature(List<int> message, List<int> signature) {
-    final verifyKey = BitcoinVerifier.fromKeyBytes(toBytes());
-    return verifyKey.verifyTransaction(message, signature);
-  }
-
-  /// returns true if the message was signed with this public key's
-  bool verifySchnorrTransactionSignature(List<int> message, List<int> signature,
-      {List<dynamic>? tapleafScripts, bool isTweak = true}) {
-    final verifyKey = BitcoinVerifier.fromKeyBytes(toBytes());
-    return verifyKey.verifySchnorr(message, signature,
-        tapleafScripts: tapleafScripts, isTweak: isTweak);
+    final verifyKey = BitcoinSignatureVerifier.fromKeyBytes(toBytes());
+    return verifyKey.verifyMessageSignature(
+        message: message, messagePrefix: messagePrefix, signature: signature);
   }
 }

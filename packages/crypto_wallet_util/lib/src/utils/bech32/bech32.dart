@@ -70,7 +70,7 @@ class Bech32Decoder extends Converter<String, Bech32> with Bech32Validations {
 }
 
 /// Generic validations for Bech32 standard.
-class Bech32Validations {
+mixin Bech32Validations {
   static const int maxInputLength = 90;
   static const checksumLength = 6;
 
