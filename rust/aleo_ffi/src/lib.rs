@@ -1424,15 +1424,20 @@ fn consensus_supported<N: Network>(height: u32) -> Result<(), Envelope> {
     }
 }
 
-/// Generous DoS ceiling on a serialized authorization, applied *before* serde
-/// (which first builds a complete `serde_json::Value`), so an untrusted oversized
-/// blob — a direct FFI caller can pass anything — cannot exhaust memory before
-/// validation (an OOM cannot be turned into an envelope by `catch_unwind`).
-/// Protocol-grounded: at most `MAX_TRANSITIONS` transitions, each bounded by the
-/// network's `MAX_TRANSACTION_SIZE`, which is far above any honest per-transition
-/// authorization JSON.
+/// DoS ceiling on a serialized authorization, applied *before* serde (which first
+/// builds a complete `serde_json::Value`, materializing even unrelated padding
+/// fields), so an untrusted oversized blob — a direct FFI caller can pass anything
+/// — cannot exhaust memory before validation (an OOM cannot be turned into an
+/// envelope by `catch_unwind`).
+///
+/// The bound is the network's `MAX_TRANSACTION_SIZE` (which bounds a whole
+/// transaction; an authorization carries no proofs, so it is smaller). It is NOT
+/// multiplied by `MAX_TRANSITIONS` — that already counts toward the transaction
+/// size, and a 32× looser cap would let a padding array expand to tens of MB as a
+/// `Value`. At this cap the intermediate `Value` stays within a few MB, while
+/// every honest credits authorization (KB-scale) is far under it.
 fn max_authorization_bytes<N: Network>() -> usize {
-    Transaction::<N>::MAX_TRANSITIONS.saturating_mul(N::MAX_TRANSACTION_SIZE)
+    N::MAX_TRANSACTION_SIZE
 }
 
 /// Shared parse + credits-only + consensus gate for the checked proving exports.
