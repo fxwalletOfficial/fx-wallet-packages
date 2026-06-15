@@ -47,6 +47,11 @@ class BchOutput {
 }
 
 class BchSignRequestUR extends UR {
+  /// Keystone 交易所属链的资产代码。
+  ///
+  /// Keystone 的 BCH/DOGE 等 UTXO 交易共用 [BchTx] 结构承载输入输出，
+  /// 设备端通过 [coinCode] 区分最终签名链，默认保持历史 BCH 行为。
+  final String coinCode;
   final String requestId;
   final String xfp;
   final String hdPath;
@@ -54,12 +59,18 @@ class BchSignRequestUR extends UR {
 
   BchSignRequestUR({
     required UR ur,
+    this.coinCode = 'BCH',
     required this.requestId,
     required this.xfp,
     required this.hdPath,
     this.origin,
   }) : super(payload: ur.payload, type: ur.type);
 
+  /// 构建 Keystone UTXO 签名请求。
+  ///
+  /// [coinCode] 默认是 `BCH`，Doge 等同源 UTXO 链可以传入自己的大写资产代码。
+  /// Payload 仍使用 Keystone 现有的 [BchTx] oneof 字段，避免创建设备端不认识的新
+  /// registry type。
   factory BchSignRequestUR.fromTransaction({
     required List<BchInput> inputs,
     required List<BchOutput> outputs,
@@ -69,6 +80,7 @@ class BchSignRequestUR extends UR {
     String? requestId,
     String? origin,
     int dustThreshold = 546,
+    String coinCode = 'BCH',
   }) {
     final id = requestId ?? const Uuid().v4();
 
@@ -82,7 +94,7 @@ class BchSignRequestUR extends UR {
 
     // 2. 构建 Payload → SignTransaction → BchTx
     final signTransaction = SignTransaction()
-      ..coinCode = 'BCH'
+      ..coinCode = coinCode
       ..signId = id
       ..hdPath = hdPath
       ..timestamp = Int64(DateTime.now().millisecondsSinceEpoch)
@@ -116,6 +128,7 @@ class BchSignRequestUR extends UR {
 
     return BchSignRequestUR(
       ur: ur,
+      coinCode: coinCode,
       requestId: id,
       xfp: xfp,
       hdPath: hdPath,
@@ -144,6 +157,7 @@ class BchSignRequestUR extends UR {
     // 取出 signTx
     final signTx = payload.signTx;
     final signId = signTx.signId;
+    final coinCode = signTx.coinCode;
     final xfp = payload.xfp;
     final hdPath = signTx.hdPath;
 
@@ -152,6 +166,7 @@ class BchSignRequestUR extends UR {
 
     return BchSignRequestUR(
       ur: ur,
+      coinCode: coinCode,
       requestId: signId,
       xfp: xfp,
       hdPath: hdPath,
