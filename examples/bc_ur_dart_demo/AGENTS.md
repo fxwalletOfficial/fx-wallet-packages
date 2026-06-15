@@ -1,9 +1,5 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-03-19
-**Commit:** 054984f
-**Branch:** feature/gs-transfer
-
 ## OVERVIEW
 Flutter demo app for bc_ur_dart — debug & development tool for UR (Uniform Resource) QR code decoding/encoding. Pure mock data, no real on-chain transactions.
 
@@ -69,7 +65,7 @@ bc_ur_dart_demo/
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - All mock data — no real on-chain transactions
-- Sprint 3 features show "In Development" toast (not implemented)
+- Sprint 3 signing flow is demo-only and uses mock payloads
 - Empty catch blocks in `qr_display_page.dart` silently swallow parsing errors
 
 ## BUILD & TEST
@@ -90,6 +86,6 @@ cd ../.. && melos run test
 
 ## NOTES
 - Depends on local `bc_ur_dart` via `path: ../../packages/bc_ur_dart`
-- Supports: ETH, Cosmos, Solana, Tron, Alephium, PSBT, GSPL, CryptoHDKey, CryptoMultiAccounts
+- Supports: ETH, Cosmos, Solana, Tron, Alephium, Sia SC/SCP, PSBT, BTC, BCH, DOGE, GSPL, XRP, Keystone sign requests/results, CryptoHDKey, CryptoAccount, CryptoMultiAccounts
 - Progress calculation: `receivedPartIndexes.length / seq.length` (manual, UR class has no progress property)
 - ThemeNotifier lives in `main.dart` (not extracted to lib/common/ — deviation from Flutter convention)

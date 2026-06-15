@@ -45,13 +45,13 @@ flutter run
 | Scan UR QR + multi-frame progress | 1 | ✅ |
 | Parse result + copy each field | 1 | ✅ |
 | Dynamic form + generate QR | 2 | ✅ |
-| Two-step signing flow | 3 | 📅 |
+| Two-step signing flow | 3 | ✅ |
 
 ## Supported UR Types
 
-- **Sign Requests**: ETH, Cosmos, Solana, Tron, Alephium, PSBT, GSPL
-- **Signatures**: ETH, Cosmos, Solana, Tron, Alephium, PSBT, GSPL
-- **Accounts**: CryptoHDKey, CryptoMultiAccounts
+- **Sign Requests**: ETH, Cosmos, Solana, Tron, Alephium, SC, SCP, PSBT, BTC, BCH, DOGE, GSPL, XRP, Keystone Cosmos, Keystone Solana, Keystone Tron
+- **Signatures / Results**: ETH, Cosmos, Solana, Tron, Alephium, SC, PSBT, BTC, BCH, GSPL, XRP, Keystone Tron
+- **Accounts**: CryptoHDKey, CryptoAccount, CryptoMultiAccounts, XRP Account
 
 ## UR API
 
@@ -107,8 +107,11 @@ final tronReq = TronSignRequest.fromCBOR(ur.payload);
 | ETH Sign Request | `EthSignRequestUR` |
 | ETH Signature | `EthSignatureUR` |
 | PSBT Sign Request | `PsbtSignRequestUR` |
+| SC Sign Request / Signature | `ScSignRequest` / `ScSignature` |
+| BCH / DOGE Sign Request | `BchSignRequestUR` |
 | GSPL Sign Request | `GsplSignRequestUR` |
 | GSPL Signature | `GsplSignatureUR` |
 | HD Key | `CryptoHDKeyUR` |
+| Account | `CryptoAccountUR` |
 | Multi Accounts | `CryptoMultiAccountsUR` |
 | Cosmos/Sol/Tron/Alph | `CosmosSignRequest` / `SolSignRequest` / `TronSignRequest` / `AlphSignRequest` |

@@ -186,7 +186,6 @@ class _ModuleCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
-    this.badge,
   });
 
   final String title;
@@ -194,7 +193,6 @@ class _ModuleCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  final String? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -221,20 +219,7 @@ class _ModuleCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      Flexible(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), overflow: TextOverflow.ellipsis)),
-                      if (badge != null) ...[
-                        const SizedBox(width: 7),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: scheme.secondaryContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(badge!, style: TextStyle(fontSize: 10, color: scheme.onSecondaryContainer, fontWeight: FontWeight.w500)),
-                        ),
-                      ]
-                    ]),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 3),
                     Text(subtitle, style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.55), height: 1.4)),
                   ],
