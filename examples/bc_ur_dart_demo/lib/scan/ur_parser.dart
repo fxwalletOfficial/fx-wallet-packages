@@ -98,7 +98,9 @@ Map<String, dynamic> parseUR(UR ur) {
               'signData': hex.encode(req.signData),
               'signType': req.signType.name,
               'derivationPath': req.derivationPath.getPath() ?? '—',
-              'address': req.addressBytes == null ? '—' : utf8.decode(req.addressBytes!),
+              'address': req.addressBytes == null
+                  ? '—'
+                  : utf8.decode(req.addressBytes!),
               'origin': req.origin ?? '—',
             },
           };
@@ -140,7 +142,9 @@ Map<String, dynamic> parseUR(UR ur) {
             'requestId': hex.encode(req.getRequestId()),
             'signData': hex.encode(req.signData),
             'derivationPath': req.getDerivationPath() ?? '—',
-            'xfp': req.getSourceFingerprint() != null ? hex.encode(req.getSourceFingerprint()!) : '—',
+            'xfp': req.getSourceFingerprint() != null
+                ? hex.encode(req.getSourceFingerprint()!)
+                : '—',
             'origin': req.origin ?? '—',
             'fee': req.fee?.toString() ?? '—',
           },
@@ -167,7 +171,9 @@ Map<String, dynamic> parseUR(UR ur) {
             'signData': hex.encode(req.signData),
             'dataType': req.dataType.name,
             'derivationPath': req.getDerivationPath() ?? '—',
-            'xfp': req.getSourceFingerprint() != null ? hex.encode(req.getSourceFingerprint()!) : '—',
+            'xfp': req.getSourceFingerprint() != null
+                ? hex.encode(req.getSourceFingerprint()!)
+                : '—',
             'outputsCount': (req.outputs?.length ?? 0).toString(),
             'origin': req.origin ?? '—',
           },
@@ -192,13 +198,16 @@ Map<String, dynamic> parseUR(UR ur) {
           'fields': {
             'requestId': req.getRequestIdString(),
             'chain': req.chain.isEmpty ? '—' : req.chain,
-            'signingPayloadData': const JsonEncoder.withIndent('  ').convert(req.signingPayloadData),
+            'signingPayloadData': const JsonEncoder.withIndent('  ')
+                .convert(req.signingPayloadData),
             'path': req.path,
             'xfp': req.xfp,
             'address': req.address,
             'publicKey': req.publicKey,
             'fee': req.fee ?? '—',
-            'outputs': req.outputs == null ? '—' : const JsonEncoder.withIndent('  ').convert(req.outputs),
+            'outputs': req.outputs == null
+                ? '—'
+                : const JsonEncoder.withIndent('  ').convert(req.outputs),
             'crossChainFee': req.crossChainFee ?? '—',
             'origin': req.origin ?? '—',
           },
@@ -210,7 +219,8 @@ Map<String, dynamic> parseUR(UR ur) {
           'type': ur.type,
           'fields': {
             'requestId': sig.getRequestIdString(),
-            'broadcastTx': const JsonEncoder.withIndent('  ').convert(sig.broadcastTx),
+            'broadcastTx':
+                const JsonEncoder.withIndent('  ').convert(sig.broadcastTx),
             'origin': sig.origin ?? '—',
           },
         };
@@ -296,7 +306,8 @@ Map<String, dynamic> parseUR(UR ur) {
             'path': key.path,
             'name': key.name,
             'xfp': key.xfp ?? key.sourceFingerprint ?? '—',
-            'parentFingerprint': key.wallet?.parentFingerprint.toRadixString(16) ?? '—',
+            'parentFingerprint':
+                key.wallet?.parentFingerprint.toRadixString(16) ?? '—',
           },
         };
 
@@ -316,6 +327,7 @@ Map<String, dynamic> parseUR(UR ur) {
             'extendedPublicKey': wallet?.toBase58() ?? '',
             'sourceFingerprint': output.sourceFingerprint ?? '',
             'xfpFormat': output.xfpFormat ?? '',
+            'note': output.note ?? '',
           };
         }).toList();
 
@@ -346,6 +358,8 @@ Map<String, dynamic> parseUR(UR ur) {
             'chainCode': chainCode == null ? '' : hex.encode(chainCode),
             'extendedPublicKey': wallet?.toBase58() ?? '',
             'sourceFingerprint': chain.sourceFingerprint ?? '',
+            'xfpFormat': chain.xfpFormat ?? '',
+            'note': chain.note ?? '',
           };
         }).toList();
 
@@ -376,7 +390,8 @@ Map<String, dynamic> parseUR(UR ur) {
       'fields': {
         'error': e.toString(),
         'stackTrace': stack.toString().split('\n').take(5).join('\n'),
-        'hint': 'Check if UR data is complete or if fromCBOR() parameter matches this type',
+        'hint':
+            'Check if UR data is complete or if fromCBOR() parameter matches this type',
       },
       'isError': true,
     };
@@ -397,17 +412,22 @@ Map<String, dynamic> _parseKeystoneSignRequest(UR ur) {
         'to': req.tronTx.to,
         'value': req.tronTx.value,
         'token': req.tronTx.token.isEmpty ? '—' : req.tronTx.token,
-        'contractAddress': req.tronTx.contractAddress.isEmpty ? '—' : req.tronTx.contractAddress,
+        'contractAddress': req.tronTx.contractAddress.isEmpty
+            ? '—'
+            : req.tronTx.contractAddress,
         'fee': req.tronTx.fee.toString(),
         'origin': req.origin ?? '—',
       },
     };
   } catch (_) {
     final req = BchSignRequestUR.fromUR(ur: ur);
+    final variant =
+        req.coinCode.isEmpty ? 'Keystone UTXO' : 'Keystone ${req.coinCode}';
     return {
       'type': ur.type,
       'fields': {
-        'variant': 'BCH',
+        'variant': variant,
+        'coinCode': req.coinCode.isEmpty ? '—' : req.coinCode,
         'requestId': req.requestId,
         'xfp': req.xfp,
         'hdPath': req.hdPath,
@@ -443,8 +463,10 @@ Map<String, dynamic> _parseKeystoneSignResult(UR ur) {
       };
     } catch (_) {
       final data = ur.decodeCBOR() as CborMap;
-      final bytes = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
-      final payload = _readMessageField(Uint8List.fromList(GZipCodec().decode(bytes)), 7);
+      final bytes =
+          Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
+      final payload =
+          _readMessageField(Uint8List.fromList(GZipCodec().decode(bytes)), 7);
       final result = _readStringFields(payload, {1, 2, 3});
       return {
         'type': ur.type,
@@ -483,7 +505,9 @@ Map<String, dynamic> _parseBytes(UR ur) {
         'publicKey': signature.publicKey.isEmpty ? '—' : signature.publicKey,
         'signedBlob': signature.signedBlob.isEmpty ? '—' : signature.signedBlob,
         'txHash': signature.txHash.isEmpty ? '—' : signature.txHash,
-        'payload': signature.payload == null ? '—' : const JsonEncoder.withIndent('  ').convert(signature.payload),
+        'payload': signature.payload == null
+            ? '—'
+            : const JsonEncoder.withIndent('  ').convert(signature.payload),
       },
     };
   } catch (_) {}
@@ -494,7 +518,8 @@ Map<String, dynamic> _parseBytes(UR ur) {
       'type': ur.type,
       'fields': {
         'variant': 'XRP Sign Request',
-        'transaction': const JsonEncoder.withIndent('  ').convert(request.transaction),
+        'transaction':
+            const JsonEncoder.withIndent('  ').convert(request.transaction),
         'payloadBytes': hex.encode(request.payloadBytes),
       },
     };

@@ -163,6 +163,7 @@ const kMockGsplSignRequest = {
 
 const kMockBchSignRequest = {
   'requestId': 'bch-request-id',
+  'coinCode': 'BCH',
   'xfp': _kXfp,
   'hdPath': "m/44'/145'/0'",
   'origin': _kOrigin,
@@ -180,6 +181,31 @@ const kMockBchSignRequest = {
     {
       'address': 'bitcoincash:qq07g6kz8zqauyn9f0rqpxnrsyvz2xy3xqyqj8xq2n',
       'value': '99500',
+      'isChange': false,
+    },
+  ],
+};
+
+const kMockDogeSignRequest = {
+  'requestId': 'doge-request-id',
+  'coinCode': 'DOGE',
+  'xfp': _kXfp,
+  'hdPath': "m/44'/3'/0'/0/0",
+  'origin': _kOrigin,
+  'fee': '100000',
+  'inputs': [
+    {
+      'hash': '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff',
+      'index': 1,
+      'value': '100000000',
+      'pubkey': '03019967bdd2d94ee29f00fb77eb57064afb1c56fcc7d1fdfd0ae9c9c6d65128bd',
+      'ownerKeyPath': "m/44'/3'/0'/0/0",
+    },
+  ],
+  'outputs': [
+    {
+      'address': 'D8Bq7z8rJbJ6z8G4m7Zx8Q9x2n3P4q5R6S',
+      'value': '99900000',
       'isChange': false,
     },
   ],
@@ -379,10 +405,10 @@ const kMockCryptoMultiAccounts = {
       'sourceFingerprint': '21d0ae26',
       'xfpFormat': 'canonical',
       'xpub': '',
-      'publicKey': '03bbc64f4b1a2b16c3539e71963dec71435f3065d6b0f36c8ae4762f1203416c6d',
+      'publicKey': 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
       'chainCode': '',
       'name': 'Keystone',
-      'note': 'account.ledger_legacy',
+      'note': 'account.non_secp_ed25519',
     },
     {
       'path': "m/44'/60'/0'/0/0",
@@ -443,6 +469,7 @@ const Map<String, Map<String, dynamic>> kMockByType = {
   'psbt-sign-request': kMockPsbtSignRequest,
   'btc-sign-request': kMockGsplSignRequest,
   'bch-sign-request': kMockBchSignRequest,
+  'doge-sign-request': kMockDogeSignRequest,
   'keystone-cosmos-sign-request': kMockKeystoneCosmosSignRequest,
   'keystone-sol-sign-request': kMockKeystoneSolSignRequest,
   'keystone-tron-sign-request': kMockKeystoneTronSignRequest,

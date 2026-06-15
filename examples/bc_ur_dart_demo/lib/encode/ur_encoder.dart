@@ -182,6 +182,7 @@ UR buildUR(String type, Map<String, dynamic> params) {
       );
 
     case 'bch-sign-request':
+    case 'doge-sign-request':
       final inputs = (params['inputs'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .map((e) => BchInput(
@@ -209,6 +210,7 @@ UR buildUR(String type, Map<String, dynamic> params) {
         hdPath: params['hdPath'] as String,
         requestId: params['requestId'] as String?,
         origin: params['origin'] as String?,
+        coinCode: params['coinCode'] as String? ?? (type.toLowerCase() == 'doge-sign-request' ? 'DOGE' : 'BCH'),
       );
 
     // ── CryptoHDKey ───────────────────────────────────────────
