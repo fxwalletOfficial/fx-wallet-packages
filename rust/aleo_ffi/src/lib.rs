@@ -1440,19 +1440,20 @@ fn max_authorization_bytes<N: Network>() -> usize {
     N::MAX_TRANSACTION_SIZE
 }
 
-/// Rejects a structurally-degenerate authorization that snarkVM would still prove.
-/// Deserialization checks that the input `requests`/`transitions` arrays are the
-/// same length, but then collects transitions into an `IndexMap` keyed by
-/// transition ID — so duplicating a valid request+transition pair keeps the extra
-/// request while silently folding the duplicate transition. The proving path then
-/// consumes only the requests it needs and ignores the rest, which would yield a
-/// successful proof that omits a request the caller supplied. Require: non-empty,
-/// at most `MAX_TRANSITIONS` requests, and exactly one transition per request (no
-/// fold) — `len()` is the request count, `transitions()` the deduped map.
-fn authorization_is_well_formed<N: Network>(authorization: &Authorization<N>) -> bool {
-    !authorization.is_empty()
-        && authorization.len() <= Transaction::<N>::MAX_TRANSITIONS
-        && authorization.transitions().len() == authorization.len()
+/// v1 proves exactly ONE credits.aleo call. credits.aleo functions are leaf — the
+/// bundled `credits.aleo` has no `call` instructions and no imports — so a
+/// legitimate credits authorization is always exactly one request and one
+/// transition. Requiring that rejects every structurally-degenerate authorization
+/// snarkVM would otherwise prove only in part:
+///   - a folded duplicate (a duplicated request+transition passes snarkVM's
+///     equal-length check but the duplicate transition collapses in the
+///     transition `IndexMap`, leaving 2 requests for 1 transition); and
+///   - two independent authorizations concatenated (unique requests + transition
+///     IDs, equal counts, which snarkVM would prove starting from the first root
+///     while silently ignoring the second request).
+/// `len()` is the request count, `transitions()` the deduped transition map.
+fn authorization_is_single_transition<N: Network>(authorization: &Authorization<N>) -> bool {
+    authorization.len() == 1 && authorization.transitions().len() == 1
 }
 
 /// Shared parse + structure + credits-only + consensus gate for the checked
@@ -1467,10 +1468,10 @@ fn checked_proving_preconditions<N: Network>(authorization: &str, height: u32) -
     }
     let authorization: Authorization<N> = serde_json::from_str(authorization)
         .map_err(|e| Envelope::err("invalid_input", format!("invalid authorization: {e}")))?;
-    if !authorization_is_well_formed(&authorization) {
+    if !authorization_is_single_transition(&authorization) {
         return Err(Envelope::err(
             "invalid_input",
-            "malformed authorization: empty, over MAX_TRANSITIONS, or has duplicate/folded transitions",
+            "a credits authorization must be exactly one transition (no extra, folded, or unconnected requests)",
         ));
     }
     if !authorization_is_credits_only(&authorization) {
@@ -2553,7 +2554,37 @@ mod tests {
         let env = execute_proof_checked_call("mainnet", &degenerate, 17_000_000);
         assert_eq!(env["ok"], false);
         assert_eq!(env["code"], "invalid_input", "{env}");
-        assert!(env["message"].as_str().unwrap().contains("malformed"), "{env}");
+        assert!(env["message"].as_str().unwrap().contains("one transition"), "{env}");
+    }
+
+    #[test]
+    fn execute_proof_checked_rejects_concatenated_authorizations() {
+        // Two INDEPENDENT valid credits authorizations (unique requests + transition
+        // IDs) concatenated: snarkVM's equal-length check passes and nothing folds,
+        // but proving would start from the first root and silently ignore the
+        // second request. The single-transition check must reject it.
+        let owner = owner();
+        let recipient = Address::<Net>::try_from(&other_key()).unwrap().to_string();
+        let mut auth_value = |amount: u64| -> serde_json::Value {
+            let inputs = transfer_inputs("transfer_public", &recipient, amount, "", &owner).unwrap();
+            let vm = new_vm::<Net>().unwrap();
+            let auth = vm
+                .authorize(&owner, "credits.aleo", "transfer_public", inputs, &mut TestRng::default())
+                .unwrap();
+            serde_json::from_str(&serde_json::to_string(&auth).unwrap()).unwrap()
+        };
+        // Distinct amounts → distinct transitions (different ids), so nothing folds.
+        let mut first = auth_value(1);
+        let second = auth_value(2);
+        for key in ["requests", "transitions"] {
+            let extra = second[key].as_array().unwrap().clone();
+            first[key].as_array_mut().unwrap().extend(extra);
+        }
+        let concatenated = serde_json::to_string(&first).unwrap();
+        let env = execute_proof_checked_call("mainnet", &concatenated, 17_000_000);
+        assert_eq!(env["ok"], false);
+        assert_eq!(env["code"], "invalid_input", "{env}");
+        assert!(env["message"].as_str().unwrap().contains("one transition"), "{env}");
     }
 
     #[test]
