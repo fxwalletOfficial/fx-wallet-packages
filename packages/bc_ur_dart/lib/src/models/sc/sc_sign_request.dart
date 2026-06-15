@@ -102,10 +102,10 @@ class ScSignRequest extends RegistryItem {
   RegistryItem decodeFromCbor(CborMap map) {
     return ScSignRequest(
       uuid: RegistryItem.readBytes(map, ScSignRequestKeys.uuid.index),
-      xfp: _readText(map, ScSignRequestKeys.xfp.index),
-      path: _readText(map, ScSignRequestKeys.path.index),
-      address: _readText(map, ScSignRequestKeys.address.index),
-      publicKey: _readText(map, ScSignRequestKeys.publicKey.index),
+      xfp: RegistryItem.readText(map, ScSignRequestKeys.xfp.index),
+      path: RegistryItem.readText(map, ScSignRequestKeys.path.index),
+      address: RegistryItem.readText(map, ScSignRequestKeys.address.index),
+      publicKey: RegistryItem.readText(map, ScSignRequestKeys.publicKey.index),
       signingPayloadData: RegistryItem.readJsonMap(map, ScSignRequestKeys.signingPayloadData.index),
       fee: RegistryItem.readOptionalText(map, ScSignRequestKeys.fee.index),
       outputs: RegistryItem.readOptionalJsonList(map, ScSignRequestKeys.outputs.index),
@@ -161,11 +161,5 @@ class ScSignRequest extends RegistryItem {
       chain: chain,
       crossChainFee: crossChainFee,
     ).toUR();
-  }
-
-  static String _readText(CborMap map, int key) {
-    final value = map[CborSmallInt(key)];
-    if (value is CborString) return value.toString();
-    throw ArgumentError('Invalid text at key $key');
   }
 }

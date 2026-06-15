@@ -176,7 +176,9 @@ class CryptoHDKeyUR extends UR {
       try {
         wallet = BIP32.fromPublicKey(publicKey, chainCode);
       } catch (e) {
-        wallet = null;
+        if (!_allowsRawNonSecpKey(useInfo, path)) {
+          throw FormatException('Invalid crypto-hdkey public key or chain code: $e');
+        }
       }
       if (wallet != null) {
         wallet.parentFingerprint = parentFingerprint ?? 0;
@@ -220,8 +222,18 @@ class CryptoHDKeyUR extends UR {
     fields.addString('publicKey', pubKey != null && pubKey.isNotEmpty ? hex.encode(pubKey) : null);
     fields.addString('chainCode', chain != null && chain.isNotEmpty ? hex.encode(chain) : null);
     fields.addString('name', name);
-    fields.addRawString('note', note);
+    fields.addString('note', note);
 
     return fields.toString();
+  }
+
+  static bool _allowsRawNonSecpKey(CryptoCoinInfo? useInfo, String path) {
+    final coinType = useInfo?.coinType ?? _coinTypeFromPath(path);
+    return coinType == CoinType.SOL;
+  }
+
+  static int? _coinTypeFromPath(String path) {
+    final match = RegExp(r"^m/44'/(\d+)'").firstMatch(path);
+    return match == null ? null : int.tryParse(match.group(1)!);
   }
 }

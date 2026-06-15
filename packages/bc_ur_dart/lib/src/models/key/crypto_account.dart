@@ -28,14 +28,16 @@ class CryptoAccountUR extends UR {
 
     final data = ur.decodeCBOR() as CborMap;
     if (!RegistryItem.hasKey(data, 1)) {
-      throw ArgumentError('Missing required field: master fingerprint (field 1)');
+      throw ArgumentError(
+          'Missing required field: master fingerprint (field 1)');
     }
     if (!RegistryItem.hasKey(data, 2)) {
       throw ArgumentError('Missing required field: outputs (field 2)');
     }
 
     final fpRaw = (data[CborSmallInt(1)] as CborInt).toInt();
-    final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
+    final fpBytes = Uint8List(4)
+      ..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
     final masterFingerprint = hex.encode(fpBytes);
 
     final outputsRaw = data[CborSmallInt(2)] as CborList;
@@ -72,11 +74,13 @@ class CryptoAccountUR extends UR {
       value: CborMap({
         CborSmallInt(1): CborInt(BigInt.from(fpInt)),
         CborSmallInt(2): CborList(outputs.map((e) => e.decodeCBOR()).toList()),
-        if (xfpFormat != null && xfpFormat.isNotEmpty) CborSmallInt(3): CborString(xfpFormat),
+        if (xfpFormat != null && xfpFormat.isNotEmpty)
+          CborSmallInt(3): CborString(xfpFormat),
       }),
     );
 
-    final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpInt, Endian.big);
+    final fpBytes = Uint8List(4)
+      ..buffer.asByteData().setUint32(0, fpInt, Endian.big);
     return CryptoAccountUR(
       ur: ur,
       masterFingerprint: hex.encode(fpBytes),
@@ -92,7 +96,7 @@ class CryptoAccountUR extends UR {
 
     fields.addString('masterFingerprint', masterFingerprint);
     fields.addString('xfpFormat', xfpFormat);
-    if (outputs.isNotEmpty) fields.addRaw('outputs', '[${outputs.map((e) => e.toString()).join(',')}]');
+    fields.addRaw('outputs', '[${outputs.map((e) => e.toString()).join(',')}]');
     return fields.toString();
   }
 }

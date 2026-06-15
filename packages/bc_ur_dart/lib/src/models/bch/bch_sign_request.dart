@@ -69,6 +69,8 @@ class BchSignRequestUR extends UR {
   /// 构建 Keystone UTXO 签名请求。
   ///
   /// [coinCode] 默认是 `BCH`，Doge 等同源 UTXO 链可以传入自己的大写资产代码。
+  /// 当前 Keystone UTXO payload 固定使用 8 位小数，调用方只应传入同样采用
+  /// 8-decimal satoshi 单位的 coin code。
   /// Payload 仍使用 Keystone 现有的 [BchTx] oneof 字段，避免创建设备端不认识的新
   /// registry type。
   factory BchSignRequestUR.fromTransaction({
@@ -105,7 +107,7 @@ class BchSignRequestUR extends UR {
       ..type = Payload_Type.TYPE_SIGN_TX
       ..xfp = xfp
       ..signTx = signTransaction;
-    
+
     // 外层包 Base
     final base = Base()
       ..version = 2
@@ -115,7 +117,7 @@ class BchSignRequestUR extends UR {
     // 3. gzip 压缩 Base
     final compressed = GZipCodec().encode(base.writeToBuffer());
     final signDataBytes = Uint8List.fromList(compressed);
-    
+
     // 4. 封装为 BCH-SIGN-REQUEST CBOR
     // field 1: signData(bytes), field 2: origin(string, optional)
     final ur = UR.fromCBOR(
