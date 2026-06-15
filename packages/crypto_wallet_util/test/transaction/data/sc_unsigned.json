@@ -1,0 +1,51 @@
+{
+  "siacoinOutputs": [
+    {
+      "value": "100000000000000000000000",
+      "address": "2a24fb0ed9cd23d7900a150bb81dd7c3b33954e21e3f3a5744c5ac91e4689edbc0eda69fd2d1"
+    },
+    {
+      "value": "1660000000000000000000000",
+      "address": "328c18b6cbdb538185aaf58a3e5e71fa17d66e93ae39c1426864ba3b7903b9d56050b56937f8"
+    }
+  ],
+  "siacoinInputs": [
+    {
+      "parent": {
+        "id": "c1b16e9052263596b4c79b54b6b5a3785230df2f3d58d00774be7f6bfd23f685",
+        "stateElement": {
+          "leafIndex": 75536681,
+          "merkleProof": [
+            "dd847a2560cad8a6832fcf7485b4402340d89d63c19c832deb77904964249057",
+            "cb4f6c3b2688035396d2a9d94b3fcbdeb4139f35099860dd2a971549b3752955",
+            "67beab538a71a4e3369f5f4a51f14aa7d182403ddd2fcab86100ed1bc2466cd6",
+            "29cf5a3e556bf3d453f06a0ce631e5b6f16b37adac1ace3067f88ab616412ff3",
+            "42d5918fbecded38ed8bd04d99199c2e6fa97174e64437e9f65fe8c4c199e777",
+            "506e6452b500b5403b9dd5f6cbe4982f77c9ff8025c171e307d22b62b24d9662",
+            "c997546789badd2bed27bcbf9cf2d495808ab01aa3d691b75653f2e7939cda2c",
+            "68165605156b984e636955a94cdc017cd8201649202259ff7897f84963e341c8",
+            "9d4fb9801fba6bd1f39c8b4b4e512a10e263bcaa9c131f00f9b1f121c86b8301",
+            "a1f9ed82b43dad09b99c5f7d4731f6be0bc2bab4aff63abfba079cdf9bb43062"
+          ]
+        },
+        "siacoinOutput": {
+          "value": "1780000000000000000000000",
+          "address": "328c18b6cbdb538185aaf58a3e5e71fa17d66e93ae39c1426864ba3b7903b9d56050b56937f8"
+        }
+      },
+      "satisfiedPolicy": {
+        "policy": {
+          "type": "uc",
+          "policy": {
+            "timelock": 0,
+            "publicKeys": [
+              "ed25519:02459264c5abf18f1e178031824443a2c9cef4e70f8131ec018308754181f2ab"
+            ],
+            "signaturesRequired": 1
+          }
+        }
+      }
+    }
+  ],
+  "minerFee": "20000000000000000000000"
+}

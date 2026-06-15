@@ -1,0 +1,88 @@
+[package]
+name = "aleo_rust"
+version = "0.6.6"
+authors = [ "fx wallet <www.fxwallet.com>" ]
+description = "Dart for managing Aleo programs and communicating with the Aleo network"
+homepage = "www.fxwallet.com"
+readme = "README.md"
+repository = "https://github.com/fxwalletOfficial/aleo_dart"
+keywords = [
+  "aleo",
+  "cryptography",
+  "blockchain",
+  "decentralized",
+  "zero-knowledge"
+]
+categories = [ "cryptography::cryptocurrencies" ]
+include = [ "Cargo.toml", "src", "README.md", "LICENSE.md" ]
+license = "GPL-3.0"
+edition = "2021"
+
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies.anyhow]
+version = "1"
+
+
+[dependencies.indexmap]
+version = "2.0"
+
+[dependencies.once_cell]
+version = "1.18.0"
+
+[dependencies.rand]
+version = "0.8.5"
+
+[dependencies.ureq]
+features = [ "json" ]
+optional = true
+version = "2.7.1"
+
+
+[dependencies.snarkvm]
+optional = true
+version = "4.5.0"
+
+[dependencies.snarkvm-algorithms]
+version = "4.5.0"
+
+[dependencies.snarkvm-circuit-network]
+version = "4.5.0"
+
+[dependencies.snarkvm-console]
+version = "4.5.0"
+
+[dependencies.snarkvm-ledger-store]
+version = "4.5.0"
+
+[dependencies.snarkvm-ledger-query]
+version = "4.5.0"
+
+[dependencies.snarkvm-ledger-block]
+version = "4.5.0"
+
+[dependencies.snarkvm-synthesizer]
+version = "4.5.0"
+
+[dependencies.snarkvm-console-network]
+version = "4.5.0"
+
+[dependencies.snarkvm-synthesizer-process]
+version = "4.5.0"
+
+[dependencies.aleo-std-storage]
+version = "1.0.1"
+
+[dependencies.snarkvm-console-types-group]
+version = "4.5.0"
+
+[dependencies.http]
+version = "1.0"
+
+[features]
+default = [ "full","mainnet" ]
+full = [ "ureq", "snarkvm" ]
+testnet = []
+mainnet = []
