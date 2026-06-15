@@ -259,6 +259,8 @@ class CryptoHDKeyUR extends UR {
   }
 
   static bool _allowsRawNonSecpKey(CryptoCoinInfo? useInfo, String path) {
+    // Keep this allowlist narrow; add other non-secp256k1 coin types here only
+    // after the consumer validates that chain's key length and format.
     final coinType = useInfo?.coinType ?? _coinTypeFromPath(path);
     return coinType == CoinType.SOL;
   }
