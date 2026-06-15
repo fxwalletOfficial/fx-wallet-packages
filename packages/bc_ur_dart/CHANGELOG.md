@@ -102,3 +102,14 @@
 * Update: Align CryptoHDKeyUR, canonical xfp and source fingerprint handling with Keystone spec.
 * Fix: Wrap invalid HDKey and multi-account parse errors.
 * Fix: Align BCH, Solana and TRON sign request encoding with Keystone protocol.
+
+## [0.1.25] - 2026-06-15
+
+* Feature: Add SC sign request and signature UR support.
+* Feature: Support SC cross-chain fee display metadata.
+* Feature: Support multi-coin Keystone UTXO signing through configurable coin code.
+* Feature: Add bc_ur_dart demo.
+* Update: Preserve non-secp256k1 CryptoHDKey entries for supported chains such as Solana.
+* Update: Consolidate registry JSON helpers and required text decoding.
+* Fix: Keep CryptoHDKey, CryptoAccount and CryptoMultiAccounts string output JSON-safe and compatible with empty fields.
+* Fix: Reject malformed secp256k1 CryptoHDKey public key or chain code data instead of silently importing it.
