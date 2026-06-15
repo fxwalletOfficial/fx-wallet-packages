@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
+import 'package:bc_ur_dart/src/models/key/to_string_fields.dart';
 import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:convert/convert.dart';
@@ -165,17 +166,25 @@ class CryptoHDKeyUR extends UR {
 
     final index = keypath.components.isNotEmpty ? keypath.components.last.getIndex() ?? 0 : 0;
 
-    // Build BIP32 wallet (仅当有 chainCode 时才构建)
+    // Build BIP32 wallet (仅当有 chainCode 且公钥属于 secp256k1 时才构建)。
+    //
+    // BIP32 只适用于 secp256k1；这里不能
+    // 因单条非 secp 公钥导致整个 crypto-multi-accounts 导入失败，而是保留原始
+    // publicKey / chainCode 交给上层按链类型处理。
     BIP32? wallet;
     if (chainCode != null) {
       try {
         wallet = BIP32.fromPublicKey(publicKey, chainCode);
       } catch (e) {
-        throw FormatException('Invalid crypto-hdkey public key or chain code: $e');
+        if (!_allowsRawNonSecpKey(useInfo, path)) {
+          throw FormatException('Invalid crypto-hdkey public key or chain code: $e');
+        }
       }
-      wallet.parentFingerprint = parentFingerprint ?? 0;
-      wallet.depth = keypath.depth ?? keypath.components.length;
-      wallet.index = index;
+      if (wallet != null) {
+        wallet.parentFingerprint = parentFingerprint ?? 0;
+        wallet.depth = keypath.depth ?? keypath.components.length;
+        wallet.index = index;
+      }
     }
 
     return CryptoHDKeyUR(
@@ -201,21 +210,30 @@ class CryptoHDKeyUR extends UR {
     // 获取公钥和链码：优先使用 wallet，否则使用直接提供的字段
     final pubKey = wallet?.publicKey ?? publicKey;
     final chain = wallet?.chainCode ?? chainCode;
+    final fields = CompactToStringFields();
 
-    return '''
-{
-"useInfo":${useInfo?.toString() ?? 'null'},
-"derivationPath":"$path",
-"childrenPath":"${childrenPath ?? ''}",
-"sourceFingerprint":"${sourceFingerprint ?? ''}",
-"xfpFormat":"${xfpFormat ?? ''}",
-"masterFingerprint":"${wallet != null ? hex.encode(wallet!.fingerprint) : ''}",
-"extendedPublicKey": "${wallet?.toBase58() ?? ''}",
-"publicKey": "${pubKey != null ? hex.encode(pubKey) : ''}",
-"chainCode": "${chain != null ? hex.encode(chain) : ''}",
-"name":"$name",
-"note":"${note ?? ''}"
-}
-  ''';
+    fields.addRaw('useInfo', useInfo?.toString());
+    fields.addString('derivationPath', path);
+    fields.addString('childrenPath', childrenPath);
+    fields.addString('sourceFingerprint', sourceFingerprint);
+    fields.addString('xfpFormat', xfpFormat);
+    fields.addString('masterFingerprint', wallet != null ? hex.encode(wallet!.fingerprint) : null);
+    fields.addString('extendedPublicKey', wallet?.toBase58());
+    fields.addString('publicKey', pubKey != null && pubKey.isNotEmpty ? hex.encode(pubKey) : null);
+    fields.addString('chainCode', chain != null && chain.isNotEmpty ? hex.encode(chain) : null);
+    fields.addString('name', name);
+    fields.addString('note', note);
+
+    return fields.toString();
+  }
+
+  static bool _allowsRawNonSecpKey(CryptoCoinInfo? useInfo, String path) {
+    final coinType = useInfo?.coinType ?? _coinTypeFromPath(path);
+    return coinType == CoinType.SOL;
+  }
+
+  static int? _coinTypeFromPath(String path) {
+    final match = RegExp(r"^m/44'/(\d+)'").firstMatch(path);
+    return match == null ? null : int.tryParse(match.group(1)!);
   }
 }

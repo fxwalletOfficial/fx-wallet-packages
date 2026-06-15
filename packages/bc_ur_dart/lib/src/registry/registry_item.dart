@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
@@ -132,6 +133,33 @@ abstract class RegistryItem {
     throw ArgumentError("Invalid text at key $key");
   }
 
+  static String readText(CborMap map, int key) {
+    return readOptionalText(map, key) ??
+        (throw ArgumentError("Missing text at key $key"));
+  }
+
+  static Uint8List jsonBytes(Object? value) {
+    return Uint8List.fromList(utf8.encode(jsonEncode(value)));
+  }
+
+  static dynamic readJson(CborMap map, int key) {
+    final bytes = readBytes(map, key);
+    return jsonDecode(utf8.decode(bytes));
+  }
+
+  static Map<String, dynamic> readJsonMap(CborMap map, int key) {
+    final value = readJson(map, key);
+    if (value is Map) return Map<String, dynamic>.from(value);
+    throw ArgumentError('Invalid json map at key $key');
+  }
+
+  static List<dynamic>? readOptionalJsonList(CborMap map, int key) {
+    if (!hasKey(map, key)) return null;
+    final value = readJson(map, key);
+    if (value is List<dynamic>) return value;
+    throw ArgumentError('Invalid json list at key $key');
+  }
+
   static bool hasKey(CborMap map, int key) {
     return map.containsKey(CborSmallInt(key));
   }
@@ -145,12 +173,14 @@ abstract class RegistryItem {
 
     if (value is CborMap) {
       // 标准路径：tagged CborMap 内联嵌套
-      return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian).decodeFromCbor(value) as CryptoKeypath;
+      return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian)
+          .decodeFromCbor(value) as CryptoKeypath;
     }
 
     if (value is CborBytes) {
       // 防御路径：兼容旧版 CborBytes 格式
-      return CryptoKeypath.fromCBOR(Uint8List.fromList(value.bytes), sourceFingerprintEndian: sourceFingerprintEndian);
+      return CryptoKeypath.fromCBOR(Uint8List.fromList(value.bytes),
+          sourceFingerprintEndian: sourceFingerprintEndian);
     }
 
     throw ArgumentError(

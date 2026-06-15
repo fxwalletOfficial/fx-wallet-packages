@@ -47,6 +47,11 @@ class BchOutput {
 }
 
 class BchSignRequestUR extends UR {
+  /// Keystone 交易所属链的资产代码。
+  ///
+  /// Keystone 的 BCH/DOGE 等 UTXO 交易共用 [BchTx] 结构承载输入输出，
+  /// 设备端通过 [coinCode] 区分最终签名链，默认保持历史 BCH 行为。
+  final String coinCode;
   final String requestId;
   final String xfp;
   final String hdPath;
@@ -54,12 +59,20 @@ class BchSignRequestUR extends UR {
 
   BchSignRequestUR({
     required UR ur,
+    this.coinCode = 'BCH',
     required this.requestId,
     required this.xfp,
     required this.hdPath,
     this.origin,
   }) : super(payload: ur.payload, type: ur.type);
 
+  /// 构建 Keystone UTXO 签名请求。
+  ///
+  /// [coinCode] 默认是 `BCH`，Doge 等同源 UTXO 链可以传入自己的大写资产代码。
+  /// 当前 Keystone UTXO payload 固定使用 8 位小数，调用方只应传入同样采用
+  /// 8-decimal satoshi 单位的 coin code。
+  /// Payload 仍使用 Keystone 现有的 [BchTx] oneof 字段，避免创建设备端不认识的新
+  /// registry type。
   factory BchSignRequestUR.fromTransaction({
     required List<BchInput> inputs,
     required List<BchOutput> outputs,
@@ -69,6 +82,7 @@ class BchSignRequestUR extends UR {
     String? requestId,
     String? origin,
     int dustThreshold = 546,
+    String coinCode = 'BCH',
   }) {
     final id = requestId ?? const Uuid().v4();
 
@@ -82,7 +96,7 @@ class BchSignRequestUR extends UR {
 
     // 2. 构建 Payload → SignTransaction → BchTx
     final signTransaction = SignTransaction()
-      ..coinCode = 'BCH'
+      ..coinCode = coinCode
       ..signId = id
       ..hdPath = hdPath
       ..timestamp = Int64(DateTime.now().millisecondsSinceEpoch)
@@ -93,7 +107,7 @@ class BchSignRequestUR extends UR {
       ..type = Payload_Type.TYPE_SIGN_TX
       ..xfp = xfp
       ..signTx = signTransaction;
-    
+
     // 外层包 Base
     final base = Base()
       ..version = 2
@@ -103,7 +117,7 @@ class BchSignRequestUR extends UR {
     // 3. gzip 压缩 Base
     final compressed = GZipCodec().encode(base.writeToBuffer());
     final signDataBytes = Uint8List.fromList(compressed);
-    
+
     // 4. 封装为 BCH-SIGN-REQUEST CBOR
     // field 1: signData(bytes), field 2: origin(string, optional)
     final ur = UR.fromCBOR(
@@ -116,6 +130,7 @@ class BchSignRequestUR extends UR {
 
     return BchSignRequestUR(
       ur: ur,
+      coinCode: coinCode,
       requestId: id,
       xfp: xfp,
       hdPath: hdPath,
@@ -144,6 +159,7 @@ class BchSignRequestUR extends UR {
     // 取出 signTx
     final signTx = payload.signTx;
     final signId = signTx.signId;
+    final coinCode = signTx.coinCode;
     final xfp = payload.xfp;
     final hdPath = signTx.hdPath;
 
@@ -152,6 +168,7 @@ class BchSignRequestUR extends UR {
 
     return BchSignRequestUR(
       ur: ur,
+      coinCode: coinCode,
       requestId: signId,
       xfp: xfp,
       hdPath: hdPath,

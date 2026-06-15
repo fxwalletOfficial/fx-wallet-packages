@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
+import 'package:bc_ur_dart/src/models/key/to_string_fields.dart';
 import 'package:convert/convert.dart';
 
 final mtiType = RegistryType.CRYPTO_MULTI_ACCOUNTS.type;
@@ -29,7 +30,8 @@ class CryptoMultiAccountsUR extends UR {
 
   static CryptoMultiAccountsUR fromUR({required UR ur}) {
     if (ur.type.toLowerCase() != mtiType) {
-      throw FormatException('Invalid crypto-multi-accounts UR type: ${ur.type}');
+      throw FormatException(
+          'Invalid crypto-multi-accounts UR type: ${ur.type}');
     }
     final CborMap data;
     try {
@@ -41,10 +43,12 @@ class CryptoMultiAccountsUR extends UR {
     // field 1: masterFingerprint
     final fpValue = data[CborSmallInt(1)];
     if (fpValue is! CborInt) {
-      throw const FormatException('Invalid crypto-multi-accounts master fingerprint field');
+      throw const FormatException(
+          'Invalid crypto-multi-accounts master fingerprint field');
     }
     final fpRaw = fpValue.toInt();
-    final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
+    final fpBytes = Uint8List(4)
+      ..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
     final masterFingerprint = hex.encode(fpBytes);
 
     // field 2: keys 列表
@@ -57,7 +61,8 @@ class CryptoMultiAccountsUR extends UR {
     for (var index = 0; index < keysValue.length; index++) {
       final item = keysValue[index];
       if (item is! CborMap) {
-        throw FormatException('Invalid crypto-multi-accounts key entry at index $index');
+        throw FormatException(
+            'Invalid crypto-multi-accounts key entry at index $index');
       }
       final keyUr = UR(
         type: hdType,
@@ -67,7 +72,8 @@ class CryptoMultiAccountsUR extends UR {
         final chainInfo = CryptoHDKeyUR.fromUR(ur: keyUr);
         chainList.add(chainInfo);
       } catch (e) {
-        throw FormatException('Invalid crypto-multi-accounts key entry at index $index: $e');
+        throw FormatException(
+            'Invalid crypto-multi-accounts key entry at index $index: $e');
       }
     }
 
@@ -116,10 +122,13 @@ class CryptoMultiAccountsUR extends UR {
         CborSmallInt(1): CborInt(BigInt.from(fpInt)),
         CborSmallInt(2): CborList(chains.map((e) => e.decodeCBOR()).toList()),
         if (device.isNotEmpty) CborSmallInt(3): CborString(device),
-        if (deviceId != null && deviceId.isNotEmpty) CborSmallInt(4): CborString(deviceId),
+        if (deviceId != null && deviceId.isNotEmpty)
+          CborSmallInt(4): CborString(deviceId),
         CborSmallInt(5): CborString(version),
-        if (walletName != null && walletName.isNotEmpty) CborSmallInt(6): CborString(walletName),
-        if (xfpFormat != null && xfpFormat.isNotEmpty) CborSmallInt(7): CborString(xfpFormat),
+        if (walletName != null && walletName.isNotEmpty)
+          CborSmallInt(6): CborString(walletName),
+        if (xfpFormat != null && xfpFormat.isNotEmpty)
+          CborSmallInt(7): CborString(xfpFormat),
       }),
     );
 
@@ -137,15 +146,16 @@ class CryptoMultiAccountsUR extends UR {
   }
 
   @override
-  String toString() => '''
-{
-"masterFingerprint":"$masterFingerprint",
-"walletName":"${walletName ?? ''}",
-"device":"$device",
-"deviceId":"${deviceId ?? ''}",
-"version":"${version ?? ''}",
-"xfpFormat":"${xfpFormat ?? ''}",
-"chains":${chains.map((e) => e.toString()).join(',')}
-}
-  ''';
+  String toString() {
+    final fields = CompactToStringFields();
+
+    fields.addString('masterFingerprint', masterFingerprint);
+    fields.addString('walletName', walletName);
+    fields.addString('device', device);
+    fields.addString('deviceId', deviceId);
+    fields.addString('version', version);
+    fields.addString('xfpFormat', xfpFormat);
+    fields.addRaw('chains', '[${chains.map((e) => e.toString()).join(',')}]');
+    return fields.toString();
+  }
 }
