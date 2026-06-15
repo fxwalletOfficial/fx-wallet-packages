@@ -33,6 +33,9 @@ void main() {
     expect(
       configuredTypes,
       containsAll({
+        'sc-sign-request',
+        'scp-sign-request',
+        'sc-signature',
         'bch-sign-request',
         'bch-signature',
         'keystone-tron-sign-request',
@@ -55,6 +58,17 @@ void main() {
       expect(parsed['isError'], isNot(true), reason: '${config.type}: $parsed');
       expect(parsed['type'], isNotEmpty,
           reason: '${config.type} returned empty type');
+
+      final fields = parsed['fields'] as Map<String, dynamic>;
+      if (config.type == 'sc-sign-request' ||
+          config.type == 'scp-sign-request') {
+        expect(fields['requestId'], '123e4567-e89b-12d3-a456-426614174000');
+        expect(fields['chain'], mock['chain']);
+        expect(fields['signingPayloadData'], contains('siacoinOutputs'));
+      } else if (config.type == 'sc-signature') {
+        expect(fields['requestId'], '123e4567-e89b-12d3-a456-426614174000');
+        expect(fields['broadcastTx'], contains('signature-bytes'));
+      }
     }
   });
 }

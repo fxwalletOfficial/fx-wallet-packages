@@ -184,6 +184,37 @@ Map<String, dynamic> parseUR(UR ur) {
           },
         };
 
+      // ── Sia ───────────────────────────────────────────
+      case 'sc-sign-request':
+        final req = ScSignRequest.fromUR(ur);
+        return {
+          'type': ur.type,
+          'fields': {
+            'requestId': req.getRequestIdString(),
+            'chain': req.chain.isEmpty ? '—' : req.chain,
+            'signingPayloadData': const JsonEncoder.withIndent('  ').convert(req.signingPayloadData),
+            'path': req.path,
+            'xfp': req.xfp,
+            'address': req.address,
+            'publicKey': req.publicKey,
+            'fee': req.fee ?? '—',
+            'outputs': req.outputs == null ? '—' : const JsonEncoder.withIndent('  ').convert(req.outputs),
+            'crossChainFee': req.crossChainFee ?? '—',
+            'origin': req.origin ?? '—',
+          },
+        };
+
+      case 'sc-signature':
+        final sig = ScSignature.fromUR(ur);
+        return {
+          'type': ur.type,
+          'fields': {
+            'requestId': sig.getRequestIdString(),
+            'broadcastTx': const JsonEncoder.withIndent('  ').convert(sig.broadcastTx),
+            'origin': sig.origin ?? '—',
+          },
+        };
+
       // ── PSBT (Bitcoin) ─────────────────────────────────
       case 'psbt-sign-request':
         final req = PsbtSignRequestUR.fromUR(ur: ur);

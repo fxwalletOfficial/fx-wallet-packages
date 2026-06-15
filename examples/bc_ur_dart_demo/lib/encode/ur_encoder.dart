@@ -125,6 +125,23 @@ UR buildUR(String type, Map<String, dynamic> params) {
         origin: params['origin'] as String?,
       );
 
+    // ── Sia ──────────────────────────────────────────────────
+    case 'sc-sign-request':
+    case 'scp-sign-request':
+      return ScSignRequest.buildUR(
+        requestId: params['requestId'] as String?,
+        xfp: params['xfp'] as String,
+        path: params['path'] as String,
+        address: params['address'] as String,
+        publicKey: params['publicKey'] as String,
+        signingPayloadData: Map<String, dynamic>.from(params['signingPayloadData'] as Map),
+        fee: params['fee'] as String?,
+        outputs: params['outputs'] as List?,
+        origin: params['origin'] as String?,
+        chain: params['chain'] as String? ?? (type.toLowerCase() == 'scp-sign-request' ? 'scp' : 'sc'),
+        crossChainFee: params['crossChainFee'] as String?,
+      );
+
     // ── PSBT (Bitcoin) ────────────────────────────────────────
     case 'psbt-sign-request':
       return PsbtSignRequestUR.fromTypedTransaction(
@@ -266,6 +283,14 @@ UR buildUR(String type, Map<String, dynamic> params) {
         signature: _hex(params['signature'] as String),
         origin: params['origin'] as String?,
       ).toUR();
+
+    // ── Sia Signature ────────────────────────────────────────
+    case 'sc-signature':
+      return ScSignature.buildUR(
+        requestId: params['requestId'] as String?,
+        broadcastTx: Map<String, dynamic>.from(params['broadcastTx'] as Map),
+        origin: params['origin'] as String?,
+      );
 
     // ── PSBT Signature ────────────────────────────────────────
     case 'psbt-signature':

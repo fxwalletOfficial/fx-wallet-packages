@@ -53,6 +53,20 @@ class UrTypeConfig {
 // 所有类型配置
 // ─────────────────────────────────────────────────────────────
 
+const List<FieldConfig> _kScSignRequestFields = [
+  FieldConfig(key: 'requestId', label: 'Request ID', type: FieldType.text, required: false),
+  FieldConfig(key: 'chain', label: 'Chain', type: FieldType.dropdown, options: ['sc', 'scp']),
+  FieldConfig(key: 'signingPayloadData', label: 'Signing Payload Data (JSON)', type: FieldType.jsonMap),
+  FieldConfig(key: 'path', label: 'Derivation Path', type: FieldType.path),
+  FieldConfig(key: 'xfp', label: 'Master Fingerprint', type: FieldType.hex),
+  FieldConfig(key: 'address', label: 'Address', type: FieldType.address),
+  FieldConfig(key: 'publicKey', label: 'Public Key', type: FieldType.text),
+  FieldConfig(key: 'fee', label: 'Fee', type: FieldType.text, required: false),
+  FieldConfig(key: 'outputs', label: 'Outputs (JSON)', type: FieldType.jsonList, required: false),
+  FieldConfig(key: 'crossChainFee', label: 'Cross Chain Fee', type: FieldType.text, required: false),
+  FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
+];
+
 const List<UrTypeConfig> kUrTypeConfigs = [
   // ── ETH ──────────────────────────────────────────────────
   UrTypeConfig(
@@ -146,6 +160,23 @@ const List<UrTypeConfig> kUrTypeConfigs = [
       FieldConfig(key: 'outputs', label: 'Outputs (JSON)', type: FieldType.jsonList, required: false, hint: '[{"address":"...","amount":"1000000"}]'),
       FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
+  ),
+
+  // ── Sia ───────────────────────────────────────────────────
+  UrTypeConfig(
+    type: 'sc-sign-request',
+    label: 'SC Sign Request',
+    group: 'Sia',
+    isSignRequest: true,
+    fields: _kScSignRequestFields,
+  ),
+
+  UrTypeConfig(
+    type: 'scp-sign-request',
+    label: 'SCP Sign Request',
+    group: 'Sia',
+    isSignRequest: true,
+    fields: _kScSignRequestFields,
   ),
 
   // ── PSBT ──────────────────────────────────────────────────
@@ -295,6 +326,18 @@ const List<UrTypeConfig> kUrTypeConfigs = [
     fields: [
       FieldConfig(key: 'requestId', label: 'Request ID (hex)', type: FieldType.hex),
       FieldConfig(key: 'signature', label: 'Signature (hex)', type: FieldType.hex),
+      FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
+    ],
+  ),
+
+  // ── Sia Signature ─────────────────────────────────────────
+  UrTypeConfig(
+    type: 'sc-signature',
+    label: 'SC Signature',
+    group: 'Sia',
+    fields: [
+      FieldConfig(key: 'requestId', label: 'Request ID', type: FieldType.text),
+      FieldConfig(key: 'broadcastTx', label: 'Broadcast TX (JSON)', type: FieldType.jsonMap),
       FieldConfig(key: 'origin', label: 'Origin', type: FieldType.text, required: false),
     ],
   ),

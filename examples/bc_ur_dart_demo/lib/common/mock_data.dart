@@ -84,6 +84,50 @@ const kMockAlphSignRequest = {
   ],
 };
 
+const _kMockScSignRequestBase = {
+  'requestId': '123e4567-e89b-12d3-a456-426614174000',
+  'xfp': 'A1B2C3D4',
+  'path': "m/44'/1991'/0'",
+  'address': 'sender-address',
+  'publicKey': 'ed25519-public-key',
+  'signingPayloadData': {
+    'siacoinInputs': [
+      {
+        'parent': {
+          'id': 'input-id',
+          'siacoinOutput': {
+            'value': '1000000000000000000000000',
+            'address': 'sender-address',
+          },
+        },
+        'satisfiedPolicy': {
+          'policy': {'type': 'pk', 'key': 'ed25519-public-key'},
+          'signatures': [],
+        },
+      }
+    ],
+    'siacoinOutputs': [
+      {'value': '123456789012345678901234', 'address': 'receiver-address'}
+    ],
+  },
+  'fee': '1000000000000000000000',
+  'outputs': [
+    {'address': 'receiver-address', 'amount': '123456789012345678901234'}
+  ],
+  'origin': _kOrigin,
+};
+
+const kMockScSignRequest = {
+  ..._kMockScSignRequestBase,
+  'chain': 'sc',
+};
+
+const kMockScpSignRequest = {
+  ..._kMockScSignRequestBase,
+  'chain': 'scp',
+  'crossChainFee': '0.3',
+};
+
 const kMockPsbtSignRequest = {
   'psbt': '70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757'
       '924f545887bb2abdd7500000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c'
@@ -208,6 +252,27 @@ const kMockAlphSignature = {
   'requestId': _kRequestId,
   'signature': '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
       'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+  'origin': _kOrigin,
+};
+
+const kMockScSignature = {
+  'requestId': '123e4567-e89b-12d3-a456-426614174000',
+  'broadcastTx': {
+    'transactions': [
+      {
+        'siacoinInputs': [
+          {
+            'satisfiedPolicy': {
+              'signatures': ['signature-bytes']
+            }
+          }
+        ],
+        'siacoinOutputs': [
+          {'value': '123456789012345678901234', 'address': 'receiver-address'}
+        ],
+      }
+    ]
+  },
   'origin': _kOrigin,
 };
 
@@ -373,6 +438,8 @@ const Map<String, Map<String, dynamic>> kMockByType = {
   'sol-sign-request': kMockSolSignRequest,
   'tron-sign-request': kMockTronSignRequest,
   'alph-sign-request': kMockAlphSignRequest,
+  'sc-sign-request': kMockScSignRequest,
+  'scp-sign-request': kMockScpSignRequest,
   'psbt-sign-request': kMockPsbtSignRequest,
   'btc-sign-request': kMockGsplSignRequest,
   'bch-sign-request': kMockBchSignRequest,
@@ -385,6 +452,7 @@ const Map<String, Map<String, dynamic>> kMockByType = {
   'sol-signature': kMockSolSignature,
   'tron-signature': kMockTronSignature,
   'alph-signature': kMockAlphSignature,
+  'sc-signature': kMockScSignature,
   'psbt-signature': kMockPsbtSignature,
   'crypto-psbt': kMockCryptoPsbt,
   'btc-signature': kMockGsplSignature,
