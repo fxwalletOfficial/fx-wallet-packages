@@ -34,6 +34,11 @@ anyhow = "1"
 rand = "0.8.5"
 serde = "1"
 serde_json = "1"
+# parameter_preflight verifies provisioned proving-key files by SHA-256 against the
+# embedded metadata checksums — same digest snarkvm-parameters' `checksum!` uses
+# (sha2 + lowercase hex), so the comparison matches byte-for-byte.
+sha2 = "0.10"
+hex = "0.4"
 
 [dev-dependencies]
 # Enables snarkVM's `state_path::test_helpers::sample_global_state_path`, so the

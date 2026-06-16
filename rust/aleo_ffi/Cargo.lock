@@ -73,9 +73,11 @@ version = "0.1.0"
 dependencies = [
  "aleo-std-storage",
  "anyhow",
+ "hex",
  "rand",
  "serde",
  "serde_json",
+ "sha2",
  "snarkvm-console",
  "snarkvm-console-program",
  "snarkvm-ledger-block",
