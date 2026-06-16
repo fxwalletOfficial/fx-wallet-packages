@@ -16,7 +16,7 @@ use std::slice;
 
 use rand::rngs::OsRng;
 use snarkvm_console::account::{Address, PrivateKey, Signature, ViewKey};
-use snarkvm_console::network::MainnetV0;
+use snarkvm_console::network::{MainnetV0, TestnetV0};
 use snarkvm_console::prelude::*;
 use snarkvm_console::program::{
     Ciphertext, Identifier, InputID, Literal, Plaintext, ProgramID, Record,
@@ -37,12 +37,19 @@ use aleo_std_storage::StorageMode;
 /// these account operations.
 type Net = MainnetV0;
 
-/// Borrows a C string as `&str`. Invalid UTF-8 yields "" rather than panicking,
-/// so malformed input is handled by the caller's normal "" error path instead
-/// of unwinding across the FFI boundary (which aborts the process).
+/// Borrows a C string as `&str`. A null pointer or invalid UTF-8 yields "" rather
+/// than reading out of bounds / panicking, so malformed or absent input is handled
+/// by the caller's normal "" / error path instead of undefined behaviour or
+/// unwinding across the FFI boundary (which aborts the process). `CStr::from_ptr`
+/// is UB on null, and that UB happens before — and cannot be caught by — the
+/// `catch_unwind` envelope wrapper, so the null check must live here.
 ///
-/// SAFETY: `p` must be a valid NUL-terminated C string for the duration of the call.
+/// SAFETY: `p` is null, or a valid NUL-terminated C string for the duration of the
+/// call.
 unsafe fn read_str<'a>(p: *const c_char) -> &'a str {
+    if p.is_null() {
+        return "";
+    }
     CStr::from_ptr(p).to_str().unwrap_or("")
 }
 
@@ -345,8 +352,8 @@ pub unsafe extern "C" fn decrypt_to_private_key(
 
 /// A fresh in-memory VM (credits.aleo and the other built-in programs are
 /// bundled in snarkVM, so no network fetch is needed to authorize/execute them).
-fn new_vm() -> anyhow::Result<VM<Net, ConsensusMemory<Net>>> {
-    VM::from(ConsensusStore::<Net, ConsensusMemory<Net>>::open(StorageMode::Production)?)
+fn new_vm<N: Network>() -> anyhow::Result<VM<N, ConsensusMemory<N>>> {
+    VM::from(ConsensusStore::<N, ConsensusMemory<N>>::open(StorageMode::Production)?)
 }
 
 /// Rejects a fee the network can never accept, *before* the expensive fee
@@ -422,7 +429,7 @@ const IMPORT_LOAD_DEADLINE: std::time::Duration = std::time::Duration::from_secs
 const MAX_IMPORT_PROGRAMS: usize = 256;
 
 /// True for built-in programs and anything already loaded in the process.
-fn program_is_present(vm: &VM<Net, ConsensusMemory<Net>>, id: &ProgramID<Net>) -> bool {
+fn program_is_present<N: Network>(vm: &VM<N, ConsensusMemory<N>>, id: &ProgramID<N>) -> bool {
     id.to_string() == "credits.aleo" || vm.process().read().contains_program(id)
 }
 
@@ -437,9 +444,9 @@ fn program_is_present(vm: &VM<Net, ConsensusMemory<Net>>, id: &ProgramID<Net>) -
 /// the load deadline *before* each call, so no new add starts once the budget
 /// is spent, but a call already under way runs to completion: the deadline
 /// bounds when adds *start*, with an overshoot of at most one program's add.
-fn add_fetched_program(
-    vm: &VM<Net, ConsensusMemory<Net>>,
-    program: &Program<Net>,
+fn add_fetched_program<N: Network>(
+    vm: &VM<N, ConsensusMemory<N>>,
+    program: &Program<N>,
     edition: u16,
 ) -> anyhow::Result<()> {
     let process = vm.process();
@@ -658,30 +665,30 @@ const MAX_STATE_ROOT_BYTES: usize = 256;
 /// `MAX_INPUTS` record inputs per transition across at most `MAX_TRANSITIONS`
 /// transitions. The protocol bounds the required commitments to this, so it is a
 /// tight, protocol-grounded entry cap on the node-supplied `state_paths_json`.
-fn max_state_paths() -> usize {
-    Net::MAX_INPUTS.saturating_mul(Transaction::<Net>::MAX_TRANSITIONS)
+fn max_state_paths<N: Network>() -> usize {
+    N::MAX_INPUTS.saturating_mul(Transaction::<N>::MAX_TRANSITIONS)
 }
 
 /// Parses node-supplied state paths, rejecting an oversized blob *before* serde
 /// (byte budget) and an over-long array *after* (entry budget). An empty/blank
 /// input is an empty set (a public flow with no record inputs).
-fn parse_state_paths(state_paths_json: &str) -> anyhow::Result<Vec<StatePath<Net>>> {
+fn parse_state_paths<N: Network>(state_paths_json: &str) -> anyhow::Result<Vec<StatePath<N>>> {
     let state_paths_json = state_paths_json.trim();
     if state_paths_json.is_empty() {
         return Ok(Vec::new());
     }
-    let byte_budget = max_state_paths().saturating_mul(MAX_STATE_PATH_BYTES);
+    let byte_budget = max_state_paths::<N>().saturating_mul(MAX_STATE_PATH_BYTES);
     anyhow::ensure!(
         state_paths_json.len() <= byte_budget,
         "state_paths_json is {} bytes, over the {byte_budget}-byte budget",
         state_paths_json.len()
     );
-    let paths: Vec<StatePath<Net>> = serde_json::from_str(state_paths_json)?;
+    let paths: Vec<StatePath<N>> = serde_json::from_str(state_paths_json)?;
     anyhow::ensure!(
-        paths.len() <= max_state_paths(),
+        paths.len() <= max_state_paths::<N>(),
         "state_paths_json has {} entries, over the {}-entry budget",
         paths.len(),
-        max_state_paths()
+        max_state_paths::<N>()
     );
     Ok(paths)
 }
@@ -708,11 +715,11 @@ fn static_query(
 /// [`static_query`] over already-parsed paths, so a caller that parsed the JSON
 /// once (the exact-match guard) does not pay the serde cost twice on a
 /// budget-sized blob.
-fn static_query_from_paths(
+fn static_query_from_paths<N: Network>(
     height: u32,
-    paths: Vec<StatePath<Net>>,
+    paths: Vec<StatePath<N>>,
     public_state_root: &str,
-) -> anyhow::Result<StaticQuery<Net>> {
+) -> anyhow::Result<StaticQuery<N>> {
     let public_state_root = public_state_root.trim();
     anyhow::ensure!(
         public_state_root.len() <= MAX_STATE_ROOT_BYTES,
@@ -725,7 +732,8 @@ fn static_query_from_paths(
             !public_state_root.is_empty(),
             "public flow (no state paths) requires a public_state_root"
         );
-        let state_root = <Net as Network>::StateRoot::from_str(public_state_root)?;
+        let state_root = <N as Network>::StateRoot::from_str(public_state_root)
+            .map_err(|_| anyhow::anyhow!("invalid public_state_root"))?;
         return Ok(StaticQuery::new(height, state_root, HashMap::new()));
     }
 
@@ -747,7 +755,8 @@ fn static_query_from_paths(
         );
     }
     if !public_state_root.is_empty() {
-        let supplied = <Net as Network>::StateRoot::from_str(public_state_root)?;
+        let supplied = <N as Network>::StateRoot::from_str(public_state_root)
+            .map_err(|_| anyhow::anyhow!("invalid public_state_root"))?;
         anyhow::ensure!(
             supplied == state_root,
             "public_state_root disagrees with the state paths' derived root"
@@ -763,16 +772,16 @@ fn static_query_from_paths(
 /// node could pad the response with unrelated valid state paths; the byte/entry
 /// budget bounds size but not relevance. This is the tighter, protocol-grounded
 /// bound the phase-1 primitives deferred to phase 2.
-fn checked_static_query(
-    authorization: &Authorization<Net>,
+fn checked_static_query<N: Network>(
+    authorization: &Authorization<N>,
     height: u32,
     state_paths_json: &str,
     public_state_root: &str,
-) -> anyhow::Result<StaticQuery<Net>> {
+) -> anyhow::Result<StaticQuery<N>> {
     let expected: HashSet<String> = global_commitment_set(authorization).into_iter().collect();
     // Parse once, here, and hand the parsed paths to `static_query_from_paths`
     // (rather than `static_query`, which would re-parse the budget-sized blob).
-    let paths = parse_state_paths(state_paths_json)?;
+    let paths: Vec<StatePath<N>> = parse_state_paths(state_paths_json)?;
     let actual: HashSet<String> =
         paths.iter().map(|path| path.transition_leaf().id().to_string()).collect();
     anyhow::ensure!(
@@ -828,8 +837,8 @@ struct ProgramSourceEntry {
 /// machinery is dropped (no blocking I/O left to bound). A missing import or an
 /// import cycle in the supplied set is rejected as the walk stalls with programs
 /// left unadded.
-fn add_programs_from_sources(
-    vm: &VM<Net, ConsensusMemory<Net>>,
+fn add_programs_from_sources<N: Network>(
+    vm: &VM<N, ConsensusMemory<N>>,
     program_sources_json: &str,
 ) -> anyhow::Result<()> {
     add_programs_from_sources_within(
@@ -845,8 +854,8 @@ fn add_programs_from_sources(
 /// stops starting new CPU-bound work instead of parsing/building all of them; a
 /// single in-flight add still runs to completion (snarkVM exposes no way to
 /// interrupt it), an overshoot of at most one program.
-fn add_programs_from_sources_within(
-    vm: &VM<Net, ConsensusMemory<Net>>,
+fn add_programs_from_sources_within<N: Network>(
+    vm: &VM<N, ConsensusMemory<N>>,
     program_sources_json: &str,
     deadline: std::time::Instant,
 ) -> anyhow::Result<()> {
@@ -856,7 +865,7 @@ fn add_programs_from_sources_within(
     }
     // Total-byte budget before serde: `MAX_PROGRAM_SIZE` caps a single program,
     // not the set, so an unbounded acyclic closure is bounded here in aggregate.
-    let byte_budget = MAX_IMPORT_PROGRAMS.saturating_mul(Net::MAX_PROGRAM_SIZE);
+    let byte_budget = MAX_IMPORT_PROGRAMS.saturating_mul(N::MAX_PROGRAM_SIZE);
     anyhow::ensure!(
         program_sources_json.len() <= byte_budget,
         "program_sources_json is {} bytes, over the {byte_budget}-byte budget",
@@ -872,21 +881,21 @@ fn add_programs_from_sources_within(
     // Parse and validate each program; the node is not trusted, so a source over
     // the protocol maximum or one not declaring its claimed id is rejected.
     // Parsing is uninterruptible CPU work, so gate every one on the deadline.
-    let mut pending: HashMap<ProgramID<Net>, (Program<Net>, u16)> = HashMap::new();
+    let mut pending: HashMap<ProgramID<N>, (Program<N>, u16)> = HashMap::new();
     for entry in entries {
         anyhow::ensure!(
             std::time::Instant::now() < deadline,
             "program load exceeded its {IMPORT_LOAD_DEADLINE:?} time budget"
         );
         anyhow::ensure!(
-            entry.source.len() <= Net::MAX_PROGRAM_SIZE,
+            entry.source.len() <= N::MAX_PROGRAM_SIZE,
             "program '{}' source is {} bytes, over the {}-byte maximum",
             entry.id,
             entry.source.len(),
-            Net::MAX_PROGRAM_SIZE
+            N::MAX_PROGRAM_SIZE
         );
-        let program = Program::<Net>::from_str(&entry.source)?;
-        let declared = ProgramID::<Net>::from_str(&entry.id)?;
+        let program = Program::<N>::from_str(&entry.source)?;
+        let declared = ProgramID::<N>::from_str(&entry.id)?;
         anyhow::ensure!(
             program.id() == &declared,
             "program source declares '{}' but the entry id is '{declared}'",
@@ -903,7 +912,7 @@ fn add_programs_from_sources_within(
     // nothing while programs remain, an import is missing from the supplied set
     // or the set has a cycle — either way the caller's closure is rejected.
     while !pending.is_empty() {
-        let ready: Vec<ProgramID<Net>> = pending
+        let ready: Vec<ProgramID<N>> = pending
             .iter()
             .filter(|(_, (program, _))| {
                 program.imports().keys().all(|import| program_is_present(vm, import))
@@ -958,7 +967,7 @@ fn global_input_commitments(transitions: &[(Vec<String>, Vec<String>)]) -> Vec<S
 /// proving primitives' exact-match guard (so a node can supply neither extra nor
 /// missing paths). The `tcm` pairing + execution-order local filter mirror
 /// `Inclusion::insert_transition`; see [`required_commitments`].
-fn global_commitment_set(authorization: &Authorization<Net>) -> Vec<String> {
+fn global_commitment_set<N: Network>(authorization: &Authorization<N>) -> Vec<String> {
     let mut inputs_by_tcm: HashMap<String, Vec<String>> = HashMap::new();
     for request in authorization.to_vec_deque() {
         let entry = inputs_by_tcm.entry(request.tcm().to_string()).or_default();
@@ -1045,7 +1054,7 @@ pub unsafe extern "C" fn required_imports(program_source: *const c_char) -> *mut
 #[no_mangle]
 pub unsafe extern "C" fn state_root_from_paths(state_paths_json: *const c_char) -> *mut c_char {
     let inner = || -> anyhow::Result<String> {
-        let paths = parse_state_paths(read_str(state_paths_json))?;
+        let paths = parse_state_paths::<Net>(read_str(state_paths_json))?;
         let state_root =
             paths.first().ok_or_else(|| anyhow::anyhow!("no state paths"))?.global_state_root();
         for path in &paths {
@@ -1280,6 +1289,387 @@ pub unsafe extern "C" fn program_authorization_static(
     }
 }
 
+// ── Phase 4 FFI result envelope (docs/phase4-plan.md §8 Contract 1) ──────────
+//
+// New (PR2+) exports return a tagged, fail-closed JSON envelope instead of the
+// legacy ""-on-failure convention, so the Dart side can tell success from every
+// failure mode and never mistakes a non-empty error string for a proof. All such
+// exports run through `ffi_envelope`, which catches any unwinding panic — e.g. a
+// poisoned snarkVM parameter `lazy_static` — and reports it as the non-retryable
+// `restart_required` rather than letting it unwind across the C ABI (UB/abort).
+//
+//   ok:    {"ok":true, …}                       // per-export fields: `data`, `missing`, …
+//   error: {"ok":false,"code":…,"message":…}
+struct Envelope(serde_json::Value);
+
+impl Envelope {
+    /// `{"ok":true}` with no payload.
+    fn ok() -> Self {
+        Self(serde_json::json!({ "ok": true }))
+    }
+
+    /// `{"ok":true,"data":<data>}`.
+    fn ok_data(data: impl serde::Serialize) -> Self {
+        Self(serde_json::json!({ "ok": true, "data": data }))
+    }
+
+    /// `{"ok":false,"code":<code>,"message":<message>}`.
+    fn err(code: &str, message: impl Into<String>) -> Self {
+        Self(serde_json::json!({ "ok": false, "code": code, "message": message.into() }))
+    }
+
+    /// Serializes to the wire JSON. Infallible: a (never-expected) serialization
+    /// failure collapses to a constant fail-closed envelope rather than panicking
+    /// inside the panic-handling path.
+    fn to_json(&self) -> String {
+        serde_json::to_string(&self.0).unwrap_or_else(|_| {
+            r#"{"ok":false,"code":"restart_required","message":"envelope serialization failed"}"#
+                .to_string()
+        })
+    }
+}
+
+/// Runs `f` under `catch_unwind` and renders its [`Envelope`] (or a
+/// `restart_required` envelope on panic) to an owned C string. This is the single
+/// choke point that keeps panics from crossing the C ABI; `[profile.release]
+/// panic = "unwind"` (Cargo.toml) keeps it effective in release builds.
+///
+/// `AssertUnwindSafe` is sound here: the closures only borrow caller-provided
+/// input and compute over snarkVM types. aleo_ffi holds no lock or invariant a
+/// panic could leave inconsistent — the only cross-call state is snarkVM's
+/// process-global parameter cache, whose poisoning is exactly what
+/// `restart_required` signals to the caller.
+fn ffi_envelope(f: impl FnOnce() -> Envelope) -> *mut c_char {
+    let env = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f))
+        .unwrap_or_else(|_| Envelope::err("restart_required", "panic during FFI call"));
+    to_cstring(env.to_json())
+}
+
+/// Overrides the directory proving parameters are read from / written to (e.g. a
+/// mobile app sandbox; snarkVM has no env override). Set-once — see §8 Contract 2.
+/// `{"ok":true}` | `{"ok":false,"code":"param_dir_locked|invalid_path|restart_required","message":…}`.
+///
+/// SAFETY: `path` is null or a valid NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn ffi_set_parameter_dir(path: *const c_char) -> *mut c_char {
+    ffi_envelope(|| {
+        let path = unsafe { read_str(path) };
+        match snarkvm_parameters::set_parameter_dir(std::path::Path::new(path)) {
+            Ok(()) => Envelope::ok(),
+            Err(snarkvm_parameters::ParamDirError::InvalidPath) => {
+                Envelope::err("invalid_path", "parameter directory is empty or could not be created")
+            }
+            Err(snarkvm_parameters::ParamDirError::Locked) => Envelope::err(
+                "param_dir_locked",
+                "parameter directory is already set, or parameter loading has already begun",
+            ),
+        }
+    })
+}
+
+/// Reports the directory proving parameters load from (the override if set, else
+/// the default `~/.aleo`). `{"ok":true,"data":"<path>"}`.
+#[no_mangle]
+pub extern "C" fn ffi_aleo_dir() -> *mut c_char {
+    ffi_envelope(|| Envelope::ok_data(snarkvm_parameters::effective_parameter_dir().to_string_lossy().into_owned()))
+}
+
+// ── Phase 4 network-aware checked proving (docs/phase4-plan.md §8) ───────────
+//
+// The network type is embedded at authorize time (the tx network ID), so the
+// proving exports take a `network` string and dispatch to the matching snarkVM
+// monomorphization. Both `MainnetV0` and `TestnetV0` compile in (the base SRS is
+// shared, so it is not duplicated). These return the §8 Contract 1 envelope and
+// run under `ffi_envelope`'s `catch_unwind`, so a missing/corrupt proving
+// parameter (which panics deep in snarkVM) surfaces as `restart_required` rather
+// than aborting. v1 is credits-only: a custom-program authorization is rejected
+// with `unsupported_feature` before any proving (§8 Contract 3).
+
+/// The networks the checked exports can target (wire value = lowercase name,
+/// matching the existing `_network` arg convention).
+enum NetworkKind {
+    Mainnet,
+    Testnet,
+}
+
+fn parse_network(network: &str) -> Option<NetworkKind> {
+    match network.trim() {
+        "mainnet" => Some(NetworkKind::Mainnet),
+        "testnet" => Some(NetworkKind::Testnet),
+        _ => None,
+    }
+}
+
+/// True iff every execution request calls `credits.aleo`. v1 supports credits
+/// proving only; any other program (the same check on all three checked exports,
+/// §8 Contract 3) is rejected with `unsupported_feature` before proving.
+fn authorization_is_credits_only<N: Network>(authorization: &Authorization<N>) -> bool {
+    authorization
+        .to_vec_deque()
+        .iter()
+        .all(|request| request.program_id().to_string() == "credits.aleo")
+}
+
+/// v1 supports consensus versions V8..=V13 (the inclusion-proof era). `height`
+/// selects the version; outside the range is rejected with `unsupported_consensus`
+/// rather than clamped — a future version must never be mis-proven as V13.
+fn consensus_supported<N: Network>(height: u32) -> Result<(), Envelope> {
+    match N::CONSENSUS_VERSION(height) {
+        Ok(version) if (8..=13).contains(&(version as u16)) => Ok(()),
+        Ok(version) => Err(Envelope::err(
+            "unsupported_consensus",
+            format!("consensus version {} at height {height} is outside the supported V8..=V13", version as u16),
+        )),
+        Err(_) => Err(Envelope::err("unsupported_consensus", format!("no consensus version for height {height}"))),
+    }
+}
+
+/// DoS ceiling on a serialized authorization, applied *before* serde (which first
+/// builds a complete `serde_json::Value`, materializing even unrelated padding
+/// fields), so an untrusted oversized blob — a direct FFI caller can pass anything
+/// — cannot exhaust memory before validation (an OOM cannot be turned into an
+/// envelope by `catch_unwind`).
+///
+/// The bound is the network's `MAX_TRANSACTION_SIZE` (which bounds a whole
+/// transaction; an authorization carries no proofs, so it is smaller). It is NOT
+/// multiplied by `MAX_TRANSITIONS` — that already counts toward the transaction
+/// size, and a 32× looser cap would let a padding array expand to tens of MB as a
+/// `Value`. At this cap the intermediate `Value` stays within a few MB, while
+/// every honest credits authorization (KB-scale) is far under it.
+fn max_authorization_bytes<N: Network>() -> usize {
+    N::MAX_TRANSACTION_SIZE
+}
+
+/// v1 proves exactly ONE credits.aleo call. credits.aleo functions are leaf — the
+/// bundled `credits.aleo` has no `call` instructions and no imports — so a
+/// legitimate credits authorization is always exactly one request and one
+/// transition. Requiring that rejects every structurally-degenerate authorization
+/// snarkVM would otherwise prove only in part:
+///   - a folded duplicate (a duplicated request+transition passes snarkVM's
+///     equal-length check but the duplicate transition collapses in the
+///     transition `IndexMap`, leaving 2 requests for 1 transition); and
+///   - two independent authorizations concatenated (unique requests + transition
+///     IDs, equal counts, which snarkVM would prove starting from the first root
+///     while silently ignoring the second request).
+/// `len()` is the request count, `transitions()` the deduped transition map.
+fn authorization_is_single_transition<N: Network>(authorization: &Authorization<N>) -> bool {
+    authorization.len() == 1 && authorization.transitions().len() == 1
+}
+
+/// Shared parse + structure + credits-only + consensus gate for the checked
+/// proving exports. Returns the parsed authorization, or an error envelope.
+fn checked_proving_preconditions<N: Network>(authorization: &str, height: u32) -> Result<Authorization<N>, Envelope> {
+    let cap = max_authorization_bytes::<N>();
+    if authorization.len() > cap {
+        return Err(Envelope::err(
+            "invalid_input",
+            format!("authorization is {} bytes, over the {cap}-byte budget", authorization.len()),
+        ));
+    }
+    let authorization: Authorization<N> = serde_json::from_str(authorization)
+        .map_err(|e| Envelope::err("invalid_input", format!("invalid authorization: {e}")))?;
+    if !authorization_is_single_transition(&authorization) {
+        return Err(Envelope::err(
+            "invalid_input",
+            "a credits authorization must be exactly one transition (no extra, folded, or unconnected requests)",
+        ));
+    }
+    if !authorization_is_credits_only(&authorization) {
+        return Err(Envelope::err("unsupported_feature", "only credits.aleo proving is supported in this version"));
+    }
+    consensus_supported::<N>(height)?;
+    Ok(authorization)
+}
+
+fn execute_proof_checked_inner<N: Network>(
+    authorization: &str,
+    height: u32,
+    state_paths_json: &str,
+    public_state_root: &str,
+) -> Envelope {
+    let authorization = match checked_proving_preconditions::<N>(authorization, height) {
+        Ok(a) => a,
+        Err(env) => return env,
+    };
+    let proven = (|| -> anyhow::Result<String> {
+        let query = checked_static_query(&authorization, height, state_paths_json, public_state_root)?;
+        let vm = new_vm::<N>()?;
+        let (execution, _response) =
+            vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&execution)?)
+    })();
+    match proven {
+        Ok(data) => Envelope::ok_data(data),
+        Err(e) => Envelope::err("invalid_input", format!("execution proving failed: {e}")),
+    }
+}
+
+fn execute_fee_proof_checked_inner<N: Network>(
+    authorization: &str,
+    height: u32,
+    state_paths_json: &str,
+    public_state_root: &str,
+) -> Envelope {
+    let authorization = match checked_proving_preconditions::<N>(authorization, height) {
+        Ok(a) => a,
+        Err(env) => return env,
+    };
+    let proven = (|| -> anyhow::Result<String> {
+        let query = checked_static_query(&authorization, height, state_paths_json, public_state_root)?;
+        let vm = new_vm::<N>()?;
+        let fee = vm.execute_fee_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&fee)?)
+    })();
+    match proven {
+        Ok(data) => Envelope::ok_data(data),
+        Err(e) => Envelope::err("invalid_input", format!("fee proving failed: {e}")),
+    }
+}
+
+fn execute_program_proof_checked_inner<N: Network>(
+    authorization: &str,
+    program_sources_json: &str,
+    height: u32,
+    state_paths_json: &str,
+    public_state_root: &str,
+) -> Envelope {
+    // credits.aleo is built in, so a credits-only flow supplies an empty program
+    // closure — the Dart `AleoNode.programClosure` returns "[]" for credits.aleo,
+    // not "". Reject only a closure that actually contains program entries (a
+    // custom program, §8 Contract 3); "" and "[]" (JSON whitespace) are both empty.
+    // Detect emptiness WITHOUT deserializing the array: a direct FFI caller could
+    // otherwise force unbounded allocation/parsing of input that is rejected anyway
+    // (a non-empty or malformed value fails the `[ ... ]`-empty check, fail-closed).
+    // Trim only the four JSON whitespace bytes, not Rust's Unicode whitespace, so
+    // invalid JSON like `[\u{00A0}]` is rejected rather than read as empty.
+    let json_ws = |c: char| matches!(c, ' ' | '\t' | '\n' | '\r');
+    let closure = program_sources_json.trim_matches(json_ws);
+    let is_empty_closure = closure.is_empty()
+        || closure
+            .strip_prefix('[')
+            .and_then(|rest| rest.strip_suffix(']'))
+            .is_some_and(|inner| inner.trim_matches(json_ws).is_empty());
+    if !is_empty_closure {
+        return Envelope::err("unsupported_feature", "custom-program proving is not supported in this version");
+    }
+    let authorization = match checked_proving_preconditions::<N>(authorization, height) {
+        Ok(a) => a,
+        Err(env) => return env,
+    };
+    let proven = (|| -> anyhow::Result<String> {
+        let query = checked_static_query(&authorization, height, state_paths_json, public_state_root)?;
+        let vm = new_vm::<N>()?;
+        let (execution, _response) =
+            vm.execute_authorization_raw(authorization, &query, &mut rand::thread_rng())?;
+        Ok(serde_json::to_string(&execution)?)
+    })();
+    match proven {
+        Ok(data) => Envelope::ok_data(data),
+        Err(e) => Envelope::err("invalid_input", format!("execution proving failed: {e}")),
+    }
+}
+
+/// Network-aware [`execute_proof_static`]: proves an execution authorization for
+/// `network` against a [`StaticQuery`] built from pre-fetched node data, returning
+/// the §8 Contract 1 envelope (`{"ok":true,"data":"<execution>"}` or a tagged
+/// error). Credits-only.
+///
+/// SAFETY: the pointer args are null or NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_proof_checked(
+    network: *const c_char,
+    authorization: *const c_char,
+    height: u32,
+    state_paths_json: *const c_char,
+    public_state_root: *const c_char,
+) -> *mut c_char {
+    ffi_envelope(|| {
+        let network = unsafe { read_str(network) };
+        let authorization = unsafe { read_str(authorization) };
+        let state_paths_json = unsafe { read_str(state_paths_json) };
+        let public_state_root = unsafe { read_str(public_state_root) };
+        match parse_network(network) {
+            Some(NetworkKind::Mainnet) => {
+                execute_proof_checked_inner::<MainnetV0>(authorization, height, state_paths_json, public_state_root)
+            }
+            Some(NetworkKind::Testnet) => {
+                execute_proof_checked_inner::<TestnetV0>(authorization, height, state_paths_json, public_state_root)
+            }
+            None => Envelope::err("unsupported_network", format!("unknown network '{network}'")),
+        }
+    })
+}
+
+/// Network-aware [`execute_fee_proof_static`]: proves a fee authorization (a
+/// private fee spends its own record, so its state paths are its own snapshot;
+/// a public fee passes empty paths + a `public_state_root`). Credits-only.
+///
+/// SAFETY: the pointer args are null or NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_fee_proof_checked(
+    network: *const c_char,
+    authorization: *const c_char,
+    height: u32,
+    state_paths_json: *const c_char,
+    public_state_root: *const c_char,
+) -> *mut c_char {
+    ffi_envelope(|| {
+        let network = unsafe { read_str(network) };
+        let authorization = unsafe { read_str(authorization) };
+        let state_paths_json = unsafe { read_str(state_paths_json) };
+        let public_state_root = unsafe { read_str(public_state_root) };
+        match parse_network(network) {
+            Some(NetworkKind::Mainnet) => {
+                execute_fee_proof_checked_inner::<MainnetV0>(authorization, height, state_paths_json, public_state_root)
+            }
+            Some(NetworkKind::Testnet) => {
+                execute_fee_proof_checked_inner::<TestnetV0>(authorization, height, state_paths_json, public_state_root)
+            }
+            None => Envelope::err("unsupported_network", format!("unknown network '{network}'")),
+        }
+    })
+}
+
+/// Network-aware [`execute_program_proof_static`]. v1 is credits-only, so a
+/// non-empty `program_sources_json` (a custom program) is rejected with
+/// `unsupported_feature`; the symbol is kept so the Dart program path can bind it.
+///
+/// SAFETY: the pointer args are null or NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn execute_program_proof_checked(
+    network: *const c_char,
+    authorization: *const c_char,
+    program_sources_json: *const c_char,
+    height: u32,
+    state_paths_json: *const c_char,
+    public_state_root: *const c_char,
+) -> *mut c_char {
+    ffi_envelope(|| {
+        let network = unsafe { read_str(network) };
+        let authorization = unsafe { read_str(authorization) };
+        let program_sources_json = unsafe { read_str(program_sources_json) };
+        let state_paths_json = unsafe { read_str(state_paths_json) };
+        let public_state_root = unsafe { read_str(public_state_root) };
+        match parse_network(network) {
+            Some(NetworkKind::Mainnet) => execute_program_proof_checked_inner::<MainnetV0>(
+                authorization,
+                program_sources_json,
+                height,
+                state_paths_json,
+                public_state_root,
+            ),
+            Some(NetworkKind::Testnet) => execute_program_proof_checked_inner::<TestnetV0>(
+                authorization,
+                program_sources_json,
+                height,
+                state_paths_json,
+                public_state_root,
+            ),
+            None => Envelope::err("unsupported_network", format!("unknown network '{network}'")),
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1450,7 +1840,7 @@ mod tests {
     // A public transfer spends no records, so it needs no state paths: "[]".
     #[test]
     fn required_commitments_public_transfer_is_empty() {
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let authorization = vm
             .authorize(
                 &owner(),
@@ -1470,7 +1860,7 @@ mod tests {
     fn required_commitments_private_transfer_has_one() {
         let owner = owner();
         let record = plaintext_record(TEST_RECORD, &owner).unwrap();
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let authorization = vm
             .authorize(
                 &owner,
@@ -1611,7 +2001,7 @@ mod tests {
         let recipient = Address::<Net>::try_from(&other_key()).unwrap().to_string();
         let inputs =
             transfer_inputs("transfer_private", &recipient, 1, TEST_RECORD, &owner).unwrap();
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         vm.authorize(&owner, "credits.aleo", "transfer_private", inputs, &mut TestRng::default())
             .unwrap()
     }
@@ -1663,7 +2053,7 @@ mod tests {
         let owner = owner();
         let recipient = Address::<Net>::try_from(&other_key()).unwrap().to_string();
         let inputs = transfer_inputs("transfer_public", &recipient, 1, "", &owner).unwrap();
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let auth = vm
             .authorize(&owner, "credits.aleo", "transfer_public", inputs, &mut TestRng::default())
             .unwrap();
@@ -1680,9 +2070,9 @@ mod tests {
     // The state-paths byte budget rejects an oversized blob before parsing.
     #[test]
     fn state_paths_byte_budget_rejects_oversized() {
-        let over = max_state_paths() * MAX_STATE_PATH_BYTES + 1;
+        let over = max_state_paths::<Net>() * MAX_STATE_PATH_BYTES + 1;
         let blob = "[".to_string() + &"a".repeat(over);
-        let error = parse_state_paths(&blob).unwrap_err();
+        let error = parse_state_paths::<Net>(&blob).unwrap_err();
         assert!(error.to_string().contains("byte budget"), "got: {error}");
     }
 
@@ -1693,8 +2083,8 @@ mod tests {
         let mut rng = TestRng::default();
         let one =
             serde_json::to_string(&sample_global_state_path::<Net>(None, &mut rng).unwrap()).unwrap();
-        let json = format!("[{}]", vec![one; max_state_paths() + 1].join(","));
-        let error = parse_state_paths(&json).unwrap_err();
+        let json = format!("[{}]", vec![one; max_state_paths::<Net>() + 1].join(","));
+        let error = parse_state_paths::<Net>(&json).unwrap_err();
         assert!(error.to_string().contains("entry budget"), "got: {error}");
     }
 
@@ -1703,7 +2093,7 @@ mod tests {
     fn program_sources_byte_cap_rejects_oversized() {
         let over = MAX_IMPORT_PROGRAMS * Net::MAX_PROGRAM_SIZE + 1;
         let blob = "[".to_string() + &"x".repeat(over);
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let error = add_programs_from_sources(&vm, &blob).unwrap_err();
         assert!(error.to_string().contains("byte budget"), "got: {error}");
     }
@@ -1716,7 +2106,7 @@ mod tests {
             .map(|i| serde_json::json!({ "id": format!("p{i}.aleo"), "edition": 1, "source": "x" }))
             .collect();
         let json = serde_json::to_string(&entries).unwrap();
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let error = add_programs_from_sources(&vm, &json).unwrap_err();
         assert!(error.to_string().contains("program budget"), "got: {error}");
     }
@@ -1739,7 +2129,7 @@ mod tests {
             ("imp0.aleo", &["dep0.aleo".to_string()]),
             ("dep0.aleo", &[]),
         ]);
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         add_programs_from_sources(&vm, &json).unwrap();
         let process = vm.process();
         let process = process.read();
@@ -1752,7 +2142,7 @@ mod tests {
     #[test]
     fn add_programs_from_sources_rejects_missing_import() {
         let json = sources_json(&[("imp1.aleo", &["missing.aleo".to_string()])]);
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let error = add_programs_from_sources(&vm, &json).unwrap_err();
         assert!(error.to_string().contains("unresolved imports"), "got: {error}");
     }
@@ -1766,7 +2156,7 @@ mod tests {
             { "id": "honest.aleo", "edition": 1, "source": evil }
         ]))
         .unwrap();
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let error = add_programs_from_sources(&vm, &json).unwrap_err();
         assert!(error.to_string().contains("declares"), "got: {error}");
     }
@@ -1785,7 +2175,7 @@ mod tests {
             { "id": "big.aleo", "edition": 1, "source": bloated }
         ]))
         .unwrap();
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let error = add_programs_from_sources(&vm, &json).unwrap_err();
         assert!(error.to_string().contains("maximum"), "got: {error}");
     }
@@ -1801,7 +2191,7 @@ mod tests {
             ("cyclea.aleo", &["cycleb.aleo".to_string()]),
             ("cycleb.aleo", &["cyclea.aleo".to_string()]),
         ]);
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let error = add_programs_from_sources(&vm, &json).unwrap_err();
         assert!(
             error.to_string().contains("unresolved imports or an import cycle"),
@@ -1813,7 +2203,7 @@ mod tests {
     // An empty source set is a no-op (public flows supply no programs).
     #[test]
     fn add_programs_from_sources_empty_is_noop() {
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         add_programs_from_sources(&vm, "").unwrap();
         add_programs_from_sources(&vm, "[]").unwrap();
     }
@@ -1824,7 +2214,7 @@ mod tests {
     #[test]
     fn add_programs_from_sources_bounded_by_deadline() {
         let json = sources_json(&[("solo.aleo", &[])]);
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let expired = std::time::Instant::now() - std::time::Duration::from_secs(1);
         let error = add_programs_from_sources_within(&vm, &json, expired).unwrap_err();
         assert!(error.to_string().contains("time budget"), "got: {error}");
@@ -1868,7 +2258,7 @@ mod tests {
     fn required_commitments_excludes_transition_outputs() {
         let owner = owner();
         let record = plaintext_record(TEST_RECORD, &owner).unwrap();
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let auth = vm
             .authorize(
                 &owner,
@@ -2000,7 +2390,7 @@ mod tests {
     #[ignore = "proving: downloads keys + proves, run with `cargo test --release -- --ignored`"]
     fn execute_proof_static_public_transfer_end_to_end() {
         let owner = owner();
-        let vm = new_vm().unwrap();
+        let vm = new_vm::<Net>().unwrap();
         let auth = vm
             .authorize(
                 &owner,
@@ -2027,5 +2417,297 @@ mod tests {
         let execution: Execution<Net> = serde_json::from_str(&out).unwrap();
         // The proof carries the root static_query was given.
         assert_eq!(execution.global_state_root().to_string(), root);
+    }
+
+    // ── Network-aware checked proving exports (§8): the offline reject paths ────
+    // (The happy path is real SNARK proving — covered by the #[ignore] end-to-end
+    // test above for the equivalent `_static` export.)
+
+    fn call_envelope(ptr: *mut c_char) -> serde_json::Value {
+        let s = unsafe { CStr::from_ptr(ptr) }.to_str().unwrap().to_owned();
+        unsafe { free_string(ptr) };
+        serde_json::from_str(&s).unwrap_or_else(|_| panic!("non-JSON envelope: {s:?}"))
+    }
+
+    fn execute_proof_checked_call(network: &str, authorization: &str, height: u32) -> serde_json::Value {
+        let n = CString::new(network).unwrap();
+        let a = CString::new(authorization).unwrap();
+        let empty = CString::new("").unwrap();
+        call_envelope(unsafe {
+            execute_proof_checked(n.as_ptr(), a.as_ptr(), height, empty.as_ptr(), empty.as_ptr())
+        })
+    }
+
+    // ── The checked-proving input-validation contract (single source of truth) ──
+    //
+    // Every rejected input class → its envelope code, as ONE table. A new
+    // validation rule is a new row here, not a new scattered test — the deliberate
+    // countermeasure to fixing one input class per review round. The happy path is
+    // real SNARK proving, covered by the #[ignore] end-to-end test above.
+
+    /// A credits authorization whose duplicated request+transition folds in the
+    /// transition `IndexMap` (2 requests, 1 transition) — snarkVM's equal-length
+    /// check passes, but proving would ignore the extra request.
+    fn folded_duplicate_authorization() -> String {
+        let mut value: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&private_transfer_authorization()).unwrap()).unwrap();
+        for key in ["requests", "transitions"] {
+            let first = value[key][0].clone();
+            value[key].as_array_mut().expect("array field").push(first);
+        }
+        serde_json::to_string(&value).unwrap()
+    }
+
+    /// Two INDEPENDENT credits authorizations (distinct transition ids, equal
+    /// counts so nothing folds) concatenated — proving would start from the first
+    /// root and silently ignore the second request.
+    fn concatenated_authorizations() -> String {
+        let owner = owner();
+        let recipient = Address::<Net>::try_from(&other_key()).unwrap().to_string();
+        let auth_value = |amount: u64| -> serde_json::Value {
+            let inputs = transfer_inputs("transfer_public", &recipient, amount, "", &owner).unwrap();
+            let vm = new_vm::<Net>().unwrap();
+            let auth = vm
+                .authorize(&owner, "credits.aleo", "transfer_public", inputs, &mut TestRng::default())
+                .unwrap();
+            serde_json::from_str(&serde_json::to_string(&auth).unwrap()).unwrap()
+        };
+        let mut first = auth_value(1);
+        let second = auth_value(2);
+        for key in ["requests", "transitions"] {
+            let extra = second[key].as_array().unwrap().clone();
+            first[key].as_array_mut().unwrap().extend(extra);
+        }
+        serde_json::to_string(&first).unwrap()
+    }
+
+    fn call_program_proof(network: &str, authorization: &str, program_sources: &str, height: u32) -> serde_json::Value {
+        let n = CString::new(network).unwrap();
+        let a = CString::new(authorization).unwrap();
+        let s = CString::new(program_sources).unwrap();
+        let empty = CString::new("").unwrap();
+        call_envelope(unsafe {
+            execute_program_proof_checked(n.as_ptr(), a.as_ptr(), s.as_ptr(), height, empty.as_ptr(), empty.as_ptr())
+        })
+    }
+
+    #[test]
+    fn checked_proving_input_contract() {
+        let valid = || serde_json::to_string(&private_transfer_authorization()).unwrap();
+        let oversized = "x".repeat(max_authorization_bytes::<Net>() + 1); // pre-serde byte cap
+
+        // (label, network, authorization, height, expected envelope code)
+        let cases: Vec<(&str, &str, String, u32, &str)> = vec![
+            ("unknown network", "bogusnet", valid(), 17_000_000, "unsupported_network"),
+            ("unparseable authorization", "mainnet", "not json".to_string(), 17_000_000, "invalid_input"),
+            ("oversized authorization (byte cap, before serde)", "mainnet", oversized, 17_000_000, "invalid_input"),
+            ("folded duplicate transition", "mainnet", folded_duplicate_authorization(), 17_000_000, "invalid_input"),
+            ("two concatenated authorizations", "mainnet", concatenated_authorizations(), 17_000_000, "invalid_input"),
+            ("consensus below V8 (height 0 → V1)", "mainnet", valid(), 0, "unsupported_consensus"),
+        ];
+        for (label, network, authorization, height, expected) in cases {
+            let env = execute_proof_checked_call(network, &authorization, height);
+            assert_eq!(env["ok"], false, "{label}: expected rejection, got {env}");
+            assert_eq!(env["code"], expected, "{label}: {env}");
+        }
+        // NOTE: a non-credits authorization → `unsupported_feature` is enforced by
+        // `authorization_is_credits_only` but is not unit-tested here — building one
+        // offline needs a deployed custom program. It is covered for the program
+        // variant below (a custom program closure) and by code inspection.
+    }
+
+    #[test]
+    fn checked_program_proof_closure_contract() {
+        // The program variant adds the program-closure gate. An empty closure ("",
+        // "[]", or JSON whitespace) passes to proving — and then fails on the empty
+        // private-flow state paths (invalid_input), which proves it got *past* the
+        // gate. Anything with entries, a non-array shape, or non-JSON whitespace
+        // (e.g. NBSP) → unsupported_feature, without deserializing the array.
+        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
+
+        // (label, program_sources, expected envelope code)
+        let cases: &[(&str, &str, &str)] = &[
+            ("empty string closure", "", "invalid_input"),
+            ("empty array closure", "[]", "invalid_input"),
+            ("whitespace-only array", "[ \t\n\r]", "invalid_input"),
+            ("custom program entry", r#"[{"id":"foo.aleo","edition":0,"source":"program foo.aleo;"}]"#, "unsupported_feature"),
+            ("non-array object", "{}", "unsupported_feature"),
+            ("truncated array", "[ ", "unsupported_feature"),
+            ("non-JSON whitespace (NBSP)", "[\u{00A0}]", "unsupported_feature"),
+        ];
+        for (label, sources, expected) in cases {
+            let env = call_program_proof("mainnet", &auth, sources, 17_000_000);
+            assert_eq!(env["ok"], false, "{label}: {env}");
+            assert_eq!(env["code"], *expected, "{label}: {env}");
+        }
+    }
+
+    #[test]
+    fn execute_proof_checked_handles_null_pointers() {
+        // The new exports document null as allowed; `read_str` maps null to "" so
+        // `CStr::from_ptr` is never called on null (which would be UB, uncatchable
+        // by the envelope wrapper). A null network reads as "" → unsupported_network.
+        let env = call_envelope(unsafe {
+            execute_proof_checked(
+                std::ptr::null(),
+                std::ptr::null(),
+                17_000_000,
+                std::ptr::null(),
+                std::ptr::null(),
+            )
+        });
+        assert_eq!(env["ok"], false);
+        assert_eq!(env["code"], "unsupported_network");
+    }
+}
+
+#[cfg(test)]
+mod param_dir_tests {
+    //! Tests for the parameter-directory FFI (§8 Contract 1 envelope + Contract 2
+    //! set-once). The directory lives in a process-global `OnceLock`, so the
+    //! mutating scenarios must each run in their own subprocess — the harness
+    //! re-execs this test binary with `ALEO_FFI_PARAM_DIR_SCENARIO` set.
+    use super::*;
+    use std::ffi::CString;
+
+    fn parse(ptr: *mut c_char) -> serde_json::Value {
+        let s = unsafe { CStr::from_ptr(ptr) }.to_str().unwrap().to_owned();
+        unsafe { free_string(ptr) };
+        serde_json::from_str(&s).unwrap_or_else(|_| panic!("non-JSON envelope: {s:?}"))
+    }
+
+    fn set_dir(path: &str) -> serde_json::Value {
+        let c = CString::new(path).unwrap();
+        parse(unsafe { ffi_set_parameter_dir(c.as_ptr()) })
+    }
+
+    fn aleo_dir() -> serde_json::Value {
+        parse(ffi_aleo_dir())
+    }
+
+    // ── In-process: pure / non-mutating (safe to share the parent's OnceLock) ──
+
+    #[test]
+    fn envelope_shapes() {
+        // Assert parsed fields, not the raw string: key ordering depends on whether
+        // serde_json's `preserve_order` is unified on across the build.
+        let json = |e: Envelope| serde_json::from_str::<serde_json::Value>(&e.to_json()).unwrap();
+
+        let ok = json(Envelope::ok());
+        assert_eq!(ok["ok"], true);
+
+        let okd = json(Envelope::ok_data("x"));
+        assert_eq!(okd["ok"], true);
+        assert_eq!(okd["data"], "x");
+
+        let err = json(Envelope::err("invalid_path", "nope"));
+        assert_eq!(err["ok"], false);
+        assert_eq!(err["code"], "invalid_path");
+        assert_eq!(err["message"], "nope");
+    }
+
+    #[test]
+    fn set_parameter_dir_empty_is_invalid_path() {
+        // An empty path is rejected before the OnceLock is touched, so this is
+        // safe to run in the shared parent process.
+        let r = set_dir("");
+        assert_eq!(r["ok"], false);
+        assert_eq!(r["code"], "invalid_path");
+    }
+
+    #[test]
+    fn aleo_dir_reports_a_nonempty_path() {
+        let r = aleo_dir();
+        assert_eq!(r["ok"], true);
+        assert!(!r["data"].as_str().unwrap().is_empty());
+    }
+
+    // ── Subprocess: the set-once state machine (mutates the global OnceLock) ────
+
+    /// Re-exec this test binary so the scenario runs with a fresh, unset OnceLock.
+    fn run_scenario(scenario: &str) -> std::process::Output {
+        let exe = std::env::current_exe().expect("current_exe");
+        std::process::Command::new(exe)
+            .args(["--exact", "--nocapture", "param_dir_tests::scenario_runner"])
+            .env("ALEO_FFI_PARAM_DIR_SCENARIO", scenario)
+            .output()
+            .expect("spawn subprocess")
+    }
+
+    /// Dispatches a mutating scenario when re-execed; a no-op (passing) test under
+    /// a normal `cargo test`, where the env var is unset.
+    #[test]
+    fn scenario_runner() {
+        let Ok(scenario) = std::env::var("ALEO_FFI_PARAM_DIR_SCENARIO") else { return };
+        match scenario.as_str() {
+            "first_then_idempotent_then_locked" => {
+                let base = std::env::temp_dir();
+                let a = base.join(format!("aleo_ffi_pd_a_{}", std::process::id()));
+                let b = base.join(format!("aleo_ffi_pd_b_{}", std::process::id()));
+                std::fs::create_dir_all(&a).unwrap();
+                std::fs::create_dir_all(&b).unwrap();
+
+                // First set wins.
+                let r = set_dir(a.to_str().unwrap());
+                assert_eq!(r["ok"], true, "first set: {r}");
+
+                // aleo_dir now reports the override, canonicalized.
+                let d = aleo_dir();
+                assert_eq!(d["data"].as_str().unwrap(), a.canonicalize().unwrap().to_str().unwrap());
+
+                // Same path again -> idempotent ok.
+                let r = set_dir(a.to_str().unwrap());
+                assert_eq!(r["ok"], true, "idempotent: {r}");
+
+                // A different path -> locked.
+                let r = set_dir(b.to_str().unwrap());
+                assert_eq!(r["ok"], false, "different path should be rejected: {r}");
+                assert_eq!(r["code"], "param_dir_locked", "{r}");
+
+                let _ = std::fs::remove_dir_all(&a);
+                let _ = std::fs::remove_dir_all(&b);
+            }
+            "load_started_then_set_locked" => {
+                // Simulate the load macro beginning a read (which atomically freezes
+                // the directory at the default), then a later set to a *different*
+                // dir must be rejected — the TOCTOU the single lock closes.
+                let frozen = snarkvm_parameters::parameter_dir_for_load().unwrap();
+                let other = std::env::temp_dir().join(format!("aleo_ffi_pd_post_load_{}", std::process::id()));
+                std::fs::create_dir_all(&other).unwrap();
+
+                let r = set_dir(other.to_str().unwrap());
+                assert_eq!(r["ok"], false, "set after load-started must be rejected: {r}");
+                assert_eq!(r["code"], "param_dir_locked", "{r}");
+
+                // The effective dir is still the frozen (default) one, not the rejected path.
+                let d = aleo_dir();
+                assert_eq!(d["data"].as_str().unwrap(), frozen.to_str().unwrap());
+
+                let _ = std::fs::remove_dir_all(&other);
+            }
+            other => panic!("unknown scenario {other}"),
+        }
+    }
+
+    #[test]
+    fn set_parameter_dir_first_then_idempotent_then_locked() {
+        let out = run_scenario("first_then_idempotent_then_locked");
+        assert!(
+            out.status.success(),
+            "subprocess failed.\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
+    }
+
+    #[test]
+    fn set_parameter_dir_rejected_after_load_started() {
+        let out = run_scenario("load_started_then_set_locked");
+        assert!(
+            out.status.success(),
+            "subprocess failed.\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
     }
 }

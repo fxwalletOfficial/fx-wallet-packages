@@ -66,3 +66,50 @@ longer pull `ureq` either.
 
 License note: snarkvm-ledger-query is Apache-2.0, so modifying and vendoring it
 is permitted with attribution; its LICENSE.md is preserved in the directory.
+
+## snarkvm-parameters 4.5.0 (Apache-2.0)
+
+Verbatim copy of `snarkvm-parameters` 4.5.0 from crates.io with a **param-dir
+change** (see `parameters-param-dir.patch`): a new `src/parameter_dir.rs` module
+plus a two-spot edit to `src/lib.rs` / `src/macros.rs`.
+
+### Why
+
+snarkVM downloads/loads proving keys from a hard-wired `aleo_std::aleo_dir()`
+(`~/.aleo`) with **no env/`ALEO_HOME` override**, and the read happens *inside*
+this crate's load macro. To provision parameters into a mobile app sandbox, the
+directory has to be overridable, and the override must be owned by the crate that
+actually reads the files (so it can enforce the set-once rule against snarkVM's
+static parameter cache). The patch adds:
+
+- `parameter_dir.rs`: a process-global `set_parameter_dir(path)` /
+  `parameter_dir_for_load()` / `effective_parameter_dir()` with a set-once
+  contract (create-then-canonicalize, idempotent same-path, `Locked` on a
+  different path or after loading has begun) — Phase 4 §8 Contract 2. "Choose a
+  directory" and "begin loading" share **one mutex**, so a `set_parameter_dir` and
+  the first load cannot interleave (no set-after-load-start TOCTOU).
+- `macros.rs`: the `impl_load_bytes_logic_remote!` local-read path now reads from
+  `parameter_dir_for_load()` (not `aleo_std::aleo_dir()`), which atomically freezes
+  the directory and returns it.
+
+The macro's **size + SHA-256 checksum guards are unchanged**, so a Dart-provisioned
+parameter that is missing/corrupt is still rejected by this crate — the trust
+boundary stays in Rust even once curl is removed.
+
+**This PR (workstream B follow-on) does NOT remove curl/openssl-sys** — the
+download path is untouched; `cargo tree -i openssl-sys` still resolves through
+`snarkvm-parameters`. Flipping the native branch to `RemoteFetchDisabled` and
+dropping the `curl` dep is the separate workstream **A** (PR3).
+
+Consumed via `[patch.crates-io]` in `rust/aleo_ffi/Cargo.toml` (applies tree-wide).
+
+### Maintenance
+
+- Upgrading snarkVM: re-extract the crate, re-apply `parameters-param-dir.patch`,
+  re-add `src/parameter_dir.rs`, replace this directory, refresh lockfiles.
+- The embedded `resources/*.metadata` (checksums/sizes) and the `impl_local!`
+  base-SRS `.usrs` files (~6.3 MB, `include_bytes!`'d) are kept verbatim; only the
+  downloadable (`impl_remote!`) keys are fetched at runtime into the param dir.
+
+License note: snarkvm-parameters is Apache-2.0, so modifying and vendoring it is
+permitted with attribution; its LICENSE.md is preserved in the directory.
