@@ -124,7 +124,8 @@ class BchSignRequestUR extends UR {
       type: RegistryType.KEYSTONE_SIGN_REQUEST.type,
       value: CborMap({
         CborSmallInt(1): CborBytes(signDataBytes),
-        if (origin != null && origin.isNotEmpty) CborSmallInt(2): CborString(origin),
+        if (origin != null && origin.isNotEmpty)
+          CborSmallInt(2): CborString(origin),
       }),
     );
 
@@ -139,7 +140,8 @@ class BchSignRequestUR extends UR {
   }
 
   factory BchSignRequestUR.fromUR({required UR ur, bool bigEndian = true}) {
-    if (ur.type.toUpperCase() != RegistryType.KEYSTONE_SIGN_REQUEST.type.toUpperCase()) {
+    if (ur.type.toUpperCase() !=
+        RegistryType.KEYSTONE_SIGN_REQUEST.type.toUpperCase()) {
       throw Exception(URExceptionType.invalidType.toString());
     }
 
@@ -164,7 +166,8 @@ class BchSignRequestUR extends UR {
     final hdPath = signTx.hdPath;
 
     final originField = data[CborSmallInt(2)];
-    final origin = originField != null ? (originField as CborString).toString() : null;
+    final origin =
+        originField != null ? (originField as CborString).toString() : null;
 
     return BchSignRequestUR(
       ur: ur,
@@ -206,7 +209,8 @@ class BchSignRequestUR extends UR {
         protoOutput.isChange = output.isChange!;
       }
       // 只有 changeAddressPath 不为 null 且非空时才设置
-      if (output.changeAddressPath != null && output.changeAddressPath!.isNotEmpty) {
+      if (output.changeAddressPath != null &&
+          output.changeAddressPath!.isNotEmpty) {
         protoOutput.changeAddressPath = output.changeAddressPath!;
       }
       return protoOutput;

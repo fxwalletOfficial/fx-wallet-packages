@@ -76,7 +76,8 @@ class ScSignRequest extends RegistryItem {
       CborSmallInt(ScSignRequestKeys.path.index): CborString(path),
       CborSmallInt(ScSignRequestKeys.address.index): CborString(address),
       CborSmallInt(ScSignRequestKeys.publicKey.index): CborString(publicKey),
-      CborSmallInt(ScSignRequestKeys.signingPayloadData.index): cborBytes(RegistryItem.jsonBytes(signingPayloadData)),
+      CborSmallInt(ScSignRequestKeys.signingPayloadData.index):
+          cborBytes(RegistryItem.jsonBytes(signingPayloadData)),
     };
 
     if (origin != null) {
@@ -86,13 +87,15 @@ class ScSignRequest extends RegistryItem {
       map[CborSmallInt(ScSignRequestKeys.fee.index)] = CborString(fee!);
     }
     if (outputs != null) {
-      map[CborSmallInt(ScSignRequestKeys.outputs.index)] = cborBytes(RegistryItem.jsonBytes(outputs));
+      map[CborSmallInt(ScSignRequestKeys.outputs.index)] =
+          cborBytes(RegistryItem.jsonBytes(outputs));
     }
     if (chain.isNotEmpty) {
       map[CborSmallInt(ScSignRequestKeys.chain.index)] = CborString(chain);
     }
     if (crossChainFee != null) {
-      map[CborSmallInt(ScSignRequestKeys.crossChainFee.index)] = CborString(crossChainFee!);
+      map[CborSmallInt(ScSignRequestKeys.crossChainFee.index)] =
+          CborString(crossChainFee!);
     }
 
     return CborMap(map);
@@ -106,12 +109,18 @@ class ScSignRequest extends RegistryItem {
       path: RegistryItem.readText(map, ScSignRequestKeys.path.index),
       address: RegistryItem.readText(map, ScSignRequestKeys.address.index),
       publicKey: RegistryItem.readText(map, ScSignRequestKeys.publicKey.index),
-      signingPayloadData: RegistryItem.readJsonMap(map, ScSignRequestKeys.signingPayloadData.index),
+      signingPayloadData: RegistryItem.readJsonMap(
+          map, ScSignRequestKeys.signingPayloadData.index),
       fee: RegistryItem.readOptionalText(map, ScSignRequestKeys.fee.index),
-      outputs: RegistryItem.readOptionalJsonList(map, ScSignRequestKeys.outputs.index),
-      origin: RegistryItem.readOptionalText(map, ScSignRequestKeys.origin.index),
-      chain: RegistryItem.readOptionalText(map, ScSignRequestKeys.chain.index) ?? '',
-      crossChainFee: RegistryItem.readOptionalText(map, ScSignRequestKeys.crossChainFee.index),
+      outputs: RegistryItem.readOptionalJsonList(
+          map, ScSignRequestKeys.outputs.index),
+      origin:
+          RegistryItem.readOptionalText(map, ScSignRequestKeys.origin.index),
+      chain:
+          RegistryItem.readOptionalText(map, ScSignRequestKeys.chain.index) ??
+              '',
+      crossChainFee: RegistryItem.readOptionalText(
+          map, ScSignRequestKeys.crossChainFee.index),
     );
   }
 
