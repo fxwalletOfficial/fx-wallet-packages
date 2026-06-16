@@ -53,9 +53,10 @@ jobs:
           # phase-1 I/O-to-Dart primitives/helpers (the proving/fee ones keep their
           # `_static` names; the canonical rename is deferred to phase 4). Phase 4
           # PR2 adds the parameter-directory control exports (ffi_set_parameter_dir,
-          # ffi_aleo_dir) and the network-aware checked proving exports
+          # ffi_aleo_dir), the network-aware checked proving exports
           # (execute_proof_checked, execute_fee_proof_checked,
-          # execute_program_proof_checked) → 34 functions + free_string. The full
+          # execute_program_proof_checked) and parameter_preflight → 35 functions +
+          # free_string. The full
           # EXACT exported set is compared (not just presence), so CI also fails if a
           # deleted RPC symbol survives or an unexpected symbol appears.
           expected=$(printf '%s\n' \
@@ -69,7 +70,8 @@ jobs:
             consensus_version_for get_base_fee_static execution_fee_authorization_static \
             execute_proof_static execute_fee_proof_static execute_program_proof_static \
             program_authorization_static ffi_set_parameter_dir ffi_aleo_dir \
-            execute_proof_checked execute_fee_proof_checked execute_program_proof_checked | sort -u)
+            execute_proof_checked execute_fee_proof_checked execute_program_proof_checked \
+            parameter_preflight | sort -u)
           # Exported defined symbols, minus the ELF runtime symbols the linker adds
           # to any shared object (not part of our C API).
           runtime='_init|_fini|__bss_start|_edata|_end|__bss_start__|_bss_end__|__bss_end__|_edata__|__data_start|__dso_handle|_IO_stdin_used|__TMC_END__'
@@ -82,7 +84,7 @@ jobs:
             comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$actual")
             exit 1
           fi
-          echo "exported FFI symbol set matches exactly (34 functions + free_string)"
+          echo "exported FFI symbol set matches exactly (35 functions + free_string)"
 
       # Run the Dart wrapper's FFI-backed tests against the cdylib built above,
       # so Dart/Rust signature mismatches, string-ownership bugs and wrapper

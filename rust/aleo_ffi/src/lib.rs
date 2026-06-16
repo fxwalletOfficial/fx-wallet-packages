@@ -1313,6 +1313,14 @@ impl Envelope {
         Self(serde_json::json!({ "ok": true, "data": data }))
     }
 
+    /// `{"ok":true,"<field>":<value>}` — a single dynamically-named ok payload field.
+    fn ok_field(field: &str, value: serde_json::Value) -> Self {
+        let mut map = serde_json::Map::new();
+        map.insert("ok".to_string(), serde_json::Value::Bool(true));
+        map.insert(field.to_string(), value);
+        Self(serde_json::Value::Object(map))
+    }
+
     /// `{"ok":false,"code":<code>,"message":<message>}`.
     fn err(code: &str, message: impl Into<String>) -> Self {
         Self(serde_json::json!({ "ok": false, "code": code, "message": message.into() }))
@@ -1667,6 +1675,234 @@ pub unsafe extern "C" fn execute_program_proof_checked(
             ),
             None => Envelope::err("unsupported_network", format!("unknown network '{network}'")),
         }
+    })
+}
+
+// ── Phase 4 parameter preflight (docs/pr2a-preflight-spec.md) ────────────────
+//
+// `parameter_preflight` reports which of the v1 credits proving-key files are
+// missing/corrupt in the parameter directory, so the Dart layer can download them
+// BEFORE proving — snarkVM loads each key through a `lazy_static!` that `.expect()`s
+// (panics, and poisons the static) on a missing or corrupt file. Preflight reads
+// only the embedded metadata + each file's size/checksum; it never deserializes a
+// key, so it cannot itself hit that panic. Credits-only (v1): 15 credits-function
+// provers + the inclusion prover, 16 files per network.
+
+/// One provisioned proving-key file: where it lives under the parameter dir, where
+/// to fetch it, and the size + checksum it must have.
+struct ParamEntry {
+    function: &'static str,
+    relative_path: String,
+    urls: [String; 2],
+    size: u64,
+    checksum: String,
+}
+
+/// Builds one [`ParamEntry`] from a `*.metadata` JSON string (the vendored crate's
+/// `pub const METADATA`). Mirrors snarkVM's filename rule `<fn>.prover.<checksum[0..7]>`
+/// and runtime layout `<param_dir>/resources/<filename>` (macros.rs).
+fn param_entry(function: &'static str, metadata: &str, bases: &[&str; 2]) -> anyhow::Result<ParamEntry> {
+    let meta: serde_json::Value = serde_json::from_str(metadata)?;
+    let checksum = meta["prover_checksum"]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("{function}.metadata missing prover_checksum"))?
+        .to_string();
+    let size = meta["prover_size"]
+        .as_u64()
+        .or_else(|| meta["prover_size"].as_str().and_then(|s| s.parse().ok()))
+        .ok_or_else(|| anyhow::anyhow!("{function}.metadata missing prover_size"))?;
+    let sum7 = checksum.get(0..7).ok_or_else(|| anyhow::anyhow!("{function} checksum too short"))?;
+    let filename = format!("{function}.prover.{sum7}");
+    Ok(ParamEntry {
+        function,
+        relative_path: format!("resources/{filename}"),
+        urls: [format!("{}/{}", bases[0], filename), format!("{}/{}", bases[1], filename)],
+        size,
+        checksum,
+    })
+}
+
+/// The credits-v1 proving-key set for `network`: the 15 credits-function provers +
+/// the inclusion prover. The `(function, METADATA)` pairs are snarkVM's
+/// `insert_credit_keys!` functions plus `InclusionProver`; `REMOTE_URLS` mirrors the
+/// vendored crate's (private) per-network constant.
+fn parameter_manifest(network: NetworkKind) -> anyhow::Result<Vec<ParamEntry>> {
+    use snarkvm_parameters::{mainnet, testnet};
+    let (raw, bases): ([(&'static str, &'static str); 16], [&'static str; 2]) = match network {
+        NetworkKind::Mainnet => (
+            [
+                ("bond_public", mainnet::BondPublicProver::METADATA),
+                ("bond_validator", mainnet::BondValidatorProver::METADATA),
+                ("unbond_public", mainnet::UnbondPublicProver::METADATA),
+                ("claim_unbond_public", mainnet::ClaimUnbondPublicProver::METADATA),
+                ("set_validator_state", mainnet::SetValidatorStateProver::METADATA),
+                ("transfer_public", mainnet::TransferPublicProver::METADATA),
+                ("transfer_private", mainnet::TransferPrivateProver::METADATA),
+                ("transfer_public_as_signer", mainnet::TransferPublicAsSignerProver::METADATA),
+                ("transfer_private_to_public", mainnet::TransferPrivateToPublicProver::METADATA),
+                ("transfer_public_to_private", mainnet::TransferPublicToPrivateProver::METADATA),
+                ("join", mainnet::JoinProver::METADATA),
+                ("split", mainnet::SplitProver::METADATA),
+                ("fee_public", mainnet::FeePublicProver::METADATA),
+                ("fee_private", mainnet::FeePrivateProver::METADATA),
+                ("upgrade", mainnet::UpgradeProver::METADATA),
+                ("inclusion", mainnet::InclusionProver::METADATA),
+            ],
+            ["https://parameters.provable.com/mainnet", "https://s3.us-west-1.amazonaws.com/mainnet.parameters"],
+        ),
+        NetworkKind::Testnet => (
+            [
+                ("bond_public", testnet::BondPublicProver::METADATA),
+                ("bond_validator", testnet::BondValidatorProver::METADATA),
+                ("unbond_public", testnet::UnbondPublicProver::METADATA),
+                ("claim_unbond_public", testnet::ClaimUnbondPublicProver::METADATA),
+                ("set_validator_state", testnet::SetValidatorStateProver::METADATA),
+                ("transfer_public", testnet::TransferPublicProver::METADATA),
+                ("transfer_private", testnet::TransferPrivateProver::METADATA),
+                ("transfer_public_as_signer", testnet::TransferPublicAsSignerProver::METADATA),
+                ("transfer_private_to_public", testnet::TransferPrivateToPublicProver::METADATA),
+                ("transfer_public_to_private", testnet::TransferPublicToPrivateProver::METADATA),
+                ("join", testnet::JoinProver::METADATA),
+                ("split", testnet::SplitProver::METADATA),
+                ("fee_public", testnet::FeePublicProver::METADATA),
+                ("fee_private", testnet::FeePrivateProver::METADATA),
+                ("upgrade", testnet::UpgradeProver::METADATA),
+                ("inclusion", testnet::InclusionProver::METADATA),
+            ],
+            ["https://parameters.provable.com/testnet", "https://s3.us-west-1.amazonaws.com/testnet.parameters"],
+        ),
+    };
+    raw.iter().map(|&(function, metadata)| param_entry(function, metadata, &bases)).collect()
+}
+
+/// Identity of a verified file, so a re-verify can skip the SHA-256 unless the file
+/// changed. On Unix `dev`+`ino` pin the inode; `size`+`mtime_ns` detect edits.
+#[derive(PartialEq)]
+struct FileKey {
+    path: std::path::PathBuf,
+    size: u64,
+    mtime_ns: u128,
+    #[cfg(unix)]
+    dev: u64,
+    #[cfg(unix)]
+    ino: u64,
+}
+
+fn file_key(path: &std::path::Path, meta: &std::fs::Metadata) -> Option<FileKey> {
+    let mtime_ns = meta.modified().ok()?.duration_since(std::time::UNIX_EPOCH).ok()?.as_nanos();
+    Some(FileKey {
+        path: path.to_path_buf(),
+        size: meta.len(),
+        mtime_ns,
+        #[cfg(unix)]
+        dev: std::os::unix::fs::MetadataExt::dev(meta),
+        #[cfg(unix)]
+        ino: std::os::unix::fs::MetadataExt::ino(meta),
+    })
+}
+
+/// Process-global verified-file cache, so preflight (run before every prove) does not
+/// SHA-256 ~1.15 GiB each time. The parameter dir is set-once, so it cannot change
+/// under the cache. Residual: a size+mtime+inode-preserving swap escapes it; the load
+/// macro's own checksum is the backstop.
+static PREFLIGHT_CACHE: std::sync::Mutex<Vec<FileKey>> = std::sync::Mutex::new(Vec::new());
+
+/// Streams the file through SHA-256 (bounded memory) and returns lowercase hex —
+/// the same digest snarkVM's `checksum!` macro stores in the metadata.
+fn sha256_file(path: &std::path::Path) -> std::io::Result<String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 64 * 1024];
+    loop {
+        let read = file.read(&mut buf)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buf[..read]);
+    }
+    Ok(hex::encode(hasher.finalize()))
+}
+
+/// Verifies one entry under `dir`: `None` if present + correct, else the reason it is
+/// missing (`absent` | `wrong_size` | `wrong_checksum` | `unreadable`). Read-only; the
+/// verified-file `cache` lets a warm call skip the SHA-256.
+fn verify_param(
+    dir: &std::path::Path,
+    entry: &ParamEntry,
+    cache: &std::sync::Mutex<Vec<FileKey>>,
+) -> Option<&'static str> {
+    let path = dir.join(&entry.relative_path);
+    let meta = match std::fs::metadata(&path) {
+        Ok(meta) => meta,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Some("absent"),
+        Err(_) => return Some("unreadable"),
+    };
+    if meta.len() != entry.size {
+        return Some("wrong_size");
+    }
+    let key = file_key(&path, &meta);
+    if let Some(key) = &key {
+        if cache.lock().unwrap_or_else(|e| e.into_inner()).contains(key) {
+            return None;
+        }
+    }
+    match sha256_file(&path) {
+        Ok(sum) if sum == entry.checksum => {
+            if let Some(key) = key {
+                cache.lock().unwrap_or_else(|e| e.into_inner()).push(key);
+            }
+            None
+        }
+        Ok(_) => Some("wrong_checksum"),
+        Err(_) => Some("unreadable"),
+    }
+}
+
+/// Reports which v1 credits proving-key files are missing/corrupt in the parameter
+/// directory for `network` at `consensus_version`, so the Dart layer can provision
+/// them before proving. Read-only — never deserializes a key, so it cannot trigger
+/// the panicking parameter `lazy_static`. Returns the §8 envelope:
+/// `{"ok":true,"missing":[{relativePath,urls,size,checksum,reason}]}` (empty ⇒ the
+/// audited credits-v1 set is present) or `{"ok":false,"code","message"}`.
+///
+/// SAFETY: `network` is null or a NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn parameter_preflight(network: *const c_char, consensus_version: u16) -> *mut c_char {
+    ffi_envelope(|| {
+        let network = unsafe { read_str(network) };
+        let net = match parse_network(network) {
+            Some(net) => net,
+            None => return Envelope::err("unsupported_network", format!("unknown network '{network}'")),
+        };
+        if !(8..=13).contains(&consensus_version) {
+            return Envelope::err(
+                "unsupported_consensus",
+                format!("consensus version {consensus_version} is outside the supported V8..=V13"),
+            );
+        }
+        let entries = match parameter_manifest(net) {
+            Ok(entries) => entries,
+            Err(e) => return Envelope::err("preflight_error", format!("parameter manifest error: {e}")),
+        };
+        let dir = snarkvm_parameters::effective_parameter_dir();
+        let missing: Vec<serde_json::Value> = entries
+            .iter()
+            .filter_map(|entry| {
+                verify_param(&dir, entry, &PREFLIGHT_CACHE).map(|reason| {
+                    serde_json::json!({
+                        "function": entry.function,
+                        "relativePath": entry.relative_path,
+                        "urls": entry.urls,
+                        "size": entry.size,
+                        "checksum": entry.checksum,
+                        "reason": reason,
+                    })
+                })
+            })
+            .collect();
+        Envelope::ok_field("missing", serde_json::Value::Array(missing))
     })
 }
 
@@ -2559,6 +2795,122 @@ mod tests {
         assert_eq!(env["ok"], false);
         assert_eq!(env["code"], "unsupported_network");
     }
+
+    // ── parameter_preflight: manifest + verify_param ───────────────────────────
+
+    use sha2::{Digest, Sha256};
+
+    fn fabricate_entry(relative_path: &str, content: &[u8]) -> ParamEntry {
+        ParamEntry {
+            function: "test",
+            relative_path: relative_path.to_string(),
+            urls: ["http://x/a".to_string(), "http://y/a".to_string()],
+            size: content.len() as u64,
+            checksum: hex::encode(Sha256::digest(content)),
+        }
+    }
+
+    fn tmp_dir(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("aleo_ffi_pf_{tag}_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn parameter_manifest_covers_16_credits_files() {
+        let expected = [
+            "bond_public", "bond_validator", "unbond_public", "claim_unbond_public",
+            "set_validator_state", "transfer_public", "transfer_private",
+            "transfer_public_as_signer", "transfer_private_to_public",
+            "transfer_public_to_private", "join", "split", "fee_public", "fee_private",
+            "upgrade", "inclusion",
+        ];
+        for net in [NetworkKind::Mainnet, NetworkKind::Testnet] {
+            let manifest = parameter_manifest(net).unwrap();
+            assert_eq!(manifest.len(), 16);
+            let functions: Vec<&str> = manifest.iter().map(|e| e.function).collect();
+            assert_eq!(functions, expected);
+            // Filename rule + layout: resources/<fn>.prover.<checksum[0..7]>.
+            let tp = manifest.iter().find(|e| e.function == "transfer_public").unwrap();
+            assert_eq!(tp.relative_path, format!("resources/transfer_public.prover.{}", &tp.checksum[0..7]));
+            assert!(tp.urls[0].ends_with(&format!("transfer_public.prover.{}", &tp.checksum[0..7])));
+            assert_eq!(tp.checksum.len(), 64); // full SHA-256 hex
+        }
+    }
+
+    #[test]
+    fn verify_param_reasons() {
+        let dir = tmp_dir("reasons");
+        let cache = std::sync::Mutex::new(Vec::new());
+
+        // absent
+        let entry = fabricate_entry("absent.bin", b"hello");
+        assert_eq!(verify_param(&dir, &entry, &cache), Some("absent"));
+
+        // wrong size
+        std::fs::write(dir.join("f.bin"), b"hello").unwrap();
+        let mut wrong = fabricate_entry("f.bin", b"hello");
+        wrong.size = 999;
+        assert_eq!(verify_param(&dir, &wrong, &cache), Some("wrong_size"));
+
+        // wrong checksum (right size)
+        let mut bad_sum = fabricate_entry("f.bin", b"world"); // size 5 = len("hello"), but checksum of "world"
+        bad_sum.size = 5;
+        assert_eq!(verify_param(&dir, &bad_sum, &cache), Some("wrong_checksum"));
+
+        // present + correct, then a warm second call (cache hit) still passes
+        let good = fabricate_entry("f.bin", b"hello");
+        assert_eq!(verify_param(&dir, &good, &cache), None);
+        assert_eq!(verify_param(&dir, &good, &cache), None);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn verify_param_all_absent_in_empty_dir() {
+        let dir = tmp_dir("empty");
+        let cache = std::sync::Mutex::new(Vec::new());
+        for entry in parameter_manifest(NetworkKind::Mainnet).unwrap() {
+            assert_eq!(verify_param(&dir, &entry, &cache), Some("absent"), "{}", entry.function);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn preflight_call(network: &str, consensus: u16) -> serde_json::Value {
+        let n = CString::new(network).unwrap();
+        let ptr = unsafe { parameter_preflight(n.as_ptr(), consensus) };
+        let s = unsafe { CStr::from_ptr(ptr) }.to_str().unwrap().to_owned();
+        unsafe { free_string(ptr) };
+        serde_json::from_str(&s).unwrap()
+    }
+
+    #[test]
+    fn parameter_preflight_rejects_unknown_network() {
+        let env = preflight_call("bogusnet", 13);
+        assert_eq!(env["ok"], false);
+        assert_eq!(env["code"], "unsupported_network");
+    }
+
+    #[test]
+    fn parameter_preflight_rejects_unsupported_consensus() {
+        for v in [0u16, 7, 14, 99] {
+            let env = preflight_call("mainnet", v);
+            assert_eq!(env["ok"], false, "v{v}: {env}");
+            assert_eq!(env["code"], "unsupported_consensus", "v{v}");
+        }
+    }
+
+    /// Manual: on a machine that has already proved (real params cached in ~/.aleo),
+    /// every manifest entry resolves to a present, size+checksum-correct file — i.e.
+    /// the 16 paths/checksums match reality. The *sufficiency* of these 16 for a cold
+    /// prove (no missing SRS) is the definitive check; 2b's curl-off cold E2E owns it.
+    #[ignore]
+    #[test]
+    fn parameter_preflight_real_dir_mainnet_is_complete() {
+        let env = preflight_call("mainnet", 13);
+        assert_eq!(env["ok"], true, "{env}");
+        assert_eq!(env["missing"].as_array().unwrap().len(), 0, "missing: {}", env["missing"]);
+    }
 }
 
 #[cfg(test)]
@@ -2685,8 +3037,42 @@ mod param_dir_tests {
 
                 let _ = std::fs::remove_dir_all(&other);
             }
+            "preflight_empty_dir" => {
+                // Point the (process-global) param dir at an empty dir, then preflight
+                // mainnet: every one of the 16 files is absent. Exercises the whole
+                // FFI path (envelope + manifest + verify) end-to-end.
+                let dir = std::env::temp_dir().join(format!("aleo_ffi_pf_ffi_{}", std::process::id()));
+                std::fs::create_dir_all(&dir).unwrap();
+                let r = set_dir(dir.to_str().unwrap());
+                assert_eq!(r["ok"], true, "set dir: {r}");
+
+                let n = std::ffi::CString::new("mainnet").unwrap();
+                let ptr = unsafe { super::parameter_preflight(n.as_ptr(), 13) };
+                let s = unsafe { CStr::from_ptr(ptr) }.to_str().unwrap().to_owned();
+                unsafe { free_string(ptr) };
+                let env: serde_json::Value = serde_json::from_str(&s).unwrap();
+
+                assert_eq!(env["ok"], true, "{env}");
+                let missing = env["missing"].as_array().unwrap();
+                assert_eq!(missing.len(), 16, "{env}");
+                assert!(missing.iter().all(|m| m["reason"] == "absent"), "{env}");
+                assert!(missing[0]["urls"].as_array().unwrap().len() == 2, "{env}");
+
+                let _ = std::fs::remove_dir_all(&dir);
+            }
             other => panic!("unknown scenario {other}"),
         }
+    }
+
+    #[test]
+    fn parameter_preflight_empty_dir_reports_all_16_missing() {
+        let out = run_scenario("preflight_empty_dir");
+        assert!(
+            out.status.success(),
+            "subprocess failed.\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
     }
 
     #[test]
