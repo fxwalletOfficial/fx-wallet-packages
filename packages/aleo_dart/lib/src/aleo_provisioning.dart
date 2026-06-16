@@ -79,10 +79,22 @@ class ParameterProvisioner {
   final Directory paramDir;
 
   final Dio _dio;
+  final bool _ownsDio;
   bool _dirSet = false;
 
-  /// Process-global poison latch (Contract 3). Once a `restart_required` is seen,
-  /// every provisioner fail-fasts until the OS process restarts.
+  /// Poison latch (§8 Contract 3). Tripped when a checked-proving call returns
+  /// `restart_required` (a corrupt/missing parameter poisoned snarkVM's
+  /// process-global static, which only an OS-process restart clears).
+  ///
+  /// This `static` is **isolate-local**, so it is only a fast-path: a long-lived
+  /// isolate stops touching the FFI after the first poison. It is NOT the
+  /// cross-isolate guarantee — the authoritative guard is the Rust side. Every
+  /// checked export is `catch_unwind`-wrapped, so a fresh isolate that calls the
+  /// already-poisoned FFI gets `restart_required` back cheaply (a poisoned
+  /// `lazy_static` re-deref is an immediate caught panic, not a re-download) and
+  /// self-latches. Proving therefore never crashes and never silently succeeds
+  /// after a poison, in any isolate; it just isn't byte-for-byte FFI-free across
+  /// isolates.
   static bool _provingDisabled = false;
   static bool get provingDisabled => _provingDisabled;
 
@@ -91,7 +103,8 @@ class ParameterProvisioner {
     this.network,
     this.paramDir, {
     Dio? dio,
-  }) : _dio = dio ??
+  })  : _ownsDio = dio == null,
+        _dio = dio ??
             Dio(BaseOptions(receiveTimeout: const Duration(minutes: 30)));
 
   // ── FFI ────────────────────────────────────────────────────────────────────
@@ -153,6 +166,40 @@ class ParameterProvisioner {
         authorization,
         statePaths,
         publicStateRoot);
+  }
+
+  String _callExecuteProgramProofChecked(
+      String authorization,
+      String programSources,
+      int height,
+      String statePaths,
+      String publicStateRoot) {
+    final fn = _lib.lookupFunction<
+        ffi.Pointer<Utf8> Function(
+            ffi.Pointer<Utf8>,
+            ffi.Pointer<Utf8>,
+            ffi.Pointer<Utf8>,
+            ffi.Uint32,
+            ffi.Pointer<Utf8>,
+            ffi.Pointer<Utf8>),
+        ffi.Pointer<Utf8> Function(
+            ffi.Pointer<Utf8>,
+            ffi.Pointer<Utf8>,
+            ffi.Pointer<Utf8>,
+            int,
+            ffi.Pointer<Utf8>,
+            ffi.Pointer<Utf8>)>('execute_program_proof_checked');
+    final net = network.toNativeUtf8();
+    final auth = authorization.toNativeUtf8();
+    final sources = programSources.toNativeUtf8();
+    final paths = statePaths.toNativeUtf8();
+    final root = publicStateRoot.toNativeUtf8();
+    try {
+      return takeNativeString(
+          _lib, fn(net, auth, sources, height, paths, root));
+    } finally {
+      freeAll([net, auth, sources, paths, root]);
+    }
   }
 
   /// Shared input marshalling for the 4-pointer checked proving exports.
@@ -242,10 +289,17 @@ class ParameterProvisioner {
 
   // ── Download (atomic, single-flight, locked) ────────────────────────────────
 
-  /// In-process per-file mutex. `RandomAccessFile.lock` is POSIX `fcntl`, which
-  /// coordinates ACROSS processes but not within one (a process never conflicts
-  /// with its own locks, and isolates don't share statics either way), so
-  /// same-isolate concurrent provisions of one file are serialized here.
+  /// Per-file mutex within ONE isolate. `RandomAccessFile.lock` is POSIX `fcntl`,
+  /// which coordinates ACROSS processes but not within one (a process never
+  /// conflicts with its own locks), so this serializes same-isolate concurrent
+  /// provisions; the flock serializes other processes.
+  ///
+  /// Gap (documented, not closed): two isolates of the SAME process are coordinated
+  /// by neither layer — this map is isolate-local, and fcntl doesn't conflict
+  /// intra-process — so both could download the same file. That only wastes
+  /// bandwidth: each verifies size+SHA-256 and atomically renames, so the result is
+  /// still correct. Dart offers no intra-process cross-isolate file lock; closing
+  /// it would need explicit isolate coordination (out of scope).
   static final Map<String, Future<void>> _inProcessLocks = {};
 
   Future<T> _withInProcessLock<T>(String key, Future<T> Function() body) async {
@@ -417,7 +471,27 @@ class ParameterProvisioner {
           () => _callExecuteFeeProofChecked(
               authorization, height, statePaths, publicStateRoot));
 
-  void close() => _dio.close(force: true);
+  /// preflight → download → prove an execution through the program path. v1 is
+  /// credits-only, so a non-empty [programSources] (a custom program) is rejected
+  /// by the native side with `unsupported_feature`. Returns the serialized execution.
+  Future<String> provisionAndProveProgram({
+    required String authorization,
+    required int height,
+    required int consensusVersion,
+    String programSources = '',
+    String statePaths = '',
+    String publicStateRoot = '',
+  }) =>
+      _provisionAndProve(
+          consensusVersion,
+          () => _callExecuteProgramProofChecked(authorization, programSources,
+              height, statePaths, publicStateRoot));
+
+  /// Closes the internally-created Dio. A caller-injected Dio is left open — the
+  /// caller owns its lifecycle (mirrors `AleoNode`).
+  void close() {
+    if (_ownsDio) _dio.close(force: true);
+  }
 
   // ── Test hooks (the download / envelope / latch logic is otherwise private) ──
 
@@ -428,6 +502,14 @@ class ParameterProvisioner {
 
   /// Exposes the fail-closed envelope parser.
   Map<String, dynamic> parseEnvelopeForTest(String json) => _ok(json);
+
+  /// Exposes the program checked-proof binding (bypassing provisioning) so its
+  /// typedef can be exercised; a non-empty closure returns `unsupported_feature`
+  /// before any parameter load.
+  String callProgramProofForTest(String authorization, String programSources,
+          int height, String statePaths, String publicStateRoot) =>
+      _callExecuteProgramProofChecked(
+          authorization, programSources, height, statePaths, publicStateRoot);
 
   /// Clears the process-global poison latch between tests.
   static void resetLatchForTest() => _provingDisabled = false;

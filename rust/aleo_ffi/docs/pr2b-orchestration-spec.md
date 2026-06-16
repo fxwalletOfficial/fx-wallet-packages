@@ -40,12 +40,20 @@ empty-check for the new exports (the old `_static` path keeps `_require` until P
 
 ## 2. `restart_required` latch (Contract 3, Dart side)
 
-Process-global `bool _provingDisabled`. On any envelope `restart_required`: set it,
-throw `ProvingDisabledException("a proving parameter is corrupt; restart the app")`.
-Every checked-proving/preflight entry checks the latch FIRST and fail-fasts WITHOUT
-calling the FFI. Rationale (§8 Contract 3 / round-5): a poisoned snarkVM
-`lazy_static` is process-global and **isolate restart does not clear it** — only an
-OS-process restart does; mobile must surface "restart app", never auto-retry in-isolate.
+A `static bool _provingDisabled`. On any envelope `restart_required`: set it, throw
+`ProvingDisabledException`. Every checked-proving/preflight entry checks it first.
+
+**Scope (corrected):** a Dart `static` is **isolate-local**, so this is a fast-path,
+not the cross-isolate guarantee. The authoritative guard is the **Rust** side: every
+checked export is `catch_unwind`-wrapped, so a fresh isolate that calls the
+already-poisoned FFI gets `restart_required` back cheaply — a poisoned `lazy_static`
+re-deref is an immediate caught panic, not a re-download — and self-latches.
+Proving therefore never crashes and never silently succeeds after a poison, in any
+isolate; the Dart latch only spares a long-lived isolate the (safe, cheap) repeat
+FFI call. (A pid-keyed sentinel file was considered for a true cross-isolate latch
+but rejected: pid reuse could falsely latch a healthy process, worse than the cheap
+repeat call it saves.) Recovery still requires an **OS-process restart** (isolate
+restart does not clear the poisoned static); mobile surfaces "restart app".
 
 ## 3. Atomic single-flight downloader
 
@@ -79,6 +87,14 @@ package.
   The holder re-checks size+SHA-256 first (a prior flight may have finished it), then
   downloads to `<file>.<rand>.tmp` → verify → atomic `rename`. *(Found by the
   single-flight test: the flock alone let two same-isolate downloads both run.)*
+  **Documented gap:** two isolates of the SAME process are coordinated by neither
+  layer (the map is isolate-local; fcntl doesn't conflict intra-process), so both
+  could download one file — only wasted bandwidth, since each verifies + atomically
+  renames. Dart has no intra-process cross-isolate file lock; closing it needs
+  explicit isolate coordination (out of scope).
+- **Download verification is inside the url loop:** a url whose body fails
+  size/SHA-256 falls back to the next url (like a connection error), so a corrupt
+  HTTP-200 from the primary CDN tries the mirror instead of failing the provision.
 - **Per-network tier (prove):** after all `missing` are downloaded, take a **shared**
   lock on `<param-dir>/.locks/<network>.lock`, **re-run `parameter_preflight` under
   the lock** (closes the TOCTOU: nothing was evicted between download and prove),
@@ -98,8 +114,11 @@ statePaths, publicStateRoot, programSources?})`:
 4. take shared tier lock → re-preflight (must now be empty, else
    `AleoNodeException`) → `execute_*_checked` → release;
 5. return the proof (`data`), or throw per the envelope.
-The fee + program variants mirror this. This is a NEW method; `AleoProgram`'s
-existing public methods are untouched (PR4 switches them).
+All three are implemented: `provisionAndProveExecution`, `provisionAndProveFee`,
+`provisionAndProveProgram` (the program one takes `programSources`; v1 rejects a
+non-empty/custom closure with `unsupported_feature`). These are NEW methods;
+`AleoProgram`'s existing public methods are untouched (PR4 switches them). The Dio is
+caller-owned when injected (`close()` only closes an internally-created client).
 
 ## 6. Delete dead code
 Remove `downloadProvingKey` + the hardcoded `s3-us-west-1…/inclusion.prover.cd85cc5`

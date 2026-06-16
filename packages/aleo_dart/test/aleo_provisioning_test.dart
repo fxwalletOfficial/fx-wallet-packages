@@ -227,6 +227,24 @@ void main() {
       );
     });
 
+    test(
+        'execute_program_proof_checked binding: custom sources → unsupported_feature',
+        () {
+      if (dyLib == null) return;
+      final pv = ParameterProvisioner(dyLib, 'mainnet', shared);
+      // A non-empty closure is rejected up front (before any param load), so the
+      // authorization need not be valid — this just exercises the binding typedef.
+      final env = jsonDecode(pv.callProgramProofForTest(
+        '{}',
+        '[{"id":"foo.aleo","edition":0,"source":"program foo.aleo;"}]',
+        17000000,
+        '',
+        '',
+      ));
+      expect(env['ok'], false);
+      expect(env['code'], 'unsupported_feature');
+    });
+
     test('consensus outside V8..=V13 → unsupported_consensus', () async {
       if (dyLib == null) return;
       final pv = ParameterProvisioner(dyLib, 'mainnet', shared);
