@@ -57,18 +57,22 @@ restart does not clear the poisoned static); mobile surfaces "restart app".
 
 ## 3. Atomic single-flight downloader
 
-dio + `CancelToken` (the existing `AleoNode` lifecycle: overall deadline, bounded
-retries, real socket abort). For each `missing` entry:
-1. acquire the file's single-flight lock (§4);
-2. **re-stat** (another flight may have finished it) — if now present+correct, done;
-3. download `urls[0]` (fall back to `urls[1]`) into `<final>.<rand>.tmp`, enforcing
-   `size` as a hard cap (abort+delete on overrun);
-4. verify SHA-256 == `checksum` (defensive; Rust preflight re-checks too);
-5. `flush`/`fsync` → atomic `rename` to the final `relativePath`;
-6. release the lock.
-Download UX (D2: Wi-Fi-only default, progress, resume) — **minimal in 2b** (a
-progress callback hook + the resume-friendly tmp+rename); full Wi-Fi-gating/resume
-policy is a thin follow-up, called out so it is not forgotten.
+dio + `CancelToken`. Per url: a **connect timeout** (15s — a hung DNS/TCP on the
+primary fails over to the mirror), a **receive** between-chunks inactivity timeout
+(60s), and an **overall per-url wall-clock deadline** (a `Timer` that cancels the
+token — catches a steady-but-slow stream that never goes idle). For each `missing`
+entry, under its single-flight lock (§4): re-check size+SHA-256 (another flight may
+have finished it); else, for each url in turn, download into `<final>.<rand>.tmp`
+(`size` as a hard cap via `onReceiveProgress`), **verify size + SHA-256 — on failure
+fall back to the next url** (so a corrupt HTTP-200 from the primary tries the
+mirror); then atomic `rename` to `relativePath`. *(Durability note: just `rename`,
+no explicit `fsync`; a crash mid-write is caught by the next run's preflight
+checksum, which re-downloads.)*
+
+Download UX (D2: Wi-Fi-only default, public progress callback, resume) — **out of
+scope in 2b**; only the internal size-cap `onReceiveProgress` exists. A public
+progress callback + Wi-Fi gating + resume is a follow-up, called out so it is not
+forgotten.
 
 ## 4. Contract 4 file-locking (the hard part)
 
@@ -126,17 +130,23 @@ URL + the now-unused `downloadFile` (grep-confirm no other caller) from
 `aleo_programs.dart`. (The `setup_dylib.dart` `pzhun` / `dyLib.dart` GPL pointers are
 PR4 / workstream D — not here.)
 
-## 7. Tests (offline / `ALEO_NEW_LIB`, like `aleo_node_test`)
-- Envelope parser: ok/missing/error/`restart_required`→latch; non-JSON→throw.
-- Latch: after `restart_required`, the next call fail-fasts without FFI.
-- Downloader vs a local `dart:io` `HttpServer`: atomic rename; size-cap abort; url[0]→
-  url[1] fallback; **single-flight** (two concurrent downloaders of the same file —
-  one downloads, one waits then sees it present).
-- Lock: concurrent `provisionAndProve` (shared tier lock lets both prove; an
-  exclusive holder blocks).
-- **Cold-cache E2E (`#[ignore]`/manual):** isolated temp param dir, download the 16
-  real files via the manifest, run a real credits prove → success. The definitive
-  "16 files sufficient" check (spec 2a §7); manual (needs ~1.2 GiB + a real node).
+## 7. Tests (offline / `ALEO_NEW_LIB`, like `aleo_node_test`) — as implemented
+- Envelope parser: ok / error / `restart_required`→latch; non-JSON→throw.
+- Downloader vs a local `dart:io` `HttpServer`: download+verify+atomic rename; url[0]→
+  url[1] fallback (incl. a corrupt HTTP-200 primary → verified mirror); wrong-checksum
+  rejection; **single-flight** (two concurrent same-isolate downloaders → one download).
+- Preflight (FFI): empty dir → 16 missing/absent; unknown network; unsupported
+  consensus; `execute_program_proof_checked` binding (custom sources →
+  `unsupported_feature`); `provisionAndProveProgram` rejects custom sources before any
+  provisioning (no dir touched).
+- **Not unit-tested (documented):** the per-network **tier-lock** behavior across
+  concurrent *proves* — that path needs a real prove (real params), so it is covered
+  by the cold-cache E2E below, not an offline test. The lock primitive is `dart:io`
+  `RandomAccessFile.lock`; the exclusive flock is exercised by the single-flight test.
+- **Cold-cache E2E (manual; needs ~1.2 GiB + a real node):** isolated temp param dir,
+  download the 16 real files via the manifest, run a real credits prove → success.
+  The definitive "16 files sufficient" check (spec 2a §7) and the only real exercise
+  of the prove path + tier lock.
 
 ## 8. Open decisions (review before I code)
 1. **Split 2b?** It is large (bindings+latch / downloader / locking / orchestration).

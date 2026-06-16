@@ -80,6 +80,11 @@ class ParameterProvisioner {
 
   final Dio _dio;
   final bool _ownsDio;
+
+  /// Wall-clock ceiling on a single url attempt, so a hung/slow source is abandoned
+  /// for the mirror instead of stalling (`connectTimeout`/`receiveTimeout` alone miss
+  /// a steady-but-slow stream that never goes idle).
+  final Duration _perUrlDeadline;
   bool _dirSet = false;
 
   /// Poison latch (§8 Contract 3). Tripped when a checked-proving call returns
@@ -103,9 +108,14 @@ class ParameterProvisioner {
     this.network,
     this.paramDir, {
     Dio? dio,
+    Duration? perUrlDownloadDeadline,
   })  : _ownsDio = dio == null,
+        _perUrlDeadline = perUrlDownloadDeadline ?? const Duration(minutes: 30),
         _dio = dio ??
-            Dio(BaseOptions(receiveTimeout: const Duration(minutes: 30)));
+            Dio(BaseOptions(
+              connectTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(minutes: 30),
+            ));
 
   // ── FFI ────────────────────────────────────────────────────────────────────
 
@@ -374,6 +384,15 @@ class ParameterProvisioner {
     Object? lastError;
     for (final url in param.urls) {
       final cancel = CancelToken();
+      // Overall wall-clock deadline for this attempt: a hung connect or a
+      // steady-but-slow stream (which never trips receiveTimeout) is cancelled so
+      // the loop falls back to the mirror.
+      final deadline = Timer(_perUrlDeadline, () {
+        if (!cancel.isCancelled) {
+          cancel.cancel('download of ${param.function} from $url exceeded '
+              '${_perUrlDeadline.inSeconds}s');
+        }
+      });
       try {
         await _dio.download(
           url,
@@ -381,7 +400,7 @@ class ParameterProvisioner {
           cancelToken: cancel,
           onReceiveProgress: (received, _) {
             // Hard cap: never write more than the manifest size.
-            if (received > param.size) {
+            if (received > param.size && !cancel.isCancelled) {
               cancel.cancel(
                   'parameter ${param.function} exceeded its declared size');
             }
@@ -392,6 +411,8 @@ class ParameterProvisioner {
             '$url returned a body failing size/checksum verification');
       } catch (e) {
         lastError = e;
+      } finally {
+        deadline.cancel();
       }
       if (await tmp.exists()) {
         await tmp.delete().catchError((_) => tmp);
@@ -471,9 +492,25 @@ class ParameterProvisioner {
           () => _callExecuteFeeProofChecked(
               authorization, height, statePaths, publicStateRoot));
 
+  /// An empty program closure: `""` or `"[]"` (an empty JSON array). Mirrors the
+  /// native rule so a custom program is rejected at the Dart entry; a non-array or
+  /// malformed value is NOT empty (and the native side would reject it too).
+  static bool _isEmptyClosure(String programSources) {
+    final trimmed = programSources.trim();
+    if (trimmed.isEmpty) return true;
+    try {
+      final decoded = jsonDecode(trimmed);
+      return decoded is List && decoded.isEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// preflight → download → prove an execution through the program path. v1 is
-  /// credits-only, so a non-empty [programSources] (a custom program) is rejected
-  /// by the native side with `unsupported_feature`. Returns the serialized execution.
+  /// credits-only: a non-empty [programSources] (a custom program) is rejected HERE
+  /// with `unsupported_feature`, BEFORE provisioning ~1.15 GiB — the native side
+  /// would also reject it, but only after the download. Returns the serialized
+  /// execution.
   Future<String> provisionAndProveProgram({
     required String authorization,
     required int height,
@@ -481,11 +518,16 @@ class ParameterProvisioner {
     String programSources = '',
     String statePaths = '',
     String publicStateRoot = '',
-  }) =>
-      _provisionAndProve(
-          consensusVersion,
-          () => _callExecuteProgramProofChecked(authorization, programSources,
-              height, statePaths, publicStateRoot));
+  }) async {
+    if (!_isEmptyClosure(programSources)) {
+      throw ProvisioningException('unsupported_feature',
+          'custom-program proving is not supported in this version');
+    }
+    return _provisionAndProve(
+        consensusVersion,
+        () => _callExecuteProgramProofChecked(authorization, programSources,
+            height, statePaths, publicStateRoot));
+  }
 
   /// Closes the internally-created Dio. A caller-injected Dio is left open — the
   /// caller owns its lifecycle (mirrors `AleoNode`).

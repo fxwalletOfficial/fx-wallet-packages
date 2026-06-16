@@ -245,6 +245,31 @@ void main() {
       expect(env['code'], 'unsupported_feature');
     });
 
+    test('provisionAndProveProgram rejects custom sources BEFORE provisioning',
+        () async {
+      if (dyLib == null) return;
+      final dir = Directory.systemTemp.createTempSync('aleo_pv_prog_');
+      try {
+        final pv = ParameterProvisioner(dyLib, 'mainnet', dir);
+        await expectLater(
+          pv.provisionAndProveProgram(
+            authorization: '{}',
+            programSources:
+                '[{"id":"foo.aleo","edition":0,"source":"program foo.aleo;"}]',
+            height: 17000000,
+            consensusVersion: 13,
+          ),
+          throwsA(isA<ProvisioningException>()
+              .having((e) => e.code, 'code', 'unsupported_feature')),
+        );
+        // Rejected before any provisioning: the dir was never even touched (no
+        // ffi_set_parameter_dir, no preflight, no .locks/resources, no download).
+        expect(dir.listSync(), isEmpty);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
     test('consensus outside V8..=V13 → unsupported_consensus', () async {
       if (dyLib == null) return;
       final pv = ParameterProvisioner(dyLib, 'mainnet', shared);
