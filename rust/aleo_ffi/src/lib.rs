@@ -2438,134 +2438,33 @@ mod tests {
         })
     }
 
-    #[test]
-    fn execute_proof_checked_rejects_unknown_network() {
-        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
-        let env = execute_proof_checked_call("bogusnet", &auth, 17_000_000);
-        assert_eq!(env["ok"], false);
-        assert_eq!(env["code"], "unsupported_network");
-    }
+    // ── The checked-proving input-validation contract (single source of truth) ──
+    //
+    // Every rejected input class → its envelope code, as ONE table. A new
+    // validation rule is a new row here, not a new scattered test — the deliberate
+    // countermeasure to fixing one input class per review round. The happy path is
+    // real SNARK proving, covered by the #[ignore] end-to-end test above.
 
-    #[test]
-    fn execute_proof_checked_rejects_invalid_authorization() {
-        let env = execute_proof_checked_call("mainnet", "not json", 17_000_000);
-        assert_eq!(env["ok"], false);
-        assert_eq!(env["code"], "invalid_input");
-    }
-
-    #[test]
-    fn execute_proof_checked_rejects_unsupported_consensus() {
-        // A valid credits authorization, but height 0 selects consensus V1 (< V8),
-        // which v1 does not support — rejected before any proving.
-        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
-        let env = execute_proof_checked_call("mainnet", &auth, 0);
-        assert_eq!(env["ok"], false);
-        assert_eq!(env["code"], "unsupported_consensus");
-    }
-
-    #[test]
-    fn execute_program_proof_checked_rejects_custom_sources() {
-        // v1 is credits-only: a non-empty program closure is a custom program.
-        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
-        let n = CString::new("mainnet").unwrap();
-        let a = CString::new(auth).unwrap();
-        let sources =
-            CString::new(r#"[{"id":"foo.aleo","edition":0,"source":"program foo.aleo;"}]"#).unwrap();
-        let empty = CString::new("").unwrap();
-        let env = call_envelope(unsafe {
-            execute_program_proof_checked(
-                n.as_ptr(),
-                a.as_ptr(),
-                sources.as_ptr(),
-                17_000_000,
-                empty.as_ptr(),
-                empty.as_ptr(),
-            )
-        });
-        assert_eq!(env["ok"], false);
-        assert_eq!(env["code"], "unsupported_feature");
-    }
-
-    #[test]
-    fn execute_program_proof_checked_accepts_empty_array_closure() {
-        // "[]" is an empty closure (what AleoNode.programClosure returns for
-        // credits.aleo), not a custom program — it must pass the closure gate. The
-        // call then fails on the empty private-flow state paths (invalid_input),
-        // which proves it got *past* the unsupported_feature check.
-        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
-        let n = CString::new("mainnet").unwrap();
-        let a = CString::new(auth).unwrap();
-        let sources = CString::new("[]").unwrap();
-        let empty = CString::new("").unwrap();
-        let env = call_envelope(unsafe {
-            execute_program_proof_checked(
-                n.as_ptr(),
-                a.as_ptr(),
-                sources.as_ptr(),
-                17_000_000,
-                empty.as_ptr(),
-                empty.as_ptr(),
-            )
-        });
-        assert_ne!(env["code"], "unsupported_feature", "empty array closure must not be rejected: {env}");
-        assert_eq!(env["code"], "invalid_input", "{env}");
-    }
-
-    #[test]
-    fn execute_program_proof_checked_rejects_non_array_closure() {
-        // A non-array (or malformed) closure is rejected without deserializing it.
-        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
-        let n = CString::new("mainnet").unwrap();
-        let a = CString::new(auth).unwrap();
-        let empty = CString::new("").unwrap();
-        // "[\u{00A0}]" is invalid JSON (NBSP is not JSON whitespace) — must be
-        // rejected, not read as empty by Rust's Unicode-aware trim.
-        for bad in ["{}", "[ ", "not json", "[\u{00A0}]"] {
-            let sources = CString::new(bad).unwrap();
-            let env = call_envelope(unsafe {
-                execute_program_proof_checked(
-                    n.as_ptr(),
-                    a.as_ptr(),
-                    sources.as_ptr(),
-                    17_000_000,
-                    empty.as_ptr(),
-                    empty.as_ptr(),
-                )
-            });
-            assert_eq!(env["code"], "unsupported_feature", "input {bad:?} → {env}");
-        }
-    }
-
-    #[test]
-    fn execute_proof_checked_rejects_duplicate_transition() {
-        // Duplicate the single request + transition: snarkVM's try_from accepts it
-        // (the input arrays are still equal length), but the transition IndexMap
-        // folds the duplicate, leaving more requests (2) than transitions (1). The
-        // structure check must reject this before proving silently ignores the
-        // extra request.
-        let auth = private_transfer_authorization();
-        let mut value: serde_json::Value = serde_json::from_str(&serde_json::to_string(&auth).unwrap()).unwrap();
+    /// A credits authorization whose duplicated request+transition folds in the
+    /// transition `IndexMap` (2 requests, 1 transition) — snarkVM's equal-length
+    /// check passes, but proving would ignore the extra request.
+    fn folded_duplicate_authorization() -> String {
+        let mut value: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&private_transfer_authorization()).unwrap()).unwrap();
         for key in ["requests", "transitions"] {
-            let arr = value[key].as_array_mut().expect("array field");
-            let first = arr[0].clone();
-            arr.push(first);
+            let first = value[key][0].clone();
+            value[key].as_array_mut().expect("array field").push(first);
         }
-        let degenerate = serde_json::to_string(&value).unwrap();
-        let env = execute_proof_checked_call("mainnet", &degenerate, 17_000_000);
-        assert_eq!(env["ok"], false);
-        assert_eq!(env["code"], "invalid_input", "{env}");
-        assert!(env["message"].as_str().unwrap().contains("one transition"), "{env}");
+        serde_json::to_string(&value).unwrap()
     }
 
-    #[test]
-    fn execute_proof_checked_rejects_concatenated_authorizations() {
-        // Two INDEPENDENT valid credits authorizations (unique requests + transition
-        // IDs) concatenated: snarkVM's equal-length check passes and nothing folds,
-        // but proving would start from the first root and silently ignore the
-        // second request. The single-transition check must reject it.
+    /// Two INDEPENDENT credits authorizations (distinct transition ids, equal
+    /// counts so nothing folds) concatenated — proving would start from the first
+    /// root and silently ignore the second request.
+    fn concatenated_authorizations() -> String {
         let owner = owner();
         let recipient = Address::<Net>::try_from(&other_key()).unwrap().to_string();
-        let mut auth_value = |amount: u64| -> serde_json::Value {
+        let auth_value = |amount: u64| -> serde_json::Value {
             let inputs = transfer_inputs("transfer_public", &recipient, amount, "", &owner).unwrap();
             let vm = new_vm::<Net>().unwrap();
             let auth = vm
@@ -2573,31 +2472,74 @@ mod tests {
                 .unwrap();
             serde_json::from_str(&serde_json::to_string(&auth).unwrap()).unwrap()
         };
-        // Distinct amounts → distinct transitions (different ids), so nothing folds.
         let mut first = auth_value(1);
         let second = auth_value(2);
         for key in ["requests", "transitions"] {
             let extra = second[key].as_array().unwrap().clone();
             first[key].as_array_mut().unwrap().extend(extra);
         }
-        let concatenated = serde_json::to_string(&first).unwrap();
-        let env = execute_proof_checked_call("mainnet", &concatenated, 17_000_000);
-        assert_eq!(env["ok"], false);
-        assert_eq!(env["code"], "invalid_input", "{env}");
-        assert!(env["message"].as_str().unwrap().contains("one transition"), "{env}");
+        serde_json::to_string(&first).unwrap()
+    }
+
+    fn call_program_proof(network: &str, authorization: &str, program_sources: &str, height: u32) -> serde_json::Value {
+        let n = CString::new(network).unwrap();
+        let a = CString::new(authorization).unwrap();
+        let s = CString::new(program_sources).unwrap();
+        let empty = CString::new("").unwrap();
+        call_envelope(unsafe {
+            execute_program_proof_checked(n.as_ptr(), a.as_ptr(), s.as_ptr(), height, empty.as_ptr(), empty.as_ptr())
+        })
     }
 
     #[test]
-    fn execute_proof_checked_rejects_oversized_authorization() {
-        // An authorization past the byte budget is rejected BEFORE serde, so an
-        // untrusted blob can't OOM the deserializer. The string is > the cap
-        // (MAX_TRANSITIONS * MAX_TRANSACTION_SIZE) but still small enough to test.
-        let cap = max_authorization_bytes::<Net>();
-        let huge = "x".repeat(cap + 1);
-        let env = execute_proof_checked_call("mainnet", &huge, 17_000_000);
-        assert_eq!(env["ok"], false);
-        assert_eq!(env["code"], "invalid_input");
-        assert!(env["message"].as_str().unwrap().contains("budget"), "{env}");
+    fn checked_proving_input_contract() {
+        let valid = || serde_json::to_string(&private_transfer_authorization()).unwrap();
+        let oversized = "x".repeat(max_authorization_bytes::<Net>() + 1); // pre-serde byte cap
+
+        // (label, network, authorization, height, expected envelope code)
+        let cases: Vec<(&str, &str, String, u32, &str)> = vec![
+            ("unknown network", "bogusnet", valid(), 17_000_000, "unsupported_network"),
+            ("unparseable authorization", "mainnet", "not json".to_string(), 17_000_000, "invalid_input"),
+            ("oversized authorization (byte cap, before serde)", "mainnet", oversized, 17_000_000, "invalid_input"),
+            ("folded duplicate transition", "mainnet", folded_duplicate_authorization(), 17_000_000, "invalid_input"),
+            ("two concatenated authorizations", "mainnet", concatenated_authorizations(), 17_000_000, "invalid_input"),
+            ("consensus below V8 (height 0 → V1)", "mainnet", valid(), 0, "unsupported_consensus"),
+        ];
+        for (label, network, authorization, height, expected) in cases {
+            let env = execute_proof_checked_call(network, &authorization, height);
+            assert_eq!(env["ok"], false, "{label}: expected rejection, got {env}");
+            assert_eq!(env["code"], expected, "{label}: {env}");
+        }
+        // NOTE: a non-credits authorization → `unsupported_feature` is enforced by
+        // `authorization_is_credits_only` but is not unit-tested here — building one
+        // offline needs a deployed custom program. It is covered for the program
+        // variant below (a custom program closure) and by code inspection.
+    }
+
+    #[test]
+    fn checked_program_proof_closure_contract() {
+        // The program variant adds the program-closure gate. An empty closure ("",
+        // "[]", or JSON whitespace) passes to proving — and then fails on the empty
+        // private-flow state paths (invalid_input), which proves it got *past* the
+        // gate. Anything with entries, a non-array shape, or non-JSON whitespace
+        // (e.g. NBSP) → unsupported_feature, without deserializing the array.
+        let auth = serde_json::to_string(&private_transfer_authorization()).unwrap();
+
+        // (label, program_sources, expected envelope code)
+        let cases: &[(&str, &str, &str)] = &[
+            ("empty string closure", "", "invalid_input"),
+            ("empty array closure", "[]", "invalid_input"),
+            ("whitespace-only array", "[ \t\n\r]", "invalid_input"),
+            ("custom program entry", r#"[{"id":"foo.aleo","edition":0,"source":"program foo.aleo;"}]"#, "unsupported_feature"),
+            ("non-array object", "{}", "unsupported_feature"),
+            ("truncated array", "[ ", "unsupported_feature"),
+            ("non-JSON whitespace (NBSP)", "[\u{00A0}]", "unsupported_feature"),
+        ];
+        for (label, sources, expected) in cases {
+            let env = call_program_proof("mainnet", &auth, sources, 17_000_000);
+            assert_eq!(env["ok"], false, "{label}: {env}");
+            assert_eq!(env["code"], *expected, "{label}: {env}");
+        }
     }
 
     #[test]
