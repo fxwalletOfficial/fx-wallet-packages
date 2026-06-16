@@ -57,10 +57,11 @@ restart does not clear the poisoned static); mobile surfaces "restart app".
 
 ## 3. Atomic single-flight downloader
 
-dio + `CancelToken`. Per url: a **connect timeout** (15s — a hung DNS/TCP on the
+dio + `CancelToken`. Per url: a **connect timeout** (30s — a hung DNS/TCP on the
 primary fails over to the mirror), a **receive** between-chunks inactivity timeout
-(60s), and an **overall per-url wall-clock deadline** (a `Timer` that cancels the
-token — catches a steady-but-slow stream that never goes idle). For each `missing`
+(30min), and an **overall per-url wall-clock deadline** (`_perUrlDeadline`, default
+30min, constructor-overridable — a `Timer` that cancels the token, catching a
+steady-but-slow stream that never goes idle). For each `missing`
 entry, under its single-flight lock (§4): re-check size+SHA-256 (another flight may
 have finished it); else, for each url in turn, download into `<final>.<rand>.tmp`
 (`size` as a hard cap via `onReceiveProgress`), **verify size + SHA-256 — on failure

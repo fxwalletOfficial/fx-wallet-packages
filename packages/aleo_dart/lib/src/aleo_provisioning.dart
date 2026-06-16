@@ -519,6 +519,9 @@ class ParameterProvisioner {
     String statePaths = '',
     String publicStateRoot = '',
   }) async {
+    // Latch first (Contract 3): a poisoned process fail-fasts as
+    // ProvingDisabledException, even for a custom-program call.
+    _ensureNotDisabled();
     if (!_isEmptyClosure(programSources)) {
       throw ProvisioningException('unsupported_feature',
           'custom-program proving is not supported in this version');

@@ -65,6 +65,31 @@ void main() {
           throwsA(isA<ProvingDisabledException>()));
       expect(ParameterProvisioner.provingDisabled, isTrue);
     });
+
+    test(
+        'provisionAndProveProgram checks the latch before the custom-closure check',
+        () async {
+      if (dyLib == null) return;
+      final pv = ParameterProvisioner(dyLib, 'mainnet', Directory.systemTemp);
+      // Poison the process.
+      try {
+        pv.parseEnvelopeForTest(
+            '{"ok":false,"code":"restart_required","message":"m"}');
+      } catch (_) {}
+      expect(ParameterProvisioner.provingDisabled, isTrue);
+      // A custom-program call now fail-fasts as ProvingDisabledException (Contract 3
+      // — latch first), NOT unsupported_feature.
+      await expectLater(
+        pv.provisionAndProveProgram(
+          authorization: '{}',
+          programSources:
+              '[{"id":"foo.aleo","edition":0,"source":"program foo.aleo;"}]',
+          height: 17000000,
+          consensusVersion: 13,
+        ),
+        throwsA(isA<ProvingDisabledException>()),
+      );
+    });
   }, skip: dyLib == null ? nativeLibMissingReason : null);
 
   // ── Downloader + single-flight (local server, no FFI dir set) ───────────────
