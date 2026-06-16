@@ -91,14 +91,16 @@ class ParameterProvisioner {
     this.network,
     this.paramDir, {
     Dio? dio,
-  }) : _dio = dio ?? Dio(BaseOptions(receiveTimeout: const Duration(minutes: 30)));
+  }) : _dio = dio ??
+            Dio(BaseOptions(receiveTimeout: const Duration(minutes: 30)));
 
   // ── FFI ────────────────────────────────────────────────────────────────────
 
   String _callPreflight(int consensusVersion) {
     final fn = _lib.lookupFunction<
         ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>, ffi.Uint16),
-        ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>, int)>('parameter_preflight');
+        ffi.Pointer<Utf8> Function(
+            ffi.Pointer<Utf8>, int)>('parameter_preflight');
     final net = network.toNativeUtf8();
     try {
       return takeNativeString(_lib, fn(net, consensusVersion));
@@ -125,28 +127,32 @@ class ParameterProvisioner {
     return takeNativeString(_lib, fn());
   }
 
-  String _callExecuteProofChecked(
-      String authorization, int height, String statePaths, String publicStateRoot) {
+  String _callExecuteProofChecked(String authorization, int height,
+      String statePaths, String publicStateRoot) {
     final fn = _lib.lookupFunction<
-        ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Uint32,
-            ffi.Pointer<Utf8>, ffi.Pointer<Utf8>),
+        ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>,
+            ffi.Uint32, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>),
         ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int,
             ffi.Pointer<Utf8>, ffi.Pointer<Utf8>)>('execute_proof_checked');
     return _callProving(
         (net, auth, paths, root) => fn(net, auth, height, paths, root),
-        authorization, statePaths, publicStateRoot);
+        authorization,
+        statePaths,
+        publicStateRoot);
   }
 
-  String _callExecuteFeeProofChecked(
-      String authorization, int height, String statePaths, String publicStateRoot) {
+  String _callExecuteFeeProofChecked(String authorization, int height,
+      String statePaths, String publicStateRoot) {
     final fn = _lib.lookupFunction<
-        ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Uint32,
-            ffi.Pointer<Utf8>, ffi.Pointer<Utf8>),
+        ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>,
+            ffi.Uint32, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>),
         ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int,
             ffi.Pointer<Utf8>, ffi.Pointer<Utf8>)>('execute_fee_proof_checked');
     return _callProving(
         (net, auth, paths, root) => fn(net, auth, height, paths, root),
-        authorization, statePaths, publicStateRoot);
+        authorization,
+        statePaths,
+        publicStateRoot);
   }
 
   /// Shared input marshalling for the 4-pointer checked proving exports.
@@ -178,10 +184,12 @@ class ParameterProvisioner {
     try {
       decoded = jsonDecode(json);
     } catch (_) {
-      throw ProvisioningException('invalid_envelope', 'native returned non-JSON: $json');
+      throw ProvisioningException(
+          'invalid_envelope', 'native returned non-JSON: $json');
     }
     if (decoded is! Map || decoded['ok'] != true) {
-      final code = (decoded is Map ? decoded['code'] : null) ?? 'invalid_envelope';
+      final code =
+          (decoded is Map ? decoded['code'] : null) ?? 'invalid_envelope';
       final message = (decoded is Map ? decoded['message'] : null) ?? json;
       if (code == 'restart_required') {
         _provingDisabled = true;
@@ -209,7 +217,9 @@ class ParameterProvisioner {
     }
     // Already set/loading: accept only if the effective dir is already ours.
     final dir = _ok(_callAleoDir())['data'] as String;
-    final ours = paramDir.existsSync() ? paramDir.resolveSymbolicLinksSync() : paramDir.path;
+    final ours = paramDir.existsSync()
+        ? paramDir.resolveSymbolicLinksSync()
+        : paramDir.path;
     if (dir == ours) {
       _dirSet = true;
       return;
@@ -270,7 +280,8 @@ class ParameterProvisioner {
   /// rename). Verifies size + SHA-256, then atomically renames into place.
   Future<void> _provisionFile(MissingParam param) {
     // In-process single-flight (this isolate), then cross-process via the flock.
-    return _withInProcessLock(param.relativePath, () => _provisionFileLocked(param));
+    return _withInProcessLock(
+        param.relativePath, () => _provisionFileLocked(param));
   }
 
   Future<void> _provisionFileLocked(MissingParam param) async {
@@ -280,7 +291,8 @@ class ParameterProvisioner {
     try {
       await raf.lock(FileLock.blockingExclusive);
       final target = File(p.join(paramDir.path, param.relativePath));
-      if (await _fileMatches(target, param)) return; // another flight finished it
+      if (await _fileMatches(target, param))
+        return; // another flight finished it
       await target.parent.create(recursive: true);
 
       final tmp = File('${target.path}.${Random().nextInt(1 << 31)}.tmp');
@@ -314,7 +326,8 @@ class ParameterProvisioner {
           onReceiveProgress: (received, _) {
             // Hard cap: never write more than the manifest size.
             if (received > param.size) {
-              cancel.cancel('parameter ${param.function} exceeded its declared size');
+              cancel.cancel(
+                  'parameter ${param.function} exceeded its declared size');
             }
           },
         );
@@ -326,8 +339,8 @@ class ParameterProvisioner {
         }
       }
     }
-    throw ProvisioningException(
-        'download_failed', 'all sources failed for ${param.function}: $lastError');
+    throw ProvisioningException('download_failed',
+        'all sources failed for ${param.function}: $lastError');
   }
 
   // ── Tier lock + proving ─────────────────────────────────────────────────────
@@ -359,7 +372,8 @@ class ParameterProvisioner {
   /// Provisions then proves, holding the shared tier lock across a re-preflight (to
   /// close the download→prove TOCTOU) and the whole proving call. Returns the
   /// native envelope's serialized proof (`data`). [prove] performs the FFI call.
-  Future<String> _provisionAndProve(int consensusVersion, String Function() prove) async {
+  Future<String> _provisionAndProve(
+      int consensusVersion, String Function() prove) async {
     _ensureNotDisabled();
     await _downloadAll(consensusVersion);
     return _withSharedTierLock(() async {
@@ -381,8 +395,10 @@ class ParameterProvisioner {
     String statePaths = '',
     String publicStateRoot = '',
   }) =>
-      _provisionAndProve(consensusVersion,
-          () => _callExecuteProofChecked(authorization, height, statePaths, publicStateRoot));
+      _provisionAndProve(
+          consensusVersion,
+          () => _callExecuteProofChecked(
+              authorization, height, statePaths, publicStateRoot));
 
   /// preflight → download → prove a fee authorization. Returns the serialized fee.
   Future<String> provisionAndProveFee({
@@ -392,8 +408,10 @@ class ParameterProvisioner {
     String statePaths = '',
     String publicStateRoot = '',
   }) =>
-      _provisionAndProve(consensusVersion,
-          () => _callExecuteFeeProofChecked(authorization, height, statePaths, publicStateRoot));
+      _provisionAndProve(
+          consensusVersion,
+          () => _callExecuteFeeProofChecked(
+              authorization, height, statePaths, publicStateRoot));
 
   void close() => _dio.close(force: true);
 
@@ -401,7 +419,8 @@ class ParameterProvisioner {
 
   /// Exposes [_provisionFile] so the downloader + single-flight lock can be tested
   /// with a fabricated [MissingParam] against a local server (no real params).
-  Future<void> provisionFileForTest(MissingParam param) => _provisionFile(param);
+  Future<void> provisionFileForTest(MissingParam param) =>
+      _provisionFile(param);
 
   /// Exposes the fail-closed envelope parser.
   Map<String, dynamic> parseEnvelopeForTest(String json) => _ok(json);

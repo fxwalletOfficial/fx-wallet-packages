@@ -23,7 +23,8 @@ Future<HttpServer> serveBytes(Map<String, List<int>?> routes) async {
   return server;
 }
 
-MissingParam missingFor(String dir, String relPath, List<int> body, List<String> urls,
+MissingParam missingFor(
+    String dir, String relPath, List<int> body, List<String> urls,
     {String reason = 'absent'}) {
   return MissingParam(
     function: 'test',
@@ -52,11 +53,15 @@ void main() {
 
       expect(() => pv.parseEnvelopeForTest('not json'),
           throwsA(isA<ProvisioningException>()));
-      expect(() => pv.parseEnvelopeForTest('{"ok":false,"code":"invalid_input","message":"m"}'),
+      expect(
+          () => pv.parseEnvelopeForTest(
+              '{"ok":false,"code":"invalid_input","message":"m"}'),
           throwsA(isA<ProvisioningException>()));
 
       expect(ParameterProvisioner.provingDisabled, isFalse);
-      expect(() => pv.parseEnvelopeForTest('{"ok":false,"code":"restart_required","message":"m"}'),
+      expect(
+          () => pv.parseEnvelopeForTest(
+              '{"ok":false,"code":"restart_required","message":"m"}'),
           throwsA(isA<ProvingDisabledException>()));
       expect(ParameterProvisioner.provingDisabled, isTrue);
     });
@@ -64,7 +69,8 @@ void main() {
 
   // ── Downloader + single-flight (local server, no FFI dir set) ───────────────
   group('downloader', () {
-    test('downloads, verifies size+checksum, atomic-renames into place', () async {
+    test('downloads, verifies size+checksum, atomic-renames into place',
+        () async {
       if (dyLib == null) return;
       final dir = Directory.systemTemp.createTempSync('aleo_pv_dl_');
       final body = utf8.encode('a-fake-proving-key-${DateTime.now()}');
@@ -97,14 +103,17 @@ void main() {
         final param = missingFor(dir.path, 'resources/k.prover.def5678', body,
             ['http://127.0.0.1:$port/bad', 'http://127.0.0.1:$port/good']);
         await pv.provisionFileForTest(param);
-        expect(File(p.join(dir.path, 'resources/k.prover.def5678')).existsSync(), isTrue);
+        expect(
+            File(p.join(dir.path, 'resources/k.prover.def5678')).existsSync(),
+            isTrue);
       } finally {
         await server.close(force: true);
         dir.deleteSync(recursive: true);
       }
     });
 
-    test('rejects a wrong-checksum body (verification), leaves no file', () async {
+    test('rejects a wrong-checksum body (verification), leaves no file',
+        () async {
       if (dyLib == null) return;
       final dir = Directory.systemTemp.createTempSync('aleo_pv_bad_');
       final body = utf8.encode('actual-body');
@@ -121,16 +130,18 @@ void main() {
           checksum: sha256.convert(utf8.encode('something-else')).toString(),
           reason: 'absent',
         );
-        await expectLater(
-            pv.provisionFileForTest(param), throwsA(isA<ProvisioningException>()));
-        expect(File(p.join(dir.path, 'resources/k.prover.bad')).existsSync(), isFalse);
+        await expectLater(pv.provisionFileForTest(param),
+            throwsA(isA<ProvisioningException>()));
+        expect(File(p.join(dir.path, 'resources/k.prover.bad')).existsSync(),
+            isFalse);
       } finally {
         await server.close(force: true);
         dir.deleteSync(recursive: true);
       }
     });
 
-    test('single-flight: a concurrent provision sees the file already present', () async {
+    test('single-flight: a concurrent provision sees the file already present',
+        () async {
       if (dyLib == null) return;
       final dir = Directory.systemTemp.createTempSync('aleo_pv_sf_');
       final body = utf8.encode('single-flight-body');
@@ -145,13 +156,14 @@ void main() {
       final port = server.port;
       try {
         final pv = ParameterProvisioner(dyLib, 'mainnet', dir);
-        final param = missingFor(
-            dir.path, 'resources/k.prover.sf', body, ['http://127.0.0.1:$port/k']);
+        final param = missingFor(dir.path, 'resources/k.prover.sf', body,
+            ['http://127.0.0.1:$port/k']);
         await Future.wait([
           pv.provisionFileForTest(param),
           pv.provisionFileForTest(param),
         ]);
-        expect(File(p.join(dir.path, 'resources/k.prover.sf')).existsSync(), isTrue);
+        expect(File(p.join(dir.path, 'resources/k.prover.sf')).existsSync(),
+            isTrue);
         // The exclusive single-flight lock serialized them: only one download.
         expect(hits, 1);
       } finally {
@@ -178,7 +190,8 @@ void main() {
       expect(missing.map((m) => m.function), contains('inclusion'));
     });
 
-    test('unknown network → ProvisioningException(unsupported_network)', () async {
+    test('unknown network → ProvisioningException(unsupported_network)',
+        () async {
       if (dyLib == null) return;
       final pv = ParameterProvisioner(dyLib, 'bogusnet', shared);
       await expectLater(
