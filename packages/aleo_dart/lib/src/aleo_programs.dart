@@ -338,8 +338,8 @@ class AleoProgram {
       String execution_raw) async {
     AleoUtils.checkAmount(fee_credits, 'fee');
     final height = await _node(url_raw).latestHeight();
-    return executionFeeAuthorizationStatic(private_key_raw, execution_raw,
-        fee_credits, fee_record_raw, '', height);
+    return executionFeeAuthorizationStatic(
+        private_key_raw, execution_raw, fee_credits, fee_record_raw, '', height);
   }
 
   /// Broadcasts a serialized transaction. `transfer_type_raw` is unused (kept
@@ -524,8 +524,8 @@ class AleoProgram {
     try {
       return takeNativeString(
           programsRustFFI.dyLib,
-          programsRustFFI.executionFeeAuthorizationStatic(private_key,
-              execution, fee_credits, fee_record, sources, height));
+          programsRustFFI.executionFeeAuthorizationStatic(
+              private_key, execution, fee_credits, fee_record, sources, height));
     } finally {
       freeAll([private_key, execution, fee_record, sources]);
     }
@@ -561,8 +561,7 @@ class AleoProgram {
     final execution = dartStrToC(execution_raw);
     final programSources = dartStrToC(sources);
     try {
-      return programsRustFFI.getBaseFeeStatic(
-          execution, programSources, height);
+      return programsRustFFI.getBaseFeeStatic(execution, programSources, height);
     } finally {
       freeAll([execution, programSources]);
     }
@@ -626,7 +625,8 @@ class AleoProgram {
       AleoNode node, String authorization, int height) async {
     final commitments = requiredCommitments(authorization);
     final paths = await node.statePaths(commitments);
-    final publicRoot = commitments.isEmpty ? await node.latestStateRoot() : '';
+    final publicRoot =
+        commitments.isEmpty ? await node.latestStateRoot() : '';
     return _require(
         await executeProofStatic(authorization, height, paths, publicRoot),
         'execution proof');
@@ -638,10 +638,10 @@ class AleoProgram {
       AleoNode node, String feeAuthorization, int height) async {
     final commitments = requiredCommitments(feeAuthorization);
     final paths = await node.statePaths(commitments);
-    final publicRoot = commitments.isEmpty ? await node.latestStateRoot() : '';
+    final publicRoot =
+        commitments.isEmpty ? await node.latestStateRoot() : '';
     return _require(
-        await executeFeeProofStatic(
-            feeAuthorization, height, paths, publicRoot),
+        await executeFeeProofStatic(feeAuthorization, height, paths, publicRoot),
         'fee proof');
   }
 
@@ -651,7 +651,8 @@ class AleoProgram {
       AleoNode node, String authorization, String sources, int height) async {
     final commitments = requiredCommitments(authorization);
     final paths = await node.statePaths(commitments);
-    final publicRoot = commitments.isEmpty ? await node.latestStateRoot() : '';
+    final publicRoot =
+        commitments.isEmpty ? await node.latestStateRoot() : '';
     return _require(
         await executeProgramProofStatic(
             authorization, sources, height, paths, publicRoot),
@@ -688,3 +689,4 @@ class AleoProgram {
     return json.encode(data);
   }
 }
+

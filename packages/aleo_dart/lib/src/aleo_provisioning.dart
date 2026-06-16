@@ -297,11 +297,8 @@ class ParameterProvisioner {
 
       final tmp = File('${target.path}.${Random().nextInt(1 << 31)}.tmp');
       try {
-        await _downloadTo(param, tmp);
-        if (!await _fileMatches(tmp, param)) {
-          throw ProvisioningException('checksum_mismatch',
-              'downloaded ${param.function} failed size/checksum verification');
-        }
+        await _downloadTo(
+            param, tmp); // returns only a size+checksum-verified body
         await tmp.rename(target.path); // atomic on the same filesystem
       } finally {
         if (await tmp.exists()) {
@@ -314,6 +311,11 @@ class ParameterProvisioner {
     }
   }
 
+  /// Downloads [param] into [tmp] from the first url whose body verifies (size +
+  /// SHA-256). Falls back to the next url on a connection error OR a content
+  /// mismatch — so a corrupt/stale primary CDN response (HTTP 200, wrong bytes)
+  /// tries the mirror instead of failing the whole provision. Returns only when a
+  /// url's body is verified.
   Future<void> _downloadTo(MissingParam param, File tmp) async {
     Object? lastError;
     for (final url in param.urls) {
@@ -331,12 +333,14 @@ class ParameterProvisioner {
             }
           },
         );
-        return;
+        if (await _fileMatches(tmp, param)) return; // verified
+        lastError = ProvisioningException('checksum_mismatch',
+            '$url returned a body failing size/checksum verification');
       } catch (e) {
         lastError = e;
-        if (await tmp.exists()) {
-          await tmp.delete().catchError((_) => tmp);
-        }
+      }
+      if (await tmp.exists()) {
+        await tmp.delete().catchError((_) => tmp);
       }
     }
     throw ProvisioningException('download_failed',

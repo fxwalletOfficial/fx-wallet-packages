@@ -112,6 +112,32 @@ void main() {
       }
     });
 
+    test('a corrupt primary url falls back to the verified mirror', () async {
+      if (dyLib == null) return;
+      final dir = Directory.systemTemp.createTempSync('aleo_pv_corrupt_');
+      final good = utf8.encode('the-correct-proving-key');
+      // Primary serves WRONG bytes (HTTP 200), mirror serves the correct body.
+      final server = await serveBytes({
+        '/primary': utf8.encode('corrupt-stale-body'),
+        '/mirror': good,
+      });
+      final port = server.port;
+      try {
+        final pv = ParameterProvisioner(dyLib, 'mainnet', dir);
+        final param = missingFor(dir.path, 'resources/k.prover.cor', good, [
+          'http://127.0.0.1:$port/primary',
+          'http://127.0.0.1:$port/mirror'
+        ]);
+        await pv.provisionFileForTest(param);
+        final target = File(p.join(dir.path, 'resources/k.prover.cor'));
+        expect(target.existsSync(), isTrue);
+        expect(target.readAsBytesSync(), good);
+      } finally {
+        await server.close(force: true);
+        dir.deleteSync(recursive: true);
+      }
+    });
+
     test('rejects a wrong-checksum body (verification), leaves no file',
         () async {
       if (dyLib == null) return;
