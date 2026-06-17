@@ -107,6 +107,38 @@ After this, the network ID embedded at authorize time matches the network the pr
 is produced for — the precondition for testnet working end-to-end (today everything
 is forced to `MainnetV0`, which silently mis-IDs a testnet tx).
 
+`network` is the **new first arg** on the §3.2 renamed exports and the `_checked`
+exports, but stays in its **existing (last) position** on these five (their slot
+already exists; moving it would be a gratuitous ABI break). The Dart bindings (§5)
+must mind this asymmetry — it is the one place the arg order differs.
+
+### 3.3.0 Activate it on the *consumers* too, or testnet aborts the process
+
+Making the producers (authorize) network-aware while leaving the consumers hardcoded
+to `MainnetV0` is worse than doing nothing: a `TestnetV0` authorization fed to a
+`MainnetV0` deserializer trips snarkVM's network-id assertion
+(`console-network-environment`), which **panics** — and the legacy exports have no
+`catch_unwind`, so the panic unwinds across `extern "C"` = abort (verified: the
+direct cross-network deser panics, not `Err`). So the network-typed **consumers**
+also take `network` + dispatch:
+
+- `required_commitments` (deserializes `Authorization<N>`) — `network` first arg
+- `state_root_from_paths` (deserializes `StatePath<N>`) — `network` first arg
+- `consensus_version_for` (per-network upgrade heights differ) — `network` first arg
+
+And, defense-in-depth (the round-3 reviewer's backstop, and the [[review-fix-classes-not-instances]]
+move): every **network-threaded** legacy export runs its body under a `catch_unwind`
+wrapper (`ffi_legacy_string`/`_u64`/`_u16`) so a panic from a wrong-network or
+malformed input degrades to the fail-closed sentinel (`""`/`0`) instead of aborting.
+The new §8-envelope exports already had this via `ffi_envelope`; this extends the
+same guarantee to the legacy convention. (The pure account/crypto exports —
+key/seed/sign/verify/encrypt — take no cross-network serialized blob and are
+unchanged from epic, so they are out of this regression's scope.)
+
+Regression test: a `TestnetV0` authorization → `required_commitments(network=testnet)`
+returns the right result, and the same blob under `network=mainnet` returns `""` via
+the backstop (not an abort).
+
 ### 3.3.1 Genericize the helper stack, not just the entry points
 
 `match parse_network` at the export is necessary but **not sufficient**. The

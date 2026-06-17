@@ -62,6 +62,33 @@ fn to_cstring(s: String) -> *mut c_char {
     unsafe { CString::from_vec_unchecked(bytes) }.into_raw()
 }
 
+// ── Panic backstop for the legacy (pre-§8-envelope) exports ──────────────────
+//
+// The legacy exports keep their historic fail-closed convention ("" for a string,
+// 0 for a number) instead of the richer §8 envelope. But a panic must still never
+// cross the C ABI: snarkVM `.expect()`s deep in deserialization — most sharply, a
+// value deserialized under the WRONG network trips a network-id assertion
+// (`console-network-environment`), which a direct FFI caller (or a Dart bug that
+// passes the wrong `network`) can reach. Each legacy export runs its body under
+// `catch_unwind` so such a panic degrades to the fail-closed sentinel rather than
+// unwinding across `extern "C"` (UB/abort). `panic = "unwind"` (Cargo.toml) keeps
+// this effective in release. `AssertUnwindSafe` is sound: the closures only borrow
+// caller input and compute over snarkVM types; aleo_ffi holds no lock or invariant
+// a panic could leave inconsistent (the only cross-call state is snarkVM's
+// parameter cache, which these non-proving exports never touch).
+fn ffi_legacy_string(f: impl FnOnce() -> *mut c_char) -> *mut c_char {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f))
+        .unwrap_or_else(|_| to_cstring(String::new()))
+}
+
+fn ffi_legacy_u64(f: impl FnOnce() -> u64) -> u64 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or(0)
+}
+
+fn ffi_legacy_u16(f: impl FnOnce() -> u16) -> u16 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or(0)
+}
+
 /// Frees a string previously returned by this library. Returned pointers are
 /// allocated with Rust's allocator via `CString::into_raw`, so they must be
 /// handed back to Rust to be freed — calling the C `free` on them is undefined
@@ -473,10 +500,7 @@ fn add_fetched_program<N: Network>(
     Ok(())
 }
 
-/// Builds an execution authorization for credits.aleo `join` (merging two
-/// private records). Offline. Returns "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
+/// Network-generic core of [`join_authorization`].
 fn join_authorization_inner<N: Network>(
     private_key: &str,
     record_1: &str,
@@ -493,6 +517,10 @@ fn join_authorization_inner<N: Network>(
     Ok(serde_json::to_string(&authorization)?)
 }
 
+/// Builds an execution authorization for credits.aleo `join` (merging two
+/// private records). Offline. Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn join_authorization(
     private_key: *const c_char,
@@ -501,20 +529,23 @@ pub unsafe extern "C" fn join_authorization(
     _url: *const c_char,
     network: *const c_char,
 ) -> *mut c_char {
-    let (private_key, record_1, record_2) =
-        (read_str(private_key), read_str(record_1), read_str(record_2));
-    let result = match parse_network(read_str(network)) {
-        Some(NetworkKind::Mainnet) => join_authorization_inner::<MainnetV0>(private_key, record_1, record_2),
-        Some(NetworkKind::Testnet) => join_authorization_inner::<TestnetV0>(private_key, record_1, record_2),
-        None => Err(anyhow::anyhow!("unknown network")),
-    };
-    to_cstring(result.unwrap_or_default())
+    ffi_legacy_string(|| {
+        let (private_key, record_1, record_2) =
+            (read_str(private_key), read_str(record_1), read_str(record_2));
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => {
+                join_authorization_inner::<MainnetV0>(private_key, record_1, record_2)
+            }
+            Some(NetworkKind::Testnet) => {
+                join_authorization_inner::<TestnetV0>(private_key, record_1, record_2)
+            }
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        to_cstring(result.unwrap_or_default())
+    })
 }
 
-/// Builds an execution authorization for a credits.aleo transfer. Offline
-/// (credits.aleo is built in). Returns "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
+/// Network-generic core of [`execution_authorization`].
 fn execution_authorization_inner<N: Network>(
     private_key: &str,
     recipient: &str,
@@ -530,6 +561,10 @@ fn execution_authorization_inner<N: Network>(
     Ok(serde_json::to_string(&authorization)?)
 }
 
+/// Builds an execution authorization for a credits.aleo transfer. Offline
+/// (credits.aleo is built in). Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn execution_authorization(
     private_key: *const c_char,
@@ -540,30 +575,27 @@ pub unsafe extern "C" fn execution_authorization(
     amount_record: *const c_char,
     network: *const c_char,
 ) -> *mut c_char {
-    let (private_key, recipient, transfer_type, amount_record) = (
-        read_str(private_key),
-        read_str(recipient),
-        read_str(transfer_type),
-        read_str(amount_record),
-    );
-    let result = match parse_network(read_str(network)) {
-        Some(NetworkKind::Mainnet) => {
-            execution_authorization_inner::<MainnetV0>(private_key, recipient, transfer_type, amount, amount_record)
-        }
-        Some(NetworkKind::Testnet) => {
-            execution_authorization_inner::<TestnetV0>(private_key, recipient, transfer_type, amount, amount_record)
-        }
-        None => Err(anyhow::anyhow!("unknown network")),
-    };
-    to_cstring(result.unwrap_or_default())
+    ffi_legacy_string(|| {
+        let (private_key, recipient, transfer_type, amount_record) = (
+            read_str(private_key),
+            read_str(recipient),
+            read_str(transfer_type),
+            read_str(amount_record),
+        );
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => execution_authorization_inner::<MainnetV0>(
+                private_key, recipient, transfer_type, amount, amount_record,
+            ),
+            Some(NetworkKind::Testnet) => execution_authorization_inner::<TestnetV0>(
+                private_key, recipient, transfer_type, amount, amount_record,
+            ),
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        to_cstring(result.unwrap_or_default())
+    })
 }
 
-/// Builds the authorization to migrate an old (version-0) credits record to a
-/// version-1 record via credits.aleo `upgrade`. The encrypted `record` is
-/// decrypted with the key's view key and passed as the single input. Offline.
-/// Returns "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
+/// Network-generic core of [`upgrade_authorization`].
 fn upgrade_authorization_inner<N: Network>(
     private_key: &str,
     record: &str,
@@ -583,6 +615,12 @@ fn upgrade_authorization_inner<N: Network>(
     Ok(serde_json::to_string(&authorization)?)
 }
 
+/// Builds the authorization to migrate an old (version-0) credits record to a
+/// version-1 record via credits.aleo `upgrade`. The encrypted `record` is
+/// decrypted with the key's view key and passed as the single input. Offline.
+/// Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn upgrade_authorization(
     private_key: *const c_char,
@@ -590,44 +628,54 @@ pub unsafe extern "C" fn upgrade_authorization(
     _url: *const c_char,
     network: *const c_char,
 ) -> *mut c_char {
-    let (private_key, record) = (read_str(private_key), read_str(record));
-    let result = match parse_network(read_str(network)) {
-        Some(NetworkKind::Mainnet) => upgrade_authorization_inner::<MainnetV0>(private_key, record),
-        Some(NetworkKind::Testnet) => upgrade_authorization_inner::<TestnetV0>(private_key, record),
-        None => Err(anyhow::anyhow!("unknown network")),
-    };
-    to_cstring(result.unwrap_or_default())
+    ffi_legacy_string(|| {
+        let (private_key, record) = (read_str(private_key), read_str(record));
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => {
+                upgrade_authorization_inner::<MainnetV0>(private_key, record)
+            }
+            Some(NetworkKind::Testnet) => {
+                upgrade_authorization_inner::<TestnetV0>(private_key, record)
+            }
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        to_cstring(result.unwrap_or_default())
+    })
+}
+
+/// Network-generic core of [`build_upgrade_transaction_offline`].
+fn build_upgrade_transaction_offline_inner<N: Network>(execution: &str) -> anyhow::Result<String> {
+    let execution: Execution<N> = serde_json::from_str(execution)?;
+    Ok(Transaction::from_execution(execution, None)?.to_string())
 }
 
 /// Assembles a credits.aleo `upgrade` transaction from its execution alone. A
 /// transaction with a single `upgrade` transition is base-fee exempt, so no fee
 /// is attached (`Transaction::from_execution(execution, None)`). Returns "".
 ///
-/// SAFETY: `execution` is a NUL-terminated C string.
-fn build_upgrade_transaction_offline_inner<N: Network>(execution: &str) -> anyhow::Result<String> {
-    let execution: Execution<N> = serde_json::from_str(execution)?;
-    Ok(Transaction::from_execution(execution, None)?.to_string())
-}
-
+/// SAFETY: `execution`/`network` are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn build_upgrade_transaction_offline(
     execution: *const c_char,
     network: *const c_char,
 ) -> *mut c_char {
-    let execution = read_str(execution);
-    let result = match parse_network(read_str(network)) {
-        Some(NetworkKind::Mainnet) => build_upgrade_transaction_offline_inner::<MainnetV0>(execution),
-        Some(NetworkKind::Testnet) => build_upgrade_transaction_offline_inner::<TestnetV0>(execution),
-        None => Err(anyhow::anyhow!("unknown network")),
-    };
-    to_cstring(result.unwrap_or_default())
+    ffi_legacy_string(|| {
+        let execution = read_str(execution);
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => {
+                build_upgrade_transaction_offline_inner::<MainnetV0>(execution)
+            }
+            Some(NetworkKind::Testnet) => {
+                build_upgrade_transaction_offline_inner::<TestnetV0>(execution)
+            }
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        to_cstring(result.unwrap_or_default())
+    })
 }
 
-/// Assembles a transaction from a serialized execution proof and fee proof
-/// (the split-proof flow). Deterministic; returns "" on failure.
-///
-/// SAFETY: `execution`/`fee`/`_network` are NUL-terminated C strings
-/// (snarkVM serde JSON).
+/// Assembles a transaction from a serialized execution and fee (the split-proof
+/// flow) for network `N`. Deterministic; returns `None` on failure.
 fn build_transaction_offline_inner<N: Network>(execution: &str, fee: &str) -> Option<String> {
     let execution: Execution<N> = serde_json::from_str(execution).ok()?;
     let fee: Fee<N> = serde_json::from_str(fee).ok()?;
@@ -635,19 +683,25 @@ fn build_transaction_offline_inner<N: Network>(execution: &str, fee: &str) -> Op
     Some(transaction.to_string())
 }
 
+/// Assembles a transaction from a serialized execution proof and fee proof (the
+/// split-proof flow). Deterministic; returns "" on failure.
+///
+/// SAFETY: `execution`/`fee`/`network` are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn build_transaction_offline(
     execution: *const c_char,
     fee: *const c_char,
     network: *const c_char,
 ) -> *mut c_char {
-    let (execution, fee) = (read_str(execution), read_str(fee));
-    let result = match parse_network(read_str(network)) {
-        Some(NetworkKind::Mainnet) => build_transaction_offline_inner::<MainnetV0>(execution, fee),
-        Some(NetworkKind::Testnet) => build_transaction_offline_inner::<TestnetV0>(execution, fee),
-        None => None,
-    };
-    to_cstring(result.unwrap_or_default())
+    ffi_legacy_string(|| {
+        let (execution, fee) = (read_str(execution), read_str(fee));
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => build_transaction_offline_inner::<MainnetV0>(execution, fee),
+            Some(NetworkKind::Testnet) => build_transaction_offline_inner::<TestnetV0>(execution, fee),
+            None => None,
+        };
+        to_cstring(result.unwrap_or_default())
+    })
 }
 
 /// Computes the record's serial number for `program_id`/`record_name`. Returns
@@ -1040,6 +1094,12 @@ fn global_commitment_set<N: Network>(authorization: &Authorization<N>) -> Vec<St
     global_input_commitments(&ordered)
 }
 
+/// Network-generic core of [`required_commitments`].
+fn required_commitments_inner<N: Network>(authorization: &str) -> anyhow::Result<String> {
+    let authorization: Authorization<N> = serde_json::from_str(authorization)?;
+    Ok(serde_json::to_string(&global_commitment_set(&authorization))?)
+}
+
 /// The input-record commitments whose state paths the caller must fetch before
 /// proving this authorization. Empty for public flows (no record inputs).
 /// Pure: read from the authorization itself, no VM/synthesis or network.
@@ -1057,17 +1117,21 @@ fn global_commitment_set<N: Network>(authorization: &Authorization<N>) -> Vec<St
 /// dropped; for a composite program that spends a record minted by an earlier
 /// transition, that local commitment is correctly excluded.
 ///
-/// SAFETY: `authorization` is a NUL-terminated C string.
+/// SAFETY: `network`/`authorization` are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn required_commitments(authorization: *const c_char) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let authorization: Authorization<Net> = serde_json::from_str(read_str(authorization))?;
-        Ok(serde_json::to_string(&global_commitment_set(&authorization))?)
-    };
-    match inner() {
-        Ok(commitments) => to_cstring(commitments),
-        Err(_) => to_cstring(String::new()),
-    }
+pub unsafe extern "C" fn required_commitments(
+    network: *const c_char,
+    authorization: *const c_char,
+) -> *mut c_char {
+    ffi_legacy_string(|| {
+        let authorization = read_str(authorization);
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => required_commitments_inner::<MainnetV0>(authorization),
+            Some(NetworkKind::Testnet) => required_commitments_inner::<TestnetV0>(authorization),
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        to_cstring(result.unwrap_or_default())
+    })
 }
 
 /// The direct imports of a program, as a JSON array of program ids, so Dart can
@@ -1095,37 +1159,59 @@ pub unsafe extern "C" fn required_imports(program_source: *const c_char) -> *mut
     }
 }
 
+/// Network-generic core of [`state_root_from_paths`].
+fn state_root_from_paths_inner<N: Network>(state_paths_json: &str) -> anyhow::Result<String> {
+    let paths = parse_state_paths::<N>(state_paths_json)?;
+    let state_root =
+        paths.first().ok_or_else(|| anyhow::anyhow!("no state paths"))?.global_state_root();
+    for path in &paths {
+        anyhow::ensure!(
+            path.global_state_root() == state_root,
+            "state paths disagree on the global state root"
+        );
+    }
+    Ok(state_root.to_string())
+}
+
 /// The global state root shared by a non-empty batch of state paths — a
 /// convenience for callers that want the snapshot root for logging/caching
 /// (proving derives it itself). Returns "" if the paths are empty or disagree.
 ///
-/// SAFETY: `state_paths_json` is a NUL-terminated C string.
+/// SAFETY: `network`/`state_paths_json` are NUL-terminated C strings.
 #[no_mangle]
-pub unsafe extern "C" fn state_root_from_paths(state_paths_json: *const c_char) -> *mut c_char {
-    let inner = || -> anyhow::Result<String> {
-        let paths = parse_state_paths::<Net>(read_str(state_paths_json))?;
-        let state_root =
-            paths.first().ok_or_else(|| anyhow::anyhow!("no state paths"))?.global_state_root();
-        for path in &paths {
-            anyhow::ensure!(
-                path.global_state_root() == state_root,
-                "state paths disagree on the global state root"
-            );
-        }
-        Ok(state_root.to_string())
-    };
-    match inner() {
-        Ok(root) => to_cstring(root),
-        Err(_) => to_cstring(String::new()),
-    }
+pub unsafe extern "C" fn state_root_from_paths(
+    network: *const c_char,
+    state_paths_json: *const c_char,
+) -> *mut c_char {
+    ffi_legacy_string(|| {
+        let state_paths_json = read_str(state_paths_json);
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => state_root_from_paths_inner::<MainnetV0>(state_paths_json),
+            Some(NetworkKind::Testnet) => state_root_from_paths_inner::<TestnetV0>(state_paths_json),
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        to_cstring(result.unwrap_or_default())
+    })
 }
 
-/// The consensus version active at `height`, so Dart can pin one version for a
-/// whole transaction without hardcoding upgrade heights. Returns 0 on failure
-/// (only height 0 with no V1 mapping, which never happens for the live network).
+/// The consensus version active at `height` for `network`, so Dart can pin one
+/// version for a whole transaction without hardcoding upgrade heights — which
+/// differ per network, so this must dispatch (a mainnet height maps to a different
+/// version than the same testnet height). Returns 0 on an unknown network or a
+/// height with no version mapping.
+///
+/// SAFETY: `network` is a NUL-terminated C string.
 #[no_mangle]
-pub extern "C" fn consensus_version_for(height: u32) -> u16 {
-    Net::CONSENSUS_VERSION(height).map(|version| version as u16).unwrap_or(0)
+pub unsafe extern "C" fn consensus_version_for(network: *const c_char, height: u32) -> u16 {
+    ffi_legacy_u16(|| match parse_network(read_str(network)) {
+        Some(NetworkKind::Mainnet) => {
+            MainnetV0::CONSENSUS_VERSION(height).map(|v| v as u16).unwrap_or(0)
+        }
+        Some(NetworkKind::Testnet) => {
+            TestnetV0::CONSENSUS_VERSION(height).map(|v| v as u16).unwrap_or(0)
+        }
+        None => 0,
+    })
 }
 
 /// Computes the base fee for `execution` at `height` (→ consensus version),
@@ -1142,6 +1228,10 @@ fn get_base_fee_inner<N: Network>(
     base_fee_at_height::<N>(&execution, program_sources_json, height)
 }
 
+/// The base fee for `execution` on `network` at `height`. Returns 0 on failure or
+/// an unknown network.
+///
+/// SAFETY: `network`/`execution`/`program_sources_json` are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn get_base_fee(
     network: *const c_char,
@@ -1149,13 +1239,20 @@ pub unsafe extern "C" fn get_base_fee(
     program_sources_json: *const c_char,
     height: u32,
 ) -> u64 {
-    let (execution, program_sources_json) = (read_str(execution), read_str(program_sources_json));
-    let result = match parse_network(read_str(network)) {
-        Some(NetworkKind::Mainnet) => get_base_fee_inner::<MainnetV0>(execution, program_sources_json, height),
-        Some(NetworkKind::Testnet) => get_base_fee_inner::<TestnetV0>(execution, program_sources_json, height),
-        None => Err(anyhow::anyhow!("unknown network")),
-    };
-    result.unwrap_or(0)
+    ffi_legacy_u64(|| {
+        let (execution, program_sources_json) =
+            (read_str(execution), read_str(program_sources_json));
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => {
+                get_base_fee_inner::<MainnetV0>(execution, program_sources_json, height)
+            }
+            Some(NetworkKind::Testnet) => {
+                get_base_fee_inner::<TestnetV0>(execution, program_sources_json, height)
+            }
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        result.unwrap_or(0)
+    })
 }
 
 /// Authorizes the fee for `execution`, offline: `height` (→ consensus version)
@@ -1197,6 +1294,11 @@ fn execution_fee_authorization_inner<N: Network>(
     Ok(serde_json::to_string(&authorization)?)
 }
 
+/// Authorizes the fee for `execution` on `network`. Returns "" on failure or an
+/// unknown network.
+///
+/// SAFETY: `network`/`private_key`/`execution`/`fee_record`/`program_sources_json`
+/// are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn execution_fee_authorization(
     network: *const c_char,
@@ -1207,22 +1309,24 @@ pub unsafe extern "C" fn execution_fee_authorization(
     program_sources_json: *const c_char,
     height: u32,
 ) -> *mut c_char {
-    let (private_key, execution, fee_record, program_sources_json) = (
-        read_str(private_key),
-        read_str(execution),
-        read_str(fee_record),
-        read_str(program_sources_json),
-    );
-    let result = match parse_network(read_str(network)) {
-        Some(NetworkKind::Mainnet) => execution_fee_authorization_inner::<MainnetV0>(
-            private_key, execution, fee_credits, fee_record, program_sources_json, height,
-        ),
-        Some(NetworkKind::Testnet) => execution_fee_authorization_inner::<TestnetV0>(
-            private_key, execution, fee_credits, fee_record, program_sources_json, height,
-        ),
-        None => Err(anyhow::anyhow!("unknown network")),
-    };
-    to_cstring(result.unwrap_or_default())
+    ffi_legacy_string(|| {
+        let (private_key, execution, fee_record, program_sources_json) = (
+            read_str(private_key),
+            read_str(execution),
+            read_str(fee_record),
+            read_str(program_sources_json),
+        );
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => execution_fee_authorization_inner::<MainnetV0>(
+                private_key, execution, fee_credits, fee_record, program_sources_json, height,
+            ),
+            Some(NetworkKind::Testnet) => execution_fee_authorization_inner::<TestnetV0>(
+                private_key, execution, fee_credits, fee_record, program_sources_json, height,
+            ),
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        to_cstring(result.unwrap_or_default())
+    })
 }
 
 // The plain proving exports (`execute_proof_static` / `execute_fee_proof_static` /
@@ -1232,18 +1336,7 @@ pub unsafe extern "C" fn execution_fee_authorization(
 // unused on purpose — reusing a freed symbol name whose ABI differs across already
 // distributed libraries is the hazard `ffi_abi_version` guards against.
 
-/// Builds an execution authorization for an arbitrary program function, offline.
-/// The referenced program (and its imports) is supplied in-memory via
-/// `program_sources_json` and loaded before authorizing — `vm.authorize` reads
-/// the program's `Stack`, so a non-builtin function cannot be authorized without
-/// it. `arguments` is a JSON array of Aleo value strings (record inputs already
-/// decrypted to plaintext by the caller, as on the old `contract_execution`
-/// path). This is the pure-FFI authorize step the phase-2 Dart orchestration
-/// uses for arbitrary programs, replacing the network-bound
-/// `contract_execution` / `execute_program`. Empty `program_sources_json` works
-/// for a built-in program (credits.aleo). Returns "" on failure.
-///
-/// SAFETY: the pointer args are NUL-terminated C strings.
+/// Network-generic core of [`program_authorization`].
 fn program_authorization_inner<N: Network>(
     private_key: &str,
     program_id: &str,
@@ -1260,6 +1353,15 @@ fn program_authorization_inner<N: Network>(
     Ok(serde_json::to_string(&authorization)?)
 }
 
+/// Builds an execution authorization for an arbitrary program function, offline.
+/// The referenced program (and its imports) is supplied in-memory via
+/// `program_sources_json` and loaded before authorizing — `vm.authorize` reads
+/// the program's `Stack`, so a non-builtin function cannot be authorized without
+/// it. `arguments` is a JSON array of Aleo value strings (record inputs already
+/// decrypted to plaintext by the caller). Empty `program_sources_json` works for a
+/// built-in program (credits.aleo). Returns "" on failure.
+///
+/// SAFETY: the pointer args are NUL-terminated C strings.
 #[no_mangle]
 pub unsafe extern "C" fn program_authorization(
     network: *const c_char,
@@ -1269,23 +1371,25 @@ pub unsafe extern "C" fn program_authorization(
     arguments: *const c_char,
     program_sources_json: *const c_char,
 ) -> *mut c_char {
-    let (private_key, program_id, function_name, arguments, program_sources_json) = (
-        read_str(private_key),
-        read_str(program_id),
-        read_str(function_name),
-        read_str(arguments),
-        read_str(program_sources_json),
-    );
-    let result = match parse_network(read_str(network)) {
-        Some(NetworkKind::Mainnet) => program_authorization_inner::<MainnetV0>(
-            private_key, program_id, function_name, arguments, program_sources_json,
-        ),
-        Some(NetworkKind::Testnet) => program_authorization_inner::<TestnetV0>(
-            private_key, program_id, function_name, arguments, program_sources_json,
-        ),
-        None => Err(anyhow::anyhow!("unknown network")),
-    };
-    to_cstring(result.unwrap_or_default())
+    ffi_legacy_string(|| {
+        let (private_key, program_id, function_name, arguments, program_sources_json) = (
+            read_str(private_key),
+            read_str(program_id),
+            read_str(function_name),
+            read_str(arguments),
+            read_str(program_sources_json),
+        );
+        let result = match parse_network(read_str(network)) {
+            Some(NetworkKind::Mainnet) => program_authorization_inner::<MainnetV0>(
+                private_key, program_id, function_name, arguments, program_sources_json,
+            ),
+            Some(NetworkKind::Testnet) => program_authorization_inner::<TestnetV0>(
+                private_key, program_id, function_name, arguments, program_sources_json,
+            ),
+            None => Err(anyhow::anyhow!("unknown network")),
+        };
+        to_cstring(result.unwrap_or_default())
+    })
 }
 
 // ── Phase 4 FFI result envelope (docs/phase4-plan.md §8 Contract 1) ──────────
@@ -2077,6 +2181,31 @@ mod tests {
         }
     }
 
+    /// Calls a `(network, *const c_char) -> *mut c_char` export (the network-aware
+    /// consumers: required_commitments, state_root_from_paths) and frees the result.
+    fn call_str_net(
+        f: unsafe extern "C" fn(*const c_char, *const c_char) -> *mut c_char,
+        network: &str,
+        arg: &str,
+    ) -> String {
+        unsafe {
+            let n = CString::new(network).unwrap();
+            let c = CString::new(arg).unwrap();
+            let ptr = f(n.as_ptr(), c.as_ptr());
+            let out = CStr::from_ptr(ptr).to_str().unwrap().to_owned();
+            free_string(ptr);
+            out
+        }
+    }
+
+    /// Calls the network-aware consensus_version_for and returns the version.
+    fn consensus_version(network: &str, height: u32) -> u16 {
+        unsafe {
+            let n = CString::new(network).unwrap();
+            consensus_version_for(n.as_ptr(), height)
+        }
+    }
+
     fn recipient_address() -> String {
         Address::<Net>::try_from(&other_key()).unwrap().to_string()
     }
@@ -2094,7 +2223,7 @@ mod tests {
                 &mut rand::thread_rng(),
             )
             .unwrap();
-        let out = call_str(required_commitments, &serde_json::to_string(&authorization).unwrap());
+        let out = call_str_net(required_commitments, "mainnet", &serde_json::to_string(&authorization).unwrap());
         assert_eq!(out, "[]");
     }
 
@@ -2114,7 +2243,7 @@ mod tests {
                 &mut rand::thread_rng(),
             )
             .unwrap();
-        let out = call_str(required_commitments, &serde_json::to_string(&authorization).unwrap());
+        let out = call_str_net(required_commitments, "mainnet", &serde_json::to_string(&authorization).unwrap());
         let commitments: Vec<String> = serde_json::from_str(&out).unwrap();
         assert_eq!(commitments.len(), 1, "got {out}");
         // Each entry is a field element.
@@ -2124,7 +2253,33 @@ mod tests {
     // Malformed authorization JSON returns "" (no panic across the FFI boundary).
     #[test]
     fn required_commitments_malformed_returns_empty() {
-        assert_eq!(call_str(required_commitments, "not json"), "");
+        assert_eq!(call_str_net(required_commitments, "mainnet", "not json"), "");
+    }
+
+    // Regression (PR4a): a TestnetV0 authorization fed to required_commitments with
+    // network="testnet" is handled — the consumer dispatches to the right network,
+    // so it does NOT trip snarkVM's cross-network assertion (which would panic and,
+    // pre-fix, abort across the C ABI). A public transfer has no record inputs → [].
+    #[test]
+    fn required_commitments_testnet_authorization() {
+        let testnet_key = PrivateKey::<TestnetV0>::from_str(OWNER_KEY).unwrap();
+        let vm = new_vm::<TestnetV0>().unwrap();
+        let recipient = Address::<TestnetV0>::try_from(&testnet_key).unwrap().to_string();
+        let auth = vm
+            .authorize(
+                &testnet_key,
+                "credits.aleo",
+                "transfer_public",
+                vec![recipient, "1u64".to_string()],
+                &mut rand::thread_rng(),
+            )
+            .unwrap();
+        let json = serde_json::to_string(&auth).unwrap();
+        assert_eq!(call_str_net(required_commitments, "testnet", &json), "[]");
+        // Backstop: feeding that testnet authorization under the WRONG network would
+        // trip the cross-network assertion inside snarkVM; the catch_unwind backstop
+        // turns that panic into the fail-closed "" rather than aborting the process.
+        assert_eq!(call_str_net(required_commitments, "mainnet", &json), "");
     }
 
     // required_imports lists a program's direct imports.
@@ -2147,18 +2302,18 @@ mod tests {
     // consensus_version_for maps heights to versions at the documented boundaries.
     #[test]
     fn consensus_version_for_known_heights() {
-        assert_eq!(consensus_version_for(0), 1); // V1 at genesis
-        assert_eq!(consensus_version_for(2_800_000), 2); // exact V2 boundary
-        assert_eq!(consensus_version_for(2_800_000 - 1), 1); // just below V2
-        assert_eq!(consensus_version_for(9_430_000), 8); // V8 (inclusion upgrade)
-        assert!(consensus_version_for(u32::MAX) >= 13, "latest version at far future height");
+        assert_eq!(consensus_version("mainnet", 0), 1); // V1 at genesis
+        assert_eq!(consensus_version("mainnet", 2_800_000), 2); // exact V2 boundary
+        assert_eq!(consensus_version("mainnet", 2_800_000 - 1), 1); // just below V2
+        assert_eq!(consensus_version("mainnet", 9_430_000), 8); // V8 (inclusion upgrade)
+        assert!(consensus_version("mainnet", u32::MAX) >= 13, "latest version at far future height");
     }
 
     // No paths (empty or "[]") -> "" (there is no shared root to report).
     #[test]
     fn state_root_from_paths_empty_is_empty() {
-        assert_eq!(call_str(state_root_from_paths, ""), "");
-        assert_eq!(call_str(state_root_from_paths, "[]"), "");
+        assert_eq!(call_str_net(state_root_from_paths, "mainnet", ""), "");
+        assert_eq!(call_str_net(state_root_from_paths, "mainnet", "[]"), "");
     }
 
     // The public flow builds the query from the supplied root and height; with no
@@ -2523,7 +2678,7 @@ mod tests {
         }
         assert!(!outputs.is_empty(), "transfer_private creates output records");
 
-        let out = call_str(required_commitments, &serde_json::to_string(&auth).unwrap());
+        let out = call_str_net(required_commitments, "mainnet", &serde_json::to_string(&auth).unwrap());
         let required: Vec<String> = serde_json::from_str(&out).unwrap();
         assert_eq!(required.len(), 1, "the one spent record; got {out}");
         for commitment in &required {
@@ -2694,6 +2849,7 @@ mod tests {
         assert!(serde_json::from_str::<Authorization<TestnetV0>>(&t).is_ok(), "testnet: {t}");
         assert_eq!(auth_for("bogus"), "", "unknown network must be fail-closed");
     }
+
 
     // End-to-end proof through execute_proof_checked for a PUBLIC transfer: no
     // record inputs, so no state paths — proving only needs a height and a real
