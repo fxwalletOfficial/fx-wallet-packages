@@ -230,8 +230,24 @@ class AleoProgram {
     }
   }
 
-  /// Executes an arbitrary program function and broadcasts the transaction,
-  /// returning the node response. The fee is public (no fee record).
+  /// Fetches a program's import closure, **rejecting a custom program up front**:
+  /// v1 is credits-only, so a non-empty closure (anything but `credits.aleo`)
+  /// throws `unsupported_feature` here — deterministically, before authorize /
+  /// state-path / proving work — rather than surfacing later as a malformed-auth
+  /// or node error. credits.aleo is built in, so its closure is empty.
+  Future<String> _creditsOnlyClosure(AleoNode node, String programId) async {
+    final sources = await node.programClosure(programId);
+    if (!ParameterProvisioner.isEmptyClosure(sources)) {
+      throw ProvisioningException('unsupported_feature',
+          'custom-program proving is not supported in this version');
+    }
+    return sources;
+  }
+
+  /// v1 (credits-only): executes a **credits.aleo** function and broadcasts the
+  /// transaction. A non-credits `program_id_raw` is rejected with
+  /// `unsupported_feature`. The fee is public (no fee record). The method is kept
+  /// for API stability; arbitrary-program support is a future version.
   Future<String> executeProgram(
     String private_key_raw,
     String program_id_raw,
@@ -247,10 +263,9 @@ class AleoProgram {
       final height = await node.latestHeight();
       final version = programsRustFFI.consensusVersionFor(height);
 
-      // Fetch the program's import closure once; it is needed to authorize, to
-      // prove, and to cost the fee (execution_cost reads each transition's
-      // program Stack).
-      final sources = await node.programClosure(program_id_raw);
+      // Fetch the program's import closure once (empty for credits.aleo); a
+      // custom program is rejected here before any further work.
+      final sources = await _creditsOnlyClosure(node, program_id_raw);
 
       final auth = _require(
           await programAuthorizationStatic(private_key_raw, program_id_raw,
@@ -283,9 +298,10 @@ class AleoProgram {
     }
   }
 
-  /// Produces the execution proof for an arbitrary program function (split
-  /// proof; the fee follows via [contractFeeExecution]). Returns the serialized
-  /// execution.
+  /// Produces the execution proof for a **credits.aleo** function (split proof;
+  /// the fee follows via [contractFeeExecution]). v1 is credits-only: a custom
+  /// `program_id_raw` is rejected with `unsupported_feature`. Returns the
+  /// serialized execution.
   Future<String> contractExecution(
     String private_key_raw,
     String program_id_raw,
@@ -295,7 +311,7 @@ class AleoProgram {
   ) async {
     final node = _node(url_raw);
     final height = await node.latestHeight();
-    final sources = await node.programClosure(program_id_raw);
+    final sources = await _creditsOnlyClosure(node, program_id_raw);
     final auth = _require(
         await programAuthorizationStatic(private_key_raw, program_id_raw,
             function_name_raw, arguments_raw, sources),
@@ -303,8 +319,9 @@ class AleoProgram {
     return _proveProgramExecution(node, auth, sources, height);
   }
 
-  /// Produces the public fee proof for a contract execution. Returns the
-  /// serialized fee.
+  /// Produces the public fee proof for a **credits.aleo** contract execution. v1
+  /// is credits-only: a custom `program_id_raw` is rejected with
+  /// `unsupported_feature`. Returns the serialized fee.
   Future<String> contractFeeExecution(
     String private_key_raw,
     int fee,
@@ -315,7 +332,7 @@ class AleoProgram {
     AleoUtils.checkAmount(fee, 'fee');
     final node = _node(url_raw);
     final height = await node.latestHeight();
-    final sources = await node.programClosure(program_id_raw);
+    final sources = await _creditsOnlyClosure(node, program_id_raw);
     final feeAuth = _require(
         await executionFeeAuthorizationStatic(
             private_key_raw, execution_raw, fee, '', sources, height),
@@ -333,13 +350,14 @@ class AleoProgram {
     return _proveExecution(node, authorization_raw, height);
   }
 
-  /// Generates the execution proof for an authorization that targets a
-  /// non-builtin program: its closure is fetched and supplied in-memory.
+  /// Generates the execution proof for an authorization through the program path.
+  /// v1 is credits-only: a non-`credits.aleo` [program_id_raw] is rejected with
+  /// `unsupported_feature` (the closure is fetched and, for credits.aleo, empty).
   Future<String> executeProgramProof(String url_raw, String authorization_raw,
       {String program_id_raw = 'credits.aleo'}) async {
     final node = _node(url_raw);
     final height = await node.latestHeight();
-    final sources = await node.programClosure(program_id_raw);
+    final sources = await _creditsOnlyClosure(node, program_id_raw);
     return _proveProgramExecution(node, authorization_raw, sources, height);
   }
 

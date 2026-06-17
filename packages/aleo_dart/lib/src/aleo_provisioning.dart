@@ -496,8 +496,9 @@ class ParameterProvisioner {
 
   /// An empty program closure: `""` or `"[]"` (an empty JSON array). Mirrors the
   /// native rule so a custom program is rejected at the Dart entry; a non-array or
-  /// malformed value is NOT empty (and the native side would reject it too).
-  static bool _isEmptyClosure(String programSources) {
+  /// malformed value is NOT empty (and the native side would reject it too). Public
+  /// so the orchestration layer can fail-fast a custom program before any node I/O.
+  static bool isEmptyClosure(String programSources) {
     final trimmed = programSources.trim();
     if (trimmed.isEmpty) return true;
     try {
@@ -524,7 +525,7 @@ class ParameterProvisioner {
     // Latch first (Contract 3): a poisoned process fail-fasts as
     // ProvingDisabledException, even for a custom-program call.
     _ensureNotDisabled();
-    if (!_isEmptyClosure(programSources)) {
+    if (!isEmptyClosure(programSources)) {
       throw ProvisioningException('unsupported_feature',
           'custom-program proving is not supported in this version');
     }

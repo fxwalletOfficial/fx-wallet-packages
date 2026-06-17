@@ -12,6 +12,26 @@
   load time. Tests that broadcast real transactions are marked as manual
   integration tests.
 
+### Added
+
+- `AleoLib` + `IncompatibleNativeLibraryException`: the native library's
+  `ffi_abi_version` is validated when constructing `AleoAccount`, `AleoRecord`,
+  `AleoProgram`, or `ParameterProvisioner` (a bare `DynamicLibrary` or an `AleoLib`
+  are both accepted). An incompatible or stale library now fails loudly at load
+  time instead of mis-binding a renamed symbol or an argument slot.
+
+### Changed
+
+- The native FFI ABI is finalized and network-aware (Phase 4). Every network-typed
+  export takes a `network` (`"mainnet"`/`"testnet"`); proving goes through
+  `ParameterProvisioner` (preflight → download proving keys → the checked proving
+  path), so a cold parameter cache is provisioned cleanly.
+- **Custom-program proving is not supported in this version (credits-only).**
+  `executeProgram`, `contractExecution`, `contractFeeExecution`, and
+  `executeProgramProof` now reject a non-`credits.aleo` program with
+  `unsupported_feature`, deterministically and before any node I/O. The methods are
+  retained for API stability; arbitrary-program support is a future version.
+
 ## [1.0.0]
 
 - Initial release in the fx-wallet-packages monorepo.
