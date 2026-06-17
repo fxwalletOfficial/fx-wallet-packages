@@ -288,6 +288,15 @@ honored.
   field, `programsRustFFI.network`).
 - `getBaseFee` / `executionFeeAuthorization` / program authorization → the renamed
   `network`-aware symbols (§3.2), passing the program's network.
+- **The three consumers gained a `network` first arg too** (round-3 abort fix:
+  `required_commitments`, `state_root_from_paths`, `consensus_version_for`). Their
+  Dart wrappers MUST be updated in lockstep — this is an **arity** change, not just a
+  rename, so a stale 1-arg wrapper passes a non-pointer (e.g. a `height`) into the
+  `network` pointer slot → `read_str`/`strlen` on a bogus address → **SIGSEGV** (a
+  hardware fault `catch_unwind` cannot catch). Easy to miss while focused on the
+  proving/fee wrappers. The `ffi_abi_version` load-time guard (§4) is what makes the
+  interim safe: a stale lib + new Dart (or vice-versa) is rejected at load, before any
+  call can segfault — so the guard and these wrapper updates land together.
 - The deleted `_static` proving bindings + their now-unused typedefs are removed
   from `programs_rust_ffi.dart`; the stale "rename deferred to phase 4" comment
   block (lines 39–48) is updated to reflect that PR4a did the rename.
