@@ -139,5 +139,6 @@ version = "0.8"
 [dev-dependencies.wasm-bindgen-test]
 version = "0.3.37"
 
-[target.'cfg(all(not(target_family = "wasm"), not(target_env = "sgx")))'.dependencies.curl]
-version = "0.4.43"
+# fx-wallet no-remote-fetch patch (workstream A): the `curl` dependency (and its
+# transitive `openssl-sys`) was removed. The native load macro fails closed when
+# a parameter is absent; the Dart layer provisions params before proving.

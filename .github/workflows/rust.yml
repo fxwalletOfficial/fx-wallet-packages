@@ -86,6 +86,28 @@ jobs:
           fi
           echo "exported FFI symbol set matches exactly (35 functions + free_string)"
 
+      # Workstream A (PR3) dropped curl + openssl-sys (the in-Rust param
+      # downloader is gone); workstream B (PR1) dropped the transitive ureq/rustls.
+      # Together they mean aleo_ffi links NO HTTP/TLS stack — all network I/O is in
+      # the Dart layer. Assert none of these crates can creep back into the graph
+      # (`cargo tree -i` exits non-zero when the package is absent, which is what
+      # we want).
+      - name: Verify no HTTP/TLS stack in the dependency graph
+        working-directory: rust/aleo_ffi
+        shell: bash
+        run: |
+          forbidden='curl openssl-sys openssl ureq rustls reqwest'
+          fail=0
+          for pkg in $forbidden; do
+            if cargo tree -i "$pkg" >/dev/null 2>&1; then
+              echo "ERROR: '$pkg' is back in the dependency graph (no-HTTP-stack regression):"
+              cargo tree -i "$pkg"
+              fail=1
+            fi
+          done
+          [ "$fail" = 0 ] || exit 1
+          echo "no curl/openssl-sys/ureq/rustls/reqwest in the dependency graph"
+
       # Run the Dart wrapper's FFI-backed tests against the cdylib built above,
       # so Dart/Rust signature mismatches, string-ownership bugs and wrapper
       # regressions fail CI instead of being skipped for want of a library.

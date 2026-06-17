@@ -44,66 +44,11 @@ macro_rules! remove_file {
 
 macro_rules! impl_store_and_remote_fetch {
     () => {
-        #[cfg(not(feature = "wasm"))]
-        fn store_bytes(buffer: &[u8], file_path: &std::path::Path) -> Result<(), $crate::errors::ParameterError> {
-            use snarkvm_utilities::Write;
-
-            #[cfg(not(feature = "no_std_out"))]
-            {
-                use colored::*;
-                let output = format!("{:>15} - Storing file in {:?}", "Installation", file_path);
-                println!("{}", output.dimmed());
-            }
-
-            // Ensure the folders up to the file path all exist.
-            let mut directory_path = file_path.to_path_buf();
-            directory_path.pop();
-            let _ = std::fs::create_dir_all(directory_path)?;
-
-            // Attempt to write the parameter buffer to a file.
-            match std::fs::File::create(file_path) {
-                Ok(mut file) => file.write_all(&buffer)?,
-                Err(error) => eprintln!("{}", error),
-            }
-            Ok(())
-        }
-
-        #[cfg(all(not(feature = "wasm"), not(target_env = "sgx")))]
-        fn remote_fetch(buffer: &mut Vec<u8>, url: &str) -> Result<(), $crate::errors::ParameterError> {
-            let mut easy = curl::easy::Easy::new();
-            easy.follow_location(true)?;
-            easy.url(url)?;
-
-            #[cfg(not(feature = "no_std_out"))]
-            {
-                use colored::*;
-
-                let output = format!("{:>15} - Downloading \"{}\"", "Installation", url);
-                println!("{}", output.dimmed());
-
-                easy.progress(true)?;
-                easy.progress_function(|total_download, current_download, _, _| {
-                    // avoid division by zero.
-                    if total_download == 0.0 {
-                        return true;
-                    }
-                    let percent = (current_download / total_download) * 100.0;
-                    let size_in_megabytes = total_download as u64 / 1_048_576;
-                    let output =
-                        format!("\r{:>15} - {:.2}% complete ({:#} MB total)", "Installation", percent, size_in_megabytes);
-                    print!("{}", output.dimmed());
-                    true
-                })?;
-            }
-
-            let mut transfer = easy.transfer();
-            transfer.write_function(|data| {
-                buffer.extend_from_slice(data);
-                Ok(data.len())
-            })?;
-            Ok(transfer.perform()?)
-        }
-
+        // fx-wallet no-remote-fetch patch (workstream A, NOT upstream): the native
+        // `store_bytes` + curl `remote_fetch` were removed so the build links no
+        // curl/openssl-sys. The native load macro fails closed when a parameter is
+        // absent (the Dart layer provisions it first). Only the wasm `remote_fetch`
+        // remains (wasm is unused by this project but kept for crate coherence).
         #[cfg(feature = "wasm")]
         fn remote_fetch(url: &str) -> Result<Vec<u8>, $crate::errors::ParameterError> {
             // Use the browser's XmlHttpRequest object to download the parameter file synchronously.
@@ -186,82 +131,15 @@ macro_rules! impl_load_bytes_logic_remote {
                     // Attempts to load the parameter file locally with an absolute path.
                     std::fs::read(&file_path)?
                 } else {
-                    // Downloads the missing parameters and stores it in the local directory for use.
-                    #[cfg(not(feature = "no_std_out"))]
-                    {
-                        use colored::*;
-                        let path = format!("(in {:?})", file_path);
-                        eprintln!(
-                            "\n⚠️  \"{}\" does not exist. Downloading and storing it {}.\n",
-                            $filename, path.dimmed()
-                        );
-                    }
-
-                    // Load remote file
-                    cfg_if::cfg_if!{
-                        if #[cfg(all(not(feature = "wasm"), not(target_env = "sgx")))] {
-                            // Try each URL in order, falling back to the next if one fails.
-                            let remote_urls: &[&str] = &$remote_urls;
-                            let mut buffer = vec![];
-                            let mut last_error: Option<($crate::errors::ParameterError, &str)> = None;
-
-                            for base_url in remote_urls.iter() {
-                                // Remove the previous error (if any).
-                                cfg_if::cfg_if!{
-                                    if #[cfg(feature = "no_std_out")] {
-                                        last_error = None;
-                                    } else {
-                                        use colored::Colorize;
-                                        // If this is a retry, print the previous error as warning.
-                                        if let Some((err, url)) = last_error.take() {
-                                            eprintln!("{:>15} - {err}", "Warning".yellow());
-                                            eprintln!("{:>15} - Failed to fetch from \"{url}\". Trying next source...", "Warning".yellow());
-                                         }
-                                    }
-                                }
-
-                                let url = format!("{}/{}", base_url, $filename);
-                                buffer.clear();
-
-                                match Self::remote_fetch(&mut buffer, &url) {
-                                    Ok(()) => {
-                                        // Ensure the checksum matches.
-                                        let candidate_checksum = checksum!(&buffer);
-                                        if $expected_checksum == candidate_checksum {
-                                            // Success - break out of the loop
-                                            break;
-                                        } else {
-                                            last_error = Some(($crate::errors::ParameterError::ChecksumMismatch(
-                                                $expected_checksum.to_string(),
-                                                candidate_checksum,
-                                            ), base_url));
-                                        }
-                                    }
-                                    Err(err) => {
-                                        last_error = Some((err, base_url));
-                                    }
-                                }
-                            }
-
-                            // If all URLs failed, return the last error.
-                            if let Some((err, _)) = last_error {
-                                return Err(err);
-                            }
-
-                            match Self::store_bytes(&buffer, &file_path) {
-                                Ok(()) => buffer,
-                                Err(_) => {
-                                    eprintln!(
-                                        "\n❗ Error - Failed to store \"{}\" locally. Please download this file manually and ensure it is stored in {:?}.\n",
-                                        $filename, file_path
-                                    );
-                                    buffer
-                                }
-                            }
-                        } else {
-                            return Err($crate::errors::ParameterError::RemoteFetchDisabled);
-                        }
-                    }
+                    // fx-wallet no-remote-fetch patch (workstream A, NOT upstream):
+                    // the in-Rust curl downloader is removed so the native build links
+                    // no HTTP/TLS stack (curl + openssl-sys). Missing parameters are
+                    // provisioned by the Dart layer into the (overridable) param dir
+                    // BEFORE proving; a file that is still absent here fails closed.
+                    // The size + checksum guards below remain the trust boundary for
+                    // files that ARE present, so a Dart-provisioned param that is
+                    // corrupt/wrong-size is still rejected by this crate.
+                    return Err($crate::errors::ParameterError::RemoteFetchDisabled);
                 };
 
                 // Ensure the size matches.

@@ -3060,6 +3060,26 @@ mod param_dir_tests {
 
                 let _ = std::fs::remove_dir_all(&dir);
             }
+            "missing_param_remote_fetch_disabled" => {
+                // Workstream A: with the in-Rust curl downloader removed, loading a
+                // remote (downloadable) parameter that is ABSENT from the param dir
+                // must fail closed with `RemoteFetchDisabled` — the native load macro
+                // never attempts a network download. (Before PR3 this would have
+                // curl-downloaded ~1GB; now the Dart layer provisions params first.)
+                let dir = std::env::temp_dir().join(format!("aleo_ffi_rfd_{}", std::process::id()));
+                std::fs::create_dir_all(&dir).unwrap();
+                let r = set_dir(dir.to_str().unwrap());
+                assert_eq!(r["ok"], true, "set dir: {r}");
+
+                let err = snarkvm_parameters::mainnet::InclusionProver::load_bytes()
+                    .expect_err("an absent remote param must not load (no in-Rust download)");
+                assert!(
+                    matches!(err, snarkvm_parameters::ParameterError::RemoteFetchDisabled),
+                    "expected RemoteFetchDisabled, got {err:?}",
+                );
+
+                let _ = std::fs::remove_dir_all(&dir);
+            }
             other => panic!("unknown scenario {other}"),
         }
     }
@@ -3089,6 +3109,19 @@ mod param_dir_tests {
     #[test]
     fn set_parameter_dir_rejected_after_load_started() {
         let out = run_scenario("load_started_then_set_locked");
+        assert!(
+            out.status.success(),
+            "subprocess failed.\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
+    }
+
+    /// Workstream A (PR3): curl is gone, so an absent remote parameter fails
+    /// closed with `RemoteFetchDisabled` instead of being downloaded in-process.
+    #[test]
+    fn missing_remote_param_fails_closed_with_remote_fetch_disabled() {
+        let out = run_scenario("missing_param_remote_fetch_disabled");
         assert!(
             out.status.success(),
             "subprocess failed.\nstdout:\n{}\nstderr:\n{}",
