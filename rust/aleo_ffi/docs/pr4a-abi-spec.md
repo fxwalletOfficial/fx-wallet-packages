@@ -107,6 +107,34 @@ After this, the network ID embedded at authorize time matches the network the pr
 is produced for — the precondition for testnet working end-to-end (today everything
 is forced to `MainnetV0`, which silently mis-IDs a testnet tx).
 
+### 3.3.1 Genericize the helper stack, not just the entry points
+
+`match parse_network` at the export is necessary but **not sufficient**. The
+network-typed exports (§3.2 + §3.3) call helpers that are still pinned to the
+`type Net = MainnetV0` alias; an export dispatched to `f::<TestnetV0>` that calls a
+`PrivateKey<Net>`-typed helper does not even type-check (it would force a
+`PrivateKey<MainnetV0>`), so the genericization must go **down the call stack**.
+Verified Net-fixed helpers on the authorize/build/fee path (epic `1387238`):
+
+| Helper | Pinned type | Called by | Action |
+|---|---|---|---|
+| `transfer_inputs` (`lib.rs:399`) | `&PrivateKey<Net>` | `execution_authorization` (`:511`) | `<N: Network>` |
+| `plaintext_record` (`:378`) | `&PrivateKey<Net>` | `join_authorization` (`:480,481`), `transfer_inputs` (`:410`) | `<N: Network>` |
+| `plaintext_record_typed` (`:390`) | `&PrivateKey<Net>` → `Record<Net,…>` | `execution_fee_authorization_static` (`:1141`) | `<N: Network>` |
+| `base_fee_at_height` (`:804`) | `&Execution<Net>`, `Net::CONSENSUS_VERSION` | `get_base_fee_static` (`:1097`) | `<N: Network>` |
+
+`new_vm`, `add_programs_from_sources(+_within)` are already `<N: Network>` (PR2 chunk
+3). `check_total_fee(base_fee: u64, priority_fee: u64)` is **network-agnostic** (pure
+`u64` arithmetic, no `Net` in its signature) — left as-is.
+
+Both-network coverage is **mandatory** (compile + behavior), not just the proving
+path: private-record decrypt (`plaintext_record`/`plaintext_record_typed`), private
+fee authorization, `build_transaction_offline`, and `transfer_inputs`
+public/private — each exercised for `TestnetV0` as well as `MainnetV0`. Where a live
+testnet record fixture is unavailable, the TestnetV0 monomorphization is still
+verified at compile + dispatch + network-id level (the existing `TEST_RECORD`/`owner()`
+fixtures are MainnetV0).
+
 ### 3.4 Add `ffi_abi_version`
 
 ```rust
@@ -185,6 +213,15 @@ the constructors. PR4a:
 - Migrates `example/`, `test/support/test_dylib.dart`, and any in-repo callers to the
   `AleoLib` form. The CHANGELOG calls out the constructor signature break.
 
+**`ParameterProvisioner` is part of this surface.** It is a public class
+(`export 'package:aleo_dart/src/aleo_provisioning.dart'` in `aleo.dart`) whose
+constructor takes a bare `ffi.DynamicLibrary _lib` (`aleo_provisioning.dart:73,106`).
+If only `AleoAccount`/`AleoRecord`/`AleoProgram` are migrated, a caller can still do
+`ParameterProvisioner(rawLib, …)` and bypass the guard. PR4a changes its constructor
+to take an `AleoLib` and read `lib.dyLib` internally (same break, same changelog
+entry). After this, **every** public class that reaches the FFI takes a validated
+handle — there is no unguarded constructor left.
+
 ### 4.2 Test harness must not let the fallback mask the guard
 
 `tryLoadAleoLib()` currently: `ALEO_NEW_LIB` (loud) → else `getDyLibFromCargo` →
@@ -223,6 +260,21 @@ honored.
 - Public `AleoProgram` method signatures stay source-compatible where possible; any
   that must change (e.g. a result now coming from an envelope) are documented.
 
+### 5.1 Custom-program proving becomes unsupported (intended behavior break)
+
+`executeProgramProof(url, authorization, program_id, …)` today accepts a **custom
+program id** and proves it via the closure fetched from the node. The PR2
+`provisionAndProveProgram` is **credits-only**: a non-empty program closure throws
+`ProvisioningException('unsupported_feature', …)` before provisioning
+(`aleo_provisioning.dart:514–526`, `_isEmptyClosure`). Switching the public flow to
+`provisionAndProve*` therefore **removes custom-program proving** in v1 — a deliberate
+convergence to the locked "credits-only" scope, not an accident.
+
+This must be **explicit**: a CHANGELOG entry ("custom-program proving is unsupported
+in v1; credits.aleo only") and a test asserting a custom-program call throws
+`unsupported_feature` (so it can never be mistaken for a regression). The mainnet/
+testnet credits flows (empty/`"[]"` closure) are unaffected.
+
 ## 6. Test table (write first, per the churn lesson)
 
 | Surface | Case | Expectation |
@@ -233,6 +285,8 @@ honored.
 | `parse_network` | `"mainnet"` / `"testnet"` | correct monomorphization (compile + dispatch) |
 | `parse_network` | unknown | `get_base_fee`→0; `execution_fee_authorization`→""; checked→`unsupported_network` |
 | authorize/build | `network="testnet"` | tx carries the TestnetV0 network id (not mainnet) |
+| helper stack (both networks) | `transfer_inputs`, `plaintext_record(_typed)`, `base_fee_at_height`, `execution_fee_authorization` private fee, `build_transaction_offline` | TestnetV0 + MainnetV0 each (compile + dispatch + network-id) |
+| custom program | `executeProgramProof` with a non-credits program id | throws `unsupported_feature` (intended break, §5.1) |
 | symbol set | release cdylib `nm` | exactly the 34-symbol set |
 | public flow | `executeProof` cold-cache (subprocess/temp dir) | preflight→download→checked, no abort |
 | public flow | proving after latch tripped | fail-fast, no FFI call |
