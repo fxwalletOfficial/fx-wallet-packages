@@ -122,10 +122,12 @@ Verified Net-fixed helpers on the authorize/build/fee path (epic `1387238`):
 | `plaintext_record` (`:378`) | `&PrivateKey<Net>` | `join_authorization` (`:480,481`), `transfer_inputs` (`:410`) | `<N: Network>` |
 | `plaintext_record_typed` (`:390`) | `&PrivateKey<Net>` → `Record<Net,…>` | `execution_fee_authorization_static` (`:1141`) | `<N: Network>` |
 | `base_fee_at_height` (`:804`) | `&Execution<Net>`, `Net::CONSENSUS_VERSION` | `get_base_fee_static` (`:1097`) | `<N: Network>` |
+| `check_total_fee` (`:363`) | `Net::MAX_FEE` in the body (signature is `u64`s) | `execution_fee_authorization_static` (`:1135`) | `<N: Network>` (turbofish callsites) |
 
 `new_vm`, `add_programs_from_sources(+_within)` are already `<N: Network>` (PR2 chunk
-3). `check_total_fee(base_fee: u64, priority_fee: u64)` is **network-agnostic** (pure
-`u64` arithmetic, no `Net` in its signature) — left as-is.
+3). Note `check_total_fee`'s *signature* is two `u64`s, but its body compares against
+`Net::MAX_FEE`, so it is network-dependent and must be generic too (its callsites
+turbofish `::<N>` since `N` isn't in the arguments).
 
 Both-network coverage is **mandatory** (compile + behavior), not just the proving
 path: private-record decrypt (`plaintext_record`/`plaintext_record_typed`), private

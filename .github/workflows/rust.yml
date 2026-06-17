@@ -47,29 +47,25 @@ jobs:
         run: |
           lib=target/release/libaleo_rust.so
           test -f "$lib" || { echo "release cdylib not found"; exit 1; }
-          # Phase 3 deleted the 12 in-Rust node-RPC exports (the node I/O moved to
-          # the Dart AleoNode). The phase-3 surface is 29 FFI functions + free_string:
-          # 19 offline/account/record originals (31 - 12 deleted) plus the 10
-          # phase-1 I/O-to-Dart primitives/helpers (the proving/fee ones keep their
-          # `_static` names; the canonical rename is deferred to phase 4). Phase 4
-          # PR2 adds the parameter-directory control exports (ffi_set_parameter_dir,
-          # ffi_aleo_dir), the network-aware checked proving exports
-          # (execute_proof_checked, execute_fee_proof_checked,
-          # execute_program_proof_checked) and parameter_preflight → 35 functions +
-          # free_string. The full
-          # EXACT exported set is compared (not just presence), so CI also fails if a
-          # deleted RPC symbol survives or an unexpected symbol appears.
+          # Phase 4 PR4a finalized the ABI (workstream C): the 3 plain proving
+          # exports (execute_proof_static / execute_fee_proof_static /
+          # execute_program_proof_static) were DELETED (superseded by the enveloped
+          # *_checked ones), the 3 remaining `_static` exports were renamed to
+          # canonical + made network-aware (get_base_fee, execution_fee_authorization,
+          # program_authorization), and ffi_abi_version was added (the Dart loader's
+          # ABI guard). Net: 35 - 3 + 1 = 33 FFI functions + free_string = 34 symbols.
+          # The full EXACT exported set is compared (not just presence), so CI also
+          # fails if a deleted symbol survives or an unexpected symbol appears.
           expected=$(printf '%s\n' \
-            numbers_add seed_to_private_key private_key_to_address \
+            ffi_abi_version numbers_add seed_to_private_key private_key_to_address \
             private_key_to_view_key view_key_to_address sign_message verify \
             get_token_owner_hash is_owner decrypt_cipher_text serial_number_string \
             encrypt_private_key decrypt_to_private_key decrypt_sender_ciphertext \
             build_transaction_offline execution_authorization join_authorization \
             upgrade_authorization build_upgrade_transaction_offline free_string \
             required_commitments required_imports state_root_from_paths \
-            consensus_version_for get_base_fee_static execution_fee_authorization_static \
-            execute_proof_static execute_fee_proof_static execute_program_proof_static \
-            program_authorization_static ffi_set_parameter_dir ffi_aleo_dir \
+            consensus_version_for get_base_fee execution_fee_authorization \
+            program_authorization ffi_set_parameter_dir ffi_aleo_dir \
             execute_proof_checked execute_fee_proof_checked execute_program_proof_checked \
             parameter_preflight | sort -u)
           # Exported defined symbols, minus the ELF runtime symbols the linker adds
@@ -84,7 +80,7 @@ jobs:
             comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$actual")
             exit 1
           fi
-          echo "exported FFI symbol set matches exactly (35 functions + free_string)"
+          echo "exported FFI symbol set matches exactly (33 functions + free_string)"
 
       # Workstream A (PR3) dropped curl + openssl-sys (the in-Rust param
       # downloader is gone); workstream B (PR1) dropped the transitive ureq/rustls.
