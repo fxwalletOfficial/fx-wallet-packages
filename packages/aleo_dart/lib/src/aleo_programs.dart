@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:path/path.dart' as path;
 
 import 'package:aleo_dart/src/aleo_node.dart';
 import 'package:aleo_dart/src/rust_lib/programs_rust_ffi.dart';
@@ -671,28 +669,6 @@ class AleoProgram {
     return value;
   }
 
-  Future<void> downloadProvingKey({updateKey = false}) async {
-    late final rootPath;
-    if (Platform.isLinux) {
-      var rootDirectory = Directory.current;
-      var parts = path.split(rootDirectory.path);
-      rootPath = parts[0] + parts[1] + '/' + parts[2] + '/';
-    }
-    final savePath = rootPath + '.aleo/resources/inclusion.prover.cd85cc5';
-
-    final file = File(savePath);
-
-    if (file.existsSync() || !updateKey) {
-      return;
-    } else {
-      print('start downloading');
-      const downLoadUrl =
-          'https://s3-us-west-1.amazonaws.com/testnet.parameters/inclusion.prover.cd85cc5';
-      await downloadFile(downLoadUrl, savePath);
-    }
-    return;
-  }
-
   String modifyAuthorization(
     String authorizationJson,
   ) {
@@ -712,32 +688,4 @@ class AleoProgram {
     }
     return json.encode(data);
   }
-}
-
-Future<void> downloadFile(String url, String savePath) async {
-  final httpClient = HttpClient();
-  final request =
-      await httpClient.getUrl(Uri.parse(url)).timeout(Duration(minutes: 3));
-  final response = await request.close();
-  final file = File(savePath);
-  await file.create(recursive: true);
-  final output = file.openWrite();
-
-  int totalBytes = response.contentLength;
-  int receivedBytes = 0;
-
-  await response.forEach((data) {
-    output.add(data);
-    receivedBytes += data.length;
-    print('downing: ${(receivedBytes / totalBytes * 100).toStringAsFixed(2)}%');
-  }).timeout(Duration(minutes: 3), onTimeout: () {
-    throw Exception('timeout');
-  }).catchError((error) {
-    print('downing error: $error');
-    output.close();
-    file.deleteSync();
-    throw error;
-  });
-
-  await output.close();
 }
