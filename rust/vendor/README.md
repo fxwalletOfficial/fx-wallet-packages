@@ -8,15 +8,13 @@ and `VM::execute_fee_authorization_raw` are flipped from private to `pub`.
 
 ### Why
 
-`aleo_rust`'s split-proof flow (`execute_proof` / `execute_fee_proof` /
-`build_transaction_offline`) needs the bare `Execution` / `Fee` objects so the
+`aleo_ffi`'s split-proof flow (`execute_proof_checked` / `execute_fee_proof_checked`
+/ `build_transaction_offline`) needs the bare `Execution` / `Fee` objects so the
 proving step can run separately from transaction assembly. snarkVM's public
 API (`execute_authorization`) only returns a fully assembled `Transaction`.
-The original library was built against a (now lost) snarkVM fork exposing
-these methods; without this patch the crate does not compile.
+Without this patch the crate does not compile.
 
-Consumed via `[patch.crates-io]` in `rust/aleo_rust/Cargo.toml`. The clean-room
-`aleo_ffi` crate will use the same vendor for its program/proof group.
+Consumed via `[patch.crates-io]` in `rust/aleo_ffi/Cargo.toml`.
 
 ### Maintenance
 

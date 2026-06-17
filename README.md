@@ -16,9 +16,10 @@ fx-wallet-packages/
 │   ├── flutter_web3_webview/    # Web3 WebView bridge for dApp integration
 │   ├── crypto_utils/            # General crypto utilities: hash, sign, encode
 │   ├── bc_ur_dart/              # UR (Uniform Resources) encoding/decoding for QR sharing
-│   └── aleo_dart/               # Aleo blockchain SDK (FFI to aleo_rust)
+│   └── aleo_dart/               # Aleo blockchain SDK (FFI to aleo_ffi)
 ├── rust/
-│   └── aleo_rust/               # Native Rust crate backing aleo_dart
+│   ├── aleo_ffi/                # Native Rust crate (clean-room, Apache-2.0) backing aleo_dart
+│   └── vendor/                  # Vendored + patched snarkVM crates (Apache-2.0)
 ├── examples/
 │   └── chart_demo_app/          # (Optional) Demo app showing k_chart_flutter usage
 ├── melos.yaml                   # (Optional) Melos workspace config for multi-package management
@@ -35,7 +36,7 @@ fx-wallet-packages/
 | [`flutter_web3_webview`](https://pub.dev/packages/flutter_web3_webview) | ✅       | Inject Web3 provider into WebView for dApp support    |
 | [`crypto_utils`](https://pub.dev/packages/crypto_utils)                 | ✅       | Cryptographic tools (ECDSA, hashing, encoding)        |
 | [`bc_ur_dart`](https://pub.dev/packages/bc_ur_dart)                     | ✅       | Dart implementation of the BC-UR protocol             |
-| [`aleo_dart`](https://pub.dev/packages/aleo_dart)                       | 🆕       | Aleo blockchain Dart SDK (FFI to `aleo_rust`)         |
+| [`aleo_dart`](https://pub.dev/packages/aleo_dart)                       | 🆕       | Aleo blockchain Dart SDK (FFI to `aleo_ffi`)         |
 
 ---
 
