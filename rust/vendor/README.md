@@ -69,9 +69,14 @@ is permitted with attribution; its LICENSE.md is preserved in the directory.
 
 ## snarkvm-parameters 4.5.0 (Apache-2.0)
 
-Verbatim copy of `snarkvm-parameters` 4.5.0 from crates.io with a **param-dir
-change** (see `parameters-param-dir.patch`): a new `src/parameter_dir.rs` module
-plus a two-spot edit to `src/lib.rs` / `src/macros.rs`.
+Verbatim copy of `snarkvm-parameters` 4.5.0 from crates.io with two fx-wallet
+patches, applied in order:
+
+1. **param-dir change** (`parameters-param-dir.patch`): a new
+   `src/parameter_dir.rs` module plus a two-spot edit to `src/lib.rs` /
+   `src/macros.rs`.
+2. **no-remote-fetch change** (`parameters-no-remote-fetch.patch`, workstream A /
+   PR3): removes the in-Rust curl downloader so the build links no HTTP/TLS stack.
 
 ### Why
 
@@ -96,17 +101,29 @@ The macro's **size + SHA-256 checksum guards are unchanged**, so a Dart-provisio
 parameter that is missing/corrupt is still rejected by this crate — the trust
 boundary stays in Rust even once curl is removed.
 
-**This PR (workstream B follow-on) does NOT remove curl/openssl-sys** — the
-download path is untouched; `cargo tree -i openssl-sys` still resolves through
-`snarkvm-parameters`. Flipping the native branch to `RemoteFetchDisabled` and
-dropping the `curl` dep is the separate workstream **A** (PR3).
+### No remote fetch (workstream A, PR3)
+
+The native download branch of `impl_load_bytes_logic_remote!` previously fetched a
+missing parameter with `curl` (pulling in `openssl-sys`). The
+`parameters-no-remote-fetch.patch` removes it: a parameter that is absent from the
+param dir now **fails closed** with `ParameterError::RemoteFetchDisabled` instead
+of being downloaded in-process. The Dart `ParameterProvisioner` provisions params
+(download + verify + atomic rename) into the param dir before any prove. With the
+downloader gone, the native `store_bytes` + curl `remote_fetch` and the
+`From<curl::Error>` impl are deleted and the `curl` dependency is dropped, so
+`cargo tree -i curl` / `-i openssl-sys` no longer resolve through this crate. The
+size + checksum guards stay, so the trust boundary remains in Rust. (CI's "Verify
+no HTTP/TLS stack" step asserts curl/openssl-sys/ureq/rustls/reqwest are all
+absent; a Rust subprocess test asserts an absent remote param returns
+`RemoteFetchDisabled`.)
 
 Consumed via `[patch.crates-io]` in `rust/aleo_ffi/Cargo.toml` (applies tree-wide).
 
 ### Maintenance
 
-- Upgrading snarkVM: re-extract the crate, re-apply `parameters-param-dir.patch`,
-  re-add `src/parameter_dir.rs`, replace this directory, refresh lockfiles.
+- Upgrading snarkVM: re-extract the crate, re-apply `parameters-param-dir.patch`
+  then `parameters-no-remote-fetch.patch`, re-add `src/parameter_dir.rs`, replace
+  this directory, refresh lockfiles.
 - The embedded `resources/*.metadata` (checksums/sizes) and the `impl_local!`
   base-SRS `.usrs` files (~6.3 MB, `include_bytes!`'d) are kept verbatim; only the
   downloadable (`impl_remote!`) keys are fetched at runtime into the param dir.

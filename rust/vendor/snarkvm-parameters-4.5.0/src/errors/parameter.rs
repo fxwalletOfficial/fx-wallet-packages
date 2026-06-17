@@ -39,12 +39,8 @@ pub enum ParameterError {
     FilesystemDisabled,
 }
 
-#[cfg(all(not(feature = "wasm"), not(target_env = "sgx")))]
-impl From<curl::Error> for ParameterError {
-    fn from(error: curl::Error) -> Self {
-        ParameterError::Crate("curl::error", error.description().to_string())
-    }
-}
+// fx-wallet no-remote-fetch patch (workstream A): the `From<curl::Error>` impl
+// was removed with the curl dependency (the in-Rust downloader is gone).
 
 impl From<std::io::Error> for ParameterError {
     fn from(error: std::io::Error) -> Self {
