@@ -1,0 +1,5 @@
+# Cross-compile outputs (build-time bundled by the app; not committed — v1 does
+# not download or vendor prebuilt libraries). Produced by build_android.sh /
+# build_ios.sh.
+/android_lib/
+/ios_lib/

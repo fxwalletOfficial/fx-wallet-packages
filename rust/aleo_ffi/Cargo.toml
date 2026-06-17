@@ -14,8 +14,12 @@ panic = "unwind"
 
 [lib]
 name = "aleo_rust"
-# rlib in addition to cdylib so `cargo test` can build a unit-test harness.
-crate-type = ["cdylib", "rlib"]
+# cdylib: the shared library for Android (.so) and desktop (.so/.dylib/.dll),
+# loaded via DynamicLibrary.open.
+# staticlib: the static archive (.a) bundled into the iOS xcframework and
+# statically linked into the app, loaded via DynamicLibrary.process().
+# rlib: lets `cargo test` build a unit-test harness.
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 snarkvm-console = "=4.5.0"
