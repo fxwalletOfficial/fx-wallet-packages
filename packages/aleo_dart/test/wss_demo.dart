@@ -5,9 +5,7 @@ import 'package:web_socket_channel/io.dart';
 import 'package:aleo_dart/aleo.dart';
 
 Future<void> main() async {
-  final String libPosition = 'aleo_rust/target/release/libaleo_rust.so';
-  final dyLib = DyLib.getDyLibByPosition(libPosition);
-// final dyLib = DyLib.getDyLibFromCargo();
+  final dyLib = DyLib.getDyLibFromCargo();
   final rustLib = AleoProgram(dyLib);
 
   final wss = 'ws://aleo.fxwallet.com/wallet/aleo/delegate';
