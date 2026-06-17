@@ -39,6 +39,34 @@ MissingParam missingFor(
 void main() {
   final dyLib = tryLoadAleoLib();
 
+  // ── Pure-Dart: the credits-only closure predicate (no FFI, no network) ──────
+  // It gates the public-flow fail-fast: a non-empty (custom-program) closure is
+  // rejected with `unsupported_feature` before any authorize / state-path / prove
+  // work, so a custom program never surfaces as a malformed-auth or node error.
+  group('isEmptyClosure (credits-only gate)', () {
+    test('empty / "[]" / whitespace-around are empty (credits.aleo)', () {
+      expect(ParameterProvisioner.isEmptyClosure(''), isTrue);
+      expect(ParameterProvisioner.isEmptyClosure('   '), isTrue);
+      expect(ParameterProvisioner.isEmptyClosure('[]'), isTrue);
+      expect(ParameterProvisioner.isEmptyClosure(' [ ] '), isTrue);
+    });
+
+    test('a non-empty array (a custom program) is NOT empty', () {
+      expect(
+        ParameterProvisioner.isEmptyClosure(
+            '[{"id":"custom.aleo","edition":0,"source":"program custom.aleo;"}]'),
+        isFalse,
+      );
+    });
+
+    test('malformed / non-array values are NOT empty (fail-closed)', () {
+      expect(ParameterProvisioner.isEmptyClosure('not json'), isFalse);
+      expect(ParameterProvisioner.isEmptyClosure('{}'), isFalse);
+      // A non-breaking space is not JSON whitespace, so this is not an empty array.
+      expect(ParameterProvisioner.isEmptyClosure('[ ]'), isFalse);
+    });
+  });
+
   // ── Pure-Dart: envelope parser + latch (no FFI dir, no network) ─────────────
   // (Still needs the library handle to construct the provisioner.)
   group('envelope + latch', () {

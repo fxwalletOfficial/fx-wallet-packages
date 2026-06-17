@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:aleo_dart/src/rust_lib/record_rust_ffi.dart';
+import 'package:aleo_dart/src/rust_lib/dyLib.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
 import 'package:aleo_dart/src/aleo_utils.dart';
 
@@ -9,7 +10,8 @@ class AleoRecord {
   int decimal = 6;
 
   AleoRecord(dyLib, [String network_raw = 'testnet']) {
-    this.recordRustFFI = RecordRustFFI(dyLib, network_raw);
+    this.recordRustFFI =
+        RecordRustFFI(AleoLib.coerce(dyLib).dyLib, network_raw);
   }
 
   String encryptPrivateKey(privateKeyRaw, secretRaw) {

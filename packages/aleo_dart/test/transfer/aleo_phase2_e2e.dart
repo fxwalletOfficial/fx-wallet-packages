@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:aleo_dart/aleo.dart';
 import 'package:test/test.dart';
 
@@ -74,9 +76,17 @@ void main() async {
         reason: 'a single-record private transfer spends one record');
 
     final paths = await node.statePaths(commitments);
-    // checked_static_query enforces paths' set == required_commitments, so a
-    // proof only succeeds when the helper was exact.
-    final proof = await rust.executeProofStatic(auth, height, paths, '');
+    // PR4a: proving goes through the ParameterProvisioner checked path (preflight
+    // → download keys → execute_*_checked). checked_static_query enforces paths'
+    // set == required_commitments, so a proof only succeeds when the helper was
+    // exact.
+    final prov = ParameterProvisioner(dyLib, 'testnet', Directory.systemTemp);
+    final version = rust.consensusVersionFor(height);
+    final proof = await prov.provisionAndProveExecution(
+        authorization: auth,
+        height: height,
+        consensusVersion: version,
+        statePaths: paths);
     expect(proof, isNotEmpty, reason: 'private execution proof must verify');
 
     final feeAuth = await rust.executionFeeAuthorizationStatic(
@@ -86,12 +96,17 @@ void main() async {
     final feeCommitments = rust.requiredCommitments(feeAuth);
     final feePaths = await node.statePaths(feeCommitments);
     final feeRoot = feeCommitments.isEmpty ? await node.latestStateRoot() : '';
-    final feeProof =
-        await rust.executeFeeProofStatic(feeAuth, height, feePaths, feeRoot);
+    final feeProof = await prov.provisionAndProveFee(
+        authorization: feeAuth,
+        height: height,
+        consensusVersion: version,
+        statePaths: feePaths,
+        publicStateRoot: feeRoot);
     expect(feeProof, isNotEmpty, reason: 'private-flow fee proof must verify');
 
     final tx = await rust.buildTransactionOffline(proof, feeProof);
     expect(tx, isNotEmpty);
     print('assembled private transfer tx (${tx.length} bytes)');
+    prov.close();
   }, skip: 'manual: requires a funded testnet record + proving keys');
 }
