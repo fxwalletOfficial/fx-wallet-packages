@@ -27,7 +27,8 @@ snarkvm-ledger-query = { version = "=4.5.0", default-features = false, features 
 snarkvm-synthesizer = "=4.5.0"
 # Direct dep so the FFI can drive parameter provisioning: set the param dir
 # (mobile sandbox) and run preflight. Vendored + patched below to own the
-# param-dir state (curl download path is untouched in this PR; removed in PR3/A).
+# param-dir state AND to remove the curl download path (a missing param fails
+# closed with RemoteFetchDisabled) — so this crate links no curl/openssl-sys.
 snarkvm-parameters = "=4.5.0"
 aleo-std-storage = "=1.0.3"
 anyhow = "1"

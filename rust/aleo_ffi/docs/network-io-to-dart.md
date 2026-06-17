@@ -10,18 +10,20 @@ orchestration onto the pure primitives, and lands the Rust exact-match guard
 The phase-1 `_static` proving/fee exports keep their names (the canonical rename
 is deferred to phase 4's lib redistribution — see "Deleted from Rust"). The FFI
 surface is now 29 functions + `free_string` and makes **zero node RPC calls**.
-Phase 4 (drop the proving-parameter `curl`/OpenSSL download) is not started — see
-"Proving parameters": the crate still links `curl`/`openssl-sys` for that (and
-`ureq` remains transitively via `snarkvm-ledger-query`, see "Result"), so phase 3
-is "no node RPC", not "no HTTP stack".
+Phase 4 then removed the HTTP stack itself: workstream B (PR1) dropped the
+transitive `ureq` (split `snarkvm-ledger-query`'s REST behind an opt-in feature),
+and workstream A (PR3) dropped the proving-parameter `curl`/`openssl-sys` download
+(vendored `snarkvm-parameters` now fails closed with `RemoteFetchDisabled`; the
+Dart layer provisions params). So the crate now links **no HTTP stack** — see
+"Proving parameters" and "Result".
 Owner: aleo_ffi
 Supersedes: the in-Rust HTTP hardening accreted across PR #51 review rounds 5–13.
 
 ## Phase 1 status (implemented)
 
 Phase 1 is strictly additive: it ships **ten** pure, RPC-free exports (they
-issue no node RPC; proving's parameter download is a separate, still-open matter
-— see "Proving parameters") alongside the untouched old ones — four helpers (`required_commitments`,
+issue no node RPC; proving's parameter download was a separate matter, since
+closed in phase 4 — see "Proving parameters") alongside the untouched old ones — four helpers (`required_commitments`,
 `required_imports`, `state_root_from_paths`, `consensus_version_for`) plus six
 `_static` proving/fee/authorize variants (`get_base_fee_static`,
 `execution_fee_authorization_static`, `execute_proof_static`,
@@ -397,8 +399,9 @@ I/O left in Rust to bound — the proving-parameter download is separate, see
 
 ## Deleted from Rust (phase 3, done)
 
-Removed: `aleo_ffi`'s direct `ureq` dependency (a transitive `ureq` remains via
-`snarkvm-ledger-query`, see "Result"); `http_agent`, `http_get`, `http_get_until`,
+Removed: `aleo_ffi`'s direct `ureq` dependency (the transitive `ureq` via
+`snarkvm-ledger-query` was later dropped too — phase 4 PR1, see "Result");
+`http_agent`, `http_get`, `http_get_until`,
 `http_post`, `request_once_bounded`, the `HttpMethod` enum,
 `InflightPermit`/`MAX_INFLIGHT_REQUESTS` (and its backing atomic); the
 `HTTP_REQUEST_TIMEOUT` / `HTTP_GET_ATTEMPTS` / `HTTP_GET_DEADLINE` constants;
@@ -433,24 +436,27 @@ Result: the Rust crate makes **zero RPC calls** — state, program sources, and
 broadcast all move to Dart. `aleo_ffi`'s **direct** `ureq` dependency (and all of
 its in-crate HTTP code) is gone.
 
-Two network **dependencies remain in the build tree**, neither called by our
-code, both removable only by patching upstream (not by removing a direct dep):
+At phase 3 two network **dependencies still remained in the build tree** (neither
+called by our code, both removable only by patching upstream, not by dropping a
+direct dep); **phase 4 removed both**, so the crate now links no HTTP/TLS stack:
 
-1. `ureq` (now the **rustls** flavor, v3.x) is still pulled in **transitively**
-   by `snarkvm-ledger-query`'s `query` feature — the feature that also provides
-   the offline `StaticQuery` type this phase depends on. The two are one feature
-   bundle (`query = [dep:ureq, ...]`), so there is no way to keep `StaticQuery`
-   and drop `ureq` short of vendoring/patching `snarkvm-ledger-query`. It backs
-   that crate's `RestQuery`, which `aleo_ffi` never uses.
-2. `curl` + `openssl-sys`, via `snarkvm-parameters`' proving-key / SRS download
-   (see "Proving parameters" below).
+1. `ureq` (the **rustls** flavor, v3.x) was pulled in **transitively** by
+   `snarkvm-ledger-query`'s `query` feature — bundled with the offline
+   `StaticQuery` type this phase depends on (`query = [dep:ureq, ...]`), backing
+   that crate's `RestQuery`, which `aleo_ffi` never uses. **Phase 4 PR1
+   (workstream B)** vendored + patched `snarkvm-ledger-query` to split the REST
+   surface behind an opt-in `rest` feature, so the default `query` build no
+   longer pulls `ureq`/`rustls`.
+2. `curl` + `openssl-sys`, via `snarkvm-parameters`' proving-key / SRS download.
+   **Phase 4 PR3 (workstream A)** vendored + patched `snarkvm-parameters` to fail
+   closed with `RemoteFetchDisabled` instead of curl-downloading, and dropped the
+   `curl` dependency (see "Proving parameters").
 
-Eliminating these — pre-provisioning the parameters with remote fetch disabled,
-and patching `snarkvm-ledger-query` if the transitive `ureq` must also go — is
-phase 4's work and the actual prerequisite for the no-OpenSSL iOS/Android
-cross-compile in the GPL-removal plan.
+This was the actual prerequisite for the no-OpenSSL iOS/Android cross-compile in
+the GPL-removal plan; CI now asserts none of
+`curl`/`openssl-sys`/`ureq`/`rustls`/`reqwest` are in the dependency graph.
 
-## Proving parameters (open gap — the network I/O still in Rust)
+## Proving parameters (the last in-Rust network I/O — removed in phase 4, PR3)
 
 This phase's premise is "Rust does no network I/O." That holds for **node RPC**
 (state / program sources / broadcast), but **not** for snarkVM's proving
@@ -463,9 +469,10 @@ parameters, an issue this design originally overlooked:
   downloads **each missing one** with `curl::easy` — **synchronous, with no
   timeout** (`transfer.perform()`), each retrying a list of URLs.
 - `curl` (and thus `openssl-sys`) is an unconditional `cfg(not(wasm),
-  not(sgx))` dependency of `snarkvm-parameters`; **no Cargo feature disables it**
-  on native targets. So removing `ureq` does not stop the crate linking
-  curl/OpenSSL, and a cold-cache prove can still block on the network.
+  not(sgx))` dependency of upstream `snarkvm-parameters`; **no Cargo feature
+  disables it** on native targets. So removing `ureq` did not stop the crate
+  linking curl/OpenSSL on its own, and (until PR3) a cold-cache prove could still
+  block on the network.
 
 This is **not introduced by phase 1** — the old network-bound `execute_proof`
 downloads parameters the same way — but it does mean the early "zero-network /
@@ -478,7 +485,7 @@ and make native targets take the `RemoteFetchDisabled` path that wasm/sgx alread
 use — return an error instead of fetching — then drop the `curl`/`openssl-sys`
 dependency. Parameters are pre-provisioned: bundled with the app, or downloaded
 once by the Dart layer (with `dio` timeout/cancel) into `aleo_dir()` before the
-first prove. Until then, the parameter download remains snarkVM's default
+first prove. Until PR3, the parameter download remained snarkVM's default
 behaviour.
 
 > **Status: done (Phase 4, PR3).** The vendored `snarkvm-parameters` native
@@ -518,13 +525,14 @@ behaviour.
    differs in already-distributed prebuilt libraries (a silent ABI mismatch
    instead of a clean missing-symbol error). `AleoProgram`'s public method
    signatures are unchanged. The FFI surface is 29 functions + `free_string`.
-4. **Remove the proving-parameter network dependency + re-point cross-compile**:
-   vendor/patch `snarkvm-parameters` to disable native remote fetch
-   (pre-provision the keys/SRS), dropping `curl`/`openssl-sys` — see "Proving
-   parameters". This is the actual no-OpenSSL prerequisite; folds into the
-   GPL-removal / mobile-build work. Do the `_static`→canonical rename here, in
-   lockstep with the rebuilt/redistributed library + an ABI-version guard so a
-   version skew fails loudly rather than corrupting the ABI.
+4. **Remove the proving-parameter network dependency + re-point cross-compile**
+   *(curl/openssl: done in phase 4 PR3; `_static`→canonical rename + cross-compile:
+   pending PR4)*: vendored/patched `snarkvm-parameters` to disable native remote
+   fetch (the Dart layer pre-provisions the keys), dropping `curl`/`openssl-sys` —
+   see "Proving parameters". This was the actual no-OpenSSL prerequisite; folds
+   into the GPL-removal / mobile-build work. The `_static`→canonical rename lands
+   here, in lockstep with the rebuilt/redistributed library + an ABI-version guard
+   so a version skew fails loudly rather than corrupting the ABI.
 
 ## Open questions / risks
 
