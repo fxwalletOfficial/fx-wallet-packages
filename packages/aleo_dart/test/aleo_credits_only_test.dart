@@ -79,4 +79,18 @@ void main() {
     );
     expect(requests, 0, reason: 'must reject before reaching the node');
   });
+
+  test('contractFeeExecution rejects a custom program before any node request',
+      () async {
+    if (dyLib == null) {
+      markTestSkipped(nativeLibMissingReason);
+      return;
+    }
+    await expectLater(
+      program.contractFeeExecution(
+          'APrivateKey1zkp', 1, '{}', 'custom.aleo', url),
+      unsupported,
+    );
+    expect(requests, 0, reason: 'must reject before reaching the node');
+  });
 }
