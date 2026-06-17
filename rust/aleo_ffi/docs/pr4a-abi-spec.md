@@ -4,6 +4,31 @@
 > epic `1387238`. This is the ABI half of workstream C from `phase4-plan.md` §3.C.
 > PR4b (cross-compile + distribution) is split out per the Phase-4 PR-split decision.
 
+## 0. Applicable baseline (read before reviewing)
+
+This spec is written **against epic `1387238`** (the PR4a branch base, commit
+`203023f`). Review against that ref, not `main` or an older branch. The crate under
+change is **`rust/aleo_ffi/`**.
+
+⚠️ **Do not review `rust/aleo_rust/`.** That is the legacy **GPL** crate, slated for
+deletion in PR5. It is unrelated to the Phase-1..4 work. Both crates set
+`[lib] name = "aleo_rust"`, so **both build a `libaleo_rust` artifact** — this name
+collision is the easy trap: the Dart layer loads `rust/aleo_ffi`'s output, but a
+reviewer who greps `rust/aleo_rust/src/lib.rs` will see the *old* symbols (canonical
+`execute_proof`/`get_base_fee`, a 2-arg `build_transaction_offline`, no `_network`)
+and conclude the spec is wrong. Those legacy symbols are not this spec's subject.
+
+Ground-truth checks on epic `1387238` (what this spec assumes):
+
+| Claim | Verify | Expected |
+|---|---|---|
+| CI gate is `rust.yml` (exact symbol set) | `git show 1387238:.github/workflows/rust.yml` | present (in addition to `ci.yml`) |
+| `_static` + `_checked` + preflight exports exist | `grep -E '_static\|_checked\|parameter_preflight' rust/aleo_ffi/src/lib.rs` | all present |
+| `ParameterProvisioner` exists (PR2) | `packages/aleo_dart/lib/src/aleo_provisioning.dart` | present |
+| `build_transaction_offline` arity | `rust/aleo_ffi/src/lib.rs` | 3 args incl. `_network` (matches Dart) |
+| `build_upgrade_transaction_offline` arity | `rust/aleo_ffi/src/lib.rs` | 2 args incl. `_network` (matches Dart) |
+| `get_base_fee_static` failure mode | `rust/aleo_ffi/src/lib.rs` | `inner().unwrap_or(0)` (no panic) |
+
 ## 1. Why PR4a is split from PR4b
 
 Workstream C (the C-ABI change) and workstream D (cross-compile + redistribution)
@@ -92,6 +117,13 @@ pub extern "C" fn ffi_abi_version() -> u32 { 1 }
 Bump on every future ABI change. Retroactively guards the PR-#51 `u64`-widening
 drift (an older library lacks the symbol → the loader rejects it).
 
+Dart typedef must mirror `u32` exactly — do **not** reuse the generic `ffi.Int`:
+
+```dart
+typedef _FfiAbiVersionNative = ffi.Uint32 Function();
+typedef _FfiAbiVersionDart = int Function();
+```
+
 ### 3.5 `parse_network` contract
 
 A single helper: `"mainnet" → MainnetV0`, `"testnet" → TestnetV0`, anything else →
@@ -135,8 +167,41 @@ class AleoLib {
 - The three public classes' constructors take an `AleoLib` (breaking Dart API
   change — documented in the changelog). Internally they read `lib.dyLib`.
 - A missing `ffi_abi_version` symbol surfaces as a clear thrown error, not a crash.
-- Test harness (`test/support/test_dylib.dart`) builds an `AleoLib` from the
-  `ALEO_NEW_LIB` path so the whole suite exercises the guard.
+
+### 4.1 `DyLib` → `AleoLib` boundary (close the bypass)
+
+The chokepoint is only real if **every** path that produces a library for the public
+classes is validated. Today `DyLib.{getDyLibByPosition,getLocalDyLib,getDyLibFromCargo,
+getDyLibFromGit}` each return a **bare `DynamicLibrary`** that callers hand straight to
+the constructors. PR4a:
+
+- Adds validated factories on `DyLib` (or a new `AleoLib`) that wrap each loader and
+  return an `AleoLib` (open → `ffi_abi_version()` check → handle). These become the
+  public way to get a library.
+- Keeps the raw `DynamicLibrary`-returning loaders only as **internal/deprecated**
+  (`@Deprecated`) helpers used by the validated factories — not as a public unguarded
+  path. The public constructors no longer accept a bare `DynamicLibrary` at all (so
+  there is no unvalidated bypass left to forget).
+- Migrates `example/`, `test/support/test_dylib.dart`, and any in-repo callers to the
+  `AleoLib` form. The CHANGELOG calls out the constructor signature break.
+
+### 4.2 Test harness must not let the fallback mask the guard
+
+`tryLoadAleoLib()` currently: `ALEO_NEW_LIB` (loud) → else `getDyLibFromCargo` →
+`getDyLibFromGit` (a possibly-stale prebuilt) → `null` (suite skips). For ordinary
+suites that fallback is fine, but the **ABI-guard tests must not depend on it** — a
+stale-but-new-enough prebuilt, or a graceful skip, would hide a regression. PR4a:
+
+- For the normal suite: build `AleoLib` from `ALEO_NEW_LIB` (CI sets it; loud on a
+  bad path) so the guard runs against the freshly built library on every run.
+- For the guard's negative cases, construct **explicit fixtures**, never the fallback:
+  - *symbol absent* → open a library known to lack `ffi_abi_version` (a system
+    library such as libc/libSystem, or a tiny purpose-built stub `.so`); the lookup
+    throws `ArgumentError` → assert it maps to `IncompatibleNativeLibraryException`.
+  - *version mismatch* → a test seam: the loader's version comparison takes the
+    expected version as an injectable parameter (default `AleoLib.expectedAbiVersion`),
+    so a test can assert a `2 != 1` mismatch throws before any business lookup without
+    needing a second native build.
 
 ## 5. Dart: switch the public proving flow to the checked + provisioned path
 
@@ -162,9 +227,9 @@ honored.
 
 | Surface | Case | Expectation |
 |---|---|---|
-| `ffi_abi_version` | symbol present, ==1 | loader returns handle |
-| loader | symbol absent (phase-3 lib) | `IncompatibleNativeLibraryException` |
-| loader | version != 1 | throws before any business lookup |
+| `ffi_abi_version` | freshly built lib (`ALEO_NEW_LIB`), ==1 | loader returns handle |
+| loader | symbol absent — fixture: system lib / stub `.so` (not the fallback) | `IncompatibleNativeLibraryException` |
+| loader | version mismatch — test seam injects expected `2` | throws before any business lookup |
 | `parse_network` | `"mainnet"` / `"testnet"` | correct monomorphization (compile + dispatch) |
 | `parse_network` | unknown | `get_base_fee`→0; `execution_fee_authorization`→""; checked→`unsupported_network` |
 | authorize/build | `network="testnet"` | tx carries the TestnetV0 network id (not mainnet) |
