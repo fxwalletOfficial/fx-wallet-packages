@@ -230,18 +230,18 @@ class AleoProgram {
     }
   }
 
-  /// Fetches a program's import closure, **rejecting a custom program up front**:
-  /// v1 is credits-only, so a non-empty closure (anything but `credits.aleo`)
-  /// throws `unsupported_feature` here — deterministically, before authorize /
-  /// state-path / proving work — rather than surfacing later as a malformed-auth
-  /// or node error. credits.aleo is built in, so its closure is empty.
-  Future<String> _creditsOnlyClosure(AleoNode node, String programId) async {
-    final sources = await node.programClosure(programId);
-    if (!ParameterProvisioner.isEmptyClosure(sources)) {
+  /// The import closure for a credits-only program, **rejecting a custom program
+  /// before any node I/O**: v1 supports only `credits.aleo`, so a non-credits
+  /// `programId` throws `unsupported_feature` deterministically here — it never
+  /// reaches `programClosure`/`latestHeight`, so an unreachable/404/slow/malicious
+  /// node cannot mask the rejection with an `AleoNodeException`. credits.aleo is
+  /// built in, so its closure is empty (`[]`) and needs no node fetch at all.
+  String _creditsOnlyClosure(String programId) {
+    if (programId != 'credits.aleo') {
       throw ProvisioningException('unsupported_feature',
           'custom-program proving is not supported in this version');
     }
-    return sources;
+    return '[]';
   }
 
   /// v1 (credits-only): executes a **credits.aleo** function and broadcasts the
@@ -257,15 +257,13 @@ class AleoProgram {
     String url_raw,
   ) async {
     AleoUtils.checkAmount(fee, 'fee');
+    // v1 credits-only: reject a custom program before any node I/O.
+    final sources = _creditsOnlyClosure(program_id_raw);
     final node = _node(url_raw);
 
     for (var attempt = 0;; attempt++) {
       final height = await node.latestHeight();
       final version = programsRustFFI.consensusVersionFor(height);
-
-      // Fetch the program's import closure once (empty for credits.aleo); a
-      // custom program is rejected here before any further work.
-      final sources = await _creditsOnlyClosure(node, program_id_raw);
 
       final auth = _require(
           await programAuthorizationStatic(private_key_raw, program_id_raw,
@@ -309,9 +307,10 @@ class AleoProgram {
     String arguments_raw,
     String url_raw,
   ) async {
+    // v1 credits-only: reject a custom program before any node I/O.
+    final sources = _creditsOnlyClosure(program_id_raw);
     final node = _node(url_raw);
     final height = await node.latestHeight();
-    final sources = await _creditsOnlyClosure(node, program_id_raw);
     final auth = _require(
         await programAuthorizationStatic(private_key_raw, program_id_raw,
             function_name_raw, arguments_raw, sources),
@@ -330,9 +329,10 @@ class AleoProgram {
     String url_raw,
   ) async {
     AleoUtils.checkAmount(fee, 'fee');
+    // v1 credits-only: reject a custom program before any node I/O.
+    final sources = _creditsOnlyClosure(program_id_raw);
     final node = _node(url_raw);
     final height = await node.latestHeight();
-    final sources = await _creditsOnlyClosure(node, program_id_raw);
     final feeAuth = _require(
         await executionFeeAuthorizationStatic(
             private_key_raw, execution_raw, fee, '', sources, height),
@@ -352,12 +352,13 @@ class AleoProgram {
 
   /// Generates the execution proof for an authorization through the program path.
   /// v1 is credits-only: a non-`credits.aleo` [program_id_raw] is rejected with
-  /// `unsupported_feature` (the closure is fetched and, for credits.aleo, empty).
+  /// `unsupported_feature` before any node I/O (credits.aleo's closure is empty).
   Future<String> executeProgramProof(String url_raw, String authorization_raw,
       {String program_id_raw = 'credits.aleo'}) async {
+    // v1 credits-only: reject a custom program before any node I/O.
+    final sources = _creditsOnlyClosure(program_id_raw);
     final node = _node(url_raw);
     final height = await node.latestHeight();
-    final sources = await _creditsOnlyClosure(node, program_id_raw);
     return _proveProgramExecution(node, authorization_raw, sources, height);
   }
 
