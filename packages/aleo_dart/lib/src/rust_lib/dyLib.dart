@@ -73,12 +73,17 @@ class AleoLib {
   }
 }
 
+// Desktop dev / CI build-from-source paths, relative to the package directory
+// (`packages/aleo_dart`). PR4b repointed these from the GPL `aleo_rust` crate to
+// the clean-room `aleo_ffi` crate; the `[lib] name` is still `aleo_rust`, so the
+// artifact filename is unchanged. `cargo build --release` in rust/aleo_ffi
+// produces them. (Mobile does not use these — see getMobileDyLib.)
 const DEFAULT_RUST_LIB_CARGO_SO =
-    './aleo_rust/target/release/libaleo_rust.so'; // linux
+    '../../rust/aleo_ffi/target/release/libaleo_rust.so'; // linux
 const DEFAULT_RUST_LIB_CARGO_DLL =
-    'aleo_rust/target/release/aleo_rust.dll'; // windows
+    '../../rust/aleo_ffi/target/release/aleo_rust.dll'; // windows
 const DEFAULT_RUST_LIB_CARGO_LIB =
-    './aleo_rust/target/release/libaleo_rust.dylib'; // ios
+    '../../rust/aleo_ffi/target/release/libaleo_rust.dylib'; // macOS
 
 const DEFAULT_RUST_LIB_GIT_SO = '.dart_tool/dart_aleo/libaleo_rust.so';
 const DEFAULT_RUST_LIB_GIT_DLL = '.dart_tool/dart_aleo/aleo_rust.dll';
@@ -114,6 +119,24 @@ class DyLib {
       return ffi.DynamicLibrary.open(DEFAULT_RUST_LIB_GIT_DLL);
     } else {
       throw Exception("error platform");
+    }
+  }
+
+  /// Loads the build-time-bundled native library on mobile (v1 does not download
+  /// at runtime). Android resolves the per-ABI `libaleo_rust.so` the app bundles
+  /// in its jniLibs (see `rust/build_android.sh`); iOS statically links the
+  /// xcframework (see `rust/build_ios.sh`), so the symbols live in the running
+  /// process and are found via `DynamicLibrary.process()`.
+  ///
+  /// Wrap the result in `AleoLib.coerce` (the public constructors already do) so
+  /// the ABI version is validated before any FFI call.
+  static ffi.DynamicLibrary getMobileDyLib() {
+    if (Platform.isAndroid) {
+      return ffi.DynamicLibrary.open('libaleo_rust.so');
+    } else if (Platform.isIOS) {
+      return ffi.DynamicLibrary.process();
+    } else {
+      throw Exception('getMobileDyLib is for Android/iOS only');
     }
   }
 }

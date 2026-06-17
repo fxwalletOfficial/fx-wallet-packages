@@ -6,9 +6,20 @@ import 'package:aleo_dart/src/rust_lib/setup/cpu_architecture.dart';
 import 'package:aleo_dart/src/rust_lib/setup/library_locator.dart'
     show dynamicLibraryEnvVariable, getDesktopLibName, libBuildOutDir;
 
+// DEPRECATED runtime-download source. This points at the pre-clean-room GPL-era
+// `pzhun/aleo_dart` release (a stale, ABI-incompatible library) and is NOT used in
+// v1: the native library is now obtained build-from-source on desktop/CI
+// (`cargo build` in rust/aleo_ffi, see DyLib.getDyLibFromCargo) and build-time
+// bundled on mobile (rust/build_android.sh, rust/build_ios.sh — see
+// DyLib.getMobileDyLib). A runtime-download path with an in-package integrity
+// anchor may return later; until then a downloaded library would be rejected by
+// the ffi_abi_version load-time guard (AleoLib) anyway.
 final BASE_URL = 'https://github.com/pzhun/aleo_dart/releases/download';
 final VERSION = 'v0.0.1-dev.1';
 
+@Deprecated('v1 does not download the native library at runtime; build from '
+    'source (DyLib.getDyLibFromCargo) or bundle at build time '
+    '(DyLib.getMobileDyLib). The pinned source is a stale GPL-era artifact.')
 Future<void> setUpDynamicLibrary(
     {String? dynamicLibraryPath, String? userUrl, String? userVersion}) async {
   /// Get the CPU architecture.

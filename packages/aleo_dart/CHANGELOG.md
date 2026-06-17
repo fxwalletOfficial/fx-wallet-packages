@@ -19,6 +19,10 @@
   `AleoProgram`, or `ParameterProvisioner` (a bare `DynamicLibrary` or an `AleoLib`
   are both accepted). An incompatible or stale library now fails loudly at load
   time instead of mis-binding a renamed symbol or an argument slot.
+- Mobile loading via `DyLib.getMobileDyLib`: Android opens the per-ABI
+  `libaleo_rust.so` bundled in the app's `jniLibs`; iOS uses
+  `DynamicLibrary.process()` against the statically-linked xcframework. Build them
+  with `rust/build_android.sh` / `rust/build_ios.sh` (no runtime download in v1).
 
 ### Changed
 
@@ -31,6 +35,16 @@
   `executeProgramProof` now reject a non-`credits.aleo` program with
   `unsupported_feature`, deterministically and before any node I/O. The methods are
   retained for API stability; arbitrary-program support is a future version.
+- `DyLib`'s `getDyLibFromCargo` paths now point at the clean-room `aleo_ffi` crate's
+  build output (`../../rust/aleo_ffi/target/release/`) instead of the GPL
+  `aleo_rust` crate; the artifact filename is unchanged (`libaleo_rust`).
+
+### Deprecated
+
+- `setUpDynamicLibrary` (the runtime library downloader / `dart run aleo_dart:setup`):
+  v1 does not download the native library at runtime. Build from source on desktop
+  (`DyLib.getDyLibFromCargo`) or bundle at build time on mobile
+  (`DyLib.getMobileDyLib`). Its pinned source is a stale GPL-era artifact.
 
 ## [1.0.0]
 

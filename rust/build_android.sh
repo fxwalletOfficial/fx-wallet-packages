@@ -1,117 +1,71 @@
 #!/bin/bash
+#
+# Cross-compiles aleo_ffi to the Android per-ABI shared libraries for build-time
+# bundling into an app's jniLibs. v1 does NOT download the native library at
+# runtime — the app bundles these .so files and loads them with
+# DynamicLibrary.open('libaleo_rust.so').
+#
+# No OpenSSL: workstreams A (curl) and B (ureq) removed the HTTP/TLS stack, so
+# there is nothing to cross-compile or carry. The only flags needed are the 16k
+# page-size link args (mandatory on Android 15+).
+#
+# Requirements:
+#   rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+#   cargo install cargo-ndk
+#   an Android NDK on ANDROID_NDK_HOME (or auto-detected by cargo-ndk)
+#
+# Usage: rust/build_android.sh   (output: rust/android_lib/jniLibs/<abi>/libaleo_rust.so)
 
-# Android Cross-Compilation Script
-# For building aleo_rust library for Android with 16k pages support
+set -euo pipefail
 
-echo "Starting Android cross-compilation with 16k pages support..."
+cd "$(dirname "$0")/aleo_ffi"
 
-# Enter aleo_rust directory
-# OpenSSL base path
-OPENSSL_BASE_PATH="/home/zhun/openssl-3.1.5/android"
+OUT="../android_lib/jniLibs"
 
-cd aleo_rust
-
-# Create output directories
-mkdir -p ../android_lib/arm64
-mkdir -p ../android_lib/x86_64
-mkdir -p ../android_lib/armv7
-
-# Set 16k pages compatibility flags
+# 16k page alignment for Android 15+ (applies to every target built below).
 export RUSTFLAGS="-C link-arg=-Wl,-z,max-page-size=16384 -C link-arg=-Wl,-z,common-page-size=16384"
 
-echo "=========================================="
-echo "Building ARM64 Architecture"
-echo "=========================================="
+# Resolve an ELF reader: the NDK ships llvm-readelf; fall back to a system readelf
+# (macOS has neither by default, so the NDK's is preferred).
+readelf_bin() {
+  if command -v llvm-readelf >/dev/null 2>&1; then echo llvm-readelf; return; fi
+  if command -v readelf >/dev/null 2>&1; then echo readelf; return; fi
+  local ndk="${ANDROID_NDK_HOME:-}"
+  for f in "$ndk"/toolchains/llvm/prebuilt/*/bin/llvm-readelf; do
+    [ -x "$f" ] && { echo "$f"; return; }
+  done
+  echo "ERROR: no readelf/llvm-readelf found (install binutils or set ANDROID_NDK_HOME)" >&2
+  exit 1
+}
+READELF="$(readelf_bin)"
 
-export OPENSSL_INCLUDE_DIR=${OPENSSL_BASE_PATH}/arm64/include
-export OPENSSL_LIB_DIR=${OPENSSL_BASE_PATH}/arm64/lib
+echo "Building Android ABIs (arm64-v8a, armeabi-v7a, x86_64) into $OUT ..."
+cargo ndk \
+  -t arm64-v8a -t armeabi-v7a -t x86_64 \
+  --platform 21 \
+  -o "$OUT" \
+  build --release
 
-echo "Using OpenSSL:"
-echo "  Include: $OPENSSL_INCLUDE_DIR"
-echo "  Lib: $OPENSSL_LIB_DIR"
-echo "Using 16k pages flags: $RUSTFLAGS"
+# Every LOAD segment must be 16k-aligned (0x4000) or larger; fail the build
+# otherwise. The previous script only printed a warning, so a 4k-aligned library
+# (which Android 15+ rejects at load) would still "succeed".
+fail=0
+for so in "$OUT"/*/libaleo_rust.so; do
+  bad=""
+  # Each LOAD segment's Align is the last field (hex, e.g. 0x4000). Convert via
+  # shell printf (portable: BSD awk on macOS lacks gawk's strtonum) and require
+  # >= 16384.
+  for a in $("$READELF" -lW "$so" | awk '$1=="LOAD"{print $NF}'); do
+    dec=$(printf '%d' "$a" 2>/dev/null || echo 0)
+    [ "$dec" -ge 16384 ] || bad="$bad $a"
+  done
+  if [ -n "$bad" ]; then
+    echo "ERROR: $so has a LOAD segment aligned below 16k:$bad" >&2
+    fail=1
+  else
+    echo "  OK: $so is 16k-aligned"
+  fi
+done
+[ "$fail" -eq 0 ] || exit 1
 
-echo "Starting ARM64 build..."
-if cargo ndk --target aarch64-linux-android build --release; then
-    echo "✅ ARM64 build successful!"
-    cp target/aarch64-linux-android/release/libaleo_rust.so ../android_lib/arm64/
-    echo "📁 Copied to: ../android_lib/arm64/"
-    
-    # Verify 16k pages alignment
-    echo "🔍 Verifying 16k pages alignment for ARM64..."
-    readelf -l target/aarch64-linux-android/release/libaleo_rust.so | grep -E "LOAD.*0x[0-9a-f]+.*0x[0-9a-f]+.*0x[0-9a-f]+.*0x4000" && echo "✅ ARM64: 16k pages aligned" || echo "⚠️  ARM64: May not be fully 16k aligned"
-else
-    echo "❌ ARM64 build failed!"
-    exit 1
-fi
-
-echo ""
-echo "=========================================="
-echo "Building x86_64 Architecture"
-echo "=========================================="
-
-export OPENSSL_INCLUDE_DIR=${OPENSSL_BASE_PATH}/x86_64/include
-export OPENSSL_LIB_DIR=${OPENSSL_BASE_PATH}/x86_64/lib
-
-echo "Using OpenSSL:"
-echo "  Include: $OPENSSL_INCLUDE_DIR"
-echo "  Lib: $OPENSSL_LIB_DIR"
-echo "Using 16k pages flags: $RUSTFLAGS"
-
-echo "Starting x86_64 build..."
-if cargo ndk --target x86_64-linux-android build --release; then
-    echo "✅ x86_64 build successful!"
-    cp target/x86_64-linux-android/release/libaleo_rust.so ../android_lib/x86_64/
-    echo "📁 Copied to: ../android_lib/x86_64/"
-    
-    # Verify 16k pages alignment
-    echo "🔍 Verifying 16k pages alignment for x86_64..."
-    readelf -l target/x86_64-linux-android/release/libaleo_rust.so | grep -E "LOAD.*0x[0-9a-f]+.*0x[0-9a-f]+.*0x[0-9a-f]+.*0x4000" && echo "✅ x86_64: 16k pages aligned" || echo "⚠️  x86_64: May not be fully 16k aligned"
-else
-    echo "❌ x86_64 build failed!"
-    exit 1
-fi
-
-echo ""
-echo "=========================================="
-echo "Building ARMv7 Architecture"
-echo "=========================================="
-
-export OPENSSL_INCLUDE_DIR=${OPENSSL_BASE_PATH}/armv7/include
-export OPENSSL_LIB_DIR=${OPENSSL_BASE_PATH}/armv7/lib
-
-echo "Using OpenSSL:"
-echo "  Include: $OPENSSL_INCLUDE_DIR"
-echo "  Lib: $OPENSSL_LIB_DIR"
-echo "Using 16k pages flags: $RUSTFLAGS"
-
-echo "Starting ARMv7 build..."
-if cargo ndk --target armv7-linux-androideabi build --release; then
-    echo "✅ ARMv7 build successful!"
-    cp target/armv7-linux-androideabi/release/libaleo_rust.so ../android_lib/armv7/
-    echo "📁 Copied to: ../android_lib/armv7/"
-    
-    # Verify 16k pages alignment
-    echo "🔍 Verifying 16k pages alignment for ARMv7..."
-    readelf -l target/armv7-linux-androideabi/release/libaleo_rust.so | grep -E "LOAD.*0x[0-9a-f]+.*0x[0-9a-f]+.*0x[0-9a-f]+.*0x4000" && echo "✅ ARMv7: 16k pages aligned" || echo "⚠️  ARMv7: May not be fully 16k aligned"
-else
-    echo "❌ ARMv7 build failed!"
-    exit 1
-fi
-
-echo ""
-echo "=========================================="
-echo "🎉 All architectures built successfully!"
-echo "=========================================="
-
-echo "Output file locations:"
-echo "  ARM64:   android_lib/arm64/libaleo_rust.so"
-echo "  x86_64:  android_lib/x86_64/libaleo_rust.so"
-echo "  ARMv7:   android_lib/armv7/libaleo_rust.so"
-
-echo ""
-echo "📋 16k Pages Compatibility Summary:"
-echo "All libraries have been built with 16k pages support flags:"
-echo "  - max-page-size=16384"
-echo "  - common-page-size=16384"
-echo "This ensures compatibility with Android devices using 16k memory pages."
+echo "All Android ABIs built + 16k-verified. Bundle $OUT/<abi>/libaleo_rust.so into the app's jniLibs."
