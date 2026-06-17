@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
+import 'rust_lib/dyLib.dart';
 import 'rust_lib/utils.dart';
 
 /// Thrown when the native side reports `restart_required`: a proving parameter is
@@ -104,12 +105,13 @@ class ParameterProvisioner {
   static bool get provingDisabled => _provingDisabled;
 
   ParameterProvisioner(
-    this._lib,
+    Object lib,
     this.network,
     this.paramDir, {
     Dio? dio,
     Duration? perUrlDownloadDeadline,
-  })  : _ownsDio = dio == null,
+  })  : _lib = AleoLib.coerce(lib).dyLib,
+        _ownsDio = dio == null,
         _perUrlDeadline = perUrlDownloadDeadline ?? const Duration(minutes: 30),
         _dio = dio ??
             Dio(BaseOptions(

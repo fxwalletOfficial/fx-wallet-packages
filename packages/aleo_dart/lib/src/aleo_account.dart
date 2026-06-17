@@ -4,6 +4,7 @@ import 'package:bip39/bip39.dart' as bip39;
 import 'package:ffi/ffi.dart';
 
 import 'package:aleo_dart/src/rust_lib/account_rust_ffi.dart';
+import 'package:aleo_dart/src/rust_lib/dyLib.dart';
 import 'package:aleo_dart/src/aleo_hd_key.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
 import 'package:aleo_dart/src/aleo_utils.dart';
@@ -13,7 +14,8 @@ const ALEO_PATH = "m/44/0/0/0";
 class AleoAccount {
   late AccountRustFFI accountRustFFI;
   AleoAccount(dyLib, [String network_raw = 'testnet']) {
-    this.accountRustFFI = AccountRustFFI(dyLib, network_raw);
+    this.accountRustFFI =
+        AccountRustFFI(AleoLib.coerce(dyLib).dyLib, network_raw);
   }
 
   int testRustFFi(int a, int b) {
