@@ -59,8 +59,11 @@ snarkvm-synthesizer = { path = "../vendor/snarkvm-synthesizer-4.5.0" }
 # feature so the default `query` build links no HTTP stack. Verbatim 4.5.0 + the
 # 2-file `ledger-query-split-rest.patch`; Apache-2.0. See vendor/README.md.
 snarkvm-ledger-query = { path = "../vendor/snarkvm-ledger-query-4.5.0" }
-# Param-dir ownership: process-global override of the directory proving keys load
-# from (snarkVM has no env override), so the Dart layer can provision into the
-# mobile app sandbox. Verbatim 4.5.0 + parameters-param-dir.patch; Apache-2.0.
-# (curl/openssl removal is the separate workstream A / PR3.) See vendor/README.md.
+# Param-dir ownership + no remote fetch: process-global override of the directory
+# proving keys load from (snarkVM has no env override) so the Dart layer can
+# provision into the mobile app sandbox, AND the in-Rust curl downloader is
+# removed so this build links no HTTP/TLS stack (curl + openssl-sys gone; a
+# missing param fails closed with RemoteFetchDisabled). Verbatim 4.5.0 +
+# parameters-param-dir.patch + parameters-no-remote-fetch.patch; Apache-2.0.
+# See vendor/README.md.
 snarkvm-parameters = { path = "../vendor/snarkvm-parameters-4.5.0" }

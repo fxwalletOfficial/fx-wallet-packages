@@ -481,6 +481,12 @@ once by the Dart layer (with `dio` timeout/cancel) into `aleo_dir()` before the
 first prove. Until then, the parameter download remains snarkVM's default
 behaviour.
 
+> **Status: done (Phase 4, PR3).** The vendored `snarkvm-parameters` native
+> branch now returns `RemoteFetchDisabled` instead of curl-downloading
+> (`rust/vendor/parameters-no-remote-fetch.patch`), and the `curl`/`openssl-sys`
+> dependency is dropped — the crate links no HTTP/TLS stack. The Dart
+> `ParameterProvisioner` (Phase 4 PR2) provisions params before proving.
+
 ## Migration plan (phased, each independently shippable)
 
 1. **Add pure primitives + helpers under new symbol names, alongside the

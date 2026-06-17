@@ -643,11 +643,12 @@ pub unsafe extern "C" fn serial_number_string(
 // now-free canonical names is deferred to the phase-4 lib redistribution, where
 // it can land atomically with a rebuilt/redistributed library + an ABI-version
 // guard — reusing a freed name whose ABI differs in an already-distributed lib
-// would turn that clean error into a silent ABI mismatch. NOTE: this is still
-// not "zero network" — snarkVM's proving lazily downloads proving keys / the SRS
-// via `curl` (no timeout) on a cold parameter cache, so the crate still links
-// curl/openssl; removing that is a separate task (phase 4, see the spec's
-// "Proving parameters" section).
+// would turn that clean error into a silent ABI mismatch. The crate now links NO
+// HTTP/TLS stack: the vendored snarkvm-parameters curl downloader is removed
+// (parameters-no-remote-fetch.patch, workstream A), so on a cold parameter cache
+// a missing proving key fails closed with `RemoteFetchDisabled` instead of being
+// downloaded in-process — the Dart `ParameterProvisioner` provisions params
+// (download + verify + atomic rename) into the param dir before any prove.
 // ----------------------------------------------------------------------------
 
 /// Assumed serialized size of one `StatePath`, used *only* as a factor to derive
