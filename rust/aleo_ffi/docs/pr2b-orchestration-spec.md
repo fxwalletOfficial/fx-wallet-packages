@@ -1,11 +1,13 @@
 # PR2 part 2b — Dart provisioning + checked-proving orchestration (spec)
 
-> **Status:** spec for review — no code yet. **Base:** `epic/aleo-dart-monorepo` @
-> `3cfe498` (PR2 part 2a). Companion: [`pr2a-preflight-spec.md`](./pr2a-preflight-spec.md),
-> [`phase4-plan.md`](./phase4-plan.md) (§8 Contracts 1–4).
+> **Status:** implemented (PR #62) and reconciled with the code below. **Base:**
+> `epic/aleo-dart-monorepo` @ `3cfe498` (PR2 part 2a). Companion:
+> [`pr2a-preflight-spec.md`](./pr2a-preflight-spec.md), [`phase4-plan.md`](./phase4-plan.md)
+> (§8 Contracts 1–4).
 >
-> Spec-first (the churn countermeasure): this pins the Contract 4 lock state machine,
-> the envelope/latch contract, and the downloader BEFORE coding.
+> Written spec-first (the churn countermeasure — it pinned the Contract 4 lock state
+> machine, the envelope/latch contract, and the downloader before coding), then kept
+> in sync with the implementation through review.
 
 ## 0. Scope
 
@@ -149,7 +151,9 @@ PR4 / workstream D — not here.)
   The definitive "16 files sufficient" check (spec 2a §7) and the only real exercise
   of the prove path + tier lock.
 
-## 8. Open decisions (review before I code)
+## 8. Decisions (resolved — "按你的倾向来")
+All four taken as the lean below: one PR; minimal download UX (full D2 is a follow-up);
+eviction/quota deferred (lock layout reserved); `RandomAccessFile.lock` as the primitive.
 1. **Split 2b?** It is large (bindings+latch / downloader / locking / orchestration).
    Option: 2b-1 = bindings + envelope + latch + downloader (additive, no locking);
    2b-2 = Contract 4 locking + orchestration + E2E. Lean: **one PR** (the pieces are

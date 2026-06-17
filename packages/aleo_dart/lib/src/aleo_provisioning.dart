@@ -264,25 +264,25 @@ class ParameterProvisioner {
     }
   }
 
-  /// Points the native param loader at [paramDir] (idempotent / set-once).
+  /// Points the native param loader at [paramDir] (idempotent / set-once). Uses the
+  /// shared fail-closed [_ok] parser so a non-JSON envelope throws, `restart_required`
+  /// trips the latch, and `invalid_path` propagates as itself — only `param_dir_locked`
+  /// is reinterpreted (it is fine if the effective dir is already ours).
   void _ensureParameterDir() {
     if (_dirSet) return;
-    final env = jsonDecode(_callSetParameterDir(paramDir.path));
-    if (env is Map && env['ok'] == true) {
+    try {
+      _ok(_callSetParameterDir(paramDir.path));
       _dirSet = true;
-      return;
-    }
-    // Already set/loading: accept only if the effective dir is already ours.
-    final dir = _ok(_callAleoDir())['data'] as String;
-    final ours = paramDir.existsSync()
-        ? paramDir.resolveSymbolicLinksSync()
-        : paramDir.path;
-    if (dir == ours) {
+    } on ProvisioningException catch (e) {
+      if (e.code != 'param_dir_locked') rethrow;
+      // Already fixed: accept only if the effective dir is already ours.
+      final dir = _ok(_callAleoDir())['data'] as String;
+      final ours = paramDir.existsSync()
+          ? paramDir.resolveSymbolicLinksSync()
+          : paramDir.path;
+      if (dir != ours) rethrow;
       _dirSet = true;
-      return;
     }
-    throw ProvisioningException('param_dir_locked',
-        'parameter dir is already fixed to $dir, cannot use ${paramDir.path}');
   }
 
   // ── Preflight ───────────────────────────────────────────────────────────────
@@ -556,6 +556,6 @@ class ParameterProvisioner {
       _callExecuteProgramProofChecked(
           authorization, programSources, height, statePaths, publicStateRoot);
 
-  /// Clears the process-global poison latch between tests.
+  /// Clears the (isolate-local) poison latch between tests.
   static void resetLatchForTest() => _provingDisabled = false;
 }

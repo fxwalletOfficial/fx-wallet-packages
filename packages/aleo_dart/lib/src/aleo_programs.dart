@@ -689,4 +689,3 @@ class AleoProgram {
     return json.encode(data);
   }
 }
-
