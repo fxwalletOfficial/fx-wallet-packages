@@ -36,7 +36,7 @@ paths, root)`, `ffi_set_parameter_dir(path)`, `ffi_aleo_dir()`.
 
 A single `Envelope.parse(String json)` helper — **fail-closed**: parse; if not an
 object or `ok != true` → throw. `ok == false` with `code == "restart_required"` →
-trip the latch (§2) then throw; other codes → `AleoNodeException`(code+message).
+trip the latch (§2) then throw; other codes → `ProvisioningException`(code+message).
 `ok == true` returns the payload (`data` or `missing`). Replaces `_require`'s
 empty-check for the new exports (the old `_static` path keeps `_require` until PR4).
 
@@ -119,7 +119,7 @@ statePaths, publicStateRoot, programSources?})`:
 2. `ffi_set_parameter_dir(dir)` once (mobile sandbox; desktop default);
 3. `parameter_preflight` → if `missing` non-empty, download each (locked, §3/§4);
 4. take shared tier lock → re-preflight (must now be empty, else
-   `AleoNodeException`) → `execute_*_checked` → release;
+   `ProvisioningException`) → `execute_*_checked` → release;
 5. return the proof (`data`), or throw per the envelope.
 All three are implemented: `provisionAndProveExecution`, `provisionAndProveFee`,
 `provisionAndProveProgram` (the program one takes `programSources`; v1 rejects a
