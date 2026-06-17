@@ -226,8 +226,14 @@ class AleoLib {
 }
 ```
 
-- The three public classes' constructors take an `AleoLib` (breaking Dart API
-  change — documented in the changelog). Internally they read `lib.dyLib`.
+- **Refinement (decided): internal validation, non-breaking.** Rather than forcing
+  every constructor to take an `AleoLib` (which would break ~24 in-repo call sites +
+  every app-repo construction), the public constructors keep accepting a
+  `DynamicLibrary` *and* also accept an `AleoLib`, funnelling both through
+  `AleoLib.coerce(...)` which validates `ffi_abi_version` and unwraps. Every public
+  constructor (`AleoAccount`/`AleoRecord`/`AleoProgram`/`ParameterProvisioner`)
+  validates on construction, so there is no unvalidated path to the FFI — the same
+  no-bypass guarantee as the type-only design, without the breaking signature change.
 - A missing `ffi_abi_version` symbol surfaces as a clear thrown error, not a crash.
 
 ### 4.1 `DyLib` → `AleoLib` boundary (close the bypass)
