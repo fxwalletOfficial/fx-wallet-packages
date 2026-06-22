@@ -29,7 +29,7 @@ DynamicLibrary.open('AleoRust.framework/AleoRust').
   # extracted (link fails with "framework 'AleoRust' not found"). See Classes/.
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.platform = :ios, '13.0'
+  s.platform = :ios, '15.5'  # matches the fx-wallet app + the framework's minos
   s.swift_version = '5.0'
 
   # Provide ios/Frameworks/AleoRust.xcframework before CocoaPods globs

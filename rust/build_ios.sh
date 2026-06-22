@@ -27,7 +27,14 @@ DYLIB="libaleo_rust.dylib"          # cargo's cdylib output filename
 FW="AleoRust"                       # framework bundle + binary name
 INSTALL_NAME="@rpath/$FW.framework/$FW"
 
-echo "Building iOS dynamic library (device + simulator slices) ..."
+# iOS deployment target. Matches the fx-wallet app (ios/Podfile platform :ios,
+# '15.5'); set explicitly so every slice's Mach-O minos is intentional (not
+# rustc's default ~10) and consistent with the podspec + framework Info.plist.
+# The arm64 simulator slice is intrinsically >= 14, so 15.5 is fully consistent.
+MIN_IOS="15.5"
+export IPHONEOS_DEPLOYMENT_TARGET="$MIN_IOS"
+
+echo "Building iOS dynamic library (device + simulator slices) for iOS $MIN_IOS ..."
 cargo build --release --target aarch64-apple-ios      # device   (arm64)
 cargo build --release --target aarch64-apple-ios-sim  # simulator (arm64)
 cargo build --release --target x86_64-apple-ios       # simulator (x86_64)
@@ -57,7 +64,7 @@ make_framework() {
   <key>CFBundlePackageType</key><string>FMWK</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>CFBundleVersion</key><string>1</string>
-  <key>MinimumOSVersion</key><string>13.0</string>
+  <key>MinimumOSVersion</key><string>$MIN_IOS</string>
   <key>CFBundleSupportedPlatforms</key><array><string>$platform</string></array>
 </dict>
 </plist>

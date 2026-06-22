@@ -221,6 +221,28 @@ auto-linked, which the podspec guarantees. **Device contingency:** if `.open()`
 ever fails on a real device, `DynamicLibrary.process()` is the natural fallback
 for an embedded dynamic library (it reads the already-loaded global symbol table).
 
+## Review round 6 — iOS deployment target
+
+The declared minimum was inconsistent: podspec/Info.plist said 13.0, but the
+device slice's Mach-O `minos` was rustc's default (10) and the arm64 *simulator*
+slice is intrinsically 14 (arm64 simulators don't exist below iOS 14). A binary
+`minos` ≤ the declared minimum is the *safe* direction (it loads on the consumer's
+OS), so nothing was broken — but three different numbers is sloppy.
+
+Fixed by pinning everything to the fx-wallet app's deployment target (its
+`ios/Podfile` is `platform :ios, '15.5'`, the plugin's only consumer):
+`build_ios.sh` exports `IPHONEOS_DEPLOYMENT_TARGET=15.5` (`MIN_IOS`, also written
+into each framework `Info.plist`), the podspec is `platform :ios, '15.5'`, and the
+example `Podfile` is `15.5`. Verified: a **clean** device rebuild with the env
+produces `LC_BUILD_VERSION minos 15.5` (Rust 1.96 honors `IPHONEOS_DEPLOYMENT_TARGET`).
+Gotcha: changing only the env does NOT bust cargo's cache — a clean rebuild (or
+`rm -rf target/<triple>/release`) is required to pick up a new deployment target.
+The example sim integration test still passes at the 15.5 config.
+
+(The local `rust/ios_lib` may carry older-minos cached slices; the shipped
+artifact is a clean CI build, so it carries 15.5. Only the device slice ships;
+simulator slices are stripped from the App Store archive.)
+
 ## Deferred to PR6b / later
 
 - The release pipeline (`.github/workflows/release-aleo.yml`) that builds and

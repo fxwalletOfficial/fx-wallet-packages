@@ -47,7 +47,10 @@ rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
 and a fat simulator slice (`aarch64-apple-ios-sim` + `x86_64-apple-ios` via `lipo`),
 wraps each in a flat `AleoRust.framework` (install name
 `@rpath/AleoRust.framework/AleoRust` + `Info.plist`), and packages a **dynamic**
-`rust/ios_lib/AleoRust.xcframework`.
+`rust/ios_lib/AleoRust.xcframework`. It exports `IPHONEOS_DEPLOYMENT_TARGET=15.5`
+(`MIN_IOS`, matching the fx-wallet app's `ios/Podfile`) so every slice's `minos`,
+the framework `Info.plist`, and the podspec all agree. Note: changing only the env
+does not bust cargo's cache — a clean rebuild is needed to re-stamp `minos`.
 
 The `aleo_flutter` plugin vendors this xcframework; CocoaPods links, embeds and
 signs the dynamic framework, so dyld loads it at app launch and its exports are
