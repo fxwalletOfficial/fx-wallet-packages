@@ -44,8 +44,12 @@ abstract final class AleoFlutter {
   /// final address = account.mnemonicToAddress(mnemonic);
   /// ```
   static AleoLib load() {
-    // iOS: the bundled dynamic AleoRust.framework (see ios/aleo_flutter.podspec) —
-    // dlopen it by name. Android: the bundled libaleo_rust.so via aleo_dart's DyLib.
+    // iOS: CocoaPods links + embeds the dynamic AleoRust.framework (see
+    // ios/aleo_flutter.podspec), so dyld loads it at launch; opening this
+    // slash-bearing path resolves to that already-loaded image by suffix match
+    // (it is not an rpath search). If a real device ever fails this,
+    // DynamicLibrary.process() is the natural fallback for an embedded dynamic
+    // library. Android: the bundled libaleo_rust.so via aleo_dart's DyLib.
     final dyLib = Platform.isIOS
         ? DynamicLibrary.open('AleoRust.framework/AleoRust')
         : DyLib.getMobileDyLib();

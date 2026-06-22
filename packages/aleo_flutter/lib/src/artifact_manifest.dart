@@ -28,8 +28,8 @@ const int aleoFfiAbiVersion = 1;
 /// future releases (spec §7.3).
 const String aleoFfiReleaseTag = 'aleo_ffi-v1.0.0';
 
-/// iOS: the static `AleoRust.xcframework` (device arm64 + simulator arm64/x86_64
-/// fat), zipped.
+/// iOS: the dynamic `AleoRust.framework`, packaged as an `AleoRust.xcframework`
+/// (device arm64 + simulator arm64/x86_64 fat), zipped.
 const String aleoIosArtifactUrl =
     'https://github.com/fxwalletOfficial/fx-wallet-packages/releases/download/aleo_ffi-v1.0.0/AleoRust.xcframework.zip';
 

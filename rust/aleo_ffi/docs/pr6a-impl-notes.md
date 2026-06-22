@@ -208,9 +208,18 @@ aren't in the binary"; the dynamic approach guarantees they are, reducing the
 remaining risk to a load-path detail that is easy to verify (`nm -gU` on the
 embedded `AleoRust.framework/AleoRust`, then the example's API call).
 
-Stage-2 verification (in progress): build the dynamic xcframework, `pod install`
-the example, clean-build for the iOS simulator, `nm -gU` the embedded framework,
-and run `mnemonicToAddress`.
+Stage-2 verification: built the dynamic xcframework, `pod install`ed the example,
+clean-built for the iOS simulator, `nm -gU`'d the embedded framework, and ran
+`mnemonicToAddress` — all pass on the simulator. Physical-device run still pending.
+
+How `AleoFlutter.load()` resolves the framework: CocoaPods links + embeds it (the
+keep-alive `Classes/` TU keeps the pod target building so it is linked), so dyld
+loads it at launch. `DynamicLibrary.open('AleoRust.framework/AleoRust')` then
+resolves to that already-loaded image by **suffix match** — a slash-bearing
+relative path is NOT an rpath search. So the load depends on the framework being
+auto-linked, which the podspec guarantees. **Device contingency:** if `.open()`
+ever fails on a real device, `DynamicLibrary.process()` is the natural fallback
+for an embedded dynamic library (it reads the already-loaded global symbol table).
 
 ## Deferred to PR6b / later
 
