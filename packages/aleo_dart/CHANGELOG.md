@@ -21,8 +21,10 @@
   time instead of mis-binding a renamed symbol or an argument slot.
 - Mobile loading via `DyLib.getMobileDyLib`: Android opens the per-ABI
   `libaleo_rust.so` bundled in the app's `jniLibs`; iOS uses
-  `DynamicLibrary.process()` against the statically-linked xcframework. Build them
-  with `rust/build_android.sh` / `rust/build_ios.sh` (no runtime download in v1).
+  `DynamicLibrary.process()` for apps that link the library into their own process.
+  Build them with `rust/build_android.sh` / `rust/build_ios.sh` (no runtime download
+  in v1). (The `aleo_flutter` plugin instead bundles a dynamic `AleoRust.framework`
+  and loads it via `AleoFlutter.load()`.)
 
 ### Changed
 

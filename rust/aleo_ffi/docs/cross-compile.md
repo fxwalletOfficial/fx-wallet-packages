@@ -14,8 +14,8 @@ OpenSSL** to cross-compile or carry — the old `OPENSSL_BASE_PATH` is gone.
 
 | crate-type | artifact | used by |
 |---|---|---|
-| `cdylib` | `libaleo_rust.{so,dylib,dll}` | Android (.so) + desktop, `DynamicLibrary.open` |
-| `staticlib` | `libaleo_rust.a` | iOS (xcframework), `DynamicLibrary.process()` |
+| `cdylib` | `libaleo_rust.{so,dylib,dll}` | Android (.so) + desktop (`DynamicLibrary.open`); iOS dynamic `AleoRust.framework` |
+| `staticlib` | `libaleo_rust.a` | not used by the mobile build (kept for apps that static-link the library themselves) |
 | `rlib` | — | `cargo test` harness |
 
 ## Android — `rust/build_android.sh`
@@ -36,24 +36,29 @@ The app bundles `jniLibs/` and loads via `DynamicLibrary.open('libaleo_rust.so')
 
 ## iOS — `rust/build_ios.sh`
 
-Statically linked. Requirements (macOS + Xcode):
+A **dynamic framework** (v2; the earlier static-lib + `-force_load` approach was
+dropped — see `pr6a-impl-notes.md`). Requirements (macOS + Xcode):
 
 ```
 rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
 ```
 
-`rust/build_ios.sh` builds the device slice (`aarch64-apple-ios`) + a fat simulator
-slice (`aarch64-apple-ios-sim` + `x86_64-apple-ios` via `lipo`) and packages
+`rust/build_ios.sh` builds the `cdylib` for the device slice (`aarch64-apple-ios`)
+and a fat simulator slice (`aarch64-apple-ios-sim` + `x86_64-apple-ios` via `lipo`),
+wraps each in a flat `AleoRust.framework` (install name
+`@rpath/AleoRust.framework/AleoRust` + `Info.plist`), and packages a **dynamic**
 `rust/ios_lib/AleoRust.xcframework`.
 
-**Dead-strip retention (done in the app repo).** A static linker drops the
-`#[no_mangle]` exports that nothing in the app references directly, and
-`DynamicLibrary.process()` lookups would then fail at runtime. The app target must
-either `-force_load` the archive or supply an `-exported_symbols_list`, then verify
-on the **final app binary** (not just the `.a`):
+The `aleo_flutter` plugin vendors this xcframework; CocoaPods links, embeds and
+signs the dynamic framework, so dyld loads it at app launch and its exports are
+reachable at runtime — **no dead-strip and no `-force_load`** (a dynamic library's
+exports are never stripped, unlike a static archive's unreferenced members).
+`AleoFlutter.load()` dlopens it via `DynamicLibrary.open('AleoRust.framework/AleoRust')`.
+
+Verify the exports survived into a built app:
 
 ```
-nm -gU <app-binary> | grep -E 'ffi_abi_version|execute_proof_checked'
+nm -gU <App>.app/Frameworks/AleoRust.framework/AleoRust | grep -E 'ffi_abi_version|execute_proof_checked'
 ```
 
 ## Desktop / CI

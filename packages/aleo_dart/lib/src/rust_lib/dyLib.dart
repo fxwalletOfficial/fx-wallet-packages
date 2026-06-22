@@ -124,9 +124,13 @@ class DyLib {
 
   /// Loads the build-time-bundled native library on mobile (no runtime download).
   /// Android opens the per-ABI `libaleo_rust.so` the app bundles in its jniLibs
-  /// (see `rust/build_android.sh`); iOS dlopens the embedded dynamic
-  /// `AleoRust.framework` (see `rust/build_ios.sh`), whose exported symbols are
-  /// intact (dynamic libraries are not dead-stripped).
+  /// (see `rust/build_android.sh`). iOS returns `DynamicLibrary.process()`, which
+  /// resolves symbols an app has linked into its own process — kept stable for
+  /// apps that integrate the native library themselves.
+  ///
+  /// The `aleo_flutter` plugin bundles a dynamic `AleoRust.framework` and loads it
+  /// via `AleoFlutter.load()` (which dlopens the framework by name) — it does not
+  /// rely on this method's iOS branch.
   ///
   /// Wrap the result in `AleoLib.coerce` (the public constructors already do) so
   /// the ABI version is validated before any FFI call.
@@ -134,10 +138,7 @@ class DyLib {
     if (Platform.isAndroid) {
       return ffi.DynamicLibrary.open('libaleo_rust.so');
     } else if (Platform.isIOS) {
-      // The dynamic AleoRust.framework is embedded in the app (see aleo_flutter);
-      // dlopen it by name so it loads regardless of link-time dylib stripping. Its
-      // exported symbols are intact — dynamic libraries are not dead-stripped.
-      return ffi.DynamicLibrary.open('AleoRust.framework/AleoRust');
+      return ffi.DynamicLibrary.process();
     } else {
       throw Exception('getMobileDyLib is for Android/iOS only');
     }

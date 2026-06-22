@@ -1,10 +1,11 @@
 #
-# aleo_flutter (iOS): vendors the PREBUILT static AleoRust.xcframework and links
-# it into the app. Unlike the flutter_create plugin_ffi template there is no C
-# source compiled here — download_artifact.sh provides the xcframework (local
-# build first, else the pinned GitHub Release verified against the in-package
-# manifest), and the static symbols are reached at runtime via
-# DynamicLibrary.process() (see aleo_dart's DyLib.getMobileDyLib).
+# aleo_flutter (iOS): vendors the PREBUILT dynamic AleoRust.framework (as an
+# xcframework) and links + embeds it. The native library is NOT compiled from
+# source here — download_artifact.sh provides the xcframework (local build first,
+# else the pinned GitHub Release verified against the in-package manifest); the
+# only source (Classes/) is a tiny keep-alive TU so the pod target builds. The
+# framework is loaded at runtime by AleoFlutter.load() via
+# DynamicLibrary.open('AleoRust.framework/AleoRust').
 #
 # `pod lib lint` only passes once an artifact can be provisioned (a local
 # build or a pinned release): the body fetch below runs during evaluation, so
@@ -15,9 +16,9 @@ Pod::Spec.new do |s|
   s.version          = '0.0.1'
   s.summary          = 'Prebuilt aleo_rust native library for Flutter (iOS).'
   s.description      = <<-DESC
-Bundles the static AleoRust.xcframework and exposes the aleo_dart API. No runtime
-download; the symbols are statically linked into the app and loaded via
-DynamicLibrary.process().
+Bundles the prebuilt dynamic AleoRust.framework and exposes the aleo_dart API. No
+runtime download; the framework is embedded in the app and loaded at runtime via
+DynamicLibrary.open('AleoRust.framework/AleoRust').
                        DESC
   s.homepage         = 'https://github.com/fxwalletOfficial/fx-wallet-packages'
   s.license          = { :file => '../LICENSE' }
@@ -42,8 +43,9 @@ DynamicLibrary.process().
 
   # AleoRust.xcframework ships a DYNAMIC framework (see rust/build_ios.sh).
   # CocoaPods links, embeds and signs it, so dyld loads it at app launch and its
-  # exported FFI symbols are reachable at runtime via DynamicLibrary.process() /
-  # .open() — with NO dead-strip and NO -force_load.
+  # exported FFI symbols stay intact — with NO dead-strip and NO -force_load.
+  # AleoFlutter.load() reaches them via
+  # DynamicLibrary.open('AleoRust.framework/AleoRust').
   #
   # This deliberately replaces the static-lib approach: a static linker drops the
   # unreferenced #[no_mangle] members, and the -force_load workaround had to point

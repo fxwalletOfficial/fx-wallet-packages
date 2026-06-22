@@ -1,7 +1,7 @@
 /// aleo_flutter — a Flutter FFI plugin that bundles the prebuilt `aleo_rust`
-/// native library (Android per-ABI `.so`, iOS static `xcframework`) at build
-/// time and exposes the [aleo_dart](https://pub.dev/packages/aleo_dart) API on
-/// device.
+/// native library (Android per-ABI `.so`, iOS dynamic `AleoRust.framework`) at
+/// build time and exposes the [aleo_dart](https://pub.dev/packages/aleo_dart) API
+/// on device.
 ///
 /// The native library is fetched once at **build** time — from a pinned GitHub
 /// Release, verified against the SHA-256 in `src/artifact_manifest.dart`, or from
@@ -9,6 +9,9 @@
 /// the app. At **run** time [AleoFlutter.load] does no network or disk I/O beyond
 /// `dlopen`: the library already lives inside the app, so it works offline.
 library;
+
+import 'dart:ffi';
+import 'dart:io';
 
 import 'package:aleo_dart/aleo.dart';
 
@@ -23,8 +26,11 @@ abstract final class AleoFlutter {
   ///
   /// Does no network or disk I/O beyond `dlopen` — the library is already inside
   /// the app (bundled at build time). Android opens the bundled
-  /// `libaleo_rust.so`; iOS finds the statically-linked symbols via
-  /// `DynamicLibrary.process()`.
+  /// `libaleo_rust.so`; iOS dlopens the embedded dynamic `AleoRust.framework`.
+  ///
+  /// This is additive: it does not change `aleo_dart`'s `DyLib.getMobileDyLib`,
+  /// which still returns `DynamicLibrary.process()` on iOS for apps that link the
+  /// native library into their own process.
   ///
   /// Throws [IncompatibleNativeLibraryException] if the bundled library's ABI
   /// does not match (for example a stale artifact), or an [Exception] on a
@@ -37,5 +43,12 @@ abstract final class AleoFlutter {
   /// final account = AleoAccount(lib, 'mainnet');
   /// final address = account.mnemonicToAddress(mnemonic);
   /// ```
-  static AleoLib load() => AleoLib.coerce(DyLib.getMobileDyLib());
+  static AleoLib load() {
+    // iOS: the bundled dynamic AleoRust.framework (see ios/aleo_flutter.podspec) —
+    // dlopen it by name. Android: the bundled libaleo_rust.so via aleo_dart's DyLib.
+    final dyLib = Platform.isIOS
+        ? DynamicLibrary.open('AleoRust.framework/AleoRust')
+        : DyLib.getMobileDyLib();
+    return AleoLib.coerce(dyLib);
+  }
 }
