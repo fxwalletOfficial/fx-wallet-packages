@@ -130,6 +130,30 @@ load/API is the manual/stage-2 gate, not a `flutter test`.
    prove no runtime download.
 5. A deliberately mismatched library → `IncompatibleNativeLibraryException`.
 
+## Review fixes (round 2)
+
+External review of the round-1 fixes; applied:
+
+- **iOS local branch now validates** the xcframework (`Info.plist` present) before
+  vendoring — symmetry with the Android per-ABI check; a truncated local build
+  fails loudly instead of vendoring a broken framework.
+- **iOS download is cached** by a `.provisioned-sha` stamp under `Frameworks/`, so
+  repeated podspec-body evaluations during one `pod install` don't re-download
+  35 MB. (Android already gets this from Gradle's task up-to-date check.)
+- **Android namespace/group** `com.example.aleo_flutter` → `com.fxwallet.aleo_flutter`
+  (avoids `com.example.*` R/BuildConfig collisions in the host app); the manifest
+  `package=` attribute was dropped (AGP 8 derives it from `namespace`).
+- **Android `compileSdk` 36 → 35** — the plugin floors every consumer's compileSdk
+  and ships no compiled Android code, so it needn't be bleeding-edge.
+- **Doc/comment honesty**: the Android local branch documents the partial-ABI
+  tradeoff; the podspec notes `pod lib lint` only passes once an artifact can be
+  provisioned.
+
+Deliberately NOT changed:
+- **perl dependency** in the manifest extractor — accepted (present on macOS + the
+  GitHub runners; documented). Using `// dart format off` to avoid the wrap (and
+  drop perl) was considered but risks cross-version formatter behavior.
+
 ## Deferred to PR6b / later
 
 - The release pipeline (`.github/workflows/release-aleo.yml`) that builds and

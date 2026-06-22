@@ -6,7 +6,9 @@
 # manifest), and the static symbols are reached at runtime via
 # DynamicLibrary.process() (see aleo_dart's DyLib.getMobileDyLib).
 #
-# Validate with: pod lib lint aleo_flutter.podspec
+# `pod lib lint` only passes once an artifact can be provisioned (a local
+# build or a pinned release): the body fetch below runs during evaluation, so
+# linting with neither available fails by design (expected in stage 1).
 #
 Pod::Spec.new do |s|
   s.name             = 'aleo_flutter'

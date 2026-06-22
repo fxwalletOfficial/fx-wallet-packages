@@ -35,7 +35,10 @@ SHA="$(mfval aleoAndroidArtifactSha256)"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
-# 1) Local build.
+# 1) Local build. Any present ABI is copied; a PARTIAL local build (e.g. only
+# arm64-v8a, to speed up iteration) is accepted on purpose — but then an
+# emulator/device on a missing ABI fails at runtime (dlopen) rather than at build
+# time. Release builds (the download path) always carry all three ABIs.
 LOCAL="${ALEO_FFI_ANDROID_JNILIBS:-../../../rust/android_lib/jniLibs}"
 if [ -d "$LOCAL" ]; then
   echo "aleo_flutter[android]: using local jniLibs $LOCAL"
