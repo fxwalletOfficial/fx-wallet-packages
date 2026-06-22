@@ -1,0 +1,83 @@
+// aleo_flutter (Android): bundles the PREBUILT per-ABI libaleo_rust.so into the
+// app's jniLibs at build time. Unlike the flutter_create plugin_ffi template,
+// this does NOT compile native code from source — there is no externalNativeBuild
+// / CMake. The .so files are fetched by download_artifact.sh (local build first,
+// else the pinned GitHub Release verified against lib/src/artifact_manifest.dart)
+// and dropped into a jniLibs source set.
+
+group = "com.example.aleo_flutter"
+version = "1.0"
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.11.1")
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+
+// Where download_artifact.sh stages <abi>/libaleo_rust.so for packaging.
+def aleoJniLibsDir = "${buildDir}/aleo_jniLibs"
+
+android {
+    namespace = "com.example.aleo_flutter"
+
+    // Bumping the plugin compileSdk version requires all clients of this plugin
+    // to bump the version in their app.
+    compileSdk = 36
+
+    ndkVersion = android.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdk = 24
+    }
+
+    // Package the prebuilt libraries fetched by fetchAleoNative.
+    sourceSets {
+        main {
+            jniLibs.srcDirs += [aleoJniLibsDir]
+        }
+    }
+
+    // The .so files are already 16k-page-aligned at link time (rust/build_android.sh
+    // passes -z max-page-size=16384, mandatory on Android 15+). Keep modern,
+    // uncompressed/aligned packaging so that alignment survives into the APK.
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+}
+
+// Fetch (local-first, else download+verify) the per-ABI libaleo_rust.so before
+// the library is assembled. Implemented in a shared shell script so the iOS and
+// Android fetch logic and the manifest parsing stay consistent.
+tasks.register("fetchAleoNative", Exec) {
+    workingDir projectDir
+    commandLine "bash", "download_artifact.sh", aleoJniLibsDir
+    // Re-run if the manifest changes.
+    inputs.file("../lib/src/artifact_manifest.dart")
+    outputs.dir(aleoJniLibsDir)
+}
+
+tasks.configureEach { task ->
+    if (task.name == "preBuild") {
+        task.dependsOn("fetchAleoNative")
+    }
+}

@@ -1,0 +1,44 @@
+name: aleo_flutter
+description: >-
+  Flutter FFI plugin that bundles the prebuilt aleo_rust native library and
+  exposes the aleo_dart API on Android and iOS — no cargo build, no runtime
+  download, offline-safe.
+version: 0.0.1
+homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packages/aleo_flutter
+# Distributed as an internal git dependency, not via pub.dev (PR6 spec
+# Decision 3). This also makes the in-repo `path` dependency on aleo_dart valid
+# (both packages live in this monorepo). Drop when/if we publish to pub.dev.
+publish_to: 'none'
+
+environment:
+  sdk: ^3.3.4
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # The pure-Dart Aleo SDK. aleo_flutter only adds the build-time native-library
+  # bundling and a convenience loader; every account / record / program API comes
+  # from here and is re-exported, so an app imports one package.
+  aleo_dart:
+    path: ../aleo_dart
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # ^3.0.0 to match the other Flutter packages in this monorepo and keep the SDK
+  # floor low (flutter_lints ^6 requires Dart ^3.8.0 — CI's exact floor).
+  flutter_lints: ^3.0.0
+
+flutter:
+  # A pure-FFI plugin: no Dart platform-channel class, just native code the
+  # Flutter tooling bundles. The native library is NOT compiled from source here
+  # (see android/build.gradle and ios/aleo_flutter.podspec) — it is the prebuilt
+  # aleo_rust library fetched at build time from a pinned GitHub Release (or a
+  # local build, see pr6a-impl-notes.md).
+  plugin:
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true

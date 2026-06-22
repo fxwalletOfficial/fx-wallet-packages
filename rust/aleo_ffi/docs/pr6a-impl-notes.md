@@ -1,0 +1,124 @@
+# PR6a implementation notes — `aleo_flutter` plugin skeleton
+
+> Companion to `pr6-distribution-spec.md`. Records the decisions made while
+> building the `packages/aleo_flutter` skeleton, the highest-risk item (iOS
+> static-lib dead-strip), and what is deferred to the stage-2 real-build
+> verification. Spec-first per the project's churn lesson.
+
+## What PR6a delivers (stage 1, this commit)
+
+The `packages/aleo_flutter` Flutter FFI plugin, scaffolded from
+`flutter create --template=plugin_ffi` and then converted from *compile-native-
+from-source* to *bundle-a-prebuilt-binary*:
+
+- `pubspec.yaml` — `flutter.plugin.platforms.{android,ios}.ffiPlugin: true`;
+  depends on `aleo_dart` (path). The native build-from-source template bits
+  (`src/`, `ios/Classes/*.c`, ffigen, generated bindings) were deleted.
+- `lib/aleo_flutter.dart` — `AleoFlutter.load()` = `AleoLib.coerce(DyLib.getMobileDyLib())`;
+  re-exports the full `aleo_dart` API so an app imports one package.
+- `lib/src/artifact_manifest.dart` — the in-package integrity anchor (URLs +
+  SHA-256 + release tag + ABI version), as flat literal consts.
+- `android/build.gradle` + `android/download_artifact.sh` — fetch per-ABI
+  `libaleo_rust.so` into a `jniLibs` source set at build time.
+- `ios/aleo_flutter.podspec` + `ios/download_artifact.sh` — fetch
+  `AleoRust.xcframework`, vendor it, and apply the dead-strip retention flag.
+- `example/` — a runnable app whose one button loads the bundled library and runs
+  a cheap, offline API (`mnemonicToAddress`). This is the stage-2 acceptance
+  harness (spec §9).
+- `LICENSE` (Apache-2.0), `NOTICE`, `THIRD_PARTY_LICENSES.md`.
+- Tests that run without the native library (manifest invariants; example smoke).
+
+NOT in stage 1: the actual native builds, the on-device run, and the `nm` symbol
+check — those are stage 2 (they need heavy iOS/Android builds).
+
+## Decision 1 — iOS dead-strip retention = `-force_load` (the make-or-break)
+
+`AleoRust.xcframework` is a **static** archive. The crucial fact:
+
+- A static linker only pulls archive members whose symbols are **referenced**.
+- Nothing in the app references the `#[no_mangle]` exports directly — they are
+  resolved at runtime via `DynamicLibrary.process()`.
+- So by default those members are **never pulled into the app binary**, and
+  `process()` finds nothing → runtime lookup failures.
+
+Of the three candidate mechanisms (spec §7.4):
+
+| Mechanism | Verdict |
+|---|---|
+| `DEAD_CODE_STRIPPING=NO` | **Insufficient alone.** It prevents stripping *after* member selection, but unreferenced archive members are never *selected* to begin with. |
+| `-exported_symbols_list` | Controls what is exported, not whether members are pulled; still needs the members in. |
+| **`-force_load <archive>`** | **Correct.** Forces every object file from the archive in, so all exports survive. |
+
+Implemented in the podspec as
+`OTHER_LDFLAGS = -force_load "${PODS_XCFRAMEWORKS_BUILD_DIR}/aleo_flutter/libaleo_rust.a"`.
+
+**Open (stage 2):** the exact `${PODS_XCFRAMEWORKS_BUILD_DIR}` subpath that
+CocoaPods uses for an xcframework's extracted per-SDK slice must be confirmed
+against a real `pod install` + build, then verified on the final app binary:
+
+```
+nm -gU "$BUILT_PRODUCTS_DIR/Runner.app/Runner" | grep -E 'ffi_abi_version|execute_proof_checked'
+```
+
+Both symbols must be present. If `-force_load` with that path does not work
+through CocoaPods + xcframework, fall back candidates in order: per-slice
+`vendored_libraries` with an `[sdk=...]`-conditioned `-force_load`, then an
+`-exported_symbols_list` combined with forcing the members.
+
+## Decision 2 — local-build override, then download (dev/CI before a release)
+
+There is no GitHub Release yet (PR6b builds the pipeline). Both platform scripts
+resolve the artifact in this order:
+
+1. **Local build** — `$ALEO_FFI_IOS_XCFRAMEWORK` / `$ALEO_FFI_ANDROID_JNILIBS`,
+   else the `rust/build_ios.sh` / `rust/build_android.sh` default outputs
+   (`rust/ios_lib/AleoRust.xcframework`, `rust/android_lib/jniLibs`).
+2. **Download + verify** — fetch the pinned release asset and check its SHA-256
+   against the manifest.
+
+This makes the plugin buildable/testable now (stage 2 builds locally) and in
+production later (consumers download), with one code path. An all-zero manifest
+SHA-256 is treated as "unset" → step 2 errors with guidance, so a missing local
+build never silently ships an unverified binary.
+
+## Decision 3 — manifest is the anchor; build tools parse the `.dart`
+
+The integrity anchor lives in `lib/src/artifact_manifest.dart` (spec §5). The
+Gradle (Groovy) and podspec (Ruby/shell) layers cannot import Dart, so the
+`download_artifact.sh` scripts parse the values out of the `.dart` source. The
+consts are kept **flat and literal** (no string interpolation) so a single
+`const String NAME = '...'` pattern is unambiguous — but note `dart format` wraps
+the long URL/SHA lines after `=`, so the extractor must span the newline (a
+`perl -0777` slurp with `\s*` between `=` and the string; perl ships on macOS and
+the GitHub ubuntu/macos runners). A plain single-line `grep` silently returns
+empty against the wrapped form — caught here before stage 2. A package test
+asserts `aleoFfiAbiVersion == AleoLib.expectedAbiVersion` and that both URLs
+contain the release tag, so the triple-binding (plugin version ↔ tag ↔
+`ffi_abi_version`) can't silently drift.
+
+## Decision 4 — example lives in `packages/aleo_flutter/example`
+
+Per spec §4 and Flutter plugin convention (not the repo's root `examples/`).
+Because melos globs `packages/**`, both the plugin and its example become melos
+packages, so each carries a test that passes **without** the native library
+(manifest invariants; a widget smoke test that does not tap "run"). The on-device
+load/API is the manual/stage-2 gate, not a `flutter test`.
+
+## Stage 2 plan (next, after review)
+
+1. Build the iOS slice(s) locally (`rust/build_ios.sh`); for a fast first
+   dead-strip probe, a single `aarch64-apple-ios-sim` slice suffices.
+2. `pod install` + run the example on an iOS simulator; `nm -gU` the final app
+   binary to confirm the exports survived; iterate the `-force_load` path/flag
+   until green.
+3. `rust/build_android.sh`; run the example on an Android emulator.
+4. Physical-device run for both (spec §9 hard gate), plus airplane-mode load to
+   prove no runtime download.
+5. A deliberately mismatched library → `IncompatibleNativeLibraryException`.
+
+## Deferred to PR6b / later
+
+- The release pipeline (`.github/workflows/release-aleo.yml`) that builds and
+  uploads the assets on an `aleo_ffi-v*` tag, and pins the real SHA-256s.
+- Generated `THIRD_PARTY_LICENSES` (`cargo about`).
+- Public pub.dev publication and the `lib/aleo.dart`-vs-package-name warning.
