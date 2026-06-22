@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # Provides ios/Frameworks/AleoRust.xcframework for the podspec's
-# vendored_frameworks. Runs from the pod root (packages/aleo_flutter/ios) via the
-# podspec's prepare_command.
+# vendored_frameworks. Invoked from the podspec BODY during `pod install` (not
+# prepare_command, which CocoaPods skips for Flutter's :path development pods).
 #
 # Resolution order:
 #   1. LOCAL build (dev/CI before a release exists): $ALEO_FFI_IOS_XCFRAMEWORK, or
@@ -21,6 +21,13 @@ UNSET="0000000000000000000000000000000000000000000000000000000000000000"
 # the line wrap dart format may insert between `=` and the string. perl is present
 # on macOS and the GitHub ubuntu/macos runners.
 mfval() { ALEO_KEY="$1" perl -0777 -ne 'print $1 if /const String \Q$ENV{ALEO_KEY}\E\s*=\s*'\''([^'\'']*)'\''/' "$MANIFEST"; }
+
+# SHA-256 of a file: prefer sha256sum (canonical on Linux); fall back to
+# `shasum -a 256` (macOS). One of the two is always present on dev + CI.
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}';
+  else shasum -a 256 "$1" | awk '{print $1}'; fi
+}
 URL="$(mfval aleoIosArtifactUrl)"
 SHA="$(mfval aleoIosArtifactSha256)"
 
@@ -45,10 +52,12 @@ fi
 ZIP="$DEST/AleoRust.xcframework.zip"
 echo "aleo_flutter[ios]: downloading $URL"
 curl -fSL "$URL" -o "$ZIP"
-ACTUAL="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
+ACTUAL="$(sha256_of "$ZIP")"
 if [ "$ACTUAL" != "$SHA" ]; then
   echo "ERROR: SHA-256 mismatch for $URL (got $ACTUAL, want $SHA)" >&2
   exit 1
 fi
 unzip -q -o "$ZIP" -d "$DEST"
 rm -f "$ZIP"
+# The release zip must contain AleoRust.xcframework at its top level.
+[ -d "$XCF" ] || { echo "ERROR: $URL did not contain AleoRust.xcframework at top level" >&2; exit 1; }

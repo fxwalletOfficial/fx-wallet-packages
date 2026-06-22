@@ -79,7 +79,21 @@ resolve the artifact in this order:
 This makes the plugin buildable/testable now (stage 2 builds locally) and in
 production later (consumers download), with one code path. An all-zero manifest
 SHA-256 is treated as "unset" → step 2 errors with guidance, so a missing local
-build never silently ships an unverified binary.
+build never silently ships an unverified binary. SHA-256 is computed with
+`sha256sum` (Linux) or `shasum -a 256` (macOS), whichever is present, and each
+script asserts the expected layout after unzip.
+
+**Where the fetch is invoked (self-review fix):**
+- iOS: from the **podspec body**, NOT `prepare_command`. CocoaPods runs
+  `prepare_command` only for pods it *downloads*; Flutter integrates plugins as
+  `:path` (development) pods, which are never downloaded, so `prepare_command`
+  would silently not run and the xcframework would be missing. The podspec body is
+  evaluated for every pod on every `pod install` (path included), so the fetch
+  runs there (`system('bash', "#{__dir__}/download_artifact.sh")`), before
+  CocoaPods globs `vendored_frameworks`.
+- Android: from a Gradle `Exec` task wired before `preBuild`. The local source dir
+  is declared as a task input when present, so a rebuilt `.so` re-triggers the
+  copy (no stale-library caching).
 
 ## Decision 3 — manifest is the anchor; build tools parse the `.dart`
 

@@ -25,9 +25,14 @@ DynamicLibrary.process().
   s.platform = :ios, '13.0'
   s.swift_version = '5.0'
 
-  # Provide ios/Frameworks/AleoRust.xcframework before CocoaPods reads
-  # vendored_frameworks (prepare_command runs during `pod install`).
-  s.prepare_command = 'bash download_artifact.sh'
+  # Provide ios/Frameworks/AleoRust.xcframework before CocoaPods globs
+  # vendored_frameworks below. CocoaPods runs `prepare_command` only for pods it
+  # DOWNLOADS; Flutter integrates plugins as :path (development) pods, referenced
+  # in place and never downloaded, so prepare_command would NOT run. The podspec
+  # body, by contrast, is evaluated on every `pod install` for every pod (path
+  # included) — so fetch here. download_artifact.sh is idempotent.
+  system('bash', "#{__dir__}/download_artifact.sh") or
+    raise 'aleo_flutter: failed to provision AleoRust.xcframework (see download_artifact.sh output)'
   s.vendored_frameworks = 'Frameworks/AleoRust.xcframework'
 
   # DEAD-STRIP RETENTION — PR6 spec §7.4, the make-or-break detail.

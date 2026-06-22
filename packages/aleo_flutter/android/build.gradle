@@ -28,7 +28,8 @@ rootProject.allprojects {
 apply plugin: "com.android.library"
 
 // Where download_artifact.sh stages <abi>/libaleo_rust.so for packaging.
-def aleoJniLibsDir = "${buildDir}/aleo_jniLibs"
+// layout.buildDirectory (not the deprecated project.buildDir) for Gradle 8/9.
+def aleoJniLibsDir = layout.buildDirectory.dir("aleo_jniLibs").get().asFile
 
 android {
     namespace = "com.example.aleo_flutter"
@@ -58,7 +59,8 @@ android {
     // The .so files are already 16k-page-aligned at link time (rust/build_android.sh
     // passes -z max-page-size=16384, mandatory on Android 15+). Keep modern,
     // uncompressed/aligned packaging so that alignment survives into the APK.
-    packagingOptions {
+    // `packaging` (not the deprecated `packagingOptions`) for AGP 8+.
+    packaging {
         jniLibs {
             useLegacyPackaging = false
         }
@@ -73,6 +75,14 @@ tasks.register("fetchAleoNative", Exec) {
     commandLine "bash", "download_artifact.sh", aleoJniLibsDir
     // Re-run if the manifest changes.
     inputs.file("../lib/src/artifact_manifest.dart")
+    // In local-build mode the source is rust/android_lib/jniLibs (or an env
+    // override); declare it as an input so rebuilding the .so re-triggers the copy
+    // instead of bundling a stale library. When absent (download mode) the
+    // manifest input governs.
+    def localJniLibs = System.getenv("ALEO_FFI_ANDROID_JNILIBS") ?: "../../../rust/android_lib/jniLibs"
+    if (file(localJniLibs).exists()) {
+        inputs.dir(localJniLibs)
+    }
     outputs.dir(aleoJniLibsDir)
 }
 

@@ -22,6 +22,13 @@ UNSET="0000000000000000000000000000000000000000000000000000000000000000"
 # the line wrap dart format may insert between `=` and the string. perl is present
 # on macOS and the GitHub ubuntu/macos runners.
 mfval() { ALEO_KEY="$1" perl -0777 -ne 'print $1 if /const String \Q$ENV{ALEO_KEY}\E\s*=\s*'\''([^'\'']*)'\''/' "$MANIFEST"; }
+
+# SHA-256 of a file: prefer sha256sum (canonical on Linux, where this runs); fall
+# back to `shasum -a 256` (macOS). One of the two is always present on dev + CI.
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}';
+  else shasum -a 256 "$1" | awk '{print $1}'; fi
+}
 URL="$(mfval aleoAndroidArtifactUrl)"
 SHA="$(mfval aleoAndroidArtifactSha256)"
 
@@ -54,7 +61,7 @@ fi
 ZIP="$OUT/android.zip"
 echo "aleo_flutter[android]: downloading $URL"
 curl -fSL "$URL" -o "$ZIP"
-ACTUAL="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
+ACTUAL="$(sha256_of "$ZIP")"
 if [ "$ACTUAL" != "$SHA" ]; then
   echo "ERROR: SHA-256 mismatch for $URL (got $ACTUAL, want $SHA)" >&2
   exit 1
@@ -62,3 +69,5 @@ fi
 # The release zip contains <abi>/libaleo_rust.so at its top level.
 unzip -q -o "$ZIP" -d "$OUT"
 rm -f "$ZIP"
+ls "$OUT"/*/libaleo_rust.so >/dev/null 2>&1 || {
+  echo "ERROR: $URL did not contain <abi>/libaleo_rust.so at top level" >&2; exit 1; }
