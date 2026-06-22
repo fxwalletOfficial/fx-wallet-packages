@@ -65,6 +65,7 @@ ships. See [NOTICE](NOTICE) and [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.m
 
 ## See also
 
-- Distribution spec: `rust/aleo_ffi/docs/pr6-distribution-spec.md`
-- Implementation notes (dead-strip, local override, version binding):
-  `rust/aleo_ffi/docs/pr6a-impl-notes.md`
+- **As-built design (authoritative):** `rust/aleo_ffi/docs/pr6a-impl-notes.md`
+  (iOS dynamic framework, local override, version binding).
+- Original distribution plan (partly superseded — iOS is now a dynamic framework,
+  not the static lib it describes): `rust/aleo_ffi/docs/pr6-distribution-spec.md`

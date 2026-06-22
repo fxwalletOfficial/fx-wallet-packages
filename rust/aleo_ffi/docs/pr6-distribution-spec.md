@@ -1,8 +1,13 @@
 # PR6 spec — `aleo_flutter` plugin + prebuilt-binary distribution
 
-> Status: spec, not yet implemented. Target branch `epic/aleo-dart-monorepo`
-> (base `82b1dcf`, Phase 4 complete). spec-first per the project's churn lesson —
-> doc + decisions reviewed before code.
+> Status: this is the ORIGINAL plan (spec-first per the project's churn lesson),
+> kept for the record. It is **partly superseded by the implementation** — most
+> importantly **iOS now ships a DYNAMIC framework, not a static lib**, so the
+> static-lib / `DynamicLibrary.process()` / dead-strip / `-force_load` material
+> below (§3 run-time row, §7.4) NO LONGER reflects the build. The as-built design
+> is in [`pr6a-impl-notes.md`](pr6a-impl-notes.md) ("Round 4 — iOS switched to a
+> DYNAMIC framework"). Decisions §2 and the build-time-fetch model still hold.
+> Target branch `epic/aleo-dart-monorepo` (base `82b1dcf`, Phase 4 complete).
 
 ## 0. Applicable baseline
 
@@ -51,8 +56,8 @@ The single most important point (and a common misconception):
 
 | Phase | Who / where | What happens |
 |---|---|---|
-| **Build time** | dev machine / CI, during `flutter build` / `pod install` / Gradle | the plugin downloads the prebuilt `libaleo_rust` from GH Releases **once** (cached), verifies its SHA-256, and bundles it INTO the app (Android `jniLibs`, iOS statically linked via xcframework) |
-| **Run time** | end-user device | `AleoFlutter.load()` = `DynamicLibrary.open('libaleo_rust.so')` (Android) / `DynamicLibrary.process()` (iOS) + `AleoLib` validate → **local, instant, no network, offline-safe** |
+| **Build time** | dev machine / CI, during `flutter build` / `pod install` / Gradle | the plugin downloads the prebuilt `libaleo_rust` from GH Releases **once** (cached), verifies its SHA-256, and bundles it INTO the app (Android `jniLibs`; iOS embeds the dynamic `AleoRust.framework` via xcframework — *as built*; the original plan said static) |
+| **Run time** | end-user device | `AleoFlutter.load()` = `DynamicLibrary.open('libaleo_rust.so')` (Android) / `DynamicLibrary.open('AleoRust.framework/AleoRust')` (iOS — *as built*; the original plan said `process()`) + `AleoLib` validate → **local, instant, no network, offline-safe** |
 
 The end user never downloads the native lib. `load()` does no I/O — it is effectively
 synchronous (dlopen + version check); it must not imply a network call.
@@ -111,7 +116,7 @@ Trigger: push of a tag `aleo_ffi-v*`. Jobs (GitHub-hosted, free on public repo):
 1. **Version triple-binding** (plugin ver ↔ tag ↔ `ffi_abi_version`) — pin, don't use latest. (§5)
 2. **In-package SHA-256 anchor** — `artifact_manifest.dart`; verify after download. (§5)
 3. **Monorepo tag namespacing** — `aleo_ffi-vX.Y.Z` so it doesn't collide with other packages' future releases.
-4. **iOS static-lib + plugin + `process()` (highest risk)** — the xcframework is a *static* lib; linked into the app the `#[no_mangle]` symbols get dead-stripped and `DynamicLibrary.process()` finds nothing. The podspec must retain them (`-force_load` the resolved slice, or `-exported_symbols_list`, or `DEAD_CODE_STRIPPING=NO`); the exact mechanism that works through CocoaPods + an xcframework needs **real-build experimentation** + an `nm` check on the final app binary. This is the make-or-break detail.
+4. **iOS static-lib + plugin + `process()` (highest risk)** — **SUPERSEDED: solved by shipping a DYNAMIC framework instead (see `pr6a-impl-notes.md` "Round 4"); the static-lib dead-strip problem below no longer applies.** *(original concern, kept for the record:)* the xcframework was a *static* lib; linked into the app the `#[no_mangle]` symbols get dead-stripped and `DynamicLibrary.process()` finds nothing. The podspec must retain them (`-force_load` the resolved slice, or `-exported_symbols_list`, or `DEAD_CODE_STRIPPING=NO`); the exact mechanism that works through CocoaPods + an xcframework needs **real-build experimentation** + an `nm` check on the final app binary. This was the make-or-break detail — and four real-build failures are exactly why it moved to a dynamic framework.
 5. **Android Gradle** — `minSdk`, `jniLibs` packaging (`useLegacyPackaging`), the download task ordering/caching, 16k-aligned `.so`.
 6. **License/attribution** — ship the bundled lib's Apache LICENSE + `NOTICE`/`THIRD_PARTY_LICENSES` (snarkVM Apache + transitive MIT/BSD/Unicode; elect Apache/MIT for r-efi). (§8)
 7. **Release CI needs macOS + NDK** — GitHub-hosted, free on public repo; do not put fork-PR builds on self-hosted.
