@@ -46,18 +46,24 @@ DynamicLibrary.process().
   # pulled in and process() finds nothing. -force_load pulls EVERY object file
   # from the archive, so all exports survive into the app binary.
   #
-  # NOTE: DEAD_CODE_STRIPPING=NO alone is INSUFFICIENT here — it prevents
-  # stripping AFTER member selection, but unreferenced archive members are never
-  # selected in the first place.
+  # NOTE 1: DEAD_CODE_STRIPPING=NO alone is INSUFFICIENT — it prevents stripping
+  # AFTER member selection, but unreferenced archive members are never selected.
   #
-  # The -force_load path resolves to the slice CocoaPods extracts for the active
-  # SDK (device vs simulator). The exact ${PODS_XCFRAMEWORKS_BUILD_DIR} subpath
-  # is VERIFIED in stage 2 against a real build:
+  # NOTE 2: -force_load must land on the FINAL app (Runner) link, so it belongs in
+  # user_target_xcconfig (the integrating target), NOT pod_target_xcconfig — the
+  # latter only affects the pod's own build and does NOT propagate to the app, so
+  # the exports were still stripped (review P1).
+  #
+  # The path resolves to the per-SDK slice CocoaPods extracts; every slice shares
+  # the basename libaleo_rust.a (see rust/build_ios.sh, fixed in lockstep). VERIFY
+  # in stage 2 on the final app binary:
   #   nm -gU "$BUILT_PRODUCTS_DIR/Runner.app/Runner" | grep -E 'ffi_abi_version|execute_proof_checked'
-  # Both symbols must be present; if not, fix this path / flag.
+  # Both must be present; if not, adjust this path/mechanism.
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
+  }
+  s.user_target_xcconfig = {
     'OTHER_LDFLAGS' => '-force_load "${PODS_XCFRAMEWORKS_BUILD_DIR}/aleo_flutter/libaleo_rust.a"',
   }
 end

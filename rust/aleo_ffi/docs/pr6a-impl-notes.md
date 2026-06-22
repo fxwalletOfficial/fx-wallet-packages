@@ -154,6 +154,27 @@ Deliberately NOT changed:
   GitHub runners; documented). Using `// dart format off` to avoid the wrap (and
   drop perl) was considered but risks cross-version formatter behavior.
 
+## Review fixes (round 3 — from a real iOS build)
+
+A reviewer ran an actual iOS build and hit the make-or-break items:
+
+- **P1a — simulator link failed (`library 'aleo_rust' not found`).** `build_ios.sh`
+  named the device slice `libaleo_rust.a` but the simulator fat archive
+  `libaleo_rust-sim.a`, so the xcframework recorded a different library name per
+  platform → a per-SDK linker flag (`-laleo_rust` vs `-laleo_rust-sim`). Fix: every
+  slice now shares the basename `libaleo_rust.a` (the fat archive goes in its own
+  `sim/` dir to avoid colliding with the device slice).
+- **P1b — `-force_load` didn't reach the Runner.** It was in `pod_target_xcconfig`,
+  which configures only the pod's own build and does not propagate to the app link,
+  so the FFI exports were still stripped. Moved to `user_target_xcconfig` (the
+  integrating target). The exact `${PODS_XCFRAMEWORKS_BUILD_DIR}` path + that this
+  mechanism actually retains the symbols **still needs the `nm -gU` confirmation on
+  the final Runner binary** (the real-build reviewer / stage 2).
+- **P2 — Android download accepted a partial release.** The post-unzip check only
+  required *one* ABI; it now requires all of `arm64-v8a armeabi-v7a x86_64` for the
+  release (download) path. The local-build path stays lenient on purpose (see the
+  L2 tradeoff above).
+
 ## Deferred to PR6b / later
 
 - The release pipeline (`.github/workflows/release-aleo.yml`) that builds and

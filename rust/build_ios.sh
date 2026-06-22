@@ -26,7 +26,14 @@ cargo build --release --target x86_64-apple-ios       # simulator (x86_64)
 mkdir -p "$OUT"
 
 # A single fat simulator archive (arm64 + x86_64); device stays its own slice.
-SIM_FAT="$OUT/libaleo_rust-sim.a"
+# Every xcframework slice MUST use the same library basename ($NAME, libaleo_rust.a)
+# so the framework records one library name for all platforms. If the simulator
+# slice were libaleo_rust-sim.a, Xcode/CocoaPods would emit -laleo_rust-sim for the
+# simulator and the link would fail with "library 'aleo_rust' not found". Keep the
+# fat archive in its own dir to avoid colliding with the device slice's $NAME.
+SIM_DIR="$OUT/sim"
+mkdir -p "$SIM_DIR"
+SIM_FAT="$SIM_DIR/$NAME"
 lipo -create \
   "target/aarch64-apple-ios-sim/release/$NAME" \
   "target/x86_64-apple-ios/release/$NAME" \

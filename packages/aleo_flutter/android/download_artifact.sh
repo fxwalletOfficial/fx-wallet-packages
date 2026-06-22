@@ -72,5 +72,11 @@ fi
 # The release zip contains <abi>/libaleo_rust.so at its top level.
 unzip -q -o "$ZIP" -d "$OUT"
 rm -f "$ZIP"
-ls "$OUT"/*/libaleo_rust.so >/dev/null 2>&1 || {
-  echo "ERROR: $URL did not contain <abi>/libaleo_rust.so at top level" >&2; exit 1; }
+# A release artifact MUST carry every ABI (unlike the lenient local-build path):
+# a partial zip would otherwise pass and leave some devices failing dlopen at
+# runtime instead of failing the build here.
+for abi in $ABIS; do
+  [ -f "$OUT/$abi/libaleo_rust.so" ] || {
+    echo "ERROR: $URL is missing $abi/libaleo_rust.so (release must carry all ABIs: $ABIS)" >&2
+    exit 1; }
+done
