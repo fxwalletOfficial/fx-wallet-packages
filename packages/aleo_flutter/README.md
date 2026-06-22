@@ -35,8 +35,8 @@ acceptance harness).
 
 | Phase | Where | What happens |
 |---|---|---|
-| **Build time** | dev/CI, during `flutter build` / `pod install` / Gradle | the prebuilt `libaleo_rust` is fetched **once** from a pinned GitHub Release, verified against the SHA-256 in [`lib/src/artifact_manifest.dart`](lib/src/artifact_manifest.dart), and bundled into the app (Android `jniLibs`, iOS statically linked via xcframework). |
-| **Run time** | end-user device | `AleoFlutter.load()` = `DynamicLibrary.open` (Android) / `DynamicLibrary.process()` (iOS) + ABI validation. Local, instant, offline. |
+| **Build time** | dev/CI, during `flutter build` / `pod install` / Gradle | the prebuilt `libaleo_rust` is fetched **once** from a pinned GitHub Release, verified against the SHA-256 in [`lib/src/artifact_manifest.dart`](lib/src/artifact_manifest.dart), and bundled into the app (Android `jniLibs`; iOS embedded as a dynamic `AleoRust.framework` via xcframework). |
+| **Run time** | end-user device | `AleoFlutter.load()` = `DynamicLibrary.open` (`libaleo_rust.so` on Android, `AleoRust.framework/AleoRust` on iOS) + ABI validation. Local, instant, offline. |
 
 The end user never downloads the native library.
 

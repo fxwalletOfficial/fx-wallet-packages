@@ -1,8 +1,15 @@
 #!/bin/bash
 #
-# Builds the aleo_ffi iOS staticlib and packages it as an xcframework (device +
-# simulator). v1 links the library statically into the app and loads it via
-# DynamicLibrary.process() — there is no runtime download.
+# Builds aleo_ffi as an iOS DYNAMIC framework and packages it as an xcframework
+# (device + simulator).
+#
+# v2 ships a DYNAMIC framework, not a static lib. The embedded framework is loaded
+# at app launch, so its exported symbols stay intact and are reachable via
+# DynamicLibrary.process()/open() with NO dead-strip and NO -force_load. The
+# static approach could not make the #[no_mangle] exports survive a clean
+# CocoaPods build (the linker dropped unreferenced archive members, and the
+# -force_load workaround referenced a build-time intermediate that broke clean
+# builds). See packages/aleo_flutter and rust/aleo_ffi/docs/pr6a-impl-notes.md.
 #
 # No OpenSSL: workstreams A (curl) and B (ureq) removed the HTTP/TLS stack.
 #
@@ -16,48 +23,69 @@ set -euo pipefail
 cd "$(dirname "$0")/aleo_ffi"
 
 OUT="../ios_lib"
-NAME="libaleo_rust.a"
+DYLIB="libaleo_rust.dylib"          # cargo's cdylib output filename
+FW="AleoRust"                       # framework bundle + binary name
+INSTALL_NAME="@rpath/$FW.framework/$FW"
 
-echo "Building iOS staticlib (device + simulator slices) ..."
+echo "Building iOS dynamic library (device + simulator slices) ..."
 cargo build --release --target aarch64-apple-ios      # device   (arm64)
 cargo build --release --target aarch64-apple-ios-sim  # simulator (arm64)
 cargo build --release --target x86_64-apple-ios       # simulator (x86_64)
 
+rm -rf "$OUT"
 mkdir -p "$OUT"
 
-# A single fat simulator archive (arm64 + x86_64); device stays its own slice.
-# Every xcframework slice MUST use the same library basename ($NAME, libaleo_rust.a)
-# so the framework records one library name for all platforms. If the simulator
-# slice were libaleo_rust-sim.a, Xcode/CocoaPods would emit -laleo_rust-sim for the
-# simulator and the link would fail with "library 'aleo_rust' not found". Keep the
-# fat archive in its own dir to avoid colliding with the device slice's $NAME.
-SIM_DIR="$OUT/sim"
-mkdir -p "$SIM_DIR"
-SIM_FAT="$SIM_DIR/$NAME"
+# Assemble a flat iOS .framework bundle ($dir/AleoRust.framework) from a dylib.
+# iOS frameworks are flat (no Versions/), so: the binary at <fw>/AleoRust plus a
+# minimal Info.plist. The dylib's install name is rewritten to @rpath so the app's
+# runpath (@executable_path/Frameworks) resolves the embedded copy.
+make_framework() {
+  local dylib="$1" dir="$2" platform="$3"
+  local fwdir="$dir/$FW.framework"
+  rm -rf "$fwdir"; mkdir -p "$fwdir"
+  cp "$dylib" "$fwdir/$FW"
+  install_name_tool -id "$INSTALL_NAME" "$fwdir/$FW"
+  cat > "$fwdir/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key><string>$FW</string>
+  <key>CFBundleIdentifier</key><string>com.fxwallet.AleoRust</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleName</key><string>$FW</string>
+  <key>CFBundlePackageType</key><string>FMWK</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>MinimumOSVersion</key><string>13.0</string>
+  <key>CFBundleSupportedPlatforms</key><array><string>$platform</string></array>
+</dict>
+</plist>
+PLIST
+}
+
+# Device framework (arm64).
+make_framework "target/aarch64-apple-ios/release/$DYLIB" "$OUT/device" "iPhoneOS"
+
+# Simulator framework: a fat arm64 + x86_64 dylib.
+SIMTMP="$OUT/.sim-tmp"; mkdir -p "$SIMTMP"
 lipo -create \
-  "target/aarch64-apple-ios-sim/release/$NAME" \
-  "target/x86_64-apple-ios/release/$NAME" \
-  -output "$SIM_FAT"
+  "target/aarch64-apple-ios-sim/release/$DYLIB" \
+  "target/x86_64-apple-ios/release/$DYLIB" \
+  -output "$SIMTMP/$DYLIB"
+make_framework "$SIMTMP/$DYLIB" "$OUT/sim" "iPhoneSimulator"
 
 XCF="$OUT/AleoRust.xcframework"
 rm -rf "$XCF"
 xcodebuild -create-xcframework \
-  -library "target/aarch64-apple-ios/release/$NAME" \
-  -library "$SIM_FAT" \
+  -framework "$OUT/device/$FW.framework" \
+  -framework "$OUT/sim/$FW.framework" \
   -output "$XCF"
 
+rm -rf "$SIMTMP" "$OUT/device" "$OUT/sim"
+
 echo
-echo "Built $XCF"
+echo "Built $XCF (dynamic frameworks: device arm64 + simulator arm64/x86_64)"
 echo
-echo "App integration (performed in the app repo):"
-echo "  1. Link AleoRust.xcframework into the app target."
-echo "  2. RETAIN the FFI symbols through dead-strip — a static linker drops the"
-echo "     #[no_mangle] exports that nothing in the app references directly, and"
-echo "     DynamicLibrary.process() lookups would then fail at runtime. Add:"
-echo "       -force_load <path>/AleoRust.xcframework/<slice>/libaleo_rust.a"
-echo "     (or an -exported_symbols_list listing ffi_abi_version, execute_*_checked,"
-echo "      parameter_preflight, the account/record/authorize exports, free_string)."
-echo "  3. Verify on the FINAL app binary (not just the .a):"
-echo "       nm -gU <app-binary> | grep -E 'ffi_abi_version|execute_proof_checked'"
-echo "     Both must be present; if not, the -force_load/exported-symbols step is"
-echo "     missing."
+echo "Symbols are intact in the dynamic binary (no dead-strip); verify with:"
+echo "  nm -gU \"$XCF\"/ios-arm64*/$FW.framework/$FW | grep -E 'ffi_abi_version|execute_proof_checked'"

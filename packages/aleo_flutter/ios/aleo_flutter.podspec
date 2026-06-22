@@ -23,6 +23,10 @@ DynamicLibrary.process().
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'FxWallet' => 'https://github.com/fxwalletOfficial' }
   s.source           = { :path => '.' }
+  # A minimal source so the pod target actually builds; otherwise Xcode skips it
+  # and its [CP] Copy XCFrameworks phase, and AleoRust.framework is never
+  # extracted (link fails with "framework 'AleoRust' not found"). See Classes/.
+  s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
   s.platform = :ios, '13.0'
   s.swift_version = '5.0'
@@ -35,35 +39,22 @@ DynamicLibrary.process().
   # included) — so fetch here. download_artifact.sh is idempotent.
   system('bash', "#{__dir__}/download_artifact.sh") or
     raise 'aleo_flutter: failed to provision AleoRust.xcframework (see download_artifact.sh output)'
+
+  # AleoRust.xcframework ships a DYNAMIC framework (see rust/build_ios.sh).
+  # CocoaPods links, embeds and signs it, so dyld loads it at app launch and its
+  # exported FFI symbols are reachable at runtime via DynamicLibrary.process() /
+  # .open() — with NO dead-strip and NO -force_load.
+  #
+  # This deliberately replaces the static-lib approach: a static linker drops the
+  # unreferenced #[no_mangle] members, and the -force_load workaround had to point
+  # at a CocoaPods build-time intermediate that does not exist yet on a clean
+  # build. A dynamic framework is a self-contained binary whose exports are always
+  # present — the whole dead-strip class disappears. (Spec §7.4.) Verify in stage 2:
+  #   nm -gU "<App>.app/Frameworks/AleoRust.framework/AleoRust" | grep ffi_abi_version
   s.vendored_frameworks = 'Frameworks/AleoRust.xcframework'
 
-  # DEAD-STRIP RETENTION — PR6 spec §7.4, the make-or-break detail.
-  #
-  # AleoRust.xcframework is a STATIC archive. A static linker only pulls archive
-  # members whose symbols are referenced; nothing in the app references the
-  # #[no_mangle] exports directly (they are resolved at runtime via
-  # DynamicLibrary.process()), so without intervention the members are never
-  # pulled in and process() finds nothing. -force_load pulls EVERY object file
-  # from the archive, so all exports survive into the app binary.
-  #
-  # NOTE 1: DEAD_CODE_STRIPPING=NO alone is INSUFFICIENT — it prevents stripping
-  # AFTER member selection, but unreferenced archive members are never selected.
-  #
-  # NOTE 2: -force_load must land on the FINAL app (Runner) link, so it belongs in
-  # user_target_xcconfig (the integrating target), NOT pod_target_xcconfig — the
-  # latter only affects the pod's own build and does NOT propagate to the app, so
-  # the exports were still stripped (review P1).
-  #
-  # The path resolves to the per-SDK slice CocoaPods extracts; every slice shares
-  # the basename libaleo_rust.a (see rust/build_ios.sh, fixed in lockstep). VERIFY
-  # in stage 2 on the final app binary:
-  #   nm -gU "$BUILT_PRODUCTS_DIR/Runner.app/Runner" | grep -E 'ffi_abi_version|execute_proof_checked'
-  # Both must be present; if not, adjust this path/mechanism.
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
-  }
-  s.user_target_xcconfig = {
-    'OTHER_LDFLAGS' => '-force_load "${PODS_XCFRAMEWORKS_BUILD_DIR}/aleo_flutter/libaleo_rust.a"',
   }
 end

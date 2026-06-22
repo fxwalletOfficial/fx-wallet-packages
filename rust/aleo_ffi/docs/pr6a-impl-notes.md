@@ -33,6 +33,13 @@ check — those are stage 2 (they need heavy iOS/Android builds).
 
 ## Decision 1 — iOS dead-strip retention = `-force_load` (the make-or-break)
 
+> **SUPERSEDED (round 4 — see below): iOS now ships a DYNAMIC framework, not a
+> static lib.** After three real-build failures rooted in static linking (slice
+> filename, `-force_load` not reaching the Runner, then `-force_load` referencing a
+> build-time intermediate that breaks clean builds), the whole dead-strip class was
+> removed by switching to a dynamic framework. The analysis below is kept for the
+> record; the live mechanism is in "Round 4" near the end.
+
 `AleoRust.xcframework` is a **static** archive. The crucial fact:
 
 - A static linker only pulls archive members whose symbols are **referenced**.
@@ -174,6 +181,36 @@ A reviewer ran an actual iOS build and hit the make-or-break items:
   required *one* ABI; it now requires all of `arm64-v8a armeabi-v7a x86_64` for the
   release (download) path. The local-build path stays lenient on purpose (see the
   L2 tradeoff above).
+
+## Round 4 — iOS switched to a DYNAMIC framework (the live mechanism)
+
+A fourth real-build failure (clean builds couldn't find the `-force_load`'d
+`XCFrameworkIntermediates/.../libaleo_rust.a`, which CocoaPods only produces during
+the build) made clear the static-lib + `-force_load` integration is inherently
+fragile under CocoaPods/Xcode. Rather than keep patching it, **iOS now ships a
+dynamic framework** (user decision), which removes the entire dead-strip class:
+
+- `rust/build_ios.sh` builds the `cdylib` for each iOS target, sets the install
+  name to `@rpath/AleoRust.framework/AleoRust`, wraps each slice in a flat
+  `AleoRust.framework`, and `xcodebuild -create-xcframework`s a **dynamic**
+  xcframework (device arm64 + simulator arm64/x86_64).
+- The podspec just `vendored_frameworks` it. CocoaPods links + embeds + signs the
+  dynamic framework; dyld loads it at app launch. No `-force_load`, no
+  `pod_target`/`user_target` LDFLAGS hack, no build-intermediate path.
+- `aleo_dart`'s `DyLib.getMobileDyLib()` iOS branch now `DynamicLibrary.open(
+  'AleoRust.framework/AleoRust')` (was `process()`), so the framework is dlopened
+  by name and loads regardless of any link-time dylib stripping. A dynamic
+  library's exports are never dead-stripped, so the symbols are guaranteed present
+  — only the load call needed nailing, not the symbols' existence.
+
+Why this is strictly better: the static approach's failure mode was "the symbols
+aren't in the binary"; the dynamic approach guarantees they are, reducing the
+remaining risk to a load-path detail that is easy to verify (`nm -gU` on the
+embedded `AleoRust.framework/AleoRust`, then the example's API call).
+
+Stage-2 verification (in progress): build the dynamic xcframework, `pod install`
+the example, clean-build for the iOS simulator, `nm -gU` the embedded framework,
+and run `mnemonicToAddress`.
 
 ## Deferred to PR6b / later
 
