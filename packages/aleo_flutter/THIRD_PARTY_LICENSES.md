@@ -2,8 +2,10 @@
 
 The native `libaleo_rust` library bundled by this plugin statically links the
 components below. The **authoritative, complete** list is generated from the Rust
-dependency graph in PR6b (e.g. `cargo about generate`) and shipped alongside the
-release artifacts; this file describes what that generated list covers.
+dependency graph by the release workflow (`cargo about generate`, config in
+`rust/aleo_ffi/about.toml`) and attached to each GitHub Release as the
+`THIRD_PARTY_LICENSES` asset; this file is the human-readable summary of what that
+generated list covers.
 
 ## Bundled native library
 
@@ -18,5 +20,5 @@ release artifacts; this file describes what that generated list covers.
 ## Note
 
 This is attribution, not legal advice. The generated `THIRD_PARTY_LICENSES`
-(PR6b) is the binding artifact; confirm licensing with whoever owns IP/legal
-before public distribution.
+release asset is the binding artifact; confirm licensing with whoever owns
+IP/legal before public distribution.
