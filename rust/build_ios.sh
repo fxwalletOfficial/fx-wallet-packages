@@ -34,6 +34,20 @@ INSTALL_NAME="@rpath/$FW.framework/$FW"
 MIN_IOS="15.5"
 export IPHONEOS_DEPLOYMENT_TARGET="$MIN_IOS"
 
+# cargo does NOT track IPHONEOS_DEPLOYMENT_TARGET, so a cached build keeps its old
+# Mach-O minos even after MIN_IOS changes — which would wrap a stale-minos binary
+# in a framework that DECLARES MIN_IOS. Force a clean rebuild of the iOS targets
+# whenever MIN_IOS differs from the last successful build (tracked by a stamp). The
+# post-build check is the backstop that fails the build if any slice still differs.
+STAMP="target/.aleo_ios_minos"
+if [ "$(cat "$STAMP" 2>/dev/null || true)" != "$MIN_IOS" ]; then
+  echo "iOS target is $MIN_IOS (stamp: '$(cat "$STAMP" 2>/dev/null || true)') — cleaning iOS target dirs so the new minos is stamped ..."
+  rm -rf target/aarch64-apple-ios/release \
+         target/aarch64-apple-ios-sim/release \
+         target/x86_64-apple-ios/release
+  rm -f "$STAMP"
+fi
+
 echo "Building iOS dynamic library (device + simulator slices) for iOS $MIN_IOS ..."
 cargo build --release --target aarch64-apple-ios      # device   (arm64)
 cargo build --release --target aarch64-apple-ios-sim  # simulator (arm64)
@@ -91,8 +105,39 @@ xcodebuild -create-xcframework \
 
 rm -rf "$SIMTMP" "$OUT/device" "$OUT/sim"
 
+# Backstop for the cargo-cache gotcha above: verify EVERY slice's Mach-O minos
+# actually equals $MIN_IOS, so we never ship a stale-minos binary inside a
+# framework that declares $MIN_IOS. (Same fail-loudly spirit as build_android.sh's
+# 16k-alignment check.)
+slice_minos() {  # $1 = mach-o, $2 = arch — handles LC_BUILD_VERSION + LC_VERSION_MIN_IPHONEOS
+  otool -arch "$2" -l "$1" 2>/dev/null | awk '
+    /^ *cmd LC_BUILD_VERSION/        {bv=1; vm=0}
+    /^ *cmd LC_VERSION_MIN_IPHONEOS/ {vm=1; bv=0}
+    bv && /^ *minos /   {print $2; exit}
+    vm && /^ *version / {print $2; exit}'
+}
+minos_fail=0
+check_minos() {  # $1 = framework binary, $2... = archs
+  local bin="$1"; shift
+  local arch got
+  for arch in "$@"; do
+    got="$(slice_minos "$bin" "$arch")"
+    [ "$got" = "$MIN_IOS" ] || { echo "ERROR: $bin [$arch] minos=${got:-none}, expected $MIN_IOS" >&2; minos_fail=1; }
+  done
+}
+check_minos "$XCF/ios-arm64/$FW.framework/$FW" arm64
+check_minos "$XCF/ios-arm64_x86_64-simulator/$FW.framework/$FW" arm64 x86_64
+if [ "$minos_fail" != 0 ]; then
+  echo "minos mismatch — cargo reused a stale build. Clean and rerun:" >&2
+  echo "  rm -rf rust/aleo_ffi/target/{aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios}/release && rust/build_ios.sh" >&2
+  exit 1
+fi
+
+# Record the deployment target only after a verified-correct build.
+mkdir -p target && printf '%s' "$MIN_IOS" > "$STAMP"
+
 echo
-echo "Built $XCF (dynamic frameworks: device arm64 + simulator arm64/x86_64)"
+echo "Built $XCF (dynamic frameworks: device arm64 + simulator arm64/x86_64; minos $MIN_IOS)"
 echo
 echo "Symbols are intact in the dynamic binary (no dead-strip); verify with:"
 echo "  nm -gU \"$XCF\"/ios-arm64*/$FW.framework/$FW | grep -E 'ffi_abi_version|execute_proof_checked'"

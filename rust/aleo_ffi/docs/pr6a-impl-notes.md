@@ -239,9 +239,23 @@ Gotcha: changing only the env does NOT bust cargo's cache — a clean rebuild (o
 `rm -rf target/<triple>/release`) is required to pick up a new deployment target.
 The example sim integration test still passes at the 15.5 config.
 
-(The local `rust/ios_lib` may carry older-minos cached slices; the shipped
-artifact is a clean CI build, so it carries 15.5. Only the device slice ships;
-simulator slices are stripped from the App Store archive.)
+(Only the device slice ships; simulator slices are stripped from the App Store
+archive.)
+
+### Round 6 follow-up — enforce it in the script + bump the example app target
+
+The cargo-cache gotcha and the example's deployment target were only *documented*,
+not *enforced* — so a dev with a stale cache could still wrap a 10/14 binary in a
+15.5-declaring framework, and the example app target was still 13.0 (the Podfile's
+`platform` does not cover the Runner/app target, only pods). Both made fixable:
+
+- `build_ios.sh` now (a) stamps the last-built `MIN_IOS` in `target/.aleo_ios_minos`
+  and force-cleans the iOS target dirs when it changes (so a deployment-target bump
+  recompiles), and (b) **verifies every xcframework slice's `minos == MIN_IOS`
+  after the build and fails loudly otherwise** (same spirit as build_android.sh's
+  16k-alignment check). The stamp is written only after that verification passes.
+- The example's `Runner.xcodeproj` `IPHONEOS_DEPLOYMENT_TARGET` was bumped
+  13.0 → 15.5 (all configs), so the acceptance harness actually builds at 15.5.
 
 ## Deferred to PR6b / later
 
