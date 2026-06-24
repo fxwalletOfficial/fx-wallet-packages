@@ -14,10 +14,12 @@ panic = "unwind"
 
 [lib]
 name = "aleo_rust"
-# cdylib: the shared library for Android (.so) and desktop (.so/.dylib/.dll),
-# loaded via DynamicLibrary.open.
-# staticlib: the static archive (.a) bundled into the iOS xcframework and
-# statically linked into the app, loaded via DynamicLibrary.process().
+# cdylib: the shared library for Android (.so) and desktop (.so/.dylib/.dll) — and
+#   the iOS dynamic `AleoRust.framework` — loaded via DynamicLibrary.open (iOS uses
+#   open('AleoRust.framework/AleoRust'); getMobileDyLib also exposes process()).
+# staticlib: the static archive (.a). NOT used by the mobile build — iOS ships the
+#   dynamic framework above (built from the cdylib), so there is no static link or
+#   -force_load. Kept for apps that choose to static-link the library themselves.
 # rlib: lets `cargo test` build a unit-test harness.
 crate-type = ["cdylib", "staticlib", "rlib"]
 

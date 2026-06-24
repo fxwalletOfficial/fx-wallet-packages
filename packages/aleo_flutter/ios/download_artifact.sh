@@ -62,7 +62,10 @@ if [ -d "$XCF" ] && [ "$(cat "$STAMP" 2>/dev/null)" = "$SHA" ]; then
 fi
 ZIP="$DEST/AleoRust.xcframework.zip"
 echo "aleo_flutter[ios]: downloading $URL"
-curl -fSL "$URL" -o "$ZIP"
+# Fail fast on a stalled/half-open connection (no timeout = pod install can hang
+# indefinitely) and retry a few times on transient errors. -f already fails on a
+# non-2xx status; the SHA-256 check below still verifies integrity.
+curl -fSL --connect-timeout 30 --max-time 600 --retry 3 --retry-delay 2 "$URL" -o "$ZIP"
 ACTUAL="$(sha256_of "$ZIP")"
 if [ "$ACTUAL" != "$SHA" ]; then
   echo "ERROR: SHA-256 mismatch for $URL (got $ACTUAL, want $SHA)" >&2
