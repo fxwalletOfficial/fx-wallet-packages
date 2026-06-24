@@ -66,7 +66,7 @@ final dyLib = DyLib.getMobileDyLib(); // Android: open('libaleo_rust.so'); iOS: 
 
 See [`rust/aleo_ffi/docs/cross-compile.md`](../../rust/aleo_ffi/docs/cross-compile.md) for the full per-platform build/distribution model (16k-page alignment on Android; iOS ships a dynamic `AleoRust.framework`, bundled by the `aleo_flutter` plugin).
 
-> `dart run aleo_dart:setup` (runtime download) is **deprecated** and not used in this version: its pinned source is a stale, ABI-incompatible GPL-era artifact that the ABI guard would reject.
+> `dart run aleo_dart:setup` (the old runtime download) is **removed** in this version — it now **errors out** with guidance instead of downloading. Its only source was a stale, ABI-incompatible GPL-era artifact (which the ABI guard would reject anyway). Build from source (`DyLib.getDyLibFromCargo`) or use the `aleo_flutter` plugin, which bundles the library at build time.
 
 ## License
 

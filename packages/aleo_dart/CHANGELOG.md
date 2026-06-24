@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+
+- `dart run aleo_dart:setup` no longer downloads a native library — it **fails
+  fast** with guidance (build from source via `DyLib.getDyLibFromCargo`, or use
+  the `aleo_flutter` plugin). Its only pinned source was a stale, GPL-era,
+  ABI-incompatible artifact that the `ffi_abi_version` guard would reject. Removed
+  the dead downloader machinery (`setup/cpu_architecture.dart`,
+  `setup/library_locator.dart`); `setUpDynamicLibrary()` now throws.
+
 ### Fixed
 
 - CI: `dart analyze` no longer fails the pipeline. Manual demo / integration
