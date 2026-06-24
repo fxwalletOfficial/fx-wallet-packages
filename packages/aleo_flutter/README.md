@@ -8,11 +8,25 @@ build per consumer, no runtime download, offline at runtime.
 `DyLib.getDyLibFromCargo()`). `aleo_flutter` is the thin mobile distribution
 layer on top of it.
 
+> **Status — pre-release (v1):** the `aleo_ffi-v1.0.0` GitHub Release is **not
+> published yet**, so the SHA-256 values in
+> [`lib/src/artifact_manifest.dart`](lib/src/artifact_manifest.dart) are still
+> all-zero placeholders and the build-time **download path is disabled**
+> (fail-closed). Until the release is published and the real SHA is pinned, a
+> consumer **must supply the native library locally** — run `rust/build_ios.sh` /
+> `rust/build_android.sh`, or set `ALEO_FFI_IOS_XCFRAMEWORK` /
+> `ALEO_FFI_ANDROID_JNILIBS` (see
+> [Local development](#local-development-before--instead-of-a-release)). The
+> zero-config "just run `flutter build`" flow described below activates once the
+> release is tagged and the SHA is pinned.
+
 ## Why
 
 The native library is ~35 MB per platform and slow to cross-compile (it links
 snarkVM). `aleo_flutter` removes that pain: the consumer app just runs
-`flutter build` and the right `libaleo_rust` is bundled automatically.
+`flutter build` and the right `libaleo_rust` is bundled automatically — once a
+tagged release is pinned (see **Status** above; pre-release this requires a local
+build or an `ALEO_FFI_*` override).
 
 ## Usage
 
