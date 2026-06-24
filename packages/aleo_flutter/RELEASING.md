@@ -2,8 +2,9 @@
 
 The native libraries are built and published by CI
 ([`.github/workflows/release-aleo.yml`](../../.github/workflows/release-aleo.yml))
-on a `aleo_ffi-v*` tag, then consumed at build time by the plugin's
-`download_artifact.sh`, which verifies them against the SHA-256 pinned in
+on a `aleo_ffi-v*` tag, then consumed at build time by the plugin's fetch step
+(the Android Gradle `fetchAleoNative` task / the iOS podspec's
+`download_artifact.sh`), which verifies them against the SHA-256 pinned in
 [`lib/src/artifact_manifest.dart`](lib/src/artifact_manifest.dart).
 
 ## Version triple-binding (don't break it)
@@ -46,10 +47,10 @@ in step 3 rides the branch, not the tag.
 
 ## Notes
 
-- `download_artifact.sh` treats an all-zero SHA-256 as "unset" and requires a local
-  build instead — so before step 3 a consumer must build locally (`rust/build_*.sh`)
-  or the build fails closed (never silently unverified).
-- Asset names and zip layout are a contract with `download_artifact.sh`
+- The fetch step treats an all-zero SHA-256 as "unset" and requires a local build
+  instead — so before step 3 a consumer must build locally (`rust/build_*.sh`) or
+  the build fails closed (never silently unverified).
+- Asset names and zip layout are a contract with the plugin's fetch step
   (`<abi>/libaleo_rust.so` at the zip top level for Android; `AleoRust.xcframework`
   at the top level for iOS). Don't rename without updating both.
 - Runners are GitHub-hosted (free on a public repo): `ubuntu-latest` + NDK for

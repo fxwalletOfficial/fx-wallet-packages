@@ -18,8 +18,8 @@ from-source* to *bundle-a-prebuilt-binary*:
   re-exports the full `aleo_dart` API so an app imports one package.
 - `lib/src/artifact_manifest.dart` — the in-package integrity anchor (URLs +
   SHA-256 + release tag + ABI version), as flat literal consts.
-- `android/build.gradle` + `android/download_artifact.sh` — fetch per-ABI
-  `libaleo_rust.so` into a `jniLibs` source set at build time.
+- `android/build.gradle` — fetch per-ABI `libaleo_rust.so` into a `jniLibs` source
+  set at build time, in pure Gradle/Groovy (no shell, so it works on Windows hosts).
 - `ios/aleo_flutter.podspec` + `ios/download_artifact.sh` — fetch
   `AleoRust.xcframework`, vendor it, and apply the dead-strip retention flag.
 - `example/` — a runnable app whose one button loads the bundled library and runs
@@ -105,9 +105,10 @@ script asserts the expected layout after unzip.
 ## Decision 3 — manifest is the anchor; build tools parse the `.dart`
 
 The integrity anchor lives in `lib/src/artifact_manifest.dart` (spec §5). The
-Gradle (Groovy) and podspec (Ruby/shell) layers cannot import Dart, so the
-`download_artifact.sh` scripts parse the values out of the `.dart` source. The
-consts are kept **flat and literal** (no string interpolation) so a single
+Gradle (Groovy) and podspec (Ruby/shell) layers cannot import Dart, so each parses
+the values out of the `.dart` source — Android in Groovy (a regex in
+`build.gradle`), iOS in `ios/download_artifact.sh` (perl). The consts are kept
+**flat and literal** (no string interpolation) so a single
 `const String NAME = '...'` pattern is unambiguous — but note `dart format` wraps
 the long URL/SHA lines after `=`, so the extractor must span the newline (a
 `perl -0777` slurp with `\s*` between `=` and the string; perl ships on macOS and

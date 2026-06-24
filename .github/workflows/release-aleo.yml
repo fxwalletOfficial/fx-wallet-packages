@@ -18,8 +18,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: the build + license jobs only need to read the repo; only the
+# publish job elevates to `contents: write` (below) to create/upload the Release.
 permissions:
-  contents: write   # create the release + upload assets
+  contents: read
 
 jobs:
   android:
@@ -103,6 +105,8 @@ jobs:
     needs: [android, ios, third-party-licenses]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/aleo_ffi-v')
+    permissions:
+      contents: write   # only this job creates the Release + uploads assets
     steps:
       - uses: actions/download-artifact@v4
         with:
