@@ -7,19 +7,19 @@ from `rust/aleo_ffi/about.toml`; the `aleo_ffi` crate itself is Apache-2.0.
 ## License summary
 
 {{#each overview}}
-- {{name}}: {{count}}
+- {{{name}}}: {{count}}
 {{/each}}
 
 {{#each licenses}}
-## {{name}}
+## {{{name}}}
 
 Used by:
 {{#each used_by}}
-- {{crate.name}} {{crate.version}}{{#if crate.repository}} — {{crate.repository}}{{/if}}
+- {{crate.name}} {{crate.version}}{{#if crate.repository}} — {{{crate.repository}}}{{/if}}
 {{/each}}
 
 ```
-{{text}}
+{{{text}}}
 ```
 
 {{/each}}

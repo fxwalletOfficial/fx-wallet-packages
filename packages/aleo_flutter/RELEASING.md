@@ -54,3 +54,9 @@ in step 3 rides the branch, not the tag.
   at the top level for iOS). Don't rename without updating both.
 - Runners are GitHub-hosted (free on a public repo): `ubuntu-latest` + NDK for
   Android, `macos-latest` + Xcode for iOS.
+- Build-tool versions are **pinned** for reproducible release binaries: the Rust
+  toolchain via `rust/rust-toolchain.toml`, `cargo-ndk 4.1.2`, and
+  `cargo-about 0.9.0` (whose template fields `about.hbs` is written against — note
+  the license body uses the triple-stash `{{{text}}}` so the asset is verbatim,
+  not HTML-escaped). Bump any of these deliberately and re-verify the artifacts +
+  the generated `THIRD_PARTY_LICENSES` before tagging.

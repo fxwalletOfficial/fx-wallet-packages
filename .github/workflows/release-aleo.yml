@@ -35,7 +35,10 @@ jobs:
         with:
           workspaces: rust/aleo_ffi
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
+        # Pinned: this workflow is the source of the released native binaries, so
+        # the build toolchain must be reproducible (a newer cargo-ndk could change
+        # NDK invocation / default flags). Bump deliberately + re-verify.
+        run: cargo install cargo-ndk --version 4.1.2 --locked
       # build_android.sh fails unless every LOAD segment is 16k-aligned, so an NDK
       # too old for 16k pages is caught there. The runner's latest NDK is r26+.
       - name: Build Android .so (all ABIs, 16k-aligned)
@@ -83,7 +86,10 @@ jobs:
         working-directory: rust/aleo_ffi
         run: rustup show
       - name: Install cargo-about
-        run: cargo install cargo-about --locked --features cli
+        # Pinned: cargo-about's template fields/output drive the authoritative
+        # THIRD_PARTY_LICENSES asset (about.hbs is written for 0.9.0). A new major
+        # could change fields/output. Bump deliberately + re-verify about.hbs.
+        run: cargo install cargo-about --version 0.9.0 --locked --features cli
       - name: Generate THIRD_PARTY_LICENSES
         working-directory: rust/aleo_ffi
         run: cargo about generate about.hbs -o "$GITHUB_WORKSPACE/THIRD_PARTY_LICENSES"
