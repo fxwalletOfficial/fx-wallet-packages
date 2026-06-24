@@ -1,0 +1,148 @@
+name: Release aleo_ffi native libraries
+
+# Builds the prebuilt aleo_rust native libraries (Android per-ABI .so + iOS
+# dynamic AleoRust.xcframework), generates THIRD_PARTY_LICENSES, and publishes
+# them to a GitHub Release on a `aleo_ffi-v*` tag. The aleo_flutter plugin's fetch
+# step (the Android Gradle `fetchAleoNative` task / the iOS podspec's
+# download_artifact.sh) fetches these assets at build time and verifies them
+# against the SHA-256 pinned in packages/aleo_flutter/lib/src/artifact_manifest.dart.
+#
+# Release flow + how to pin the SHA-256 afterwards: see
+# packages/aleo_flutter/RELEASING.md. Asset names + zip layout are a contract with
+# that fetch step — do not rename without updating both.
+on:
+  push:
+    tags: [ 'aleo_ffi-v*' ]
+  workflow_dispatch: {}   # manual build-only run (publish happens only on a tag)
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the build + license jobs only need to read the repo; only the
+# publish job elevates to `contents: write` (below) to create/upload the Release.
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust toolchain (pinned by rust-toolchain.toml)
+        working-directory: rust/aleo_ffi
+        run: rustup show
+      - name: Add Android Rust targets
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/aleo_ffi
+      - name: Install cargo-ndk
+        # Pinned: this workflow is the source of the released native binaries, so
+        # the build toolchain must be reproducible (a newer cargo-ndk could change
+        # NDK invocation / default flags). Bump deliberately + re-verify.
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      # build_android.sh fails unless every LOAD segment is 16k-aligned, so an NDK
+      # too old for 16k pages is caught there. The runner's latest NDK is r26+.
+      - name: Build Android .so (all ABIs, 16k-aligned)
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          bash rust/build_android.sh
+      # Top-level layout MUST be <abi>/libaleo_rust.so (the Android fetchAleoNative task asserts it).
+      - name: Zip jniLibs
+        run: cd rust/android_lib/jniLibs && zip -r "$GITHUB_WORKSPACE/libaleo_rust-android.zip" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libaleo_rust-android
+          path: libaleo_rust-android.zip
+          if-no-files-found: error
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust toolchain (pinned by rust-toolchain.toml)
+        working-directory: rust/aleo_ffi
+        run: rustup show
+      - name: Add iOS Rust targets
+        run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/aleo_ffi
+      # build_ios.sh stamps minos == MIN_IOS and FAILS if any slice disagrees.
+      - name: Build dynamic AleoRust.xcframework
+        run: bash rust/build_ios.sh
+      # Top-level layout MUST be AleoRust.xcframework (download_artifact.sh asserts it).
+      - name: Zip xcframework
+        run: cd rust/ios_lib && zip -r "$GITHUB_WORKSPACE/AleoRust.xcframework.zip" AleoRust.xcframework
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AleoRust-xcframework
+          path: AleoRust.xcframework.zip
+          if-no-files-found: error
+
+  third-party-licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust toolchain (pinned by rust-toolchain.toml)
+        working-directory: rust/aleo_ffi
+        run: rustup show
+      - name: Install cargo-about
+        # Pinned: cargo-about's template fields/output drive the authoritative
+        # THIRD_PARTY_LICENSES asset (about.hbs is written for 0.9.0). A new major
+        # could change fields/output. Bump deliberately + re-verify about.hbs.
+        run: cargo install cargo-about --version 0.9.0 --locked --features cli
+      - name: Generate THIRD_PARTY_LICENSES
+        working-directory: rust/aleo_ffi
+        run: cargo about generate about.hbs -o "$GITHUB_WORKSPACE/THIRD_PARTY_LICENSES"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: THIRD_PARTY_LICENSES
+          path: THIRD_PARTY_LICENSES
+          if-no-files-found: error
+
+  publish:
+    needs: [android, ios, third-party-licenses]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/aleo_ffi-v')
+    permissions:
+      contents: write   # only this job creates the Release + uploads assets
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Collect assets + compute SHA-256
+        run: |
+          mkdir -p out
+          cp dist/libaleo_rust-android/libaleo_rust-android.zip out/
+          cp dist/AleoRust-xcframework/AleoRust.xcframework.zip out/
+          cp dist/THIRD_PARTY_LICENSES/THIRD_PARTY_LICENSES out/
+          (cd out && sha256sum libaleo_rust-android.zip AleoRust.xcframework.zip | tee SHA256SUMS)
+      - name: Build release notes (SHA-256 to pin in artifact_manifest.dart)
+        run: |
+          {
+            echo "Prebuilt aleo_rust native libraries for ${GITHUB_REF_NAME}."
+            echo "Consumed by the aleo_flutter plugin at build time."
+            echo
+            echo '## SHA-256'
+            echo 'Pin these in packages/aleo_flutter/lib/src/artifact_manifest.dart'
+            echo '(see RELEASING.md). The android value is for libaleo_rust-android.zip,'
+            echo 'the xcframework value for AleoRust.xcframework.zip.'
+            echo
+            echo '```'
+            cat out/SHA256SUMS
+            echo '```'
+          } > notes.md
+      - name: Create GitHub Release + upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            out/libaleo_rust-android.zip \
+            out/AleoRust.xcframework.zip \
+            out/THIRD_PARTY_LICENSES \
+            out/SHA256SUMS

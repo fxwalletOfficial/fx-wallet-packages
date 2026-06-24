@@ -1,0 +1,12 @@
+aleo_flutter
+Copyright 2026 FxWallet contributors
+
+This product is licensed under the Apache License, Version 2.0 (the "License");
+you may obtain a copy of the License in the LICENSE file or at
+http://www.apache.org/licenses/LICENSE-2.0.
+
+This product bundles, at build time, the prebuilt `aleo_rust` native library
+built from the clean-room, Apache-2.0 `aleo_ffi` crate in this repository
+(rust/aleo_ffi). That library statically links snarkVM (Apache-2.0) and its
+transitive Rust dependencies. See THIRD_PARTY_LICENSES.md for the third-party
+attribution covering the statically-linked components.
