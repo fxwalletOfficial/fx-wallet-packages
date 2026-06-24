@@ -134,7 +134,22 @@ tasks.register("fetchAleoNative") {
 
         def zip = new File(aleoJniLibsDir, "android.zip")
         logger.lifecycle("aleo_flutter[android]: downloading ${url}")
-        new URL(url).withInputStream { input -> zip.withOutputStream { out -> out << input } }
+        // Use HttpURLConnection so the build fails fast on a stalled network or a
+        // non-2xx response instead of hanging indefinitely. Integrity is still
+        // verified by the SHA-256 check below.
+        def conn = (HttpURLConnection) new URL(url).openConnection()
+        conn.connectTimeout = 30000   // 30s to establish the connection
+        conn.readTimeout = 120000     // 2min stall window between reads
+        conn.instanceFollowRedirects = true  // GitHub release assets 302 -> CDN
+        try {
+            def code = conn.responseCode
+            if (code != HttpURLConnection.HTTP_OK) {
+                throw new GradleException("aleo_flutter: download of ${url} failed: HTTP ${code}")
+            }
+            conn.inputStream.withStream { input -> zip.withOutputStream { out -> out << input } }
+        } finally {
+            conn.disconnect()
+        }
 
         def md = java.security.MessageDigest.getInstance("SHA-256")
         zip.eachByte(8192) { buf, n -> md.update(buf, 0, n) }

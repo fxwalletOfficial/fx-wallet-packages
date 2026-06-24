@@ -61,6 +61,18 @@ void main() {
     expect(privateKey, targetPrivateKey);
   });
 
+  test('seedToPrivateKey rejects non-32-byte seeds (no native OOB read)', () {
+    // The native side reads a fixed 32 bytes; the Dart guard must reject shorter
+    // (and longer) seeds before the FFI call rather than read out of bounds.
+    for (final n in [0, 31, 33]) {
+      expect(
+        () => rust.seedToPrivateKey(Uint8List(n)),
+        throwsA(isA<ArgumentError>()),
+        reason: 'seed length $n must be rejected before FFI',
+      );
+    }
+  });
+
   test('mnemonicToPrivateKey', () {
     expect(rust.mnemonicToPrivateKey(mnemonic), targetPrivateKey);
   });

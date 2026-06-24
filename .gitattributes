@@ -4,3 +4,8 @@
 # valid and re-appliable.
 *.patch -whitespace
 *.diff -whitespace
+
+# Vendored third-party crates (snarkVM etc.) carry their own whitespace and are not
+# ours to reformat; keep `git diff --check` from flagging trailing whitespace in
+# their LICENSE / JSON / README / resource / source files.
+rust/vendor/** -whitespace

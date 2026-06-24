@@ -28,6 +28,13 @@ class AleoAccount {
   }
 
   String seedToPrivateKey(Uint8List seedRaw) {
+    // The native `seed_to_private_key` reads a fixed 32 bytes; a shorter buffer
+    // would make it read out of bounds (crash / unpredictable key). Reject any
+    // non-32-byte seed here, before allocating/handing it to FFI.
+    if (seedRaw.length != 32) {
+      throw ArgumentError.value(seedRaw.length, 'seedRaw.length',
+          'aleo seed must be exactly 32 bytes');
+    }
     final seed = dartListToC(seedRaw);
     try {
       final result = accountRustFFI.seedToPrivateKey(seed);
