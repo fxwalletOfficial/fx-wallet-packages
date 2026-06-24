@@ -12,6 +12,12 @@ on:
     branches: [ main, 'epic/**' ]
     paths: [ 'rust/**', 'packages/aleo_dart/**', '.github/workflows/rust.yml' ]
 
+# Cancel a superseded in-progress run on the same ref (e.g. rapid pushes to a PR)
+# so only the latest commit keeps a runner — the snarkVM build is heavy.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
