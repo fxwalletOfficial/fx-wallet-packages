@@ -39,8 +39,8 @@ artifact exists).
    (or edit `aleoAndroidArtifactSha256` / `aleoIosArtifactSha256` by hand), then
    `dart format .`, commit, and push.
 4. **Consume.** The wallet app pins the plugin git dependency at that commit (the
-   one whose manifest carries the real SHA-256). `download_artifact.sh` then
-   fetches and verifies the assets at build time.
+   one whose manifest carries the real SHA-256). The plugin's fetch step (Android
+   Gradle / iOS podspec) then fetches and verifies the assets at build time.
 
 A re-tag is only needed if step 1/2 produced a wrong artifact; the SHA-256 commit
 in step 3 rides the branch, not the tag.

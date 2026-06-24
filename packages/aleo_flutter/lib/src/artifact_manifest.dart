@@ -2,8 +2,8 @@
 /// this plugin version bundles, pinned to a GitHub Release tag and verified by
 /// SHA-256.
 ///
-/// This file is the **integrity anchor** (PR6 spec §5): the Android Gradle task
-/// (`android/build.gradle` → `download_artifact.sh`) and the iOS podspec
+/// This file is the **integrity anchor** (PR6 spec §5): the Android Gradle
+/// `fetchAleoNative` task (`android/build.gradle`) and the iOS podspec
 /// (`ios/download_artifact.sh`) read the URL/SHA-256 from here and verify the
 /// downloaded asset against it before bundling. A same-origin checksum is not an
 /// anchor — the hash must be pinned in the package, here.

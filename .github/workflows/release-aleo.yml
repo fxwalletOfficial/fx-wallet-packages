@@ -2,13 +2,14 @@ name: Release aleo_ffi native libraries
 
 # Builds the prebuilt aleo_rust native libraries (Android per-ABI .so + iOS
 # dynamic AleoRust.xcframework), generates THIRD_PARTY_LICENSES, and publishes
-# them to a GitHub Release on a `aleo_ffi-v*` tag. The aleo_flutter plugin's
-# download_artifact.sh fetches these assets at build time and verifies them
+# them to a GitHub Release on a `aleo_ffi-v*` tag. The aleo_flutter plugin's fetch
+# step (the Android Gradle `fetchAleoNative` task / the iOS podspec's
+# download_artifact.sh) fetches these assets at build time and verifies them
 # against the SHA-256 pinned in packages/aleo_flutter/lib/src/artifact_manifest.dart.
 #
 # Release flow + how to pin the SHA-256 afterwards: see
 # packages/aleo_flutter/RELEASING.md. Asset names + zip layout are a contract with
-# download_artifact.sh — do not rename without updating both.
+# that fetch step — do not rename without updating both.
 on:
   push:
     tags: [ 'aleo_ffi-v*' ]
@@ -47,7 +48,7 @@ jobs:
         run: |
           export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
           bash rust/build_android.sh
-      # Top-level layout MUST be <abi>/libaleo_rust.so (download_artifact.sh asserts it).
+      # Top-level layout MUST be <abi>/libaleo_rust.so (the Android fetchAleoNative task asserts it).
       - name: Zip jniLibs
         run: cd rust/android_lib/jniLibs && zip -r "$GITHUB_WORKSPACE/libaleo_rust-android.zip" .
       - uses: actions/upload-artifact@v4
