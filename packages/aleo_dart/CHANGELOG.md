@@ -4,6 +4,16 @@
 
 ### Changed
 
+- `AleoProgram.contractExecution` / `contractFeeExecution` are now **authorize-only**
+  and support **any program** (e.g. ARC-21 `token_registry`), not just
+  `credits.aleo`. They return the serialized **authorization** (resp. fee
+  authorization) for the wallet to send to its delegated prove server — proving is
+  not done on device, so no proving keys are needed. A non-`credits.aleo` program's
+  source and its import closure are fetched from the node; `credits.aleo` is built
+  in (empty closure, no node fetch). The credits-only restriction now applies only
+  to the **on-device proving** paths (`executeProgram` / `executeProgramProof`),
+  which still reject a custom program with `unsupported_feature`. Method signatures
+  are unchanged (source-compatible for downstream callers).
 - `dart run aleo_dart:setup` no longer downloads a native library — it **fails
   fast** with guidance (build from source via `DyLib.getDyLibFromCargo`, or use
   the `aleo_flutter` plugin). Its only pinned source was a stale, GPL-era,
