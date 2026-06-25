@@ -45,9 +45,9 @@ const String aleoAndroidArtifactUrl =
 /// an all-zero hash as "unset" and require a local build (the LOCAL-override
 /// path; see `pr6a-impl-notes.md`).
 const String aleoIosArtifactSha256 =
-    '0000000000000000000000000000000000000000000000000000000000000000';
+    '7f7673c6de687c5ca0de1c2d47515ffda6c7e26e1f3ba27aee10ea4ce32e391f';
 
 /// SHA-256 (lowercase hex) the downloaded Android asset must hash to. See
 /// [aleoIosArtifactSha256].
 const String aleoAndroidArtifactSha256 =
-    '0000000000000000000000000000000000000000000000000000000000000000';
+    'b53634f8aaf6d998cf05e71dcdffefb28b0132c85de24c7a0fc68dc3aa87d8d0';
