@@ -48,6 +48,12 @@ if [ "$(cat "$STAMP" 2>/dev/null || true)" != "$MIN_IOS" ]; then
   rm -f "$STAMP"
 fi
 
+# Ensure the Rust std for every iOS slice is present. A fresh toolchain (CI's
+# `rustup show`, or a clean machine) only has the host target -> otherwise the
+# build dies with `can't find crate for core` / "target may not be installed".
+# Idempotent: `rustup target add` is a no-op when the target is already installed.
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+
 echo "Building iOS dynamic library (device + simulator slices) for iOS $MIN_IOS ..."
 cargo build --release --target aarch64-apple-ios      # device   (arm64)
 cargo build --release --target aarch64-apple-ios-sim  # simulator (arm64)
