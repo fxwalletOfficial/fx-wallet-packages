@@ -6,6 +6,18 @@ import 'package:dio/dio.dart';
 import 'package:aleo_dart/aleo.dart';
 import './local/config.dart';
 
+/// Manual demo: an ARC-21 **token** (non-`credits.aleo`) transfer through the
+/// **delegated** prove server, mirroring the wallet's `ProofType.CONTRACT` flow
+/// (`isolate_tx.dart`). The device only **authorizes** — `contractExecution`
+/// returns the execution authorization and `contractFeeExecution` returns the fee
+/// authorization; both are sent over the WebSocket and the server does the
+/// proving. So no proving keys are needed on device, and a non-`credits.aleo`
+/// `program_id` is fully supported (its source + import closure are fetched from
+/// the node by `contractExecution`).
+///
+/// Needs `test/local/config.dart` (gitignored), a reachable Aleo node, and the
+/// prove WebSocket — run by hand, not in CI.
+
 String host = Config.host;
 Future<void> main() async {
   // 基本配置
@@ -38,6 +50,9 @@ Future<void> main() async {
     'amount': amount,
   });
 
+  // Authorize-only: builds the token execution authorization on device (fetching
+  // betastaking.aleo's source + import closure from the node). Proving is the
+  // server's job — we just send this authorization over the socket.
   final authorizationJson = await rustLib.contractExecution(
     private_key,
     program_id,
@@ -45,6 +60,9 @@ Future<void> main() async {
     arguments,
     nodeUrl,
   );
+  // Fail fast locally if the authorization is empty/malformed, instead of sending
+  // garbage to the prove server and getting an opaque remote error.
+  _requireAuthorization(authorizationJson, 'execution authorization');
 
   final channel = IOWebSocketChannel.connect(wss);
 
@@ -58,8 +76,11 @@ Future<void> main() async {
   channel.stream.listen((data) async {
     final String message = data.toString();
     if (message.contains('proof1')) {
+      // The server proved the execution; now authorize the (public) fee over it.
+      // Still authorize-only — the server proves the fee too.
       final feeAuthorization = await rustLib.contractFeeExecution(
           private_key, fee_credits, message, program_id, nodeUrl);
+      _requireAuthorization(feeAuthorization, 'fee authorization');
 
       channel.sink.add(jsonEncode({
         'transfer_type': transfer_type,
@@ -71,6 +92,24 @@ Future<void> main() async {
       channel.sink.close();
     }
   });
+}
+
+/// Sanity-checks an authorization before it goes to the prove server: non-empty,
+/// valid JSON, and carries the `requests` + `transitions` an Aleo authorization
+/// must have. Throws with a clear message otherwise (a malformed/empty value here
+/// means the on-device authorize step failed).
+void _requireAuthorization(String authorizationJson, String label) {
+  if (authorizationJson.isEmpty) {
+    throw StateError('$label is empty — on-device authorize failed');
+  }
+  final Object? decoded = json.decode(authorizationJson);
+  if (decoded is! Map ||
+      !decoded.containsKey('requests') ||
+      !decoded.containsKey('transitions')) {
+    throw StateError(
+        '$label is not a valid authorization (missing requests/transitions): '
+        '$authorizationJson');
+  }
 }
 
 /// 调用服务端接口，获取交易参数。
