@@ -1,0 +1,127 @@
+name: Rust (aleo_ffi)
+
+# Builds and unit-tests the clean-room aleo_ffi crate, then runs the Dart
+# wrapper's FFI-backed tests against the built cdylib. Path-filtered to the
+# crate and its Dart wrapper so it does not run on (and slow down) unrelated
+# Dart-only PRs; the snarkVM build is heavy and is cached between runs.
+on:
+  push:
+    branches: [ main, 'epic/**' ]
+    paths: [ 'rust/**', 'packages/aleo_dart/**', '.github/workflows/rust.yml' ]
+  pull_request:
+    branches: [ main, 'epic/**' ]
+    paths: [ 'rust/**', 'packages/aleo_dart/**', '.github/workflows/rust.yml' ]
+
+# Cancel a superseded in-progress run on the same ref (e.g. rapid pushes to a PR)
+# so only the latest commit keeps a runner — the snarkVM build is heavy.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Installs the toolchain pinned by rust/rust-toolchain.toml.
+      - name: Install Rust toolchain
+        working-directory: rust/aleo_ffi
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/aleo_ffi
+
+      # Offline unit tests only; the recursive-import test is #[ignore]d as it
+      # needs a live node. Includes an FFI smoke test that calls the exported
+      # functions (and free_string) through their C signatures.
+      - name: Test
+        working-directory: rust/aleo_ffi
+        run: cargo test --lib
+
+      # Build the actual deliverable — the release cdylib — and verify its
+      # exported C ABI, so a green run means the library Dart loads is buildable
+      # and complete (not just that the rlib test harness compiles).
+      - name: Build release cdylib
+        working-directory: rust/aleo_ffi
+        run: cargo build --release
+
+      - name: Verify exported FFI symbols
+        working-directory: rust/aleo_ffi
+        shell: bash
+        run: |
+          lib=target/release/libaleo_rust.so
+          test -f "$lib" || { echo "release cdylib not found"; exit 1; }
+          # Phase 4 PR4a finalized the ABI (workstream C): the 3 plain proving
+          # exports (execute_proof_static / execute_fee_proof_static /
+          # execute_program_proof_static) were DELETED (superseded by the enveloped
+          # *_checked ones), the 3 remaining `_static` exports were renamed to
+          # canonical + made network-aware (get_base_fee, execution_fee_authorization,
+          # program_authorization), and ffi_abi_version was added (the Dart loader's
+          # ABI guard). Net: 35 - 3 + 1 = 33 FFI functions + free_string = 34 symbols.
+          # The full EXACT exported set is compared (not just presence), so CI also
+          # fails if a deleted symbol survives or an unexpected symbol appears.
+          expected=$(printf '%s\n' \
+            ffi_abi_version numbers_add seed_to_private_key private_key_to_address \
+            private_key_to_view_key view_key_to_address sign_message verify \
+            get_token_owner_hash is_owner decrypt_cipher_text serial_number_string \
+            encrypt_private_key decrypt_to_private_key decrypt_sender_ciphertext \
+            build_transaction_offline execution_authorization join_authorization \
+            upgrade_authorization build_upgrade_transaction_offline free_string \
+            required_commitments required_imports state_root_from_paths \
+            consensus_version_for get_base_fee execution_fee_authorization \
+            program_authorization ffi_set_parameter_dir ffi_aleo_dir \
+            execute_proof_checked execute_fee_proof_checked execute_program_proof_checked \
+            parameter_preflight | sort -u)
+          # Exported defined symbols, minus the ELF runtime symbols the linker adds
+          # to any shared object (not part of our C API).
+          runtime='_init|_fini|__bss_start|_edata|_end|__bss_start__|_bss_end__|__bss_end__|_edata__|__data_start|__dso_handle|_IO_stdin_used|__TMC_END__'
+          actual=$(nm -D --defined-only "$lib" | awk 'NF {print $NF}' | grep -vxE "$runtime" | sort -u)
+          if [ "$expected" != "$actual" ]; then
+            echo "FFI export set mismatch:"
+            echo "--- expected but missing from the library ---"
+            comm -23 <(printf '%s\n' "$expected") <(printf '%s\n' "$actual")
+            echo "--- exported but unexpected (e.g. an undeleted RPC symbol) ---"
+            comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$actual")
+            exit 1
+          fi
+          echo "exported FFI symbol set matches exactly (33 functions + free_string)"
+
+      # Workstream A (PR3) dropped curl + openssl-sys (the in-Rust param
+      # downloader is gone); workstream B (PR1) dropped the transitive ureq/rustls.
+      # Together they mean aleo_ffi links NO HTTP/TLS stack — all network I/O is in
+      # the Dart layer. Assert none of these crates can creep back into the graph
+      # (`cargo tree -i` exits non-zero when the package is absent, which is what
+      # we want).
+      - name: Verify no HTTP/TLS stack in the dependency graph
+        working-directory: rust/aleo_ffi
+        shell: bash
+        run: |
+          forbidden='curl openssl-sys openssl ureq rustls reqwest'
+          fail=0
+          for pkg in $forbidden; do
+            if cargo tree -i "$pkg" >/dev/null 2>&1; then
+              echo "ERROR: '$pkg' is back in the dependency graph (no-HTTP-stack regression):"
+              cargo tree -i "$pkg"
+              fail=1
+            fi
+          done
+          [ "$fail" = 0 ] || exit 1
+          echo "no curl/openssl-sys/ureq/rustls/reqwest in the dependency graph"
+
+      # Run the Dart wrapper's FFI-backed tests against the cdylib built above,
+      # so Dart/Rust signature mismatches, string-ownership bugs and wrapper
+      # regressions fail CI instead of being skipped for want of a library.
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.8.0'
+
+      - name: Dart FFI integration tests
+        working-directory: packages/aleo_dart
+        env:
+          ALEO_NEW_LIB: ${{ github.workspace }}/rust/aleo_ffi/target/release/libaleo_rust.so
+        run: |
+          dart pub get
+          dart test

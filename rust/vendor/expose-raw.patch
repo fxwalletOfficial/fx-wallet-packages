@@ -1,0 +1,20 @@
+--- /Users/workerpei/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/snarkvm-synthesizer-4.5.0/src/vm/execute.rs	2006-07-24 09:21:28
++++ vendor/snarkvm-synthesizer-4.5.0/src/vm/execute.rs	2026-06-10 11:42:02
+@@ -172,7 +172,7 @@
+     /// Executes a call to the program function for the given authorization.
+     /// Returns the execution.
+     #[inline]
+-    fn execute_authorization_raw<R: Rng + CryptoRng>(
++    pub fn execute_authorization_raw<R: Rng + CryptoRng>(
+         &self,
+         authorization: Authorization<N>,
+         query: &dyn QueryTrait<N>,
+@@ -227,7 +227,7 @@
+     /// Executes a call to the program function for the given fee authorization.
+     /// Returns the fee.
+     #[inline]
+-    fn execute_fee_authorization_raw<R: Rng + CryptoRng>(
++    pub fn execute_fee_authorization_raw<R: Rng + CryptoRng>(
+         &self,
+         authorization: Authorization<N>,
+         query: &dyn QueryTrait<N>,

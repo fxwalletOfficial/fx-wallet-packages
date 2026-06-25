@@ -1,8 +1,7 @@
 import 'dart:math';
 
-import 'package:ffi/ffi.dart';
-
 import 'package:aleo_dart/src/rust_lib/record_rust_ffi.dart';
+import 'package:aleo_dart/src/rust_lib/dyLib.dart';
 import 'package:aleo_dart/src/rust_lib/utils.dart';
 import 'package:aleo_dart/src/aleo_utils.dart';
 
@@ -10,36 +9,36 @@ class AleoRecord {
   late RecordRustFFI recordRustFFI;
   int decimal = 6;
 
-  AleoRecord(dyLib, [network_raw = 'testnet']) {
-    final network = dartStrToC(network_raw);
-    this.recordRustFFI = RecordRustFFI(dyLib, network);
+  AleoRecord(dyLib, [String network_raw = 'testnet']) {
+    this.recordRustFFI =
+        RecordRustFFI(AleoLib.coerce(dyLib).dyLib, network_raw);
   }
 
   String encryptPrivateKey(privateKeyRaw, secretRaw) {
     AleoUtils.checkPrivateKey(privateKeyRaw);
     final privateKey = dartStrToC(privateKeyRaw);
     final secret = dartStrToC(secretRaw);
-    final ciphertext = recordRustFFI.encryptPrivateKey(privateKey, secret);
-    return ciphertext.toDartString();
+    try {
+      final result = recordRustFFI.encryptPrivateKey(privateKey, secret);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([privateKey, secret]);
+    }
   }
 
   String decryptToPrivateKey(ciphertextRaw, secretRaw) {
     final ciphertext = dartStrToC(ciphertextRaw);
     final secret = dartStrToC(secretRaw);
-    final privateKey = recordRustFFI.decryptToPrivateKey(ciphertext, secret);
-    return privateKey.toDartString();
+    try {
+      final result = recordRustFFI.decryptToPrivateKey(ciphertext, secret);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([ciphertext, secret]);
+    }
   }
 
   RecordPlainText decryptCipherText(String record, String viewKey) {
-    AleoUtils.checkRecord(record);
-    AleoUtils.checkViewKey(viewKey);
-    final flag = isOwner(record, viewKey);
-    if (!flag) {
-      throw Exception('Record is not owned by the view key');
-    }
-    final result = recordRustFFI.decryptCipherText(
-        dartStrToC(record), dartStrToC(viewKey));
-    return processRecord(result.toDartString());
+    return processRecord(decryptCipherTextRaw(record, viewKey));
   }
 
   String decryptCipherTextRaw(String record, String viewKey) {
@@ -49,15 +48,26 @@ class AleoRecord {
     if (!flag) {
       throw Exception('Record is not owned by the view key');
     }
-    final result = recordRustFFI.decryptCipherText(
-        dartStrToC(record), dartStrToC(viewKey));
-    return result.toDartString();
+    final recordPtr = dartStrToC(record);
+    final viewKeyPtr = dartStrToC(viewKey);
+    try {
+      final result = recordRustFFI.decryptCipherText(recordPtr, viewKeyPtr);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([recordPtr, viewKeyPtr]);
+    }
   }
 
   bool isOwner(String record, String viewKey) {
     AleoUtils.checkRecord(record);
     AleoUtils.checkViewKey(viewKey);
-    return recordRustFFI.isOwner(dartStrToC(record), dartStrToC(viewKey));
+    final recordPtr = dartStrToC(record);
+    final viewKeyPtr = dartStrToC(viewKey);
+    try {
+      return recordRustFFI.isOwner(recordPtr, viewKeyPtr);
+    } finally {
+      freeAll([recordPtr, viewKeyPtr]);
+    }
   }
 
   /// 解密 sender_ciphertext 字段，获取发送方地址
@@ -80,12 +90,16 @@ class AleoRecord {
     }
 
     // 调用 Rust FFI 解密 sender_ciphertext
-    final result = recordRustFFI.decryptSenderCiphertext(
-        dartStrToC(record), dartStrToC(viewKey), dartStrToC(senderCiphertext));
-
-    final senderInfo = result.toDartString();
-
-    return senderInfo;
+    final recordPtr = dartStrToC(record);
+    final viewKeyPtr = dartStrToC(viewKey);
+    final senderCiphertextPtr = dartStrToC(senderCiphertext);
+    try {
+      final result = recordRustFFI.decryptSenderCiphertext(
+          recordPtr, viewKeyPtr, senderCiphertextPtr);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([recordPtr, viewKeyPtr, senderCiphertextPtr]);
+    }
   }
 
   String serialNumberString(String recordCipherTextRaw, String privateKeyRaw,
@@ -97,9 +111,13 @@ class AleoRecord {
     final privateKey = dartStrToC(privateKeyRaw);
     final programId = dartStrToC(programIdRaw);
     final recordName = dartStrToC(recordNameRaw);
-    final result = recordRustFFI.serialNumberString(
-        recordPlainText, privateKey, programId, recordName);
-    return result.toDartString();
+    try {
+      final result = recordRustFFI.serialNumberString(
+          recordPlainText, privateKey, programId, recordName);
+      return takeNativeString(recordRustFFI.dyLib, result);
+    } finally {
+      freeAll([recordPlainText, privateKey, programId, recordName]);
+    }
   }
 
   List<String> serialNumberStrings(

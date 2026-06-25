@@ -17,7 +17,7 @@ typedef TypeStr2ToBoolInDart = int Function(
 
 class RecordRustFFI {
   final ffi.DynamicLibrary dyLib;
-  final network;
+  final String network;
 
   RecordRustFFI(this.dyLib, this.network);
 
@@ -30,8 +30,8 @@ class RecordRustFFI {
 
   ffi.Pointer<Utf8> decryptToPrivateKey(
       ffi.Pointer<Utf8> ciphertext, ffi.Pointer<Utf8> secret) {
-    final decryptToPrivateKey =
-        dyLib.lookupFunction<TypeStr2To1, TypeStr2To1>('decrypt_to_private_key');
+    final decryptToPrivateKey = dyLib
+        .lookupFunction<TypeStr2To1, TypeStr2To1>('decrypt_to_private_key');
     return decryptToPrivateKey(ciphertext, secret);
   }
 
@@ -59,12 +59,10 @@ class RecordRustFFI {
         recordCipherText, privateKey, programId, recordName);
   }
 
-  ffi.Pointer<Utf8> decryptSenderCiphertext(
-      ffi.Pointer<Utf8> recordCipherText, 
-      ffi.Pointer<Utf8> viewKey, 
-      ffi.Pointer<Utf8> senderCiphertext) {
-    final decryptSenderCiphertext =
-        dyLib.lookupFunction<TypeStr3To1, TypeStr3To1>('decrypt_sender_ciphertext');
+  ffi.Pointer<Utf8> decryptSenderCiphertext(ffi.Pointer<Utf8> recordCipherText,
+      ffi.Pointer<Utf8> viewKey, ffi.Pointer<Utf8> senderCiphertext) {
+    final decryptSenderCiphertext = dyLib
+        .lookupFunction<TypeStr3To1, TypeStr3To1>('decrypt_sender_ciphertext');
     return decryptSenderCiphertext(recordCipherText, viewKey, senderCiphertext);
   }
 }

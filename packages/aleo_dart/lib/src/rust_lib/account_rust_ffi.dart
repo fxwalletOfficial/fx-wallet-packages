@@ -26,7 +26,7 @@ typedef TypeGetTokenOwnerHashInDart = ffi.Pointer<Utf8> Function(
 
 class AccountRustFFI {
   final ffi.DynamicLibrary dyLib;
-  final network;
+  final String network;
 
   AccountRustFFI(this.dyLib, this.network);
 

@@ -1,0 +1,26 @@
+name: aleo_flutter_example
+description: "Demonstrates the aleo_flutter plugin (the simulator/emulator/device acceptance harness)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.3.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Path dependency on the parent plugin so the example exercises the current
+  # source.
+  aleo_flutter:
+    path: ../
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

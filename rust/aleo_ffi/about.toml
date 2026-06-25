@@ -1,0 +1,24 @@
+# cargo-about config for generating THIRD_PARTY_LICENSES — the licenses of the
+# Rust crates statically linked into the prebuilt `aleo_rust` native library that
+# the aleo_flutter plugin ships. Run: `cargo about generate about.hbs`.
+#
+# SPDX license ids we accept for redistribution. A build fails if a dependency's
+# license is not in this list, which is intentional — it surfaces a new/unexpected
+# license for a human to review before it ships.
+accepted = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "CC0-1.0",
+    "MPL-2.0",
+    "0BSD",
+    "BSL-1.0",
+]
+
+# r-efi is "Apache-2.0 OR LGPL-2.1-or-later OR MIT"; LGPL is intentionally NOT in
+# `accepted`, so cargo-about resolves the OR expression to Apache-2.0 / MIT.

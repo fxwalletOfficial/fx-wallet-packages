@@ -1,0 +1,76 @@
+[package]
+name = "aleo_ffi"
+version = "0.1.0"
+authors = ["fx wallet <www.fxwallet.com>"]
+description = "Apache-2.0 clean-room FFI bindings for Aleo, built directly on snarkVM (no GPL Aleo SDK)."
+license = "Apache-2.0"
+edition = "2021"
+
+# Keep unwinding in release so the FFI's `catch_unwind` boundary works: a poisoned
+# snarkVM parameter `lazy_static` (missing/corrupt proving key) must surface as a
+# `restart_required` envelope, never abort the process. (Phase 4 §8 Contract 1.)
+[profile.release]
+panic = "unwind"
+
+[lib]
+name = "aleo_rust"
+# cdylib: the shared library for Android (.so) and desktop (.so/.dylib/.dll) — and
+#   the iOS dynamic `AleoRust.framework` — loaded via DynamicLibrary.open (iOS uses
+#   open('AleoRust.framework/AleoRust'); getMobileDyLib also exposes process()).
+# staticlib: the static archive (.a). NOT used by the mobile build — iOS ships the
+#   dynamic framework above (built from the cdylib), so there is no static link or
+#   -force_load. Kept for apps that choose to static-link the library themselves.
+# rlib: lets `cargo test` build a unit-test harness.
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+snarkvm-console = "=4.5.0"
+snarkvm-ledger-block = "=4.5.0"
+snarkvm-ledger-store = "=4.5.0"
+# `query` only (StaticQuery) — never `rest`, so no transitive `ureq`/rustls HTTP
+# stack. Backed by the vendored split-feature patch below. See vendor/README.md.
+snarkvm-ledger-query = { version = "=4.5.0", default-features = false, features = ["query"] }
+snarkvm-synthesizer = "=4.5.0"
+# Direct dep so the FFI can drive parameter provisioning: set the param dir
+# (mobile sandbox) and run preflight. Vendored + patched below to own the
+# param-dir state AND to remove the curl download path (a missing param fails
+# closed with RemoteFetchDisabled) — so this crate links no curl/openssl-sys.
+snarkvm-parameters = "=4.5.0"
+aleo-std-storage = "=1.0.3"
+anyhow = "1"
+rand = "0.8.5"
+serde = "1"
+serde_json = "1"
+# parameter_preflight verifies provisioned proving-key files by SHA-256 against the
+# embedded metadata checksums — same digest snarkvm-parameters' `checksum!` uses
+# (sha2 + lowercase hex), so the comparison matches byte-for-byte.
+sha2 = "0.10"
+hex = "0.4"
+
+[dev-dependencies]
+# Enables snarkVM's `state_path::test_helpers::sample_global_state_path`, so the
+# private-flow StaticQuery path can be unit-tested offline with real StatePaths
+# (no chain/node). This uses snarkvm-console-program's `test` feature — which is
+# empty (`test = []`) and, crucially, does NOT pull in `snarkvm-console-network`'s
+# `test` feature, so the consensus-version *heights* stay at their production
+# values (network/test swaps them for test heights, which would break
+# consensus_version_for and silently change proving's version selection).
+# Test-only: dev-dependencies are excluded from the release cdylib.
+snarkvm-console-program = { version = "=4.5.0", features = ["test"] }
+
+# Expose VM::execute_authorization_raw / execute_fee_authorization_raw (private
+# upstream) for the split-proof flow. Apache-2.0; verbatim + a 2-line pub patch.
+[patch.crates-io]
+snarkvm-synthesizer = { path = "../vendor/snarkvm-synthesizer-4.5.0" }
+# Split-feature fork: move the ureq-backed REST query behind an opt-in `rest`
+# feature so the default `query` build links no HTTP stack. Verbatim 4.5.0 + the
+# 2-file `ledger-query-split-rest.patch`; Apache-2.0. See vendor/README.md.
+snarkvm-ledger-query = { path = "../vendor/snarkvm-ledger-query-4.5.0" }
+# Param-dir ownership + no remote fetch: process-global override of the directory
+# proving keys load from (snarkVM has no env override) so the Dart layer can
+# provision into the mobile app sandbox, AND the in-Rust curl downloader is
+# removed so this build links no HTTP/TLS stack (curl + openssl-sys gone; a
+# missing param fails closed with RemoteFetchDisabled). Verbatim 4.5.0 +
+# parameters-param-dir.patch + parameters-no-remote-fetch.patch; Apache-2.0.
+# See vendor/README.md.
+snarkvm-parameters = { path = "../vendor/snarkvm-parameters-4.5.0" }

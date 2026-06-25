@@ -25,4 +25,12 @@ class AleoUtils {
       throw Exception('Invalid record prefix');
     }
   }
+
+  /// Amounts and fees cross the FFI boundary as unsigned 64-bit microcredits;
+  /// a negative Dart int would wrap to an enormous u64.
+  static checkAmount(int value, String name) {
+    if (value < 0) {
+      throw Exception('Invalid $name: must not be negative ($value)');
+    }
+  }
 }

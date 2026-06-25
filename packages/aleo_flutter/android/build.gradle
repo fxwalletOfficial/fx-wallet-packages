@@ -1,0 +1,191 @@
+// aleo_flutter (Android): bundles the PREBUILT per-ABI libaleo_rust.so into the
+// app's jniLibs at build time. Unlike the flutter_create plugin_ffi template, this
+// does NOT compile native code from source — there is no externalNativeBuild /
+// CMake. The .so files are fetched by the fetchAleoNative task below (local build
+// first, else the pinned GitHub Release verified against
+// lib/src/artifact_manifest.dart) and dropped into a jniLibs source set.
+//
+// The fetch is pure Gradle/Groovy (NOT a shell script) so it runs on Windows hosts
+// too — Flutter Android builds commonly run on Windows, where `bash` is absent.
+
+group = "com.fxwallet.aleo_flutter"
+version = "1.0"
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.11.1")
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+
+// Where fetchAleoNative stages <abi>/libaleo_rust.so for packaging.
+// layout.buildDirectory (not the deprecated project.buildDir) for Gradle 8/9.
+def aleoJniLibsDir = layout.buildDirectory.dir("aleo_jniLibs").get().asFile
+
+android {
+    namespace = "com.fxwallet.aleo_flutter"
+
+    // The plugin's compileSdk floors every consumer app's compileSdk, and this
+    // plugin ships no compiled Android code (only a manifest + prebuilt jniLibs),
+    // so it does not need the bleeding edge. 35 is recent + widely installed.
+    compileSdk = 35
+
+    ndkVersion = android.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdk = 24
+    }
+
+    // Package the prebuilt libraries fetched by fetchAleoNative.
+    sourceSets {
+        main {
+            jniLibs.srcDirs += [aleoJniLibsDir]
+        }
+    }
+
+    // The .so files are already 16k-page-aligned at link time (rust/build_android.sh
+    // passes -z max-page-size=16384, mandatory on Android 15+). Keep modern,
+    // uncompressed/aligned packaging so that alignment survives into the APK.
+    // `packaging` (not the deprecated `packagingOptions`) for AGP 8+.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+}
+
+// Stage <abi>/libaleo_rust.so before the library is assembled. Mirrors the iOS
+// podspec's download_artifact.sh, but in JVM code so it is cross-platform:
+//   1. LOCAL build first ($ALEO_FFI_ANDROID_JNILIBS or rust/build_android.sh's
+//      rust/android_lib/jniLibs); any present ABI is copied (lenient — for fast
+//      single-ABI iteration).
+//   2. Else DOWNLOAD the pinned release zip, verify its SHA-256 against the
+//      in-package manifest, and require all three ABIs. Fail-closed when the
+//      SHA-256 is unset (all-zero) and there is no local build.
+def aleoAbis = ["arm64-v8a", "armeabi-v7a", "x86_64"]
+def aleoManifest = file("../lib/src/artifact_manifest.dart")
+def aleoLocalJniLibs = file(System.getenv("ALEO_FFI_ANDROID_JNILIBS") ?: "../../../rust/android_lib/jniLibs")
+
+tasks.register("fetchAleoNative") {
+    inputs.file(aleoManifest)
+    // In local-build mode the source .so re-triggers the copy (no stale library);
+    // when absent (download mode) the manifest input governs.
+    if (aleoLocalJniLibs.exists()) {
+        inputs.dir(aleoLocalJniLibs)
+    }
+    outputs.dir(aleoJniLibsDir)
+
+    doLast {
+        aleoJniLibsDir.deleteDir()
+        aleoJniLibsDir.mkdirs()
+
+        // 1) Local build.
+        if (aleoLocalJniLibs.exists()) {
+            def found = false
+            aleoAbis.each { abi ->
+                def so = new File(aleoLocalJniLibs, "${abi}/libaleo_rust.so")
+                if (so.exists()) {
+                    def dest = new File(aleoJniLibsDir, abi)
+                    dest.mkdirs()
+                    java.nio.file.Files.copy(so.toPath(),
+                        new File(dest, "libaleo_rust.so").toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    found = true
+                }
+            }
+            if (!found) {
+                throw new GradleException("aleo_flutter: ${aleoLocalJniLibs} has no <abi>/libaleo_rust.so")
+            }
+            logger.lifecycle("aleo_flutter[android]: using local jniLibs ${aleoLocalJniLibs}")
+            return
+        }
+
+        // 2) Download + verify. Parse the `const String NAME = '...'` literals
+        // (tolerating the dart-format line wrap, same as the iOS shell helper).
+        def text = aleoManifest.text
+        def urlMatch = (text =~ /(?s)const String aleoAndroidArtifactUrl\s*=\s*'([^']*)'/)
+        def shaMatch = (text =~ /(?s)const String aleoAndroidArtifactSha256\s*=\s*'([^']*)'/)
+        if (!urlMatch || !shaMatch) {
+            throw new GradleException("aleo_flutter: could not read android artifact url/sha from ${aleoManifest}")
+        }
+        def url = urlMatch[0][1]
+        def sha = shaMatch[0][1]
+        if (sha == ("0" * 64)) {
+            throw new GradleException("aleo_flutter: no local jniLibs (${aleoLocalJniLibs}) and the manifest " +
+                "SHA-256 is unset; build rust/build_android.sh, set ALEO_FFI_ANDROID_JNILIBS, or pin the release hash")
+        }
+
+        def zip = new File(aleoJniLibsDir, "android.zip")
+        logger.lifecycle("aleo_flutter[android]: downloading ${url}")
+        // Use HttpURLConnection so the build fails fast on a stalled network or a
+        // non-2xx response instead of hanging indefinitely. Integrity is still
+        // verified by the SHA-256 check below.
+        def conn = (HttpURLConnection) new URL(url).openConnection()
+        conn.connectTimeout = 30000   // 30s to establish the connection
+        conn.readTimeout = 120000     // 2min stall window between reads
+        conn.instanceFollowRedirects = true  // GitHub release assets 302 -> CDN
+        try {
+            def code = conn.responseCode
+            if (code != HttpURLConnection.HTTP_OK) {
+                throw new GradleException("aleo_flutter: download of ${url} failed: HTTP ${code}")
+            }
+            conn.inputStream.withStream { input -> zip.withOutputStream { out -> out << input } }
+        } finally {
+            conn.disconnect()
+        }
+
+        def md = java.security.MessageDigest.getInstance("SHA-256")
+        zip.eachByte(8192) { buf, n -> md.update(buf, 0, n) }
+        def actual = md.digest().collect { String.format("%02x", it) }.join()
+        if (actual != sha) {
+            zip.delete()
+            throw new GradleException("aleo_flutter: SHA-256 mismatch for ${url} (got ${actual}, want ${sha})")
+        }
+
+        // Unzip with java.util.zip (no shell, no project-state access at exec time).
+        def zis = new java.util.zip.ZipInputStream(new java.io.BufferedInputStream(new java.io.FileInputStream(zip)))
+        try {
+            def entry
+            while ((entry = zis.nextEntry) != null) {
+                if (entry.name.contains("..")) { continue }   // zip-slip guard
+                def f = new File(aleoJniLibsDir, entry.name)
+                if (entry.directory) { f.mkdirs(); continue }
+                f.parentFile.mkdirs()
+                f.withOutputStream { os -> os << zis }
+            }
+        } finally {
+            zis.close()
+        }
+        zip.delete()
+
+        // A release must carry every ABI (unlike the lenient local path).
+        aleoAbis.each { abi ->
+            if (!new File(aleoJniLibsDir, "${abi}/libaleo_rust.so").exists()) {
+                throw new GradleException("aleo_flutter: ${url} is missing ${abi}/libaleo_rust.so")
+            }
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == "preBuild") {
+        task.dependsOn("fetchAleoNative")
+    }
+}

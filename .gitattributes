@@ -1,0 +1,11 @@
+# Vendored-crate patch files are unified diffs: a blank context line is encoded
+# as a single space, which `git diff --check` would otherwise flag as trailing
+# whitespace. Exempt patch/diff files from whitespace checks so the diff stays
+# valid and re-appliable.
+*.patch -whitespace
+*.diff -whitespace
+
+# Vendored third-party crates (snarkVM etc.) carry their own whitespace and are not
+# ours to reformat; keep `git diff --check` from flagging trailing whitespace in
+# their LICENSE / JSON / README / resource / source files.
+rust/vendor/** -whitespace

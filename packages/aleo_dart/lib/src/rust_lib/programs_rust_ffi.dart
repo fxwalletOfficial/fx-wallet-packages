@@ -4,36 +4,13 @@ import 'package:ffi/ffi.dart';
 typedef TypeTestInRust = ffi.Int Function(ffi.Int, ffi.Int);
 typedef TypeTestInDart = int Function(int, int);
 
-typedef TypeTransferInRust = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Int,
-    ffi.Int,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
-
-typedef TypeTransferInDart = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    int,
-    int,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
-
-typedef TypeBroadcast = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
-
+// Amounts and fees cross the ABI as unsigned 64-bit microcredits (snarkVM's
+// fee/amount type); 32-bit types cannot express the legal range.
 typedef TypeAuthorizationInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
-    ffi.Int,
+    ffi.Uint64,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>);
@@ -53,93 +30,67 @@ typedef TypeUpgradeTransactionOffline = ffi.Pointer<Utf8> Function(
 typedef TypeProof = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
-typedef TypeExecuteProof = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
-
-typedef TypeExecuteProgramProof = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
-
 typedef TypeUpgradeAuthorization = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
-
-typedef TypeJoinInRust = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Int,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
-
-typedef TypeJoinInDart = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    int,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
 
 typedef TypeJoinAuthorization = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
 
-typedef TypeGetBaseFeeInRust = ffi.Int Function(
-  ffi.Pointer<Utf8>,
-  ffi.Pointer<Utf8>,
-  ffi.Pointer<Utf8>,
-);
+// --- Phase-4 ABI (network-aware) ---------------------------------------------
+// Phase 4 PR4a finalized the ABI: the proving exports moved to the enveloped,
+// cold-cache-safe `*_checked` symbols (bound by `ParameterProvisioner`), the
+// fee/authorize primitives were renamed to their canonical names, and every
+// network-typed export now takes a `network` string ("mainnet"|"testnet") that
+// dispatches the matching snarkVM monomorphization. The load-time
+// `ffi_abi_version` guard (see `AleoLib`) makes a stale/mismatched library fail
+// loudly rather than binding a renamed symbol or an argument into the wrong slot.
 
+/// `(network, arg) -> string` — `required_commitments` / `state_root_from_paths`.
+/// Both gained a `network` first arg in PR4a (they deserialize network-typed
+/// snarkVM data, so they must know the network).
+typedef TypeNetArgString = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>);
+
+/// `required_imports` is network-agnostic (a program source is plain text), so it
+/// keeps its single-argument shape.
+typedef TypeOneArgString = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8>);
+
+// consensus_version_for(network, height) -> u16
+typedef TypeConsensusVersionForRust = ffi.Uint16 Function(
+    ffi.Pointer<Utf8>, ffi.Uint32);
+typedef TypeConsensusVersionForDart = int Function(ffi.Pointer<Utf8>, int);
+
+// get_base_fee(network, execution, program_sources_json, height) -> u64
+typedef TypeGetBaseFeeInRust = ffi.Uint64 Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Uint32);
 typedef TypeGetBaseFeeInDart = int Function(
-  ffi.Pointer<Utf8>,
-  ffi.Pointer<Utf8>,
-  ffi.Pointer<Utf8>,
-);
+    ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int);
 
-typedef TypeContractExecutionInRust = ffi.Pointer<Utf8> Function(
+// execution_fee_authorization(
+//   network, private_key, execution, fee_credits, fee_record,
+//   program_sources_json, height)
+typedef TypeExecutionFeeAuthInRust = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
+    ffi.Uint64,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
-
-typedef TypeContractExecutionInDart = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
-
-typedef TypeExecuteProgramInRust = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Int,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
-
-typedef TypeExecuteProgramInDart = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>,
+    ffi.Uint32);
+typedef TypeExecutionFeeAuthInDart = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     int,
     ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
+    ffi.Pointer<Utf8>,
+    int);
 
-typedef TypeContractFeeExecutionInRust = ffi.Pointer<Utf8> Function(
+// program_authorization(
+//   network, private_key, program_id, function_name, arguments, program_sources_json)
+typedef TypeProgramAuth = ffi.Pointer<Utf8> Function(
     ffi.Pointer<Utf8>,
-    ffi.Int,
     ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>,
-    ffi.Pointer<Utf8>);
-
-typedef TypeContractFeeExecutionInDart = ffi.Pointer<Utf8> Function(
-    ffi.Pointer<Utf8>,
-    int,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
     ffi.Pointer<Utf8>,
@@ -147,40 +98,20 @@ typedef TypeContractFeeExecutionInDart = ffi.Pointer<Utf8> Function(
 
 class ProgramsRustFFI {
   final ffi.DynamicLibrary dyLib;
-  final network;
+  final String network;
 
   ProgramsRustFFI(this.dyLib, this.network);
 
-  Future<ffi.Pointer<Utf8>> transfer(
-    ffi.Pointer<Utf8> private_key,
-    ffi.Pointer<Utf8> recipient,
-    ffi.Pointer<Utf8> transfer_type,
-    int amount_credits,
-    int fee_credits,
-    ffi.Pointer<Utf8> url,
-    ffi.Pointer<Utf8> amount_record,
-    ffi.Pointer<Utf8> fee_record,
-  ) async {
-    final rustFunction = dyLib
-        .lookupFunction<TypeTransferInRust, TypeTransferInDart>('try_transfer');
-
-    return rustFunction(private_key, recipient, transfer_type, amount_credits,
-        fee_credits, url, amount_record, fee_record, this.network);
-  }
-
-  Future<ffi.Pointer<Utf8>> join(
-    ffi.Pointer<Utf8> private_key,
-    ffi.Pointer<Utf8> record_1,
-    ffi.Pointer<Utf8> record_2,
-    int fee_credits,
-    ffi.Pointer<Utf8> fee_record,
-    ffi.Pointer<Utf8> url,
-  ) async {
-    final rustFunction =
-        dyLib.lookupFunction<TypeJoinInRust, TypeJoinInDart>('try_join');
-
-    return rustFunction(private_key, record_1, record_2, fee_credits,
-        fee_record, url, this.network);
+  /// Allocates a native copy of [network] for the duration of [action] and
+  /// frees it afterwards. The native functions copy the string during the
+  /// call, so no allocation needs to outlive it.
+  T _withNetwork<T>(T Function(ffi.Pointer<Utf8> network) action) {
+    final networkPtr = network.toNativeUtf8();
+    try {
+      return action(networkPtr);
+    } finally {
+      malloc.free(networkPtr);
+    }
   }
 
   Future<ffi.Pointer<Utf8>> joinAuthorization(
@@ -193,7 +124,8 @@ class ProgramsRustFFI {
         dyLib.lookupFunction<TypeJoinAuthorization, TypeJoinAuthorization>(
             'join_authorization');
 
-    return rustFunction(private_key, record_1, record_2, url, this.network);
+    return _withNetwork((network) =>
+        rustFunction(private_key, record_1, record_2, url, network));
   }
 
   Future<ffi.Pointer<Utf8>> upgradeAuthorization(
@@ -204,36 +136,8 @@ class ProgramsRustFFI {
     final rustFunction = dyLib.lookupFunction<TypeUpgradeAuthorization,
         TypeUpgradeAuthorization>('upgrade_authorization');
 
-    return rustFunction(private_key, record, url, this.network);
-  }
-
-  Future<ffi.Pointer<Utf8>> buildTransaction(
-    ffi.Pointer<Utf8> private_key,
-    ffi.Pointer<Utf8> recipient,
-    ffi.Pointer<Utf8> transfer_type,
-    int amount_credits,
-    int fee_credits,
-    ffi.Pointer<Utf8> url,
-    ffi.Pointer<Utf8> amount_record,
-    ffi.Pointer<Utf8> fee_record,
-  ) async {
-    final rustFunction =
-        dyLib.lookupFunction<TypeTransferInRust, TypeTransferInDart>(
-            'build_transaction');
-
-    return rustFunction(private_key, recipient, transfer_type, amount_credits,
-        fee_credits, url, amount_record, fee_record, this.network);
-  }
-
-  Future<ffi.Pointer<Utf8>> broadcast(
-    ffi.Pointer<Utf8> transaction,
-    ffi.Pointer<Utf8> url,
-    ffi.Pointer<Utf8> transfer_type,
-  ) async {
-    final rustFunction =
-        dyLib.lookupFunction<TypeBroadcast, TypeBroadcast>('broadcast');
-
-    return rustFunction(transaction, url, transfer_type, this.network);
+    return _withNetwork(
+        (network) => rustFunction(private_key, record, url, network));
   }
 
   Future<ffi.Pointer<Utf8>> executionAuthorization(
@@ -248,56 +152,8 @@ class ProgramsRustFFI {
         dyLib.lookupFunction<TypeAuthorizationInRust, TypeAuthorizationInDart>(
             'execution_authorization');
 
-    return rustFunction(private_key, recipient, transfer_type, amount_credits,
-        url, amount_record, this.network);
-  }
-
-  Future<ffi.Pointer<Utf8>> executionFeeAuthorization(
-    ffi.Pointer<Utf8> private_key,
-    ffi.Pointer<Utf8> transfer_type,
-    int fee_credits,
-    ffi.Pointer<Utf8> url,
-    ffi.Pointer<Utf8> fee_record,
-    ffi.Pointer<Utf8> execution,
-  ) async {
-    final rustFunction =
-        dyLib.lookupFunction<TypeAuthorizationInRust, TypeAuthorizationInDart>(
-            'execution_fee_authorization');
-
-    return rustFunction(private_key, transfer_type, url, fee_credits,
-        fee_record, execution, this.network);
-  }
-
-  Future<ffi.Pointer<Utf8>> executeProof(
-    ffi.Pointer<Utf8> url,
-    ffi.Pointer<Utf8> authorization,
-  ) async {
-    final rustFunction = dyLib
-        .lookupFunction<TypeExecuteProof, TypeExecuteProof>('execute_proof');
-
-    return rustFunction(url, authorization, this.network);
-  }
-
-  Future<ffi.Pointer<Utf8>> executeProgramProof(
-    ffi.Pointer<Utf8> url,
-    ffi.Pointer<Utf8> authorization,
-    ffi.Pointer<Utf8> program_id,
-  ) async {
-    final rustFunction =
-        dyLib.lookupFunction<TypeExecuteProgramProof, TypeExecuteProgramProof>(
-            'execute_program_proof');
-
-    return rustFunction(url, authorization, this.network, program_id);
-  }
-
-  Future<ffi.Pointer<Utf8>> executeFeeProof(
-    ffi.Pointer<Utf8> url,
-    ffi.Pointer<Utf8> authorization,
-  ) async {
-    final rustFunction =
-        dyLib.lookupFunction<TypeProof, TypeProof>('execute_fee_proof');
-
-    return rustFunction(url, authorization, this.network);
+    return _withNetwork((network) => rustFunction(private_key, recipient,
+        transfer_type, amount_credits, url, amount_record, network));
   }
 
   Future<ffi.Pointer<Utf8>> buildTransactionOffline(
@@ -306,7 +162,7 @@ class ProgramsRustFFI {
   ) async {
     final rustFunction =
         dyLib.lookupFunction<TypeProof, TypeProof>('build_transaction_offline');
-    return rustFunction(execution, fee, this.network);
+    return _withNetwork((network) => rustFunction(execution, fee, network));
   }
 
   Future<ffi.Pointer<Utf8>> buildUpgradeTransactionOffline(
@@ -314,57 +170,90 @@ class ProgramsRustFFI {
   ) async {
     final rustFunction = dyLib.lookupFunction<TypeUpgradeTransactionOffline,
         TypeUpgradeTransactionOffline>('build_upgrade_transaction_offline');
-    return rustFunction(execution, this.network);
+    return _withNetwork((network) => rustFunction(execution, network));
   }
 
-  Future<int> getBaseFee(
-    ffi.Pointer<Utf8> url,
+  // --- Pure primitives (node I/O lives in AleoNode) --------------------------
+  // Synchronous: they compute over caller-supplied data and issue no node RPC.
+  // The network-typed ones take a `network` (threaded here via `_withNetwork`);
+  // the string-returning ones hand back a Rust-allocated pointer the caller
+  // releases through `takeNativeString`.
+
+  /// The global input-record commitments whose state paths the caller must
+  /// fetch before proving, as a JSON `[field]`. Empty for a public flow.
+  ffi.Pointer<Utf8> requiredCommitments(ffi.Pointer<Utf8> authorization) {
+    final fn = dyLib.lookupFunction<TypeNetArgString, TypeNetArgString>(
+        'required_commitments');
+    return _withNetwork((network) => fn(network, authorization));
+  }
+
+  /// The direct imports of a program source, as a JSON `[program_id]`, so the
+  /// closure walk knows what else to fetch. Network-agnostic (plain text).
+  ffi.Pointer<Utf8> requiredImports(ffi.Pointer<Utf8> programSource) {
+    final fn = dyLib
+        .lookupFunction<TypeOneArgString, TypeOneArgString>('required_imports');
+    return fn(programSource);
+  }
+
+  /// The shared global state root of a non-empty batch of state paths (for
+  /// logging/caching; proving derives it itself). "" if empty or disagreeing.
+  ffi.Pointer<Utf8> stateRootFromPaths(ffi.Pointer<Utf8> statePathsJson) {
+    final fn = dyLib.lookupFunction<TypeNetArgString, TypeNetArgString>(
+        'state_root_from_paths');
+    return _withNetwork((network) => fn(network, statePathsJson));
+  }
+
+  /// The consensus version active at [height] for this network — Dart pins one
+  /// for a whole transaction without hardcoding upgrade heights (which differ
+  /// per network).
+  int consensusVersionFor(int height) {
+    final fn = dyLib.lookupFunction<TypeConsensusVersionForRust,
+        TypeConsensusVersionForDart>('consensus_version_for');
+    return _withNetwork((network) => fn(network, height));
+  }
+
+  /// Base fee (microcredits) for an [execution] at [height]. [programSources]
+  /// supplies the execution's root program (empty for credits.aleo).
+  int getBaseFee(
     ffi.Pointer<Utf8> execution,
-  ) async {
-    final rustFunction =
-        dyLib.lookupFunction<TypeGetBaseFeeInRust, TypeGetBaseFeeInDart>(
-            'get_base_fee');
-    return rustFunction(url, execution, this.network);
+    ffi.Pointer<Utf8> programSources,
+    int height,
+  ) {
+    final fn = dyLib.lookupFunction<TypeGetBaseFeeInRust, TypeGetBaseFeeInDart>(
+        'get_base_fee');
+    return _withNetwork(
+        (network) => fn(network, execution, programSources, height));
   }
 
-  Future<ffi.Pointer<Utf8>> executeProgram(
-    ffi.Pointer<Utf8> private_key,
-    ffi.Pointer<Utf8> program_id,
-    ffi.Pointer<Utf8> function_name,
-    ffi.Pointer<Utf8> arguments,
-    int fee,
-    ffi.Pointer<Utf8> url,
-  ) async {
-    final rustFunction = dyLib.lookupFunction<TypeExecuteProgramInRust,
-        TypeExecuteProgramInDart>('execute_program');
-
-    return rustFunction(private_key, program_id, function_name, arguments, fee,
-        url, this.network);
-  }
-
-  Future<ffi.Pointer<Utf8>> contractExecution(
-    ffi.Pointer<Utf8> private_key,
-    ffi.Pointer<Utf8> program_id,
-    ffi.Pointer<Utf8> function_name,
-    ffi.Pointer<Utf8> arguments,
-    ffi.Pointer<Utf8> url,
-  ) async {
-    final rustFunction = dyLib.lookupFunction<TypeContractExecutionInRust,
-        TypeContractExecutionInDart>('contract_execution');
-    return rustFunction(
-        private_key, program_id, function_name, arguments, url, this.network);
-  }
-
-  Future<ffi.Pointer<Utf8>> contractFeeExecution(
-    ffi.Pointer<Utf8> private_key,
-    int fee,
+  /// Authorizes the fee for a proven [execution] at [height]. An empty
+  /// [feeRecord] is a public fee, otherwise a private fee spending that record.
+  ffi.Pointer<Utf8> executionFeeAuthorization(
+    ffi.Pointer<Utf8> privateKey,
     ffi.Pointer<Utf8> execution,
-    ffi.Pointer<Utf8> program_id,
-    ffi.Pointer<Utf8> url,
-  ) async {
-    final rustFunction = dyLib.lookupFunction<TypeContractFeeExecutionInRust,
-        TypeContractFeeExecutionInDart>('contract_fee_execution');
-    return rustFunction(
-        private_key, fee, execution, program_id, url, this.network);
+    int feeCredits,
+    ffi.Pointer<Utf8> feeRecord,
+    ffi.Pointer<Utf8> programSources,
+    int height,
+  ) {
+    final fn = dyLib.lookupFunction<TypeExecutionFeeAuthInRust,
+        TypeExecutionFeeAuthInDart>('execution_fee_authorization');
+    return _withNetwork((network) => fn(network, privateKey, execution,
+        feeCredits, feeRecord, programSources, height));
+  }
+
+  /// Builds an execution authorization for an arbitrary program function offline.
+  /// [arguments] is a JSON array of Aleo value strings (record inputs already
+  /// plaintext); [programSources] supplies the program (empty for credits.aleo).
+  ffi.Pointer<Utf8> programAuthorization(
+    ffi.Pointer<Utf8> privateKey,
+    ffi.Pointer<Utf8> programId,
+    ffi.Pointer<Utf8> functionName,
+    ffi.Pointer<Utf8> arguments,
+    ffi.Pointer<Utf8> programSources,
+  ) {
+    final fn = dyLib.lookupFunction<TypeProgramAuth, TypeProgramAuth>(
+        'program_authorization');
+    return _withNetwork((network) => fn(network, privateKey, programId,
+        functionName, arguments, programSources));
   }
 }

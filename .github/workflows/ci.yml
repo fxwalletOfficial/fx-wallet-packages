@@ -1,10 +1,31 @@
 name: CI
 
+# Monorepo-wide Dart/Flutter CI: melos bootstrap + analyze/format/test across all
+# packages. Path-filtered with `paths-ignore` so changes that can't affect the Dart
+# build — the Rust crate (covered by rust.yml) plus docs/license — don't trigger a
+# full melos run. `paths-ignore` (rather than an allow-list) fails toward running
+# CI, so a newly-added Dart path is never silently skipped.
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'epic/**' ]
+    paths-ignore:
+      - 'rust/**'
+      - '**.md'
+      - 'LICENSE'
+      - '.github/workflows/rust.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'epic/**' ]
+    paths-ignore:
+      - 'rust/**'
+      - '**.md'
+      - 'LICENSE'
+      - '.github/workflows/rust.yml'
+
+# Cancel a superseded in-progress run on the same ref (e.g. rapid pushes to a PR)
+# so only the latest commit keeps a runner.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
