@@ -39,6 +39,13 @@ readelf_bin() {
 }
 READELF="$(readelf_bin)"
 
+# Ensure the Rust std for every Android ABI is present. cargo-ndk does NOT add
+# targets itself, and a fresh toolchain (CI's `rustup show`, or a clean machine)
+# only has the host target -> otherwise the build dies with
+# `can't find crate for core` / "target may not be installed". Idempotent:
+# `rustup target add` is a no-op when the target is already installed.
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+
 echo "Building Android ABIs (arm64-v8a, armeabi-v7a, x86_64) into $OUT ..."
 cargo ndk \
   -t arm64-v8a -t armeabi-v7a -t x86_64 \
