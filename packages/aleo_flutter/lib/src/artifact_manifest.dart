@@ -40,10 +40,11 @@ const String aleoAndroidArtifactUrl =
 
 /// SHA-256 (lowercase hex) the downloaded iOS asset must hash to.
 ///
-/// Placeholder (all-zero) until the first release is built and uploaded — PR6b
-/// wires the release pipeline and pins these. Until then the build scripts treat
-/// an all-zero hash as "unset" and require a local build (the LOCAL-override
-/// path; see `pr6a-impl-notes.md`).
+/// Pinned to the published [aleoFfiReleaseTag] release asset
+/// (`AleoRust.xcframework.zip`). The build scripts verify the downloaded asset
+/// against this value before bundling. (An all-zero value is treated as "unset"
+/// and forces the LOCAL-override path; see `pr6a-impl-notes.md`. Re-pin with
+/// `tool/pin_artifact_sha.sh` whenever the release is rebuilt.)
 const String aleoIosArtifactSha256 =
     '7f7673c6de687c5ca0de1c2d47515ffda6c7e26e1f3ba27aee10ea4ce32e391f';
 
