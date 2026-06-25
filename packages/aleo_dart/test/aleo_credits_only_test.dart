@@ -24,14 +24,20 @@ void main() {
   late int requests;
   late String url;
   late AleoProgram program;
+  // Per-test request handler. Default: count the hit and 500 (the "must not reach
+  // / unreachable node" cases). A test can replace it to serve real responses.
+  late Future<void> Function(HttpRequest req) handler;
 
   setUp(() async {
     requests = 0;
-    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    server.listen((req) {
-      requests++;
+    handler = (req) async {
       req.response.statusCode = 500;
-      req.response.close();
+      await req.response.close();
+    };
+    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((req) async {
+      requests++;
+      await handler(req);
     });
     url = 'http://${server.address.host}:${server.port}';
     if (dyLib != null) program = AleoProgram(dyLib, 'testnet');
@@ -131,5 +137,51 @@ void main() {
     expect(decoded, contains('transitions'));
     expect(requests, 0,
         reason: 'credits.aleo is built in — no node fetch for its empty closure');
+  });
+
+  // Positive (the main token path): a custom program is fetched from the node
+  // (latest_edition + source), loaded, and authorized — contractExecution returns
+  // a real authorization with requests/transitions, proving the closure→authorize
+  // path works end to end (not just that a request happened).
+  test('contractExecution fetches + authorizes a custom program from the node',
+      () async {
+    if (dyLib == null) {
+      markTestSkipped(nativeLibMissingReason);
+      return;
+    }
+    const programId = 'unit_test_token.aleo';
+    const source = 'program unit_test_token.aleo;\n'
+        '\n'
+        'function transfer_public:\n'
+        '    input r0 as address.public;\n'
+        '    input r1 as u64.public;\n'
+        '    add r1 r1 into r2;\n'
+        '    output r2 as u64.public;\n';
+    // Serve latest_edition (bare int) then the source (JSON-quoted) for any id —
+    // this program imports nothing, so its closure is just itself.
+    handler = (req) async {
+      if (req.uri.path.endsWith('/latest_edition')) {
+        req.response.write('0');
+      } else {
+        req.response.write(json.encode(source));
+      }
+      await req.response.close();
+    };
+    const privateKey =
+        'APrivateKey1zkpC2CbihCvUyg8zcNXTngzGpmCzKTF8uZP4jfyu3LdfT8v';
+    final recipient = AleoAccount(dyLib).privateKeyToAddress(privateKey);
+    final auth = await program.contractExecution(
+      privateKey,
+      programId,
+      'transfer_public',
+      '["$recipient", "100u64"]',
+      url,
+    );
+    expect(auth, isNotEmpty);
+    final decoded = json.decode(auth) as Map<String, dynamic>;
+    expect(decoded, contains('requests'));
+    expect(decoded, contains('transitions'));
+    expect(requests, greaterThan(0),
+        reason: 'a custom program is fetched from the node before authorizing');
   });
 }

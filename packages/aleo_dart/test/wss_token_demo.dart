@@ -60,16 +60,20 @@ Future<void> main() async {
     arguments,
     nodeUrl,
   );
-  // Fail fast locally if the authorization is empty/malformed, instead of sending
-  // garbage to the prove server and getting an opaque remote error.
-  _requireAuthorization(authorizationJson, 'execution authorization');
+  // Normalize to the structure the prove server expects (pair each request with
+  // its transition), matching the wallet's isolate_tx CONTRACT path and the other
+  // wss_*_demo flows — the server's /wallet/aleo/execute entry expects this shape.
+  final authorization = rustLib.modifyAuthorization(authorizationJson);
+  // Fail fast locally if it's empty/malformed, instead of sending garbage to the
+  // prove server and getting an opaque remote error.
+  _requireAuthorization(authorization, 'execution authorization');
 
   final channel = IOWebSocketChannel.connect(wss);
 
   channel.sink.add(json.encode({
     'transfer_type': transfer_type,
     'method': 'amount',
-    'authorization': authorizationJson,
+    'authorization': authorization,
     'program_id': program_id,
   }));
 

@@ -51,11 +51,12 @@
   export takes a `network` (`"mainnet"`/`"testnet"`); proving goes through
   `ParameterProvisioner` (preflight → download proving keys → the checked proving
   path), so a cold parameter cache is provisioned cleanly.
-- **Custom-program proving is not supported in this version (credits-only).**
-  `executeProgram`, `contractExecution`, `contractFeeExecution`, and
-  `executeProgramProof` now reject a non-`credits.aleo` program with
-  `unsupported_feature`, deterministically and before any node I/O. The methods are
-  retained for API stability; arbitrary-program support is a future version.
+- **On-device proving is credits-only.** `executeProgram` and `executeProgramProof`
+  reject a non-`credits.aleo` program with `unsupported_feature`, deterministically
+  and before any node I/O (a custom program's on-device proving keys cannot be
+  provisioned). The authorize-only contract paths (`contractExecution` /
+  `contractFeeExecution`) are **not** restricted — see the entry above; they accept
+  any program and delegate proving to the server.
 - `DyLib`'s `getDyLibFromCargo` paths now point at the clean-room `aleo_ffi` crate's
   build output (`../../rust/aleo_ffi/target/release/`) instead of the GPL
   `aleo_rust` crate; the artifact filename is unchanged (`libaleo_rust`).
