@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:crypto_wallet_util/src/config/config.dart';
 import '../transaction/script_public_key.dart';
 import '../utils/converter.dart';
 
@@ -58,7 +59,16 @@ class TransactionOutput {
   }
 
   /// Get the address of the transaction output.
-  String getAddress({bool isTestnet = false}) {
-    return _scriptPubKey.getAddress(isTestnet: isTestnet);
+  /// [chain] is used to look up the correct version bytes for address encoding.
+  String getAddress({bool isTestnet = false, String chain = 'btc'}) {
+    final chainConf = getChainConfig(chain);
+    final networkType = isTestnet
+        ? chainConf.testnet.networkType
+        : chainConf.mainnet.networkType;
+    return _scriptPubKey.getAddress(
+        isTestnet: isTestnet,
+        pubKeyHashVersion: networkType?.pubKeyHash ?? 0x00,
+        scriptHashVersion: networkType?.scriptHash ?? 0x05,
+        bech32Hrp: networkType?.bech32 ?? 'bc');
   }
 }
