@@ -13,6 +13,12 @@ import 'package:xrandom/xrandom.dart';
 class FragmentUR extends UR {
   static const int maxUint32 = 0xffffffff;
 
+  /// Defensive upper bound on fragment count. Far beyond any real animated-QR
+  /// message, it stops a hostile `seqLen` from OOM-ing `List.generate(seqLen)`
+  /// on the streaming read path (a Dart Error that would escape read()'s
+  /// `on URException` catch and kill the scan loop).
+  static const int maxSeqLength = 0x10000;
+
   final int messageLength;
   final int checksum;
   final Uint8List part;
@@ -67,7 +73,7 @@ class FragmentUR extends UR {
     required Uint8List part,
     required String input,
   }) {
-    if (seqNum <= 0 || seqNum > maxUint32 || seqLength <= 0 || seqLength > maxUint32 || messageLength <= 0 || checksum < 0 || checksum > maxUint32 || part.isEmpty) {
+    if (seqNum <= 0 || seqNum > maxUint32 || seqLength <= 0 || seqLength > maxSeqLength || messageLength <= 0 || checksum < 0 || checksum > maxUint32 || part.isEmpty) {
       throw InvalidSequenceURException(value: input);
     }
 
