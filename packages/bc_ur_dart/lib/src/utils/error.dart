@@ -13,15 +13,14 @@ class InvalidFormatURException extends URException {
 }
 
 class InvalidSequenceURException extends URException {
-  InvalidSequenceURException({required String value}) : super(type: URExceptionType.invalidFormat, message: value);
+  InvalidSequenceURException({required String value}) : super(type: URExceptionType.invalidSequence, message: value);
 }
 
-enum URExceptionType {
-  invalidFormat,
-  invalidSequence,
-  invalidType,
-  invalidParams
+class InvalidChecksumURException extends URException {
+  InvalidChecksumURException({required String value}) : super(type: URExceptionType.invalidChecksum, message: value);
 }
+
+enum URExceptionType { invalidFormat, invalidSequence, invalidType, invalidParams, invalidChecksum }
 
 extension _URExceptionTypeExtension on URExceptionType {
   String toPrettyDescription() {
@@ -34,6 +33,8 @@ extension _URExceptionTypeExtension on URExceptionType {
         return 'Invalid Type';
       case URExceptionType.invalidParams:
         return 'Invalid Params';
+      case URExceptionType.invalidChecksum:
+        return 'Invalid Checksum';
     }
   }
 }
