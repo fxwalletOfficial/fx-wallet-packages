@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/src/models/common/seq.dart';
 import 'package:bc_ur_dart/src/ur.dart';
 import 'package:bc_ur_dart/src/utils/byte_words.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
 import 'package:cbor/cbor.dart';
 import 'package:convert/convert.dart';
@@ -10,6 +11,8 @@ import 'package:xrandom/xrandom.dart';
 
 /// Fragment of UR.
 class FragmentUR extends UR {
+  static const int maxUint32 = 0xffffffff;
+
   final int messageLength;
   final int checksum;
   final Uint8List part;
@@ -18,40 +21,61 @@ class FragmentUR extends UR {
   List<int> get indexes => _indexes;
   bool get isSimple => _indexes.length == 1;
 
-  FragmentUR({required super.type, required URSeq seq, required this.messageLength, required this.checksum, required this.part}) : super.fromCBOR(
-    seq: seq,
-    value: CborList([
-      CborSmallInt(seq.num),
-      CborSmallInt(seq.length),
-      CborSmallInt(messageLength),
-      CborSmallInt(checksum),
-      CborBytes(part)
-    ])
-  ) {
+  FragmentUR({required super.type, required URSeq seq, required this.messageLength, required this.checksum, required this.part})
+      : super.fromCBOR(seq: seq, value: CborList([CborSmallInt(seq.num), CborSmallInt(seq.length), CborSmallInt(messageLength), CborSmallInt(checksum), CborBytes(part)])) {
     setIndexes();
   }
 
   /// Generate fragment from simple UR. Only UR with valid seq can be generate.
   static FragmentUR fromUR({required UR ur}) {
-    final data = ur.decodeCBOR();
-    if (data is! CborList || data.length != 5) throw Exception('Invalid fragment ur');
+    late final CborValue data;
+    try {
+      data = ur.decodeCBOR();
+    } catch (_) {
+      throw InvalidFormatURException(input: ur.encode());
+    }
+    if (data is! CborList || data.length != 5) throw InvalidFormatURException(input: ur.encode());
+    if (data[0] is! CborInt || data[1] is! CborInt || data[2] is! CborInt || data[3] is! CborInt || data[4] is! CborBytes) {
+      throw InvalidFormatURException(input: ur.encode());
+    }
 
     final seqNum = (data[0] as CborInt).toInt();
     final seqLength = (data[1] as CborInt).toInt();
     final messageLength = (data[2] as CborInt).toInt();
     final checksum = (data[3] as CborInt).toInt();
     final part = Uint8List.fromList((data[4] as CborBytes).bytes);
-
-    final item = FragmentUR(
-      seq: URSeq(num: seqNum, length: seqLength),
+    _validateFields(
+      seqNum: seqNum,
+      seqLength: seqLength,
       messageLength: messageLength,
       checksum: checksum,
       part: part,
-      type: ur.type
+      input: ur.encode(),
     );
+
+    final item = FragmentUR(seq: URSeq(num: seqNum, length: seqLength), messageLength: messageLength, checksum: checksum, part: part, type: ur.type);
 
     item.setIndexes();
     return item;
+  }
+
+  static void _validateFields({
+    required int seqNum,
+    required int seqLength,
+    required int messageLength,
+    required int checksum,
+    required Uint8List part,
+    required String input,
+  }) {
+    if (seqNum <= 0 || seqNum > maxUint32 || seqLength <= 0 || seqLength > maxUint32 || messageLength <= 0 || checksum < 0 || checksum > maxUint32 || part.isEmpty) {
+      throw InvalidSequenceURException(value: input);
+    }
+
+    final minMessageLength = (seqLength - 1) * part.length;
+    final maxMessageLength = seqLength * part.length;
+    if (messageLength <= minMessageLength || messageLength > maxMessageLength) {
+      throw InvalidSequenceURException(value: input);
+    }
   }
 
   /// Generate fragment indexes for packet final UR.
@@ -62,7 +86,7 @@ class FragmentUR extends UR {
     }
 
     if (seq.num <= seq.length) {
-      _indexes = [seq.num -1];
+      _indexes = [seq.num - 1];
       return;
     }
 

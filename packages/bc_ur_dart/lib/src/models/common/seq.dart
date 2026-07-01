@@ -1,3 +1,5 @@
+import 'package:bc_ur_dart/src/utils/error.dart';
+
 class URSeq {
   int length;
   int num;
@@ -10,9 +12,10 @@ class URSeq {
     final components = value.split('-');
     if (components.length != 2) return URSeq(num: 0, length: 0);
 
-    final num = int.parse(components[0]);
-    final length = int.parse(components[1]);
-    if (num <= 0 || length <= 0) return URSeq(num: 0, length: 0);
+    final num = int.tryParse(components[0]);
+    final length = int.tryParse(components[1]);
+    if (num == null || length == null) throw InvalidSequenceURException(value: value);
+    if (num <= 0 || length <= 0) throw InvalidSequenceURException(value: value);
 
     return URSeq(num: num, length: length);
   }

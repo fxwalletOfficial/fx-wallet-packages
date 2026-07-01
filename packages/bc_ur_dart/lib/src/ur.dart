@@ -65,7 +65,7 @@ class UR {
 
   UR({String type = '', Uint8List? payload, URSeq? seq, this.minLength = 10, this.maxLength = 100}) {
     _type = type;
-    _payload = payload ?? Uint8List(0);
+    _setPayload(payload ?? Uint8List(0));
     _seq.copy(seq);
   }
 
@@ -84,7 +84,7 @@ class UR {
   /// Generate UR by CBOR object.
   UR.fromCBOR({required String type, required CborValue value, URSeq? seq, this.minLength = 10, this.maxLength = 100}) {
     _type = type;
-    _payload = Uint8List.fromList(cbor.encode(value));
+    _setPayload(Uint8List.fromList(cbor.encode(value)));
     if (seq != null) _seq.copy(seq);
   }
 
@@ -98,15 +98,27 @@ class UR {
   bool read(String value) {
     if (isComplete) return false;
 
-    final ur = UR.decode(value);
+    late final UR ur;
+    try {
+      ur = UR.decode(value);
+    } on URException {
+      return false;
+    }
+
     // It is only a single body, just get data and return.
     if (!ur.isFragment) {
+      if (_type.isNotEmpty) return false;
       _type = ur.type;
-      _payload = ur.payload;
+      _setPayload(ur.payload);
       return true;
     }
 
-    final fragment = FragmentUR.fromUR(ur: ur);
+    late final FragmentUR fragment;
+    try {
+      fragment = FragmentUR.fromUR(ur: ur);
+    } on URException {
+      return false;
+    }
     if (!_check(fragment) || !(fragment.seq == ur.seq)) return false;
 
     _queuedParts.add(fragment);
@@ -120,11 +132,7 @@ class UR {
   /// Check expected target when read fragment UR. Set data when read first and compare others.
   bool _check(FragmentUR ur) {
     if (_type.isNotEmpty) {
-      return _type == ur.type &&
-        seq.length == ur.seq.length &&
-        _expectedMessageLength == ur.messageLength &&
-        _expectedChecksum == ur.checksum &&
-        _expectedFragmentLength == ur.part.length;
+      return _type == ur.type && seq.length == ur.seq.length && _expectedMessageLength == ur.messageLength && _expectedChecksum == ur.checksum && _expectedFragmentLength == ur.part.length;
     }
 
     _type = ur.type;
@@ -133,10 +141,8 @@ class UR {
     _expectedChecksum = ur.checksum;
     _expectedFragmentLength = ur.part.length;
 
-    if (seq.length > 0) {
-      _expectedPartIndexes.clear();
-      _expectedPartIndexes.addAll(List.generate(ur.seq.length, (i) => i));
-    }
+    _expectedPartIndexes.clear();
+    _expectedPartIndexes.addAll(List.generate(ur.seq.length, (i) => i));
 
     return true;
   }
@@ -162,7 +168,16 @@ class UR {
     if (arraysEqual(_receivedPartIndexes, _expectedPartIndexes)) {
       // Reassemble the message from its fragments
       _simpleParts.sort((a, b) => (a.indexes[0] - b.indexes[0]));
-      _payload = _simpleParts.map((e) => e.part).reduce((a, b) => Uint8List.fromList(a + b)).sublist(0, _expectedMessageLength);
+      final builder = BytesBuilder(copy: false);
+      for (final part in _simpleParts) {
+        builder.add(part.part);
+      }
+      final payload = builder.takeBytes().sublist(0, _expectedMessageLength);
+      if (CRC32.compute(payload) != _expectedChecksum) {
+        _resetReadState();
+        return;
+      }
+      _setPayload(payload);
     } else {
       _reduceMixedBy(fragment);
     }
@@ -189,7 +204,7 @@ class UR {
 
     for (final item in _mixedParts) {
       final ur = _reducePartByPart(item, fragment);
-      ur.isSimple ? _queuedParts.add(item) : newMixed.add(ur);
+      ur.isSimple ? _queuedParts.add(ur) : newMixed.add(ur);
     }
 
     _mixedParts.clear();
@@ -207,13 +222,7 @@ class UR {
       newPart[i] = a.part[i] ^ b.part[i];
     }
 
-    final item = FragmentUR(
-      type: a.type,
-      seq: URSeq(num: a.seq.num, length: a.seq.length),
-      messageLength: _expectedMessageLength,
-      checksum: a.crc,
-      part: newPart
-    );
+    final item = FragmentUR(type: a.type, seq: URSeq(num: a.seq.num, length: a.seq.length), messageLength: a.messageLength, checksum: a.checksum, part: newPart);
     item.setIndexes(value: newIndexes);
     return item;
   }
@@ -224,32 +233,44 @@ class UR {
     return _crc;
   }
 
+  void _setPayload(Uint8List value) {
+    _payload = value;
+    _crc = -1;
+  }
+
+  void _resetReadState() {
+    _type = '';
+    _setPayload(Uint8List(0));
+    seq.num = 0;
+    seq.length = 0;
+    _expectedMessageLength = 0;
+    _expectedChecksum = 0;
+    _expectedFragmentLength = 0;
+    _expectedPartIndexes.clear();
+    _receivedPartIndexes.clear();
+    _mixedParts.clear();
+    _queuedParts.clear();
+    _simpleParts.clear();
+  }
+
+  void reset() {
+    _resetReadState();
+  }
+
   /// Get next UR. If payload is shorter than [maxLength], it will return the same value of [encode]. If not, it will return fragment.
   /// Be ensure to return enough fragments to complete full data.
   String next() {
     if (_fragments.isEmpty) _partition();
     if (_fragments.length <= 1) return encode();
 
-    _seqNum++;
-    final item = FragmentUR(
-      type: type,
-      seq: URSeq(num: _seqNum, length: _fragments.length),
-      messageLength: payload.length,
-      checksum: crc,
-      part: Uint8List(0)
-    );
+    _seqNum = (_seqNum % FragmentUR.maxUint32) + 1;
+    final item = FragmentUR(type: type, seq: URSeq(num: _seqNum, length: _fragments.length), messageLength: payload.length, checksum: crc, part: Uint8List(0));
     item.setIndexes();
 
     final indexes = List<int>.from(item.indexes);
     final mixed = _mix(indexes);
 
-    final fragment = FragmentUR(
-      type: type,
-      seq: URSeq(num: _seqNum, length: _fragments.length),
-      messageLength: payload.length,
-      checksum: crc,
-      part: mixed
-    );
+    final fragment = FragmentUR(type: type, seq: URSeq(num: _seqNum, length: _fragments.length), messageLength: payload.length, checksum: crc, part: mixed);
     fragment.setIndexes(value: indexes);
 
     return fragment.encode();
@@ -258,16 +279,13 @@ class UR {
   /// Split data to fragment.
   void _partition() {
     final length = _getFragmentLength();
-    List<int> remaining = List.from(payload);
     final items = <Uint8List>[];
 
-    while (remaining.isNotEmpty) {
-      final len = length > remaining.length ? remaining.length : length;
-      List<int> item = remaining.sublist(0, len);
-      remaining = remaining.sublist(len);
-
-      if (item.length < length) item = item + List.filled(length - item.length, 0);
-      items.add(Uint8List.fromList(item));
+    for (var offset = 0; offset < payload.length; offset += length) {
+      final end = min(offset + length, payload.length);
+      final item = Uint8List(length);
+      item.setRange(0, end - offset, payload, offset);
+      items.add(item);
     }
 
     _fragments.clear();
