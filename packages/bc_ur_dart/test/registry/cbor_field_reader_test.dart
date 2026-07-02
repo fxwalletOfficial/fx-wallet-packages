@@ -78,9 +78,7 @@ void main() {
       expect(
         () => reader.requiredInt(1, field: 'master_fingerprint', max: 0xffffffff),
         throwsA(
-          isA<InvalidCborURException>()
-              .having((e) => e.message, 'message', contains('test-model.master_fingerprint'))
-              .having((e) => e.message, 'message', contains('expected <= 4294967295')),
+          isA<InvalidCborURException>().having((e) => e.message, 'message', contains('test-model.master_fingerprint')).having((e) => e.message, 'message', contains('expected <= 4294967295')),
         ),
       );
     });

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/cbor_value.dart';
 import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:cbor/cbor.dart';
 
@@ -46,19 +47,15 @@ class CborFieldReader {
     if (value is! CborBytes) {
       throw _wrongType(field, 'CborBytes', value);
     }
-    final bytes = Uint8List.fromList(value.bytes);
-    if (length != null && bytes.length != length) {
-      throw InvalidCborURException(model: model, field: field, reason: 'expected $length bytes, got ${bytes.length}');
+    final bytes = cborBytesOrNull(value, length: length);
+    if (bytes == null) {
+      throw InvalidCborURException(model: model, field: field, reason: 'expected $length bytes, got ${value.bytes.length}');
     }
     return bytes;
   }
 
   Uint8List? optionalBytes(int key, {required String field, int? length}) {
-    final value = optionalValue(key);
-    if (value is! CborBytes) return null;
-    final bytes = Uint8List.fromList(value.bytes);
-    if (length != null && bytes.length != length) return null;
-    return bytes;
+    return cborBytesOrNull(optionalValue(key), length: length);
   }
 
   CborMap requiredMap(int key, {required String field}) {
@@ -70,8 +67,7 @@ class CborFieldReader {
   }
 
   CborMap? optionalMap(int key, {required String field}) {
-    final value = optionalValue(key);
-    return value is CborMap ? value : null;
+    return cborMapOrNull(optionalValue(key));
   }
 
   CborList requiredList(int key, {required String field}) {
@@ -98,12 +94,7 @@ class CborFieldReader {
   }
 
   int? optionalInt(int key, {required String field, int? min, int? max}) {
-    final value = optionalValue(key);
-    if (value is! CborInt) return null;
-    final number = value.toBigInt();
-    if (min != null && number < BigInt.from(min)) return null;
-    if (max != null && number > BigInt.from(max)) return null;
-    return number.toInt();
+    return cborIntOrNull(optionalValue(key), min: min, max: max);
   }
 
   BigInt requiredBigInt(int key, {required String field, BigInt? min, BigInt? max}) {
@@ -111,14 +102,15 @@ class CborFieldReader {
     if (value is! CborInt) {
       throw _wrongType(field, 'CborInt', value);
     }
-    final number = value.toBigInt();
-    if (min != null && number < min) {
-      throw InvalidCborURException(model: model, field: field, reason: 'expected >= $min, got $number');
+    final raw = value.toBigInt();
+    final number = cborBigIntOrNull(value, min: min, max: max);
+    if (number == null && min != null && raw < min) {
+      throw InvalidCborURException(model: model, field: field, reason: 'expected >= $min, got $raw');
     }
-    if (max != null && number > max) {
-      throw InvalidCborURException(model: model, field: field, reason: 'expected <= $max, got $number');
+    if (number == null && max != null && raw > max) {
+      throw InvalidCborURException(model: model, field: field, reason: 'expected <= $max, got $raw');
     }
-    return number;
+    return number!;
   }
 
   String requiredText(int key, {required String field}) {
@@ -130,13 +122,11 @@ class CborFieldReader {
   }
 
   String? optionalText(int key, {required String field}) {
-    final value = optionalValue(key);
-    return value is CborString ? value.toString() : null;
+    return cborTextOrNull(optionalValue(key));
   }
 
   bool? optionalBool(int key, {required String field}) {
-    final value = optionalValue(key);
-    return value is CborBool ? value.value : null;
+    return cborBoolOrNull(optionalValue(key));
   }
 
   int requiredEnumIndex(int key, {required String field, required int valuesLength}) {

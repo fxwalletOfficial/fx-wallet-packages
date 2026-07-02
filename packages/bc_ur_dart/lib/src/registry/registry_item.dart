@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
+import 'package:bc_ur_dart/src/utils/cbor_value.dart';
 
 abstract class RegistryItem {
   RegistryType getRegistryType();
@@ -89,30 +90,18 @@ abstract class RegistryItem {
   // =========================
 
   static Uint8List readBytes(CborMap map, int key) {
-    final v = map[CborSmallInt(key)];
-    if (v is CborBytes) {
-      return Uint8List.fromList(v.bytes);
-    }
-    throw ArgumentError("Invalid bytes at key $key");
+    return cborBytesOrNull(map[CborSmallInt(key)]) ?? (throw ArgumentError("Invalid bytes at key $key"));
   }
 
   /// 读取普通整数，CborSmallInt 是 CborInt 子类，一个 if 覆盖两种情况
   static int readInt(CborMap map, int key) {
-    final v = map[CborSmallInt(key)];
-    if (v is CborInt) {
-      return v.toInt();
-    }
-    throw ArgumentError("Invalid int at key $key");
+    return cborIntOrNull(map[CborSmallInt(key)]) ?? (throw ArgumentError("Invalid int at key $key"));
   }
 
   /// 读取大整数，用于 chain-id / 余额等超大数字场景
   /// 典型场景：ETH chain-id、ERC-20 token 数量（wei）
   static BigInt readBigInt(CborMap map, int key) {
-    final v = map[CborSmallInt(key)];
-    if (v is CborInt) {
-      return v.toBigInt();
-    }
-    throw ArgumentError("Invalid bigint at key $key");
+    return cborBigIntOrNull(map[CborSmallInt(key)]) ?? (throw ArgumentError("Invalid bigint at key $key"));
   }
 
   /// 读取可选字段，Keystone 很多字段是 optional
@@ -128,9 +117,7 @@ abstract class RegistryItem {
 
   static String? readOptionalText(CborMap map, int key) {
     if (!hasKey(map, key)) return null;
-    final v = map[CborSmallInt(key)];
-    if (v is CborString) return v.toString();
-    throw ArgumentError("Invalid text at key $key");
+    return cborTextOrNull(map[CborSmallInt(key)]) ?? (throw ArgumentError("Invalid text at key $key"));
   }
 
   static String readText(CborMap map, int key) {
