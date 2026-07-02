@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:cbor/cbor.dart';
 
 class BtcSignature extends UR {
@@ -16,12 +17,16 @@ class BtcSignature extends UR {
   });
 
   factory BtcSignature.fromUR({required UR ur}) {
-    if (ur.type.toUpperCase() != RegistryType.CRYPTO_PSBT.type.toUpperCase()) {
-      throw Exception('Invalid type: ${ur.type}');
+    final expectedType = RegistryType.CRYPTO_PSBT.type;
+    if (ur.type.toUpperCase() != expectedType.toUpperCase()) {
+      throw InvalidTypeURException(expected: expectedType, actual: ur.type);
     }
 
-    final psbtBytes = ur.decodeCBOR() as CborBytes;
-    final signature = Uint8List.fromList(psbtBytes.bytes);
+    final decoded = ur.decodeCBOR();
+    if (decoded is! CborBytes) {
+      throw InvalidCborURException(model: 'crypto-psbt', reason: 'expected top-level CborBytes, got ${decoded.runtimeType}');
+    }
+    final signature = Uint8List.fromList(decoded.bytes);
 
     return BtcSignature(
       signature: signature,

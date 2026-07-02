@@ -20,7 +20,20 @@ class InvalidChecksumURException extends URException {
   InvalidChecksumURException({required String value}) : super(type: URExceptionType.invalidChecksum, message: value);
 }
 
-enum URExceptionType { invalidFormat, invalidSequence, invalidType, invalidParams, invalidChecksum }
+class InvalidTypeURException extends URException {
+  InvalidTypeURException({required String expected, required String actual}) : super(type: URExceptionType.invalidType, message: 'expected $expected, got $actual');
+}
+
+class InvalidCborURException extends URException {
+  final String model;
+  final String? field;
+  final Object? cause;
+
+  InvalidCborURException({required this.model, this.field, required String reason, this.cause})
+      : super(type: URExceptionType.invalidCbor, message: field == null ? '$model: $reason' : '$model.$field: $reason');
+}
+
+enum URExceptionType { invalidFormat, invalidSequence, invalidType, invalidParams, invalidChecksum, invalidCbor }
 
 extension _URExceptionTypeExtension on URExceptionType {
   String toPrettyDescription() {
@@ -35,6 +48,8 @@ extension _URExceptionTypeExtension on URExceptionType {
         return 'Invalid Params';
       case URExceptionType.invalidChecksum:
         return 'Invalid Checksum';
+      case URExceptionType.invalidCbor:
+        return 'Invalid CBOR';
     }
   }
 }

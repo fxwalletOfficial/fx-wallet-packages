@@ -93,27 +93,19 @@ class KeystoneCosmosSignRequest extends RegistryItem {
       );
     }
 
-    final derivationPaths = derivationPathValue
-        .toList()
-        .whereType<CborMap>()
-        .map((item) => CryptoKeypath().decodeFromCbor(item) as CryptoKeypath)
-        .toList();
+    final derivationPaths = derivationPathValue.toList().whereType<CborMap>().map((item) => CryptoKeypath().decodeFromCbor(item) as CryptoKeypath).toList();
 
     if (derivationPaths.isEmpty) {
       throw Exception('KeystoneCosmosSignRequest: derivationPaths must not be empty.');
     }
 
     final addressesValue = map[CborSmallInt(_KeystoneCosmosKeys.addresses.index)];
-    final List<String>? addresses = addressesValue is CborList
-        ? addressesValue.toList().whereType<CborString>().map((item) => item.toString()).toList()
-        : null;
+    final List<String>? addresses = addressesValue is CborList ? addressesValue.toList().whereType<CborString>().map((item) => item.toString()).toList() : null;
 
     return KeystoneCosmosSignRequest(
       requestId: RegistryItem.readOptionalBytes(map, _KeystoneCosmosKeys.requestId.index),
       signData: RegistryItem.readBytes(map, _KeystoneCosmosKeys.signData.index),
-      dataType: dataTypeIndex >= 0 && dataTypeIndex < CosmosDataType.values.length
-          ? CosmosDataType.values[dataTypeIndex]
-          : CosmosDataType.amino,
+      dataType: dataTypeIndex >= 0 && dataTypeIndex < CosmosDataType.values.length ? CosmosDataType.values[dataTypeIndex] : CosmosDataType.amino,
       derivationPaths: derivationPaths,
       addresses: addresses,
       origin: RegistryItem.readOptionalText(map, _KeystoneCosmosKeys.origin.index),

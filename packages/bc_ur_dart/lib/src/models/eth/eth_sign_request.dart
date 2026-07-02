@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
+import 'package:bc_ur_dart/src/registry/cbor_field_reader.dart';
+import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto_wallet_util/utils.dart' hide fromHex;
 
@@ -18,34 +20,16 @@ class EthSignRequestUR extends UR {
 
   EthTxType get txType => _tx.txType;
 
-  EthTxData _tx = Eip1559TxData(
-      data: EthTxDataRaw(nonce: 0, gasLimit: 0, value: BigInt.zero),
-      network: TxNetwork(chainId: 1));
+  EthTxData _tx = Eip1559TxData(data: EthTxDataRaw(nonce: 0, gasLimit: 0, value: BigInt.zero), network: TxNetwork(chainId: 1));
   EthTxData get tx => _tx;
 
-  EthSignRequestUR(
-      {required UR ur,
-      required this.uuid,
-      required this.chainId,
-      required this.dataType,
-      required this.data,
-      required this.address,
-      required this.xfp,
-      this.origin = ''})
+  EthSignRequestUR({required UR ur, required this.uuid, required this.chainId, required this.dataType, required this.data, required this.address, required this.xfp, this.origin = ''})
       : super(payload: ur.payload, type: ur.type);
 
   factory EthSignRequestUR.fromTypedTransaction(
-      {required EthTxData tx,
-      required String address,
-      required String path,
-      required String origin,
-      required String xfp,
-      bool xfpReverse = false,
-      Uint8List? uuid}) {
+      {required EthTxData tx, required String address, required String path, required String origin, required String xfp, bool xfpReverse = false, Uint8List? uuid}) {
     uuid ??= UR.generateUUid();
-    final dataType = tx.txType == EthTxType.legacy
-        ? EthSignDataType.ETH_TRANSACTION_DATA
-        : EthSignDataType.ETH_TYPED_TRANSACTION;
+    final dataType = tx.txType == EthTxType.legacy ? EthSignDataType.ETH_TRANSACTION_DATA : EthSignDataType.ETH_TYPED_TRANSACTION;
     final addr = address.isEmpty ? Uint8List(0) : dynamicToUint8List(address);
     final msg = tx.serialize(sig: false);
 
@@ -56,26 +40,12 @@ class EthSignRequestUR extends UR {
           CborSmallInt(2): CborBytes(msg),
           CborSmallInt(3): CborSmallInt(dataType.index),
           CborSmallInt(4): CborSmallInt(tx.network.chainId),
-          CborSmallInt(5): CborMap({
-            CborSmallInt(1): CborList(getPath(path)),
-            if (xfp.isNotEmpty)
-              CborSmallInt(2): CborInt(toXfpCode(xfp, reverseBytes: xfpReverse))
-          }, tags: [
-            304
-          ]),
+          CborSmallInt(5): CborMap({CborSmallInt(1): CborList(getPath(path)), if (xfp.isNotEmpty) CborSmallInt(2): CborInt(toXfpCode(xfp, reverseBytes: xfpReverse))}, tags: [304]),
           if (addr.isNotEmpty) CborSmallInt(6): CborBytes(addr),
           CborSmallInt(7): CborString(origin)
         }));
 
-    final item = EthSignRequestUR(
-        ur: ur,
-        uuid: uuid,
-        chainId: tx.network.chainId,
-        dataType: dataType,
-        data: msg,
-        address: addr,
-        origin: origin,
-        xfp: xfp);
+    final item = EthSignRequestUR(ur: ur, uuid: uuid, chainId: tx.network.chainId, dataType: dataType, data: msg, address: addr, origin: origin, xfp: xfp);
 
     item.setTx(tx);
 
@@ -103,75 +73,43 @@ class EthSignRequestUR extends UR {
           CborSmallInt(2): CborBytes(msg),
           CborSmallInt(3): CborSmallInt(dataType.index),
           CborSmallInt(4): CborSmallInt(chainId),
-          CborSmallInt(5): CborMap({
-            CborSmallInt(1): CborList(getPath(path)),
-            if (xfp.isNotEmpty)
-              CborSmallInt(2): CborInt(toXfpCode(xfp, reverseBytes: xfpReverse))
-          }, tags: [
-            304
-          ]),
+          CborSmallInt(5): CborMap({CborSmallInt(1): CborList(getPath(path)), if (xfp.isNotEmpty) CborSmallInt(2): CborInt(toXfpCode(xfp, reverseBytes: xfpReverse))}, tags: [304]),
           if (addr.isNotEmpty) CborSmallInt(6): CborBytes(addr),
           CborSmallInt(7): CborString(origin)
         }));
 
-    return EthSignRequestUR(
-        ur: ur,
-        uuid: uuid,
-        chainId: chainId,
-        dataType: dataType,
-        data: msg,
-        address: addr,
-        origin: origin,
-        xfp: xfp);
+    return EthSignRequestUR(ur: ur, uuid: uuid, chainId: chainId, dataType: dataType, data: msg, address: addr, origin: origin, xfp: xfp);
   }
 
   factory EthSignRequestUR.fromUR({required UR ur, bool bigEndian = true}) {
-    if (ur.type.toUpperCase() != ETH_SIGN_REQUEST)
-      throw Exception(URExceptionType.invalidType.toString());
+    final reader = CborFieldReader.fromUr(ur, model: 'eth-sign-request', expectedType: ETH_SIGN_REQUEST);
 
-    final data = ur.decodeCBOR() as CborMap;
+    final uuid = reader.requiredBytes(1, field: 'uuid', length: 16);
+    final msg = reader.requiredBytes(2, field: 'data');
+    final dataType = EthSignDataType.values[reader.requiredEnumIndex(3, field: 'data_type', valuesLength: EthSignDataType.values.length)];
+    final chainId = reader.requiredInt(4, field: 'chain_id', min: 0);
+    final address = reader.optionalBytes(6, field: 'address') ?? Uint8List(0);
+    final origin = reader.optionalText(7, field: 'origin') ?? '';
 
-    final uuid = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
-    final msg = Uint8List.fromList((data[CborSmallInt(2)] as CborBytes).bytes);
-    final dataType =
-        EthSignDataType.values[(data[CborSmallInt(3)] as CborSmallInt).value];
-    final chainId = (data[CborSmallInt(4)] as CborSmallInt).value;
-    final addressField = data[CborSmallInt(6)];
-    final address = addressField == null
-        ? Uint8List(0)
-        : Uint8List.fromList((addressField as CborBytes).bytes);
-    final origin = data[CborSmallInt(7)] == null
-        ? ''
-        : (data[CborSmallInt(7)] as CborString).toString();
+    // xfp 仍保留 bigEndian 兼容参数：canonical=big-endian，legacy=little-endian。
+    // 走 CryptoKeypath.sourceFingerprint（而非旧的 getXfp 手解析），并由 value-preservation
+    // golden 锁住 canonical(12345678)/legacy(78563412) 不变。malformed keypath 现在抛错而非吞掉。
+    final keypath = RegistryItem.readKeypath(reader.map, 5, sourceFingerprintEndian: bigEndian ? Endian.big : Endian.little, model: 'eth-sign-request', field: 'derivation_path');
+    final xfp = keypath.sourceFingerprint != null ? hex.encode(keypath.sourceFingerprint!) : '';
 
-    String xfp = '';
+    final item = EthSignRequestUR(ur: ur, uuid: uuid, chainId: chainId, dataType: dataType, data: msg, address: address, origin: origin, xfp: xfp);
+
     try {
-      xfp = getXfp(
-          ((data[CborSmallInt(5)] as CborMap)[CborSmallInt(2)] as CborInt)
-              .toBigInt(),
-          reverseBytes: !bigEndian);
-    } catch (e) {
-      xfp = '';
-    }
-
-    final item = EthSignRequestUR(
-        ur: ur,
-        uuid: uuid,
-        chainId: chainId,
-        dataType: dataType,
-        data: msg,
-        address: address,
-        origin: origin,
-        xfp: xfp);
-
-    switch (dataType) {
-      case EthSignDataType.ETH_TRANSACTION_DATA:
-      case EthSignDataType.ETH_TYPED_TRANSACTION:
-        item.decodeTransaction();
-        break;
-
-      default:
-        break;
+      switch (dataType) {
+        case EthSignDataType.ETH_TRANSACTION_DATA:
+        case EthSignDataType.ETH_TYPED_TRANSACTION:
+          item.decodeTransaction();
+          break;
+        default:
+          break;
+      }
+    } on Object catch (error) {
+      throw InvalidCborURException(model: 'eth-sign-request', field: 'data', reason: 'invalid ETH transaction payload', cause: error);
     }
 
     return item;
@@ -209,10 +147,4 @@ class EthSignRequestUR extends UR {
   String get token => _token;
 }
 
-enum EthSignDataType {
-  NONE,
-  ETH_TRANSACTION_DATA,
-  ETH_TYPED_DATA,
-  ETH_RAW_BYTES,
-  ETH_TYPED_TRANSACTION
-}
+enum EthSignDataType { NONE, ETH_TRANSACTION_DATA, ETH_TYPED_DATA, ETH_RAW_BYTES, ETH_TYPED_TRANSACTION }

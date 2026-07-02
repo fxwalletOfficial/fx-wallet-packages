@@ -1,5 +1,5 @@
-import 'dart:typed_data';
-
+import 'package:bc_ur_dart/src/registry/cbor_field_reader.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart' show getPath, fromHex, cborPathToString;
 import 'package:cbor/cbor.dart';
 import 'package:crypto_wallet_util/transaction.dart' show GsplTxData, GsplItem, BtcSignDataType;
@@ -11,7 +11,9 @@ extension GsplTxDataWithCbor on GsplTxData {
       CborSmallInt(1): CborBytes(fromHex(hex)),
       CborSmallInt(2): CborSmallInt(dataType.index),
       CborSmallInt(3): CborList(inputs.map((e) => e.toCbor()).toList()),
-    }, tags: [6111]);
+    }, tags: [
+      6111
+    ]);
     if (change != null) cborData[CborSmallInt(4)] = change!.toCbor(change: true);
 
     return cborData;
@@ -31,30 +33,45 @@ extension GsplItemWithCbor on GsplItem {
 }
 
 GsplTxData getGsplTxDataFromCbor({required CborMap data}) {
-  final hex = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
-  List<GsplItem>? inputs = (data[CborSmallInt(3)] as CborList).map((e) => getGsplItemFromCbor(data: e as CborMap)).toList();
-  GsplItem? change = data[CborSmallInt(4)] == null ? null : getGsplItemFromCbor(data: data[CborSmallInt(4)] as CborMap);
+  final reader = CborFieldReader(data, model: 'gspl-tx-data');
+  final txBytes = reader.requiredBytes(1, field: 'hex');
+  final inputsRaw = reader.requiredList(3, field: 'inputs');
 
-  return GsplTxData(inputs: inputs, hex: hex.toHex(), dataType: BtcSignDataType.TRANSACTION, change: change);
+  final inputs = <GsplItem>[];
+  for (var i = 0; i < inputsRaw.length; i++) {
+    final item = inputsRaw[i];
+    if (item is! CborMap) {
+      throw InvalidCborURException(model: 'gspl-tx-data', field: 'inputs[$i]', reason: 'expected CborMap, got ${item.runtimeType}');
+    }
+    inputs.add(getGsplItemFromCbor(data: item));
+  }
+
+  final changeRaw = reader.optionalMap(4, field: 'change');
+
+  return GsplTxData(inputs: inputs, hex: txBytes.toHex(), dataType: BtcSignDataType.TRANSACTION, change: changeRaw == null ? null : getGsplItemFromCbor(data: changeRaw));
 }
 
 GsplItem getGsplItemFromCbor({required CborMap data}) {
-  final pathList = data[CborSmallInt(1)] != null ? (data[CborSmallInt(1)] as CborList) : null;
-  final path = cborPathToString(pathList);
-  final amountValue = data[CborSmallInt(2)];
-  final amount = amountValue is CborInt ? amountValue.toInt() : null;
-  final signature = data[CborSmallInt(3)] != null ? Uint8List.fromList((data[CborSmallInt(3)] as CborBytes).bytes) : null;
-  final address = data[CborSmallInt(4)] != null ? (data[CborSmallInt(4)] as CborString).toString() : null;
-  final signHashTypeValue = data[CborSmallInt(5)];
+  final reader = CborFieldReader(data, model: 'gspl-item');
+
+  final pathValue = reader.optionalValue(1);
+  if (pathValue != null && pathValue is! CborList) {
+    throw InvalidCborURException(model: 'gspl-item', field: 'path', reason: 'expected CborList, got ${pathValue.runtimeType}');
+  }
+  final path = cborPathToString(pathValue as CborList?);
+
+  final amount = reader.optionalInt(2, field: 'amount');
+  final signature = reader.optionalBytes(3, field: 'signature');
+  final address = reader.optionalText(4, field: 'address');
+
   int? signHashType;
-  try {
-    if (signHashTypeValue is CborInt) {
-      signHashType = signHashTypeValue.toInt();
-    } else if (signHashTypeValue is CborString) {
-      signHashType = int.tryParse(signHashTypeValue.toString());
-    }
-  } catch (_) {
-    signHashType = null;
+  final signHashTypeValue = reader.optionalValue(5);
+  if (signHashTypeValue is CborInt) {
+    signHashType = signHashTypeValue.toInt();
+  } else if (signHashTypeValue is CborString) {
+    signHashType = int.tryParse(signHashTypeValue.toString());
+  } else if (signHashTypeValue != null) {
+    throw InvalidCborURException(model: 'gspl-item', field: 'signHashType', reason: 'expected CborInt or CborString, got ${signHashTypeValue.runtimeType}');
   }
 
   return GsplItem(path: path, address: address, amount: amount, signHashType: signHashType, signature: signature);

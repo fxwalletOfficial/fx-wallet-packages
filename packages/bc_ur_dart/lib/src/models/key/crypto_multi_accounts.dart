@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/models/key/to_string_fields.dart';
+import 'package:bc_ur_dart/src/registry/cbor_field_reader.dart';
 import 'package:convert/convert.dart';
 
 final mtiType = RegistryType.CRYPTO_MULTI_ACCOUNTS.type;
@@ -29,67 +30,46 @@ class CryptoMultiAccountsUR extends UR {
   }) : super(payload: ur.payload, type: ur.type);
 
   static CryptoMultiAccountsUR fromUR({required UR ur}) {
-    if (ur.type.toLowerCase() != mtiType) {
-      throw FormatException(
-          'Invalid crypto-multi-accounts UR type: ${ur.type}');
-    }
-    final CborMap data;
-    try {
-      data = ur.decodeCBOR() as CborMap;
-    } catch (e) {
-      throw FormatException('Invalid crypto-multi-accounts CBOR payload: $e');
-    }
+    final reader = CborFieldReader.fromUr(ur, model: 'crypto-multi-accounts', expectedType: mtiType);
 
     // field 1: masterFingerprint
-    final fpValue = data[CborSmallInt(1)];
-    if (fpValue is! CborInt) {
-      throw const FormatException(
-          'Invalid crypto-multi-accounts master fingerprint field');
-    }
-    final fpRaw = fpValue.toInt();
-    final fpBytes = Uint8List(4)
-      ..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
+    final fpRaw = reader.requiredInt(1, field: 'master_fingerprint', min: 0, max: 0xffffffff);
+    final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
     final masterFingerprint = hex.encode(fpBytes);
 
     // field 2: keys 列表
-    final keysValue = data[CborSmallInt(2)];
-    if (keysValue is! CborList) {
-      throw const FormatException('Invalid crypto-multi-accounts keys field');
-    }
+    final keysValue = reader.requiredList(2, field: 'keys');
     final chainList = <CryptoHDKeyUR>[];
 
     for (var index = 0; index < keysValue.length; index++) {
       final item = keysValue[index];
       if (item is! CborMap) {
-        throw FormatException(
-            'Invalid crypto-multi-accounts key entry at index $index');
+        throw InvalidCborURException(model: 'crypto-multi-accounts', field: 'keys[$index]', reason: 'expected CborMap, got ${item.runtimeType}');
       }
       final keyUr = UR(
         type: hdType,
         payload: Uint8List.fromList(cbor.encode(item)),
       );
       try {
-        final chainInfo = CryptoHDKeyUR.fromUR(ur: keyUr);
-        chainList.add(chainInfo);
-      } catch (e) {
-        throw FormatException(
-            'Invalid crypto-multi-accounts key entry at index $index: $e');
+        chainList.add(CryptoHDKeyUR.fromUR(ur: keyUr));
+      } on Object catch (error) {
+        throw InvalidCborURException(model: 'crypto-multi-accounts', field: 'keys[$index]', reason: 'invalid crypto-hdkey entry', cause: error);
       }
     }
 
     // field 3: device（可选）
-    final device = data[CborSmallInt(3)]?.toString() ?? '';
+    final device = reader.optionalText(3, field: 'device') ?? '';
 
     // field 4: deviceId（可选）
-    final deviceId = data[CborSmallInt(4)]?.toString();
+    final deviceId = reader.optionalText(4, field: 'device_id');
 
     // field 5: version（可选）
-    final version = data[CborSmallInt(5)]?.toString();
+    final version = reader.optionalText(5, field: 'version');
 
     // field 6: walletName（私有扩展，可选）
-    final walletName = data[CborSmallInt(6)]?.toString();
-    final hasXfpFormatMarker = data.containsKey(CborSmallInt(7));
-    final xfpFormat = data[CborSmallInt(7)]?.toString() ?? 'canonical';
+    final walletName = reader.optionalText(6, field: 'wallet_name');
+    final hasXfpFormatMarker = reader.has(7);
+    final xfpFormat = reader.optionalText(7, field: 'xfp_format') ?? 'canonical';
 
     return CryptoMultiAccountsUR(
       ur: ur,
@@ -122,13 +102,10 @@ class CryptoMultiAccountsUR extends UR {
         CborSmallInt(1): CborInt(BigInt.from(fpInt)),
         CborSmallInt(2): CborList(chains.map((e) => e.decodeCBOR()).toList()),
         if (device.isNotEmpty) CborSmallInt(3): CborString(device),
-        if (deviceId != null && deviceId.isNotEmpty)
-          CborSmallInt(4): CborString(deviceId),
+        if (deviceId != null && deviceId.isNotEmpty) CborSmallInt(4): CborString(deviceId),
         CborSmallInt(5): CborString(version),
-        if (walletName != null && walletName.isNotEmpty)
-          CborSmallInt(6): CborString(walletName),
-        if (xfpFormat != null && xfpFormat.isNotEmpty)
-          CborSmallInt(7): CborString(xfpFormat),
+        if (walletName != null && walletName.isNotEmpty) CborSmallInt(6): CborString(walletName),
+        if (xfpFormat != null && xfpFormat.isNotEmpty) CborSmallInt(7): CborString(xfpFormat),
       }),
     );
 

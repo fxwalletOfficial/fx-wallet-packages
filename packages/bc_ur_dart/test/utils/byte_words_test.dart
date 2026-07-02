@@ -22,8 +22,7 @@ void main() {
 
   test('Byte words decode rejects malformed and corrupt input', () {
     expect(() => ByteWords.decode('wolf'), throwsException);
-    expect(() => ByteWords.decode('${words.substring(0, words.length - 2)}aa'),
-        throwsException);
+    expect(() => ByteWords.decode('${words.substring(0, words.length - 2)}aa'), throwsException);
     expect(() => ByteWords.decode('${words}a'), throwsException);
     expect(() => ByteWords.decode('${words}12'), throwsException);
   });
