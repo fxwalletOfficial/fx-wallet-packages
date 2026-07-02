@@ -13,6 +13,9 @@
 
 # Uncomment the following section to specify additional rules.
 
+formatter:
+  page_width: 200
+
 linter:
   rules:
     - annotate_overrides
