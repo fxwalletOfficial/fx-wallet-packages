@@ -8,33 +8,13 @@ import 'package:bc_ur_dart/src/utils/cbor_value.dart';
 abstract class RegistryItem {
   RegistryType getRegistryType();
 
+  CborValue toCborValue();
+
   RegistryItem decodeFromCbor(CborMap map);
-
-  // =========================
-  // encode 两条路径
-  // =========================
-
-  /// 路径 A（扁平结构推荐）：
-  /// override buildCbor() 填入字段
-  /// 基类 toCborValue() 自动组装成 CborMap
-  ///
-  /// 路径 B（含嵌套 RegistryItem 时使用）：
-  /// override toCborValue() 完全自定义编码
-  /// buildCbor() 不需要 override
-  ///
-  /// 两条路径选其一，不需要同时 override
-  Map<int, CborValue> buildCbor() => {};
 
   // =========================
   // encode helpers
   // =========================
-
-  CborSmallInt _key(int index) {
-    if (index < 0) {
-      throw ArgumentError("Registry key must be >= 0, got: $index");
-    }
-    return CborSmallInt(index);
-  }
 
   CborValue cborInt(int value) {
     if (value >= 0 && value <= 23) {
@@ -53,25 +33,6 @@ abstract class RegistryItem {
 
   CborBytes cborBytes(Uint8List data, {List<int>? tags}) {
     return CborBytes(data, tags: tags ?? const []);
-  }
-
-  /// 统一编码入口
-  ///
-  /// 两种路径：
-  ///   1. 子类 override toCborValue() — 完全自定义编码（用于需要兼容的老格式）
-  ///      例如：CryptoKeypath、CosmosSignRequest（使用 CborValue(Dart Map) 推断类型）
-  ///
-  ///   2. 子类 override buildCbor() — 走基类统一编码（用于新格式）
-  ///      例如：GsSignature、SolSignRequest 等
-  ///
-  /// 返回类型改为 CborValue（而不是 CborMap），兼容子类返回 CborValue 的情况
-  CborValue toCborValue() {
-    final raw = buildCbor();
-    final Map<CborValue, CborValue> result = {};
-    raw.forEach((k, v) {
-      result[_key(k)] = v;
-    });
-    return CborMap(result);
   }
 
   Uint8List toCBOR() {
@@ -191,5 +152,26 @@ abstract class RegistryItem {
       throw ArgumentError("Invalid CBOR structure");
     }
     return emptyInstance.decodeFromCbor(decoded) as T;
+  }
+}
+
+mixin RegistryMapEncoding on RegistryItem {
+  Map<int, CborValue> buildCborFields();
+
+  @override
+  CborValue toCborValue() {
+    final raw = buildCborFields();
+    final result = <CborValue, CborValue>{};
+    raw.forEach((key, value) {
+      result[_key(key)] = value;
+    });
+    return CborMap(result);
+  }
+
+  CborSmallInt _key(int index) {
+    if (index < 0) {
+      throw ArgumentError("Registry key must be >= 0, got: $index");
+    }
+    return CborSmallInt(index);
   }
 }
