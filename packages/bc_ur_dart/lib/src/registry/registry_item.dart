@@ -134,8 +134,7 @@ abstract class RegistryItem {
   }
 
   static String readText(CborMap map, int key) {
-    return readOptionalText(map, key) ??
-        (throw ArgumentError("Missing text at key $key"));
+    return readOptionalText(map, key) ?? (throw ArgumentError("Missing text at key $key"));
   }
 
   static Uint8List jsonBytes(Object? value) {
@@ -173,14 +172,12 @@ abstract class RegistryItem {
 
     if (value is CborMap) {
       // 标准路径：tagged CborMap 内联嵌套
-      return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian)
-          .decodeFromCbor(value) as CryptoKeypath;
+      return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian).decodeFromCbor(value) as CryptoKeypath;
     }
 
     if (value is CborBytes) {
       // 防御路径：兼容旧版 CborBytes 格式
-      return CryptoKeypath.fromCBOR(Uint8List.fromList(value.bytes),
-          sourceFingerprintEndian: sourceFingerprintEndian);
+      return CryptoKeypath.fromCBOR(Uint8List.fromList(value.bytes), sourceFingerprintEndian: sourceFingerprintEndian);
     }
 
     throw ArgumentError(
