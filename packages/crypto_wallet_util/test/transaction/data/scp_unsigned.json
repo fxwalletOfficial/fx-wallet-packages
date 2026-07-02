@@ -1,0 +1,32 @@
+{
+  "siacoinInputs": [
+    {
+      "parentID": "6ae2cc96596ca4ff5a4a84f2150a57aac633f894b37999ae9c84e5a6bedc0c94",
+      "unlockConditions": {
+        "publicKeys": [
+          "ed25519:02459264c5abf18f1e178031824443a2c9cef4e70f8131ec018308754181f2ab"
+        ],
+        "signaturesRequired": 1
+      }
+    }
+  ],
+  "siacoinOutputs": [
+    {
+      "value": "100000000000000000000000",
+      "unlockHash": "f509ab0f9fbe2d7fa7abd0db1fad5cb0a295749afd9b43c17c5e6bbab8a1d293e2aa2a54b262"
+    },
+    {
+      "value": "9400000000000000000000000",
+      "unlockHash": "328c18b6cbdb538185aaf58a3e5e71fa17d66e93ae39c1426864ba3b7903b9d56050b56937f8"
+    }
+  ],
+  "minerFees": ["100000000000000000000000"],
+  "transactionSignatures": [
+    {
+      "parentID": "6ae2cc96596ca4ff5a4a84f2150a57aac633f894b37999ae9c84e5a6bedc0c94",
+      "publicKeyIndex": 0,
+      "coveredFields": { "wholeTransaction": true }
+    }
+  ],
+  "arbitraryData": []
+}

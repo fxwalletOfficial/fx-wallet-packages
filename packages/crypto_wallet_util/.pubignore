@@ -1,0 +1,4 @@
+# The native SC library is not bundled — consumers build their own for their
+# platform (see lib/src/forked_lib/sia-wasi/build.sh). The macOS binary under
+# test/native is a test fixture only and must not ship in the published package.
+test/native/
