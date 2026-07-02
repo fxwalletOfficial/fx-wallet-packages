@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:test/test.dart';
 
@@ -133,6 +134,54 @@ void main() async {
       final decoded = base58.decode(ltcTestnetAddr);
       expect(decoded.first, 0x3a,
           reason: 'LTC testnet P2SH address must encode with version byte 0x3a');
+    });
+
+    test('isTestnet fallback: P2PKH → 0x6f, P2SH → 0xc4, P2WPKH → tb', () {
+      final pkhHash160 = Uint8List.fromList(
+          Converter.hexToBytes('e8df6b4293962bcde0c39e59bd3371981897392b'));
+      final shHash160 = Uint8List.fromList(
+          Converter.hexToBytes('f1a0e4682c80c932a225b448644366e106712a22'));
+      final wpkhHash160 = Uint8List.fromList(
+          Converter.hexToBytes('751e76e8199196d454941c45d1b3a323f1433bd6'));
+
+      final pkhScript =
+          psbt.ScriptPublicKey([0x76, 0xa9, pkhHash160, 0x88, 0xac]);
+      final shScript = psbt.ScriptPublicKey([0xa9, shHash160, 0x87]);
+      final wpkhScript = psbt.ScriptPublicKey([0x00, wpkhHash160]);
+
+      // isTestnet: false → BTC mainnet versions
+      final mainnetPkh = pkhScript.getAddress();
+      expect(base58.decode(mainnetPkh).first, 0x00,
+          reason: 'mainnet P2PKH → version byte 0x00');
+
+      final mainnetSh = shScript.getAddress();
+      expect(base58.decode(mainnetSh).first, 0x05,
+          reason: 'mainnet P2SH → version byte 0x05');
+
+      final mainnetWpkh = wpkhScript.getAddress();
+      expect(mainnetWpkh.startsWith('bc1'), isTrue,
+          reason: 'mainnet P2WPKH → bech32 hrp bc');
+
+      // isTestnet: true → BTC testnet versions
+      final testnetPkh = pkhScript.getAddress(isTestnet: true);
+      expect(base58.decode(testnetPkh).first, 0x6f,
+          reason: 'isTestnet: true → P2PKH version byte 0x6f');
+
+      final testnetSh = shScript.getAddress(isTestnet: true);
+      expect(base58.decode(testnetSh).first, 0xc4,
+          reason: 'isTestnet: true → P2SH version byte 0xc4');
+
+      final testnetWpkh = wpkhScript.getAddress(isTestnet: true);
+      expect(testnetWpkh.startsWith('tb1'), isTrue,
+          reason: 'isTestnet: true → bech32 hrp tb');
+
+      // Explicit params still override isTestnet.
+      final override = wpkhScript.getAddress(
+          isTestnet: true,
+          pubKeyHashVersion: 0x30,
+          bech32Hrp: 'ltc');
+      expect(override.startsWith('ltc1'), isTrue,
+          reason: 'explicit params override isTestnet fallback');
     });
   });
 }

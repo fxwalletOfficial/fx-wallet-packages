@@ -59,26 +59,28 @@ class ScriptPublicKey extends Script {
   }
 
   /// Get the address from the script.
-  /// [pubKeyHashVersion], [scriptHashVersion], [bech32Hrp] default to Bitcoin mainnet values.
-  /// Pass chain-specific values for other chains (e.g. LTC: 0x30, 0x32, 'ltc').
-  /// [isTestnet] is deprecated — prefer passing explicit version bytes via [TransactionOutput.getAddress].
+  /// [pubKeyHashVersion], [scriptHashVersion], [bech32Hrp] default to null —
+  /// when omitted, fall back to BTC mainnet/testnet values based on [isTestnet].
   String getAddress(
       {bool isTestnet = false,
-      int pubKeyHashVersion = 0x00,
-      int scriptHashVersion = 0x05,
-      String bech32Hrp = 'bc'}) {
+      int? pubKeyHashVersion,
+      int? scriptHashVersion,
+      String? bech32Hrp}) {
+    final pkhVersion = pubKeyHashVersion ?? (isTestnet ? 0x6f : 0x00);
+    final shVersion = scriptHashVersion ?? (isTestnet ? 0xc4 : 0x05);
+    final hrp = bech32Hrp ?? (isTestnet ? 'tb' : 'bc');
     if (isP2WPKH()) {
       Uint8List h160 = commands[1];
       var data5Bits =
           Converter.convertBits(Uint8List.fromList(h160), 8, 5, pad: true);
-      return bech32.encode(Bech32(bech32Hrp, [0x00] + data5Bits));
+      return bech32.encode(Bech32(hrp, [0x00] + data5Bits));
     } else if (isP2PKH()) {
-      Uint8List prefix = Uint8List.fromList([pubKeyHashVersion]);
+      Uint8List prefix = Uint8List.fromList([pkhVersion]);
       Uint8List h160 = commands[2];
       Uint8List prefixedHash = Uint8List.fromList(prefix + h160);
       return getBase58Address(prefixedHash);
     } else if (isP2SH()) {
-      Uint8List prefix = Uint8List.fromList([scriptHashVersion]);
+      Uint8List prefix = Uint8List.fromList([shVersion]);
       Uint8List h160 = commands[1];
       Uint8List prefixedHash = Uint8List.fromList(prefix + h160);
       return getBase58Address(prefixedHash);
@@ -87,12 +89,12 @@ class ScriptPublicKey extends Script {
       var data5Bits =
           Converter.convertBits(Uint8List.fromList(h256), 8, 5, pad: true);
       bech32m.Bech32mCodec codec = const bech32m.Bech32mCodec();
-      return codec.encode(bech32m.Bech32m(bech32Hrp, [0x01] + data5Bits));
+      return codec.encode(bech32m.Bech32m(hrp, [0x01] + data5Bits));
     } else if (isP2WSH()) {
       Uint8List h256 = commands[1];
       var data5Bits =
           Converter.convertBits(Uint8List.fromList(h256), 8, 5, pad: true);
-      return bech32.encode(Bech32(bech32Hrp, [0x00] + data5Bits));
+      return bech32.encode(Bech32(hrp, [0x00] + data5Bits));
     } else {
       return 'Script : Non-standard script.';
     }
