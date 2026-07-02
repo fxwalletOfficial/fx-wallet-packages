@@ -78,20 +78,22 @@ class PSBT {
         return fee;
       }();
 
-  List<String> get inputAddresses => () {
+  List<String> get inputAddresses => getInputAddresses();
+
+  List<String> getInputAddresses({bool isTestnet = false, String chain = 'btc'}) {
         List<String> inputAddresses = [];
         for (int i = 0; i < inputs.length; i++) {
           PsbtInput input = inputs[i];
 
           if (input.witnessUtxo != null) {
             //  witnessUtxo (PSBT key type 01)
-            inputAddresses.add(input.witnessUtxo!.getAddress());
+            inputAddresses.add(input.witnessUtxo!.getAddress(isTestnet: isTestnet, chain: chain));
           } else if (input.previousTransaction != null) {
             // nonWitnessUtxo (PSBT key type 00)
             Transaction prevTx = input.previousTransaction!;
             int outputIndex = unsignedTransaction!.inputs[i].index;
             if (outputIndex < prevTx.outputs.length) {
-              inputAddresses.add(prevTx.outputs[outputIndex].getAddress());
+              inputAddresses.add(prevTx.outputs[outputIndex].getAddress(isTestnet: isTestnet, chain: chain));
             } else {
               throw Exception(
                   'Invalid output index $outputIndex in previous transaction');
@@ -101,15 +103,18 @@ class PSBT {
           }
         }
         return inputAddresses;
-      }();
+      }
+
+  int get transferAmount => getTransferAmount();
 
   /// Get the transfer amount of the transaction.
-  int get transferAmount => () {
+  int getTransferAmount({bool isTestnet = false, String chain = 'btc'}) {
         int totalAmount = 0;
         int sameCount = 0;
+        final currentInputAddresses = getInputAddresses(isTestnet: isTestnet, chain: chain);
         for (int i = 0; i < unsignedTransaction!.outputs.length; i++) {
-          String outputAddress = unsignedTransaction!.outputs[i].getAddress();
-          if (!inputAddresses.contains(outputAddress)) {
+          String outputAddress = unsignedTransaction!.outputs[i].getAddress(isTestnet: isTestnet, chain: chain);
+          if (!currentInputAddresses.contains(outputAddress)) {
             totalAmount += unsignedTransaction!.outputs[i].amount;
           } else {
             sameCount++;
@@ -120,7 +125,7 @@ class PSBT {
         }
 
         return totalAmount;
-      }();
+      }
 
   /// Get the sending amount of the transaction.
   int get sendingAmount => () {
@@ -781,9 +786,17 @@ class PsbtOutput {
   int? get amount => _amount;
   String? get script => _script;
 
-  String getAddress() {
+  String getAddress({bool isTestnet = false, String chain = 'btc'}) {
     ScriptPublicKey script = ScriptPublicKey.parse(_script!);
-    return script.getAddress();
+    final chainConf = getChainConfig(chain);
+    final networkType = isTestnet
+        ? chainConf.testnet.networkType
+        : chainConf.mainnet.networkType;
+    return script.getAddress(
+        isTestnet: isTestnet,
+        pubKeyHashVersion: networkType?.pubKeyHash ?? 0x00,
+        scriptHashVersion: networkType?.scriptHash ?? 0x05,
+        bech32Hrp: networkType?.bech32 ?? 'bc');
   }
 
   /// @nodoc

@@ -258,6 +258,56 @@ void main() async {
         expect(lastPayment['amount'], isNot(equals(99990000)));
       }
     });
+
+    test('should parse LTC P2SH payment address', () async {
+      final txData = GsplTxData(
+        inputs: [
+          GsplItem(
+            path: "m/44'/2'/0'/0/3",
+            amount: 50000000,
+            signHashType: 1,
+          )
+        ],
+        hex: '020000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff02102700000000000017a914f1a0e4682c80c932a225b448644366e106712a228794310000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac00000000',
+        change: GsplItem(
+          path: "m/44'/2'/0'/1/7",
+          amount: 12692,
+          signHashType: 1,
+        ),
+        dataType: BtcSignDataType.TRANSACTION,
+      );
+
+      final jsonData = txData.toJson();
+      final payments = jsonData['payments'] as List;
+      expect(payments, hasLength(1));
+
+      final payment = payments.first as Map<String, dynamic>;
+      expect(payment['address'], 'MVvmpeZN3U8RwNrHxEovpb5KWxdkMmqfjC');
+      expect(payment['amount'], 10000);
+    });
+
+    test('should resolve network type from non-0/0 input path', () async {
+      final txData = GsplTxData(
+        inputs: [
+          GsplItem(
+            path: "m/44'/2'/0'/0/3",
+            amount: 50000000,
+            signHashType: 1,
+          )
+        ],
+        hex: '020000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff0110270000000000001976a914e8df6b4293962bcde0c39e59bd3371981897392b88ac00000000',
+        change: null,
+        dataType: BtcSignDataType.TRANSACTION,
+      );
+
+      final jsonData = txData.toJson();
+      final payments = jsonData['payments'] as List;
+      expect(payments, hasLength(1));
+
+      final payment = payments.first as Map<String, dynamic>;
+      expect(payment['address'], 'LgTGg988MpnG3N3FbLufCPjiKZjrqYque7');
+      expect(payment['amount'], 10000);
+    });
   });
 
   group('GSPL Signature Hash Type Tests', () {

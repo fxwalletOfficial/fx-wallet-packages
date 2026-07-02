@@ -12,38 +12,57 @@ import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutte
 class PsbtTxData extends TxData {
   final PSBT psbt;
   final bool isTaproot;
+  final String chain;
+  final bool isTestnet;
   String unsignedPsbt = '';
 
-  PsbtTxData(this.psbt, this.unsignedPsbt, this.isTaproot);
+  PsbtTxData(this.psbt, this.unsignedPsbt, this.isTaproot,
+      {this.chain = 'btc', this.isTestnet = false});
 
   /// gas fee
   int get fee => psbt.fee;
 
   /// get transfer amount (all outputs, not excluding change)
-  int get transferAmount => psbt.transferAmount;
+  int get transferAmount =>
+      psbt.getTransferAmount(isTestnet: isTestnet, chain: chain);
 
   /// get receive address (first non-change output)
   String get transferAddress {
-    return psbt.unsignedTransaction!.outputs[0].getAddress();
+    return psbt.unsignedTransaction!.outputs[0]
+        .getAddress(isTestnet: isTestnet, chain: chain);
   }
 
   List<Map<String, dynamic>> get payments {
     final payments = psbt.unsignedTransaction!.outputs.map((e) => {
-      'address': e.getAddress(),
+      'address': e.getAddress(isTestnet: isTestnet, chain: chain),
       'amount': e.amount
     }).toList();
-    return payments.where((output) => !psbt.inputAddresses.contains(output['address'])).toList();
+    return payments
+        .where((output) => !psbt
+            .getInputAddresses(isTestnet: isTestnet, chain: chain)
+            .contains(output['address']))
+        .toList();
   }
 
-  Origin get origin => getOrigin(unsignedPsbt);
+  Origin get origin =>
+      getOrigin(unsignedPsbt, chain: chain, isTestnet: isTestnet);
 
-  static PsbtTxData fromHash(String hash, {bool isTaproot = false}) {
-    return PsbtTxData(PSBT.parse(hash), hash, isTaproot);
+  static PsbtTxData fromHash(String hash,
+      {bool isTaproot = false, String chain = 'btc', bool isTestnet = false}) {
+    return PsbtTxData(PSBT.parse(hash), hash, isTaproot,
+        chain: chain, isTestnet: isTestnet);
   }
 
-  static Origin getOrigin(String psbtHex) {
+  static Origin getOrigin(String psbtHex,
+      {String chain = 'btc', bool isTestnet = false}) {
     final psbt = PSBT.parse(psbtHex);
     final unsignedTx = psbt.unsignedTransaction!;
+    final chainConf = getChainConfig(chain);
+    final networkType =
+        (isTestnet ? chainConf.testnet.networkType : chainConf.mainnet.networkType);
+    final pkhVersion = networkType?.pubKeyHash ?? 0x00;
+    final shVersion = networkType?.scriptHash ?? 0x05;
+    final hrp = networkType?.bech32 ?? 'bc';
 
     // Extract inputs from PSBT
     final inputs = <OriginInput>[];
@@ -57,7 +76,10 @@ class PsbtTxData extends TxData {
 
       if (psbtInput.witnessUtxo != null) {
         value = psbtInput.witnessUtxo!.amount / 100000000;
-        address = psbtInput.witnessUtxo!.scriptPubKey.getAddress();
+        address = psbtInput.witnessUtxo!.scriptPubKey.getAddress(
+            pubKeyHashVersion: pkhVersion,
+            scriptHashVersion: shVersion,
+            bech32Hrp: hrp);
       } else if (psbtInput.previousTransaction != null) {
         // Fallback to previous transaction if available
         final prevTx = psbtInput.previousTransaction!;
@@ -65,7 +87,7 @@ class PsbtTxData extends TxData {
         if (outputIndex < prevTx.outputs.length) {
           final output = prevTx.outputs[outputIndex];
           value = output.amount / 100000000;
-          address = output.scriptPubKey.getAddress();
+          address = output.getAddress(isTestnet: isTestnet, chain: chain);
         } else {
           // ignore: avoid_print
           print('Warning: PSBT input $i has invalid output index');
@@ -106,7 +128,7 @@ class PsbtTxData extends TxData {
     final outputs = <OriginOutput>[];
     for (final output in unsignedTx.outputs) {
       outputs.add(OriginOutput(
-        address: output.scriptPubKey.getAddress(),
+        address: output.getAddress(isTestnet: isTestnet, chain: chain),
         amount: (output.amount / 100000000), // Convert satoshis to BTC
         path: null, // May be available in PSBT output data
         value: output.amount.toString(),
@@ -131,10 +153,12 @@ class PsbtTxData extends TxData {
     if (!isSigned) {
       throw Exception('Transaction is not signed');
     }
-    final chainConf = getChainConfig('btc').mainnet;
+    final chainConf = isTestnet
+        ? getChainConfig(chain).testnet
+        : getChainConfig(chain).mainnet;
     if (isTaproot) {
       final btcTx = bitcoin.Transaction();
-      final originTx = getOrigin(unsignedPsbt);
+      final originTx = getOrigin(unsignedPsbt, chain: chain, isTestnet: isTestnet);
 
       btcTx.setVersion(originTx.version);
       btcTx.setLocktime(originTx.locktime);

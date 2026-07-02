@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:bech32m_i/bech32m_i.dart' as bech32m;
 import 'package:bs58check/bs58check.dart';
-import 'package:crypto_wallet_util/src/forked_lib/psbt/network/bitcoin_network.dart';
 import 'package:crypto_wallet_util/src/utils/bech32/bech32.dart';
 
 import 'package:crypto_wallet_util/src/utils/utils.dart';
@@ -59,50 +58,39 @@ class ScriptPublicKey extends Script {
     ]);
   }
 
-  String _getSegwitHrp({bool isTestnet = false}) {
-    String hrp;
-    if (!isTestnet) {
-      hrp = 'bc';
-    } else if (BitcoinNetwork.currentNetwork == BitcoinNetwork.testnet) {
-      hrp = 'tb';
-    } else {
-      hrp = 'bcrt';
-    }
-
-    return hrp;
-  }
-
   /// Get the address from the script.
-  String getAddress({bool isTestnet = false}) {
-    //todo: other address type
+  /// [pubKeyHashVersion], [scriptHashVersion], [bech32Hrp] default to null —
+  /// when omitted, fall back to BTC mainnet/testnet values based on [isTestnet].
+  String getAddress(
+      {bool isTestnet = false,
+      int? pubKeyHashVersion,
+      int? scriptHashVersion,
+      String? bech32Hrp}) {
+    final pkhVersion = pubKeyHashVersion ?? (isTestnet ? 0x6f : 0x00);
+    final shVersion = scriptHashVersion ?? (isTestnet ? 0xc4 : 0x05);
+    final hrp = bech32Hrp ?? (isTestnet ? 'tb' : 'bc');
     if (isP2WPKH()) {
-      String hrp = _getSegwitHrp(isTestnet: isTestnet);
-
       Uint8List h160 = commands[1];
       var data5Bits =
           Converter.convertBits(Uint8List.fromList(h160), 8, 5, pad: true);
       return bech32.encode(Bech32(hrp, [0x00] + data5Bits));
     } else if (isP2PKH()) {
-      Uint8List prefix =
-          isTestnet ? Uint8List.fromList([0x6f]) : Uint8List.fromList([0x00]);
+      Uint8List prefix = Uint8List.fromList([pkhVersion]);
       Uint8List h160 = commands[2];
       Uint8List prefixedHash = Uint8List.fromList(prefix + h160);
       return getBase58Address(prefixedHash);
     } else if (isP2SH()) {
-      Uint8List prefix =
-          isTestnet ? Uint8List.fromList([0xc4]) : Uint8List.fromList([0x05]);
+      Uint8List prefix = Uint8List.fromList([shVersion]);
       Uint8List h160 = commands[1];
       Uint8List prefixedHash = Uint8List.fromList(prefix + h160);
       return getBase58Address(prefixedHash);
     } else if (isP2TR()) {
-      String hrp = _getSegwitHrp(isTestnet: isTestnet);
       Uint8List h256 = commands[1];
       var data5Bits =
           Converter.convertBits(Uint8List.fromList(h256), 8, 5, pad: true);
       bech32m.Bech32mCodec codec = const bech32m.Bech32mCodec();
       return codec.encode(bech32m.Bech32m(hrp, [0x01] + data5Bits));
     } else if (isP2WSH()) {
-      String hrp = _getSegwitHrp(isTestnet: isTestnet);
       Uint8List h256 = commands[1];
       var data5Bits =
           Converter.convertBits(Uint8List.fromList(h256), 8, 5, pad: true);
