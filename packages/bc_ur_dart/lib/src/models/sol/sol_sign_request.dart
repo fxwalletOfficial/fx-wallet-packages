@@ -5,7 +5,7 @@ import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 
 enum SolSignRequestKeys {
-  zero, // 0 
+  zero, // 0
   uuid, // 1
   signData, // 2
   derivationPath, // 3

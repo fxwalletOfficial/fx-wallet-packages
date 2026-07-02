@@ -5,7 +5,7 @@ import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 
 enum CosmosSignRequestKeys {
-  zero, // 0 
+  zero, // 0
   uuid, // 1
   signData, // 2
   derivationPath, // 3
@@ -38,7 +38,6 @@ class CosmosSignRequest extends RegistryItem {
   @override
   RegistryType getRegistryType() => RegistryType.COSMOS_SIGN_REQUEST;
 
-
   @override
   CborValue toCborValue() {
     final Map<CborValue, CborValue> map = {};
@@ -62,7 +61,6 @@ class CosmosSignRequest extends RegistryItem {
 
   @override
   RegistryItem decodeFromCbor(CborMap map) {
-
     return CosmosSignRequest(
       uuid: RegistryItem.readBytes(map, CosmosSignRequestKeys.uuid.index),
       signData: RegistryItem.readBytes(map, CosmosSignRequestKeys.signData.index),

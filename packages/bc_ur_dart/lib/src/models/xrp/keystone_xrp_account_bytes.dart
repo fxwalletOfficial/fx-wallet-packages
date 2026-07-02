@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
@@ -17,14 +17,12 @@ class KeystoneXrpAccountBytes {
 
   static KeystoneXrpAccountBytes fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.BYTES.type) {
-      throw ArgumentError(
-          'Invalid UR type for KeystoneXrpAccountBytes: ${ur.type}');
+      throw ArgumentError('Invalid UR type for KeystoneXrpAccountBytes: ${ur.type}');
     }
 
     final Map<String, dynamic> json = _decodeJsonPayload(ur);
     final String address = _readString(json, ['address', 'Address']);
-    final String publicKey =
-        _readString(json, ['pubkey', 'publicKey', 'SigningPubKey']);
+    final String publicKey = _readString(json, ['pubkey', 'publicKey', 'SigningPubKey']);
     if (address.isEmpty || publicKey.isEmpty) {
       throw ArgumentError('Invalid Keystone XRP account bytes payload');
     }
@@ -44,8 +42,7 @@ class KeystoneXrpAccountBytes {
 
     final dynamic json = jsonDecode(utf8.decode(decoded.bytes));
     if (json is! Map<String, dynamic>) {
-      throw ArgumentError(
-          'Keystone XRP account bytes payload must decode to a JSON object');
+      throw ArgumentError('Keystone XRP account bytes payload must decode to a JSON object');
     }
     return json;
   }

@@ -1,5 +1,6 @@
-import 'package:bc_ur_dart/src/models/eth/eth_signature.dart';
-import 'package:bc_ur_dart/src/models/eth/eth_sign_request.dart';
+import 'dart:typed_data';
+
+import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -73,6 +74,22 @@ void main() {
       expect(EthSignatureUR.handleV(28), 1);
       expect(EthSignatureUR.handleV(0), 0);
       expect(EthSignatureUR.handleV(1), 1);
+    });
+
+    test('rejects missing signature bytes with explicit CBOR error', () {
+      final ur = UR.fromCBOR(
+        type: ETH_SIGNATURE,
+        value: CborMap({
+          CborSmallInt(1): CborBytes(Uint8List(16), tags: [37]),
+        }),
+      );
+
+      expect(
+        () => EthSignatureUR.fromUR(ur: ur),
+        throwsA(
+          isA<InvalidCborURException>().having((e) => e.message, 'message', contains('eth-signature.signature')),
+        ),
+      );
     });
   });
 }

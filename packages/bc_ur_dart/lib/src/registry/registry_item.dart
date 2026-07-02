@@ -167,23 +167,32 @@ abstract class RegistryItem {
     CborMap map,
     int key, {
     Endian sourceFingerprintEndian = Endian.big,
+    String? model,
+    String? field,
   }) {
-    final value = map[CborSmallInt(key)];
+    try {
+      final value = map[CborSmallInt(key)];
 
-    if (value is CborMap) {
-      // 标准路径：tagged CborMap 内联嵌套
-      return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian).decodeFromCbor(value) as CryptoKeypath;
+      if (value is CborMap) {
+        // 标准路径：tagged CborMap 内联嵌套
+        return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian).decodeFromCbor(value) as CryptoKeypath;
+      }
+
+      if (value is CborBytes) {
+        // 防御路径：兼容旧版 CborBytes 格式
+        return CryptoKeypath.fromCBOR(Uint8List.fromList(value.bytes), sourceFingerprintEndian: sourceFingerprintEndian);
+      }
+
+      throw ArgumentError(
+        'Invalid keypath at key $key: '
+        'expected CborMap or CborBytes, got ${value?.runtimeType}',
+      );
+    } on ArgumentError catch (error) {
+      // 模型工厂传入 model 时，把 CryptoKeypath 的 ArgumentError（Plan A 保留的 registry
+      // primitive 错误）在公共模型边界转成 InvalidCborURException；未传 model 的内部调用保持旧行为。
+      if (model == null) rethrow;
+      throw InvalidCborURException(model: model, field: field ?? 'field[$key]', reason: error.message.toString(), cause: error);
     }
-
-    if (value is CborBytes) {
-      // 防御路径：兼容旧版 CborBytes 格式
-      return CryptoKeypath.fromCBOR(Uint8List.fromList(value.bytes), sourceFingerprintEndian: sourceFingerprintEndian);
-    }
-
-    throw ArgumentError(
-      'Invalid keypath at key $key: '
-      'expected CborMap or CborBytes, got ${value?.runtimeType}',
-    );
   }
 
   static T fromCBOR<T extends RegistryItem>(
