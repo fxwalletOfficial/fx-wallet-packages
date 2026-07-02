@@ -287,6 +287,18 @@
 - No public API changes beyond the SDK floor; all 782 unit tests pass.
 
 
+## [2.0.2] - 2026-07-02
+### Fixed
+
+- PSBT: parse LTC P2SH / Nested SegWit addresses correctly by plumbing chain-aware
+  version bytes and bech32 HRP through address encoding instead of hard-coding BTC
+  mainnet values.
+- GSPL: support LTC P2SH payment address parsing by detecting the script type
+  (P2PKH vs P2SH) and resolving the correct network version bytes from the bip44
+  path coin-type segment.
+- BTC / LTC chain configs: fill in distinct testnet NetworkType values (previously
+  shared mainnet settings).
+
 ## [2.0.1] - 2026-06-12
 ### Added
 
