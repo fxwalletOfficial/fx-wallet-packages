@@ -258,11 +258,25 @@ class CryptoHDKeyUR extends UR {
     return fields.toString();
   }
 
+  // Coin types whose keys MUST be secp256k1. A public key that is not on the
+  // curve for one of these is genuine corruption, so keep failing closed.
+  static const Set<int> _secp256k1CoinTypes = {
+    CoinType.BTC,
+    CoinType.ETH,
+    CoinType.TRX,
+    CoinType.COSMOS,
+    CoinType.ALPH,
+  };
+
   static bool _allowsRawNonSecpKey(CryptoCoinInfo? useInfo, String path) {
-    // Keep this allowlist narrow; add other non-secp256k1 coin types here only
-    // after the consumer validates that chain's key length and format.
+    // Preserve the raw publicKey/chainCode (wallet=null) for every chain except
+    // the known-secp256k1 ones, so a single non-secp entry (SOL/ed25519 families,
+    // or unknown/exotic chains) can no longer abort a whole crypto-multi-accounts
+    // import. This completes the original non-secp hdkey intent, which only
+    // whitelisted SOL and still threw for every other non-secp chain.
     final coinType = useInfo?.coinType ?? _coinTypeFromPath(path);
-    return coinType == CoinType.SOL;
+    if (coinType == null) return true; // unknown coin type: preserve, don't abort import
+    return !_secp256k1CoinTypes.contains(coinType);
   }
 
   static int? _coinTypeFromPath(String path) {
