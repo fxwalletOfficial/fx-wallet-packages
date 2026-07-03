@@ -113,3 +113,11 @@
 * Fix: Keep CryptoHDKey, CryptoAccount and CryptoMultiAccounts string output JSON-safe and compatible with empty fields.
 * Fix: Reject malformed secp256k1 CryptoHDKey public key or chain code data instead of silently importing it.
 * Example: Add a Flutter demo app under `examples/bc_ur_dart_demo` for scanning, encoding and signing-flow debugging.
+
+## [0.1.26]
+
+- Fix (UR transport): Harden fragment decoding — `UR.read()` now returns `false` on malformed fragments instead of throwing, the reassembled payload's CRC32 is verified before a decode completes, and fragment `seqLength` is capped at `0x10000` so a field-consistent frame with a huge sequence length can no longer trigger an out-of-memory allocation that escapes `read()`'s error handling and kills the scan loop.
+- Fix (UR transport): Correct fountain-code (mixed-part) reduction, prevent a single-part frame from hijacking an in-progress multipart decode, add `UR.reset()` for safe decoder reuse, and wrap the encode-side sequence number to uint32.
+- Behavior change (malformed input only): Bytewords `MINIMAL` decoding validates length, charset, per-word bounds and checksum, throwing `InvalidFormatURException` / `InvalidChecksumURException` on corrupt input; `InvalidSequenceURException` now reports `invalidSequence`. Conformant fragments decode unchanged.
+- Fix: Preserve non-secp256k1 `CryptoHDKey` entries for every non-secp chain (not just Solana), so a single exotic-chain key can no longer abort a whole `crypto-multi-accounts` import. Genuine corruption of known-secp256k1 keys (BTC/ETH/TRX/COSMOS/ALPH) still fails closed.
+- Dependency: Update `crypto_wallet_util` constraint to `^2.0.0` so consumers can resolve current 2.x releases.
