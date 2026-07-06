@@ -114,6 +114,14 @@
 * Fix: Reject malformed secp256k1 CryptoHDKey public key or chain code data instead of silently importing it.
 * Example: Add a Flutter demo app under `examples/bc_ur_dart_demo` for scanning, encoding and signing-flow debugging.
 
+## [0.1.27]
+
+- Fix: Harden source-fingerprint and keypath decoding: respect `Uint8List` view offsets, validate source-fingerprint length/uint32 range and depth uint8 range, and keep big-endian as the default with `Endian.little` for explicit legacy compatibility.
+- Behavior change (malformed input only): `CryptoKeypath` now rejects invalid components instead of silently coercing or dropping them. This does not change conformant payload decoding.
+- Refactor: Add shared CBOR field validation (`CborFieldReader`) for prioritized ETH, BTC/PSBT, CryptoAccount, CryptoHDKey and CryptoMultiAccounts model decoding, with explicit `InvalidCborURException` / `InvalidTypeURException` errors instead of raw Dart cast errors.
+- Compatibility: Required signing fields remain fail-closed, including request ids, transaction/signature bytes, signing payloads, derivation paths and account key lists. Optional metadata remains best-effort; malformed optional metadata such as `CryptoHDKeyUR.use_info` or `children` is skipped instead of failing the whole scan.
+- Docs: Update README capabilities, monorepo example path and pure Dart test commands.
+
 ## [0.1.26]
 
 - Fix (UR transport): Harden fragment decoding — `UR.read()` now returns `false` on malformed fragments instead of throwing, the reassembled payload's CRC32 is verified before a decode completes, and fragment `seqLength` is capped at `0x10000` so a field-consistent frame with a huge sequence length can no longer trigger an out-of-memory allocation that escapes `read()`'s error handling and kills the scan loop.
