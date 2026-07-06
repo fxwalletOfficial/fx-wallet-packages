@@ -63,5 +63,44 @@ void main() {
       expect(parsed.chains[1].publicKey, Uint8List(33));
       expect(parsed.chains[1].path, "m/44'/784'/0'");
     });
+
+    test('skips a corrupt secp entry but keeps the rest of the bundle', () {
+      // A secp-shaped but off-curve key (0x02 prefix, x=0) is genuine corruption.
+      // It must be dropped without aborting the import, and recorded in
+      // skippedKeys so callers can surface it — the valid secp and non-secp
+      // entries around it stay.
+      final ur = CryptoMultiAccountsUR.fromWallet(
+        masterFingerprint: BigInt.from(0x21d0ae26),
+        device: 'Keystone',
+        chains: [
+          CryptoHDKeyUR.fromWallet(
+            name: 'btc-wallet',
+            path: "m/44'/0'/0'",
+            wallet: BIP32.fromBase58('xpub6DWambFddujzpn3rhPxjGgCTB15BMSx7yoQPzDoAS7rYnputj3srC8QnRRu24qu3Q9dKytTkAGrsbLvmQD6KT2rNhFFoA3EZLpYxyJ3mNfB'),
+          ),
+          CryptoHDKeyUR.fromWallet(
+            name: 'corrupt-btc',
+            path: "m/84'/0'/0'",
+            publicKey: Uint8List(33)..[0] = 0x02,
+            chainCode: Uint8List(32),
+          ),
+          CryptoHDKeyUR.fromWallet(
+            name: 'sol-wallet',
+            path: "m/44'/501'/0'",
+            publicKey: Uint8List(33),
+            chainCode: Uint8List(32),
+          ),
+        ],
+      );
+
+      final parsed = CryptoMultiAccountsUR.fromUR(ur: UR.decode(ur.encode()));
+
+      expect(parsed.chains.length, 2); // valid secp + non-secp SOL preserved
+      expect(parsed.chains[0].wallet, isNotNull);
+      expect(parsed.chains[1].wallet, isNull);
+      expect(parsed.chains[1].path, "m/44'/501'/0'");
+      expect(parsed.skippedKeys.length, 1); // corrupt entry skipped, not fatal
+      expect(parsed.skippedKeys.single.index, 1);
+    });
   });
 }

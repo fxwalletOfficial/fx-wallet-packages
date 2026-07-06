@@ -121,6 +121,25 @@ void main() {
       );
     });
 
+    test('rejects a secp-shaped off-curve key even without useInfo (Keystone)',
+        () {
+      // Keystone omits use_info. A BTC BIP84 path used to yield coinType=null
+      // (the old regex only matched m/44'/…) and get silently preserved. The key
+      // is encoded like a compressed secp256k1 point (0x02 prefix) but is off the
+      // curve, so it must now fail closed on the key shape alone.
+      final ur = CryptoHDKeyUR.fromWallet(
+        name: 'corrupt-btc-bip84',
+        path: "m/84'/0'/0'",
+        publicKey: Uint8List(33)..[0] = 0x02,
+        chainCode: Uint8List(32),
+      );
+
+      expect(
+        () => CryptoHDKeyUR.fromUR(ur: UR.decode(ur.encode())),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
     test('toString should keep empty keys and JSON escape note', () {
       final hdkey = CryptoHDKeyUR.fromWallet(
         name: '',

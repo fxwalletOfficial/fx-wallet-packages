@@ -16,6 +16,11 @@ class CryptoMultiAccountsUR extends UR {
   final String? version; // field 5: 固件版本
   final String? walletName; // field 6: 私有扩展字段，非 Keystone 标准
 
+  /// Entries that could not be decoded (e.g. a corrupt secp256k1 key) and were
+  /// skipped instead of aborting the whole import. Empty on a clean decode.
+  /// Callers can surface these to the user ("N accounts could not be imported").
+  final List<SkippedHDKeyEntry> skippedKeys;
+
   CryptoMultiAccountsUR({
     required UR ur,
     required this.chains,
@@ -26,6 +31,7 @@ class CryptoMultiAccountsUR extends UR {
     this.walletName,
     this.xfpFormat,
     this.hasXfpFormatMarker = false,
+    this.skippedKeys = const [],
   }) : super(payload: ur.payload, type: ur.type);
 
   static CryptoMultiAccountsUR fromUR({required UR ur}) {
@@ -57,12 +63,18 @@ class CryptoMultiAccountsUR extends UR {
       throw const FormatException('Invalid crypto-multi-accounts keys field');
     }
     final chainList = <CryptoHDKeyUR>[];
+    final skippedKeys = <SkippedHDKeyEntry>[];
 
+    // A single unreadable entry must never abort the whole account set: skip and
+    // record it, then keep decoding the rest. Only genuinely undecodable entries
+    // land here — CryptoHDKeyUR.fromUR still preserves valid non-secp256k1 keys
+    // (SOL/exotic chains) as raw, so those stay in `chainList`.
     for (var index = 0; index < keysValue.length; index++) {
       final item = keysValue[index];
       if (item is! CborMap) {
-        throw FormatException(
-            'Invalid crypto-multi-accounts key entry at index $index');
+        skippedKeys.add(SkippedHDKeyEntry(
+            index: index, reason: 'entry is not a CBOR map'));
+        continue;
       }
       final keyUr = UR(
         type: hdType,
@@ -72,8 +84,7 @@ class CryptoMultiAccountsUR extends UR {
         final chainInfo = CryptoHDKeyUR.fromUR(ur: keyUr);
         chainList.add(chainInfo);
       } catch (e) {
-        throw FormatException(
-            'Invalid crypto-multi-accounts key entry at index $index: $e');
+        skippedKeys.add(SkippedHDKeyEntry(index: index, reason: '$e'));
       }
     }
 
@@ -101,6 +112,7 @@ class CryptoMultiAccountsUR extends UR {
       walletName: walletName,
       xfpFormat: xfpFormat,
       hasXfpFormatMarker: hasXfpFormatMarker,
+      skippedKeys: skippedKeys,
     );
   }
 
@@ -158,4 +170,17 @@ class CryptoMultiAccountsUR extends UR {
     fields.addRaw('chains', '[${chains.map((e) => e.toString()).join(',')}]');
     return fields.toString();
   }
+}
+
+/// A crypto-multi-accounts key entry that failed to decode and was skipped so it
+/// could not abort the whole import. [index] is its position in the CBOR keys
+/// list; [reason] is the decode error (e.g. a corrupt secp256k1 public key).
+class SkippedHDKeyEntry {
+  final int index;
+  final String reason;
+
+  SkippedHDKeyEntry({required this.index, required this.reason});
+
+  @override
+  String toString() => '{"index":$index,"reason":"$reason"}';
 }

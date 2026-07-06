@@ -203,7 +203,7 @@ class CryptoHDKeyUR extends UR {
       try {
         wallet = BIP32.fromPublicKey(publicKey, chainCode);
       } catch (e) {
-        if (!_allowsRawNonSecpKey(useInfo, path)) {
+        if (!_allowsRawNonSecpKey(useInfo, path, publicKey)) {
           throw FormatException(
               'Invalid crypto-hdkey public key or chain code: $e');
         }
@@ -268,19 +268,35 @@ class CryptoHDKeyUR extends UR {
     CoinType.ALPH,
   };
 
-  static bool _allowsRawNonSecpKey(CryptoCoinInfo? useInfo, String path) {
-    // Preserve the raw publicKey/chainCode (wallet=null) for every chain except
-    // the known-secp256k1 ones, so a single non-secp entry (SOL/ed25519 families,
-    // or unknown/exotic chains) can no longer abort a whole crypto-multi-accounts
-    // import. This completes the original non-secp hdkey intent, which only
-    // whitelisted SOL and still threw for every other non-secp chain.
+  static bool _allowsRawNonSecpKey(
+      CryptoCoinInfo? useInfo, String path, Uint8List publicKey) {
+    // Primary signal: a key that is *encoded* like a secp256k1 point (compressed
+    // 33B 0x02/0x03 or uncompressed 65B 0x04) yet fails BIP32.fromPublicKey is
+    // genuine on-curve corruption. Keep failing closed regardless of chain, and
+    // without depending on useInfo (Keystone omits it) — this is what lets a
+    // corrupt BTC BIP49/84/86 or LTC/BCH key still be rejected.
+    if (_looksLikeSecpEncodedKey(publicKey)) return false;
+    // Secondary signal: keys that are not secp-shaped but are still tagged as a
+    // known-secp256k1 coin (via useInfo, or the BIP44/49/84/86 path) are treated
+    // as malformed and rejected too — e.g. an all-zero key labelled BTC. Every
+    // other chain (SOL/ed25519 families and unknown/exotic chains) is preserved
+    // as raw so a single entry can never abort a whole crypto-multi-accounts
+    // import.
     final coinType = useInfo?.coinType ?? _coinTypeFromPath(path);
     if (coinType == null) return true; // unknown coin type: preserve, don't abort import
     return !_secp256k1CoinTypes.contains(coinType);
   }
 
+  // A public key *shaped* like a secp256k1 point: compressed (33 bytes,
+  // 0x02/0x03 prefix) or uncompressed (65 bytes, 0x04 prefix).
+  static bool _looksLikeSecpEncodedKey(Uint8List pk) =>
+      (pk.length == 33 && (pk[0] == 0x02 || pk[0] == 0x03)) ||
+      (pk.length == 65 && pk[0] == 0x04);
+
   static int? _coinTypeFromPath(String path) {
-    final match = RegExp(r"^m/44'/(\d+)'").firstMatch(path);
+    // Any purpose (BIP44/49/84/86…): the coin type is always the 2nd path
+    // element, so BTC segwit/taproot paths (m/49'|84'|86'/0'/…) resolve too.
+    final match = RegExp(r"^m/\d+'/(\d+)'").firstMatch(path);
     return match == null ? null : int.tryParse(match.group(1)!);
   }
 }
