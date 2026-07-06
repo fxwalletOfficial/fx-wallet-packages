@@ -96,5 +96,4 @@ class ScSignature extends RegistryItem {
       origin: request.origin,
     );
   }
-
 }

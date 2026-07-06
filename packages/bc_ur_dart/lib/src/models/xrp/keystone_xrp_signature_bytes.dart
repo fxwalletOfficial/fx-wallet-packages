@@ -21,13 +21,11 @@ class KeystoneXrpSignatureBytes {
     this.payload,
   });
 
-  bool get hasSignatureMaterial =>
-      signature.isNotEmpty || signedBlob.isNotEmpty;
+  bool get hasSignatureMaterial => signature.isNotEmpty || signedBlob.isNotEmpty;
 
   static KeystoneXrpSignatureBytes fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.BYTES.type) {
-      throw ArgumentError(
-          'Invalid UR type for KeystoneXrpSignatureBytes: ${ur.type}');
+      throw ArgumentError('Invalid UR type for KeystoneXrpSignatureBytes: ${ur.type}');
     }
 
     final CborValue decoded = ur.decodeCBOR();
@@ -48,13 +46,7 @@ class KeystoneXrpSignatureBytes {
           json,
           ['publicKey', 'pubkey', 'SigningPubKey'],
         ),
-        signedBlob: _readNestedString(json, [
-          'signedBlob',
-          'signedTransaction',
-          'signedTx',
-          'txBlob',
-          'tx_blob'
-        ]),
+        signedBlob: _readNestedString(json, ['signedBlob', 'signedTransaction', 'signedTx', 'txBlob', 'tx_blob']),
         txHash: _readNestedString(json, ['txHash', 'tx_hash', 'hash']),
         payload: json,
       );

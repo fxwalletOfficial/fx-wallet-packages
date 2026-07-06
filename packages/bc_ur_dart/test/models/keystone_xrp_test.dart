@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:test/test.dart';

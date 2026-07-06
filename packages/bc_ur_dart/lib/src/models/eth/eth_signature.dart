@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cbor/cbor.dart';
 
 import 'package:bc_ur_dart/src/models/eth/eth_sign_request.dart';
+import 'package:bc_ur_dart/src/registry/cbor_field_reader.dart';
 import 'package:bc_ur_dart/src/ur.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
 
@@ -15,24 +16,20 @@ class EthSignatureUR extends UR {
   EthSignatureUR({required this.uuid, required this.signature, super.type, super.payload});
 
   factory EthSignatureUR.fromUR({required UR ur}) {
-    if (ur.type.toUpperCase() != ETH_SIGNATURE) throw Exception('Invalid type: ${ur.type}');
-
-    final data = ur.decodeCBOR() as CborMap;
-
-    final uuid = Uint8List.fromList((data[CborSmallInt(1)] as CborBytes).bytes);
-    final signature = Uint8List.fromList((data[CborSmallInt(2)] as CborBytes).bytes);
+    final reader = CborFieldReader.fromUr(ur, model: 'eth-signature', expectedType: ETH_SIGNATURE);
+    final uuid = reader.requiredBytes(1, field: 'uuid', length: 16);
+    final signature = reader.requiredBytes(2, field: 'signature');
 
     return EthSignatureUR(uuid: uuid, signature: signature, type: ur.type, payload: ur.payload);
   }
 
   factory EthSignatureUR.fromMessageSigned({required EthSignRequestUR request, required String signature}) {
     final ur = UR.fromCBOR(
-      type: ETH_SIGNATURE,
-      value: CborMap({
-        CborSmallInt(1): CborBytes(request.uuid, tags: [37]),
-        CborSmallInt(2): CborBytes(fromHex(signature))
-      })
-    );
+        type: ETH_SIGNATURE,
+        value: CborMap({
+          CborSmallInt(1): CborBytes(request.uuid, tags: [37]),
+          CborSmallInt(2): CborBytes(fromHex(signature))
+        }));
     return EthSignatureUR(uuid: request.uuid, signature: fromHex(signature), type: ETH_SIGNATURE, payload: ur.payload);
   }
 
@@ -41,12 +38,11 @@ class EthSignatureUR extends UR {
     final signature = Uint8List.fromList(bigIntToByte(r, 32) + bigIntToByte(s, 32) + [vData]);
 
     final ur = UR.fromCBOR(
-      type: ETH_SIGNATURE,
-      value: CborMap({
-        CborSmallInt(1): CborBytes(request.uuid, tags: [37]),
-        CborSmallInt(2): CborBytes(signature)
-      })
-    );
+        type: ETH_SIGNATURE,
+        value: CborMap({
+          CborSmallInt(1): CborBytes(request.uuid, tags: [37]),
+          CborSmallInt(2): CborBytes(signature)
+        }));
 
     return EthSignatureUR(uuid: request.uuid, signature: signature, type: ETH_SIGNATURE, payload: ur.payload);
   }

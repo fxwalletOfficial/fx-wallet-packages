@@ -11,7 +11,7 @@ enum GsSignatureKeys {
   origin, // 3
 }
 
-class GsSignature extends RegistryItem {
+class GsSignature extends RegistryItem with RegistryMapEncoding {
   final Uint8List? uuid;
   final Uint8List signature;
   final String? origin;
@@ -34,7 +34,7 @@ class GsSignature extends RegistryItem {
   RegistryType getRegistryType() => RegistryType.GS_SIGNATURE;
 
   @override
-  Map<int, CborValue> buildCbor() {
+  Map<int, CborValue> buildCborFields() {
     final map = <int, CborValue>{};
 
     // uuid optional，有值才写入（与 Tron 行为统一）
