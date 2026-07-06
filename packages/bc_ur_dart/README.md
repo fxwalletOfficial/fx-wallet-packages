@@ -52,7 +52,7 @@ Use UR parsing as two separate validation layers:
 - Transport validation: `UR.decode()` and `UR.read()` validate UR text, ByteWords, sequence, and fragments.
 - Semantic validation: model factories such as `EthSignRequestUR.fromUR()` and `CryptoHDKeyUR.fromUR()` validate CBOR shape, required fields, and nested registry items.
 
-Malformed model CBOR throws `URException` subclasses such as `InvalidCborURException`. Application scan flows should catch parse errors at the completed-UR boundary and stop the signing flow.
+Every chain model's decoder fails closed on malformed input, throwing `URException` subclasses — `InvalidTypeURException` for a wrong UR type and `InvalidCborURException` for bad CBOR shape / missing required fields — rather than raw `ArgumentError`, `RangeError`, or Dart cast errors. Application scan flows can therefore catch all parse failures via `on URException` at the completed-UR boundary and stop the signing flow. (Encode-side helpers that build requests still throw `ArgumentError` for programmer errors such as mismatched list lengths.)
 
 ## Development
 

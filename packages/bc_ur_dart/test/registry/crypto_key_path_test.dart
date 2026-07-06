@@ -250,11 +250,13 @@ void main() {
         ),
       });
 
+      // SolSignRequest 走非优先链的 RegistryItem.fromCBOR 收敛点：底层 keypath 的
+      // ArgumentError 会在模型边界统一翻译成 InvalidCborURException，且保留具体原因。
       expect(
         () => SolSignRequest.fromCBOR(
           Uint8List.fromList(cbor.encode(request)),
         ),
-        throwsArgumentError,
+        throwsA(isA<InvalidCborURException>()),
       );
     });
   });

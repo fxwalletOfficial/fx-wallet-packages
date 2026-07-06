@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:cbor/cbor.dart';
 
 class KeystoneXrpAccountBytes {
@@ -17,14 +18,14 @@ class KeystoneXrpAccountBytes {
 
   static KeystoneXrpAccountBytes fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.BYTES.type) {
-      throw ArgumentError('Invalid UR type for KeystoneXrpAccountBytes: ${ur.type}');
+      throw InvalidTypeURException(expected: RegistryType.BYTES.type, actual: ur.type);
     }
 
     final Map<String, dynamic> json = _decodeJsonPayload(ur);
     final String address = _readString(json, ['address', 'Address']);
     final String publicKey = _readString(json, ['pubkey', 'publicKey', 'SigningPubKey']);
     if (address.isEmpty || publicKey.isEmpty) {
-      throw ArgumentError('Invalid Keystone XRP account bytes payload');
+      throw InvalidCborURException(model: 'keystone-xrp-account', reason: 'missing address/publicKey in payload');
     }
 
     return KeystoneXrpAccountBytes(
@@ -35,14 +36,24 @@ class KeystoneXrpAccountBytes {
   }
 
   static Map<String, dynamic> _decodeJsonPayload(UR ur) {
-    final CborValue decoded = ur.decodeCBOR();
+    final CborValue decoded;
+    try {
+      decoded = ur.decodeCBOR();
+    } on Object catch (error) {
+      throw InvalidCborURException(model: 'keystone-xrp-account', reason: 'invalid CBOR payload', cause: error);
+    }
     if (decoded is! CborBytes) {
-      throw ArgumentError('Keystone XRP bytes payload must be cbor bytes');
+      throw InvalidCborURException(model: 'keystone-xrp-account', reason: 'expected top-level CborBytes, got ${decoded.runtimeType}');
     }
 
-    final dynamic json = jsonDecode(utf8.decode(decoded.bytes));
+    final dynamic json;
+    try {
+      json = jsonDecode(utf8.decode(decoded.bytes));
+    } on Object catch (error) {
+      throw InvalidCborURException(model: 'keystone-xrp-account', reason: 'payload is not valid UTF-8 JSON', cause: error);
+    }
     if (json is! Map<String, dynamic>) {
-      throw ArgumentError('Keystone XRP account bytes payload must decode to a JSON object');
+      throw InvalidCborURException(model: 'keystone-xrp-account', reason: 'payload must decode to a JSON object, got ${json.runtimeType}');
     }
     return json;
   }

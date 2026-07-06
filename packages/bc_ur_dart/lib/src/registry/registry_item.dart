@@ -147,11 +147,24 @@ abstract class RegistryItem {
     Uint8List payload,
     T emptyInstance,
   ) {
-    final decoded = cbor.decode(payload);
-    if (decoded is! CborMap) {
-      throw ArgumentError("Invalid CBOR structure");
+    // 单一收敛点：非优先链（SOL/TRON/COSMOS/SC/ALPH 等）都经此解码。把底层
+    // ArgumentError / RangeError / cbor 解码异常 / keypath 校验错误统一转成
+    // InvalidCborURException，保证 malformed 输入抛出 URException 家族而非零散原生异常。
+    // 已经是 URException 的（如带 model 的 keypath 错误）原样透传，避免二次包装。
+    final model = emptyInstance.getRegistryType().type;
+    try {
+      final decoded = cbor.decode(payload);
+      if (decoded is! CborMap) {
+        throw InvalidCborURException(model: model, reason: 'expected top-level CborMap, got ${decoded.runtimeType}');
+      }
+      return emptyInstance.decodeFromCbor(decoded) as T;
+    } on URException {
+      rethrow;
+    } on ArgumentError catch (error) {
+      throw InvalidCborURException(model: model, reason: error.message?.toString() ?? 'invalid CBOR payload', cause: error);
+    } on Object catch (error) {
+      throw InvalidCborURException(model: model, reason: 'invalid CBOR payload', cause: error);
     }
-    return emptyInstance.decodeFromCbor(decoded) as T;
   }
 }
 

@@ -83,7 +83,7 @@ class KeystoneSolSignRequest extends RegistryItem {
   /// 解析 Keystone 设备扫回的 sol-sign-request UR
   static KeystoneSolSignRequest fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.SOL_SIGN_REQUEST.type) {
-      throw ArgumentError('Invalid UR type for KeystoneSolSignRequest: ${ur.type}');
+      throw InvalidTypeURException(expected: RegistryType.SOL_SIGN_REQUEST.type, actual: ur.type);
     }
 
     return RegistryItem.fromCBOR<KeystoneSolSignRequest>(

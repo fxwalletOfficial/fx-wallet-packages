@@ -67,14 +67,14 @@ void main() {
       final bytes = utf8.encode('{"hello":"world"}');
       final ur = UR.fromCBOR(type: RegistryType.BYTES.type, value: CborBytes(bytes));
 
-      expect(() => KeystoneXrpAccountBytes.fromUR(ur), throwsArgumentError);
+      expect(() => KeystoneXrpAccountBytes.fromUR(ur), throwsA(isA<InvalidCborURException>()));
     });
 
     test('does not treat non account bytes as account export', () {
       final bytes = utf8.encode('{"signature":"ABC123"}');
       final ur = UR.fromCBOR(type: RegistryType.BYTES.type, value: CborBytes(bytes));
 
-      expect(() => KeystoneXrpAccountBytes.fromUR(ur), throwsArgumentError);
+      expect(() => KeystoneXrpAccountBytes.fromUR(ur), throwsA(isA<InvalidCborURException>()));
     });
   });
 }

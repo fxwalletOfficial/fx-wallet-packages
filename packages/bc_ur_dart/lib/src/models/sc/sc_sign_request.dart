@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
 import 'package:cbor/cbor.dart';
 
@@ -130,7 +131,7 @@ class ScSignRequest extends RegistryItem {
 
   static ScSignRequest fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.SC_SIGN_REQUEST.type) {
-      throw ArgumentError('Invalid UR type for ScSignRequest: ${ur.type}');
+      throw InvalidTypeURException(expected: RegistryType.SC_SIGN_REQUEST.type, actual: ur.type);
     }
     return fromCBOR(ur.payload);
   }

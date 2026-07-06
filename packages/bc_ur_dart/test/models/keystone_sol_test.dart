@@ -172,7 +172,7 @@ void main() {
         outputAddress: 'SomeAddress',
       );
 
-      expect(() => KeystoneSolSignRequest.fromUR(goldshellUR), throwsA(isA<ArgumentError>()));
+      expect(() => KeystoneSolSignRequest.fromUR(goldshellUR), throwsA(isA<InvalidCborURException>()));
     });
   });
 }

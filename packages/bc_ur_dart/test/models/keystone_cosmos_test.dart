@@ -157,10 +157,10 @@ void main() {
       expect(
         () => KeystoneCosmosSignRequest.fromUR(wrongTypeUR),
         throwsA(
-          isA<ArgumentError>().having(
-            (e) => e.message.toString(),
+          isA<InvalidTypeURException>().having(
+            (e) => e.message,
             'message',
-            contains('Invalid UR type'),
+            contains(RegistryType.COSMOS_SIGN_REQUEST.type),
           ),
         ),
       );

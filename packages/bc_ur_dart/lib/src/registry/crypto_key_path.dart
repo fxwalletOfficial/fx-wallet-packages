@@ -131,10 +131,14 @@ class CryptoKeypath extends RegistryItem {
     Uint8List cborPayload, {
     Endian sourceFingerprintEndian = Endian.big,
   }) {
-    return RegistryItem.fromCBOR<CryptoKeypath>(
-      cborPayload,
-      CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian),
-    );
+    // 保持 registry primitive 语义：抛 ArgumentError，由模型边界（RegistryItem.readKeypath
+    // / RegistryItem.fromCBOR）统一翻译成 InvalidCborURException。不复用被包装的
+    // RegistryItem.fromCBOR，避免在此层就把 ArgumentError 变成 URException 而绕过边界翻译。
+    final decoded = cbor.decode(cborPayload);
+    if (decoded is! CborMap) {
+      throw ArgumentError('crypto-keypath: expected CborMap, got ${decoded.runtimeType}');
+    }
+    return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian).decodeFromCbor(decoded) as CryptoKeypath;
   }
 
   static List<PathComponent> _decodeComponentsStrict(CborValue? componentsList) {

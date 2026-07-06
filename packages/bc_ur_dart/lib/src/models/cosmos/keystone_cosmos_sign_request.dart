@@ -114,7 +114,7 @@ class KeystoneCosmosSignRequest extends RegistryItem {
 
   static KeystoneCosmosSignRequest fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.COSMOS_SIGN_REQUEST.type) {
-      throw ArgumentError('Invalid UR type for KeystoneCosmosSignRequest: ${ur.type}');
+      throw InvalidTypeURException(expected: RegistryType.COSMOS_SIGN_REQUEST.type, actual: ur.type);
     }
 
     return RegistryItem.fromCBOR<KeystoneCosmosSignRequest>(

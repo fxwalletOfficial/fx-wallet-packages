@@ -8,6 +8,7 @@ import 'package:bc_ur_dart/src/gen/keystone/payload.pb.dart';
 import 'package:bc_ur_dart/src/gen/keystone/transaction.pb.dart';
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
 import 'package:cbor/cbor.dart';
 import 'package:convert/convert.dart';
@@ -87,27 +88,37 @@ class KeystoneTronSignRequest {
   }
 
   static KeystoneTronSignRequest fromUR(UR ur) {
+    const model = 'keystone-tron-sign-request';
     if (ur.type.toLowerCase() != RegistryType.KEYSTONE_SIGN_REQUEST.type) {
-      throw ArgumentError('Invalid UR type for KeystoneTronSignRequest: ${ur.type}');
+      throw InvalidTypeURException(expected: RegistryType.KEYSTONE_SIGN_REQUEST.type, actual: ur.type);
     }
 
-    final decoded = ur.decodeCBOR();
-    if (decoded is! CborMap) {
-      throw ArgumentError('Invalid Keystone TRON request payload');
+    final CborValue decodedValue;
+    try {
+      decodedValue = ur.decodeCBOR();
+    } on Object catch (error) {
+      throw InvalidCborURException(model: model, reason: 'invalid CBOR payload', cause: error);
     }
+    if (decodedValue is! CborMap) {
+      throw InvalidCborURException(model: model, reason: 'expected top-level CborMap, got ${decodedValue.runtimeType}');
+    }
+    final decoded = decodedValue;
 
     final signDataValue = decoded[CborSmallInt(1)];
     if (signDataValue is! CborBytes) {
-      throw ArgumentError('Invalid Keystone TRON signData payload');
+      throw InvalidCborURException(model: model, field: 'sign_data', reason: 'expected CborBytes, got ${signDataValue.runtimeType}');
     }
 
-    final base = Base.fromBuffer(
-      GZipCodec().decode(Uint8List.fromList(signDataValue.bytes)),
-    );
-    final payload = base.payloadData;
+    final Payload payload;
+    try {
+      final base = Base.fromBuffer(GZipCodec().decode(Uint8List.fromList(signDataValue.bytes)));
+      payload = base.payloadData;
+    } on Object catch (error) {
+      throw InvalidCborURException(model: model, field: 'sign_data', reason: 'invalid gzip/protobuf payload', cause: error);
+    }
     final signTx = payload.signTx;
     if (signTx.whichTransaction() != SignTransaction_Transaction.tronTx) {
-      throw ArgumentError('Invalid Keystone TRON transaction payload');
+      throw InvalidCborURException(model: model, field: 'sign_data', reason: 'expected TRON transaction payload');
     }
 
     final originValue = decoded[CborSmallInt(2)];

@@ -57,28 +57,41 @@ class BchSignatureUR extends UR {
   }
 
   factory BchSignatureUR.fromUR({required UR ur, bool bigEndian = true}) {
+    const model = 'bch-signature';
     if (ur.type.toUpperCase() != RegistryType.KEYSTONE_SIGNATURE.type.toUpperCase()) {
-      throw Exception(URExceptionType.invalidType.toString());
+      throw InvalidTypeURException(expected: RegistryType.KEYSTONE_SIGNATURE.type, actual: ur.type);
     }
 
-    final data = ur.decodeCBOR() as CborMap;
+    final CborValue decoded;
+    try {
+      decoded = ur.decodeCBOR();
+    } on Object catch (error) {
+      throw InvalidCborURException(model: model, reason: 'invalid CBOR payload', cause: error);
+    }
+    if (decoded is! CborMap) {
+      throw InvalidCborURException(model: model, reason: 'expected top-level CborMap, got ${decoded.runtimeType}');
+    }
 
     // field 1: signResult（gzip 压缩的 Protobuf bytes）
-    final signResultBytes = Uint8List.fromList(
-      (data[CborSmallInt(1)] as CborBytes).bytes,
-    );
+    final signResultValue = decoded[CborSmallInt(1)];
+    if (signResultValue is! CborBytes) {
+      throw InvalidCborURException(model: model, field: 'sign_result', reason: 'expected CborBytes, got ${signResultValue.runtimeType}');
+    }
+    final signResultBytes = Uint8List.fromList(signResultValue.bytes);
 
-    // 1. gzip 解压
-    final decompressed = GZipCodec().decode(signResultBytes);
-
-    // 2. 解析 Base envelope
-    final base = Base.fromBuffer(decompressed);
-    final payload = base.payloadData;
-
-    // 3. 取出 SignTxResult
-    final signTxResult = payload.signTxResult;
-    final requestId = signTxResult.signId;
-    final rawTx = signTxResult.rawTx;
+    final String requestId;
+    final String rawTx;
+    try {
+      // gzip 解压 + 解析 Base envelope + 取出 SignTxResult
+      final decompressed = GZipCodec().decode(signResultBytes);
+      final base = Base.fromBuffer(decompressed);
+      final payload = base.payloadData;
+      final signTxResult = payload.signTxResult;
+      requestId = signTxResult.signId;
+      rawTx = signTxResult.rawTx;
+    } on Object catch (error) {
+      throw InvalidCborURException(model: model, field: 'sign_result', reason: 'invalid gzip/protobuf payload', cause: error);
+    }
 
     return BchSignatureUR(
       requestId: requestId,
