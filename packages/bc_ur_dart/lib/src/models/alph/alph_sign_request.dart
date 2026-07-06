@@ -105,6 +105,14 @@ class AlphSignRequest extends RegistryItem {
     );
   }
 
+  /// 类型门入口：先校验 ur.type 再委托 fromCBOR。推荐消费方走此入口。
+  static AlphSignRequest fromUR(UR ur) {
+    if (ur.type.toLowerCase() != RegistryType.ALPH_SIGN_REQUEST.type) {
+      throw InvalidTypeURException(expected: RegistryType.ALPH_SIGN_REQUEST.type, actual: ur.type);
+    }
+    return fromCBOR(ur.payload);
+  }
+
   static UR generateSignRequest({
     String? uuid,
     required String signData,

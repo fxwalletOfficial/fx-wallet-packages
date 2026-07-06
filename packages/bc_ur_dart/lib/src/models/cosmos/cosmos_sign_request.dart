@@ -78,6 +78,14 @@ class CosmosSignRequest extends RegistryItem {
     );
   }
 
+  /// 类型门入口：先校验 ur.type 再委托 fromCBOR。推荐消费方走此入口。
+  static CosmosSignRequest fromUR(UR ur) {
+    if (ur.type.toLowerCase() != RegistryType.COSMOS_SIGN_REQUEST.type) {
+      throw InvalidTypeURException(expected: RegistryType.COSMOS_SIGN_REQUEST.type, actual: ur.type);
+    }
+    return fromCBOR(ur.payload);
+  }
+
   /// 签名请求UR生成
   static UR generateSignRequest({
     String? uuid,

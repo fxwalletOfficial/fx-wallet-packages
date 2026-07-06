@@ -118,4 +118,31 @@ void main() {
       );
     });
   });
+
+  group('问题 2: 裸模型新增类型门 fromUR(UR)', () {
+    final wrongType = UR(type: 'eth-sign-request', payload: Uint8List(4));
+
+    test('8 个 fromUR 对错误 UR 类型均抛 InvalidTypeURException', () {
+      expect(() => SolSignRequest.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
+      expect(() => SolSignature.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
+      expect(() => CosmosSignRequest.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
+      expect(() => CosmosSignature.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
+      expect(() => AlphSignRequest.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
+      expect(() => AlphSignature.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
+      expect(() => TronSignRequest.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
+      expect(() => TronSignature.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
+    });
+
+    test('fromUR 正确类型时委托 fromCBOR 正常解码（Sol round-trip）', () {
+      final ur = SolSignRequest.generateSignRequest(
+        signData: 'deadbeef',
+        signType: SignType.transaction,
+        path: "m/44'/501'/0'/0'",
+        xfp: '12345678',
+      );
+      final decoded = SolSignRequest.fromUR(ur);
+      expect(decoded.signData, equals(Uint8List.fromList([0xde, 0xad, 0xbe, 0xef])));
+      expect(decoded.signType, equals(SignType.transaction));
+    });
+  });
 }

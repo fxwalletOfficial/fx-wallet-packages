@@ -31,6 +31,14 @@ class AlphSignature extends GsSignature {
     );
   }
 
+  /// 类型门入口：先校验 ur.type 再委托 fromCBOR。推荐消费方走此入口。
+  static AlphSignature fromUR(UR ur) {
+    if (ur.type.toLowerCase() != RegistryType.ALPH_SIGNATURE.type) {
+      throw InvalidTypeURException(expected: RegistryType.ALPH_SIGNATURE.type, actual: ur.type);
+    }
+    return fromCBOR(ur.payload);
+  }
+
   static UR fromSignature({required AlphSignRequest request, required Uint8List signature}) {
     return AlphSignature(uuid: request.getRequestId(), signature: signature, origin: request.origin).toUR();
   }

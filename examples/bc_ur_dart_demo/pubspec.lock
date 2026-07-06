@@ -31,7 +31,7 @@ packages:
       path: "../../packages/bc_ur_dart"
       relative: true
     source: path
-    version: "0.1.25"
+    version: "0.1.27"
   bech32m_i:
     dependency: transitive
     description:
@@ -60,10 +60,10 @@ packages:
     dependency: transitive
     description:
       name: blockchain_utils
-      sha256: "9701dfaa74caad4daae1785f1ec4445cf7fb94e45620bc3a4aca1b9b281dc6c9"
+      sha256: aa4a3051e8577d59b15fb2b4036a1bf6f93d099dff1544d601bef2705b7e945a
       url: "https://pub.dev"
     source: hosted
-    version: "1.6.0"
+    version: "6.0.0"
   boolean_selector:
     dependency: transitive
     description:
@@ -140,10 +140,10 @@ packages:
     dependency: transitive
     description:
       name: crypto_wallet_util
-      sha256: "86d246c696d20714cb891142c85d57b770e23effc1a54eb0b583e0cc8bd52c95"
+      sha256: "4da5768935e8e275190541be8cc322a87b4da2a7d31fd741203e251e465bb8ba"
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.5"
+    version: "2.0.2"
   cryptography:
     dependency: transitive
     description:
@@ -588,6 +588,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.0.2"
+  wasd:
+    dependency: transitive
+    description:
+      name: wasd
+      sha256: ade89113743b97728ad69ed4c88ba7a156415fbdc0416f5ceed69866c115b84f
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   web:
     dependency: transitive
     description:
@@ -605,5 +613,5 @@ packages:
     source: hosted
     version: "0.7.2"
 sdks:
-  dart: ">=3.9.0 <4.0.0"
+  dart: ">=3.11.0 <4.0.0"
   flutter: ">=3.22.0"

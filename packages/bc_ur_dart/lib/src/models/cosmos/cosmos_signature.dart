@@ -31,6 +31,14 @@ class CosmosSignature extends GsSignature {
     );
   }
 
+  /// 类型门入口：先校验 ur.type 再委托 fromCBOR。推荐消费方走此入口。
+  static CosmosSignature fromUR(UR ur) {
+    if (ur.type.toLowerCase() != RegistryType.COSMOS_SIGNATURE.type) {
+      throw InvalidTypeURException(expected: RegistryType.COSMOS_SIGNATURE.type, actual: ur.type);
+    }
+    return fromCBOR(ur.payload);
+  }
+
   /// 从签名请求 + 签名结果构建 UR
   static UR fromSignature({required CosmosSignRequest request, required Uint8List signature}) {
     return CosmosSignature(uuid: request.getRequestId(), signature: signature, origin: request.origin).toUR();
