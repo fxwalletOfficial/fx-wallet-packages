@@ -114,15 +114,6 @@
 * Fix: Reject malformed secp256k1 CryptoHDKey public key or chain code data instead of silently importing it.
 * Example: Add a Flutter demo app under `examples/bc_ur_dart_demo` for scanning, encoding and signing-flow debugging.
 
-## [0.1.27]
-
-- Fix: Harden source-fingerprint and keypath decoding: respect `Uint8List` view offsets, validate source-fingerprint length/uint32 range and depth uint8 range, and keep big-endian as the default with `Endian.little` for explicit legacy compatibility.
-- Behavior change (malformed input only): `CryptoKeypath` now rejects invalid components instead of silently coercing or dropping them. This does not change conformant payload decoding.
-- Refactor: Add shared CBOR field validation (`CborFieldReader`) for prioritized ETH, BTC/PSBT, CryptoAccount, CryptoHDKey and CryptoMultiAccounts model decoding, with explicit `InvalidCborURException` / `InvalidTypeURException` errors instead of raw Dart cast errors.
-- Error contract now covers all chains: the remaining non-prioritized decoders (SOL, TRON, Cosmos, SC, ALPH via the `RegistryItem.fromCBOR` convergence point; BCH and Keystone-XRP byte payloads via their `fromUR`) also fail closed with `InvalidTypeURException` / `InvalidCborURException` instead of raw `ArgumentError` / `RangeError` / `Exception`, so callers can catch every malformed-UR failure via `on URException`. Encode-side validation (e.g. `constructCosmosRequest` list-length checks) intentionally keeps throwing `ArgumentError`.
-- Compatibility: Required signing fields remain fail-closed, including request ids, transaction/signature bytes, signing payloads, derivation paths and account key lists. Optional metadata remains best-effort; malformed optional metadata such as `CryptoHDKeyUR.use_info` or `children` is skipped instead of failing the whole scan.
-- Docs: Update README capabilities, monorepo example path and pure Dart test commands.
-
 ## [0.1.26]
 
 - Fix (UR transport): Harden fragment decoding — `UR.read()` now returns `false` on malformed fragments instead of throwing, the reassembled payload's CRC32 is verified before a decode completes, and fragment `seqLength` is capped at `0x10000` so a field-consistent frame with a huge sequence length can no longer trigger an out-of-memory allocation that escapes `read()`'s error handling and kills the scan loop.
@@ -131,3 +122,13 @@
 - Fix: Preserve non-secp256k1 `CryptoHDKey` entries for every non-secp chain (not just Solana), so a single exotic-chain key can no longer abort a whole `crypto-multi-accounts` import. Corruption is now detected from the key shape (a key encoded like a secp256k1 point — compressed 33-byte `0x02`/`0x03` or uncompressed 65-byte `0x04` — that still fails `BIP32.fromPublicKey`), independent of `use_info`, so a corrupt BTC BIP49/84/86 or LTC/BCH key fails closed even when Keystone omits `use_info`.
 - Fix: `CryptoMultiAccountsUR.fromUR` no longer aborts the whole account set when one key entry is undecodable — it skips that entry and records it in the new `skippedKeys` (`SkippedHDKeyEntry`) list so callers can surface which accounts could not be imported. Single-key `CryptoHDKeyUR.fromUR` still throws.
 - Dependency: Update `crypto_wallet_util` constraint to `^2.0.0` so consumers can resolve current 2.x releases.
+
+## [0.1.27]
+
+- Fix: Harden source-fingerprint and keypath decoding: respect `Uint8List` view offsets, validate source-fingerprint length/uint32 range and depth uint8 range, and keep big-endian as the default with `Endian.little` for explicit legacy compatibility.
+- Behavior change (malformed input only): `CryptoKeypath` now rejects invalid components instead of silently coercing or dropping them. This does not change conformant payload decoding.
+- Refactor: Add shared CBOR field validation (`CborFieldReader`) for prioritized ETH, BTC/PSBT, CryptoAccount, CryptoHDKey and CryptoMultiAccounts model decoding, with explicit `InvalidCborURException` / `InvalidTypeURException` errors instead of raw Dart cast errors.
+- Error contract now covers all chains: the remaining non-prioritized decoders (SOL, TRON, Cosmos, SC, ALPH via the `RegistryItem.fromCBOR` convergence point; BCH and Keystone-XRP byte payloads via their `fromUR`) also fail closed with `InvalidTypeURException` / `InvalidCborURException` instead of raw `ArgumentError` / `RangeError` / `Exception`, so callers can catch every malformed-UR failure via `on URException`. Encode-side validation (e.g. `constructCosmosRequest` list-length checks) intentionally keeps throwing `ArgumentError`.
+- Compatibility: Required signing fields remain fail-closed, including request ids, transaction/signature bytes, signing payloads, derivation paths and account key lists. Optional metadata remains best-effort; malformed optional metadata such as `CryptoHDKeyUR.use_info` or `children` is skipped instead of failing the whole scan.
+- Optional-field semantics unified across both decode paths: `RegistryItem.readOptionalInt` / `readOptionalBytes` / `readOptionalText` / `readOptionalJsonList` now skip (return `null`) on a present-but-wrong-type value instead of throwing, matching `CborFieldReader`'s optional reads. Only `required` reads (`readInt` / `readBytes` / `readBigInt` / `readText` / `readJsonMap`) stay fail-closed. Behavior change (malformed optional only): a wrong-typed optional metadata field on SOL/TRON/Cosmos/SC/ALPH is now dropped rather than raising.
+- Docs: Update README capabilities, monorepo example path and pure Dart test commands.

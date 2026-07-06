@@ -82,4 +82,40 @@ void main() {
       expect(() => KeystoneTronSignResult.fromUR(wrongType), throwsA(isA<InvalidTypeURException>()));
     });
   });
+
+  group('问题 3: optional best-effort vs required fail-closed', () {
+    // 合法 keypath：components = [44, hardened]
+    final keypath = CborMap({CborSmallInt(1): CborList([CborSmallInt(44), CborBool(true)])}, tags: [304]);
+
+    CborMap solMap({required CborValue signData, CborValue? fee, CborValue? origin}) {
+      return CborMap({
+        CborSmallInt(1): CborBytes(Uint8List.fromList(List<int>.filled(16, 1))), // uuid (required bytes)
+        CborSmallInt(2): signData, // signData (required bytes)
+        CborSmallInt(3): keypath, // derivationPath (required)
+        CborSmallInt(6): CborSmallInt(SignType.transaction.index), // signType (required)
+        if (origin != null) CborSmallInt(5): origin, // origin (optional text)
+        if (fee != null) CborSmallInt(8): fee, // fee (optional int)
+      });
+    }
+
+    test('optional 字段类型不符 → 跳过（返回 null），不抛错', () {
+      final map = solMap(
+        signData: CborBytes(Uint8List.fromList([1, 2, 3])),
+        fee: CborString('not-an-int'), // 期望 int，给了 string
+        origin: CborSmallInt(999), // 期望 text，给了 int
+      );
+      final decoded = SolSignRequest.fromCBOR(Uint8List.fromList(cbor.encode(map)));
+      expect(decoded.fee, isNull);
+      expect(decoded.origin, isNull);
+      expect(decoded.signData, equals(Uint8List.fromList([1, 2, 3])));
+    });
+
+    test('required 字段类型不符 → fail-closed 抛 InvalidCborURException', () {
+      final map = solMap(signData: CborString('should-be-bytes')); // signData 期望 bytes
+      expect(
+        () => SolSignRequest.fromCBOR(Uint8List.fromList(cbor.encode(map))),
+        throwsA(isA<InvalidCborURException>()),
+      );
+    });
+  });
 }

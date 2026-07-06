@@ -65,24 +65,24 @@ abstract class RegistryItem {
     return cborBigIntOrNull(map[CborSmallInt(key)]) ?? (throw ArgumentError("Invalid bigint at key $key"));
   }
 
-  /// 读取可选字段，Keystone 很多字段是 optional
+  /// 读取可选字段，Keystone 很多字段是 optional。
+  /// 语义：optional = best-effort —— 字段缺失或类型不符都返回 null（跳过），不抛错。
+  /// 只有 required（readInt/readBytes/readBigInt/readText/readJsonMap）才 fail-closed 抛错。
+  /// 这样两条解码路径（CborFieldReader 与 RegistryItem）对 optional 字段的行为一致。
   static int? readOptionalInt(CborMap map, int key) {
-    if (!hasKey(map, key)) return null;
-    return readInt(map, key);
+    return cborIntOrNull(map[CborSmallInt(key)]);
   }
 
   static Uint8List? readOptionalBytes(CborMap map, int key) {
-    if (!hasKey(map, key)) return null;
-    return readBytes(map, key);
+    return cborBytesOrNull(map[CborSmallInt(key)]);
   }
 
   static String? readOptionalText(CborMap map, int key) {
-    if (!hasKey(map, key)) return null;
-    return cborTextOrNull(map[CborSmallInt(key)]) ?? (throw ArgumentError("Invalid text at key $key"));
+    return cborTextOrNull(map[CborSmallInt(key)]);
   }
 
   static String readText(CborMap map, int key) {
-    return readOptionalText(map, key) ?? (throw ArgumentError("Missing text at key $key"));
+    return cborTextOrNull(map[CborSmallInt(key)]) ?? (throw ArgumentError("Invalid text at key $key"));
   }
 
   static Uint8List jsonBytes(Object? value) {
@@ -100,11 +100,16 @@ abstract class RegistryItem {
     throw ArgumentError('Invalid json map at key $key');
   }
 
+  /// optional JSON 列表：best-effort —— 缺失 / 非 bytes / 非法 JSON / 非 list 一律返回 null。
   static List<dynamic>? readOptionalJsonList(CborMap map, int key) {
-    if (!hasKey(map, key)) return null;
-    final value = readJson(map, key);
-    if (value is List<dynamic>) return value;
-    throw ArgumentError('Invalid json list at key $key');
+    final bytes = cborBytesOrNull(map[CborSmallInt(key)]);
+    if (bytes == null) return null;
+    try {
+      final value = jsonDecode(utf8.decode(bytes));
+      return value is List<dynamic> ? value : null;
+    } on Object {
+      return null;
+    }
   }
 
   static bool hasKey(CborMap map, int key) {
