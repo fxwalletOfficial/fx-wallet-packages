@@ -77,6 +77,25 @@ void main() {
       expect(parsed.path, "m/44'/501'/0'");
     });
 
+    test('should preserve non secp256k1 public keys for non-SOL exotic chains', () {
+      // Regression: a legit non-secp256k1 account (e.g. Sui coin type 784) inside a
+      // Keystone crypto-multi-accounts bundle used to throw and abort the whole
+      // import. It must now be preserved with wallet=null like SOL.
+      final ur = CryptoHDKeyUR.fromWallet(
+        name: 'sui-wallet',
+        path: "m/44'/784'/0'",
+        publicKey: Uint8List(33),
+        chainCode: Uint8List(32),
+      );
+
+      final parsed = CryptoHDKeyUR.fromUR(ur: UR.decode(ur.encode()));
+
+      expect(parsed.wallet, isNull);
+      expect(parsed.publicKey, Uint8List(33));
+      expect(parsed.chainCode, Uint8List(32));
+      expect(parsed.path, "m/44'/784'/0'");
+    });
+
     test('should reject malformed secp256k1 public keys with chain code', () {
       final ur = UR.fromCBOR(
         type: RegistryType.CRYPTO_HDKEY.type,
@@ -98,6 +117,25 @@ void main() {
 
       expect(
         () => CryptoHDKeyUR.fromUR(ur: ur),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('rejects a secp-shaped off-curve key even without useInfo (Keystone)',
+        () {
+      // Keystone omits use_info. A BTC BIP84 path used to yield coinType=null
+      // (the old regex only matched m/44'/…) and get silently preserved. The key
+      // is encoded like a compressed secp256k1 point (0x02 prefix) but is off the
+      // curve, so it must now fail closed on the key shape alone.
+      final ur = CryptoHDKeyUR.fromWallet(
+        name: 'corrupt-btc-bip84',
+        path: "m/84'/0'/0'",
+        publicKey: Uint8List(33)..[0] = 0x02,
+        chainCode: Uint8List(32),
+      );
+
+      expect(
+        () => CryptoHDKeyUR.fromUR(ur: UR.decode(ur.encode())),
         throwsA(isA<FormatException>()),
       );
     });
