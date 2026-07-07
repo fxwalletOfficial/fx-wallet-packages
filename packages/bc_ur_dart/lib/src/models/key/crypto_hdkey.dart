@@ -163,7 +163,12 @@ class CryptoHDKeyUR extends UR {
         wallet = BIP32.fromPublicKey(publicKey, chainCode);
       } catch (e) {
         if (!_allowsRawNonSecpKey(useInfo, path, publicKey)) {
-          throw FormatException('Invalid crypto-hdkey public key or chain code: $e');
+          throw InvalidCborURException(
+            model: 'crypto-hdkey',
+            field: 'public_key',
+            reason: 'invalid secp256k1 public key or chain code',
+            cause: e,
+          );
         }
       }
       if (wallet != null) {

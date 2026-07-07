@@ -116,7 +116,7 @@ void main() {
 
       expect(
         () => CryptoHDKeyUR.fromUR(ur: ur),
-        throwsA(isA<FormatException>()),
+        throwsA(isA<URException>()),
       );
     });
 
@@ -135,7 +135,7 @@ void main() {
 
       expect(
         () => CryptoHDKeyUR.fromUR(ur: UR.decode(ur.encode())),
-        throwsA(isA<FormatException>()),
+        throwsA(isA<URException>()),
       );
     });
 

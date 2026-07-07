@@ -65,7 +65,11 @@ class CryptoMultiAccountsUR extends UR {
       try {
         final chainInfo = CryptoHDKeyUR.fromUR(ur: keyUr);
         chainList.add(chainInfo);
-      } catch (e) {
+      } on URException catch (e) {
+        // Malformed entries now fail closed via the URException contract; skip
+        // and record so the rest of the account set still imports. Anything
+        // outside the contract (a genuine programmer bug) is intentionally left
+        // to propagate rather than being silently dropped as a skipped key.
         skippedKeys.add(SkippedHDKeyEntry(index: index, reason: '$e'));
       }
     }
