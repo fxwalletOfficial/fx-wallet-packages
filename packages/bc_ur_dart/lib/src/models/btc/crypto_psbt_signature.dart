@@ -22,7 +22,12 @@ class BtcSignature extends UR {
       throw InvalidTypeURException(expected: expectedType, actual: ur.type);
     }
 
-    final decoded = ur.decodeCBOR();
+    final CborValue decoded;
+    try {
+      decoded = ur.decodeCBOR();
+    } on Object catch (error) {
+      throw InvalidCborURException(model: 'crypto-psbt', reason: 'invalid CBOR payload', cause: error);
+    }
     if (decoded is! CborBytes) {
       throw InvalidCborURException(model: 'crypto-psbt', reason: 'expected top-level CborBytes, got ${decoded.runtimeType}');
     }
