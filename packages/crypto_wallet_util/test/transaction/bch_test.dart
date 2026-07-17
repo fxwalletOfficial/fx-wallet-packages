@@ -1,4 +1,6 @@
 import 'package:crypto_wallet_util/crypto_utils.dart';
+import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart'
+    as bitcoin;
 import 'package:test/test.dart';
 
 void main() async {
@@ -232,8 +234,37 @@ void main() async {
       expect(address, startsWith('bchtest:'));
       expect(AddressUtils.checkAddressValid(address, bchChain.testnet), isTrue);
       expect(
+        bitcoin.Address.addressToOutputScript(
+          address,
+          bchChain.testnet.networkType,
+        ),
+        isNotEmpty,
+      );
+      expect(
         AddressUtils.checkAddressValid(address, bchChain.mainnet),
         isFalse,
+      );
+    });
+
+    test('BCH testnet P2SH conversion preserves type and network', () {
+      const legacyTestnetP2sh = '2NBFNJTktNa7GZusGbDbGKRZTxdK9VVez3n';
+      final bchChain = BCHChain();
+      final cashAddress = bitcoin.Address.legacyToBch(
+        address: legacyTestnetP2sh,
+        prefix: 'bchtest',
+      );
+
+      expect(cashAddress, startsWith('bchtest:p'));
+      expect(
+        bitcoin.Address.bchToLegacy(cashAddress, prefix: 'bchtest'),
+        legacyTestnetP2sh,
+      );
+      expect(
+        bitcoin.Address.addressToOutputScript(
+          cashAddress,
+          bchChain.testnet.networkType,
+        ),
+        isNotEmpty,
       );
     });
 
@@ -305,6 +336,10 @@ void main() async {
             bchChain.testnet,
           ),
           isFalse,
+        );
+        expect(
+          () => bitcoin.Address.bchToLegacy(corruptedCashAddress),
+          throwsArgumentError,
         );
       },
     );

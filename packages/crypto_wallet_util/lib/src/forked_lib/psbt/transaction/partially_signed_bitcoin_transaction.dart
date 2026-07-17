@@ -430,7 +430,8 @@ class PSBT {
         (outputs[outputsIndex[0]].address == inputAddress ||
             (btcInfo.chain.toLowerCase() == 'bch' &&
                 (outputs[outputsIndex[0]].address ==
-                        bitcoin.Address.bchToLegacy(inputAddress) ||
+                        bitcoin.Address.bchToLegacy(
+                            inputAddress, prefix: 'bitcoincash') ||
                     outputs[outputsIndex[0]].address ==
                         bitcoin.Address.legacyToBch(
                             address: inputAddress, prefix: 'bitcoincash'))))) {

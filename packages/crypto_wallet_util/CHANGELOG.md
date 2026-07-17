@@ -3,78 +3,15 @@
 ## [2.0.3] - 2026-07-17
 ### Fixed
 
-- BTC testnet address generation now respects the network type from `WalletSetting`.
-  Previously, `BtcCoin.publicKeyToAddress` hardcoded mainnet version bytes (0x00)
-  and HRP ('bc'), causing testnet wallets to generate mainnet-format addresses that
-  were misidentified as BCH testnet addresses during validation.
-- Added regression tests to verify BTC testnet addresses are correctly generated
-  (using version byte 0x6f for legacy, 'tb' HRP for segwit) and properly detected
-  as BTC rather than BCH.
-
-## [2.0.2] - 2026-07-02
-### Fixed
-
-- PSBT: parse LTC P2SH / Nested SegWit addresses correctly by plumbing chain-aware
-  version bytes and bech32 HRP through address encoding instead of hard-coding BTC
-  mainnet values.
-- GSPL: support LTC P2SH payment address parsing by detecting the script type
-  (P2PKH vs P2SH) and resolving the correct network version bytes from the bip44
-  path coin-type segment.
-- BTC / LTC chain configs: fill in distinct testnet NetworkType values (previously
-  shared mainnet settings).
-
-## [2.0.1] - 2026-06-12
-### Added
-
-- SC (Sia): native Go FFI transaction bridge (`ScGoFfiBridge`) as a faster,
-  opt-in alternative to the WASM bridge. The default `create()` is unchanged
-  and still uses the WASM bridge (`ScWasmRunBridge`), so existing callers are
-  unaffected. The native library is **not** bundled: the caller builds it for
-  their platform (see `lib/src/forked_lib/sia-wasi/build.sh`), loads it, and
-  passes it via `ScTransactionBuilder.createWithFfi(DynamicLibrary)`.
-
-### Changed
-
-- Minimum Dart SDK raised to `>=3.11.0` (required by the `wasd` WASM
-  interpreter that backs the default SC bridge). Consumers on Dart 3.7–3.10
-  must upgrade.
-
-### Removed
-
-- Pruned dead code from the vendored `bitcoin_base_hd` fork that is never
-  reached by this package (BTC/LTC/BCH only use `ECPrivate`):
-  - the entire `provider/` subtree (Electrum/HTTP API providers and the
-    `BitcoinTransactionBuilder` / BCH builder) and `utils/btc_utils.dart`
-    (~2.2k lines).
-  - `ECPublic.verifyTransactionSignature` and
-    `ECPublic.verifySchnorrTransactionSignature` (unused; their post-upgrade
-    bodies had latent argument-shape issues).
-## [2.0.0] - 2026-06-09
-### BREAKING
-
-- Upgrade `blockchain_utils` from `^1.4.1` to `^6.0.0`. Resolves the dependency
-  conflict reported in #20 (consumers using `bitcoin_base 7.x` / `xrpl_dart 7.x`,
-  which require `blockchain_utils ^6.0.0`).
-- Minimum Dart SDK raised to `>=3.7.0` (required by `blockchain_utils 6.0.0`).
-
-### Changed
-
-- Migrated the vendored `bitcoin_base_hd` and `xrpl_dart` forks to the
-  `blockchain_utils` 6.x API: relocated utility imports to the package barrel,
-  `Tuple`/`item1,item2` → Dart records (`$1`,`$2`), `mask*`/`writeUintXLE` →
-  `BinaryOps.*`, `bytesEqual`/`iterableIsEqual` → `BytesUtils`/`CompareUtils`,
-  `Secp256k1*KeyEcdsa` → `Secp256k1*Key`, `BitcoinSigner`/`BitcoinVerifier` →
-  `BitcoinKeySigner`/`BitcoinSignatureVerifier`, `BigintUtils.orderLen` →
-  `BigintUtils.bitlengthInBytes`.
-- ECDSA / Taproot / message signing outputs verified byte-for-byte identical to
-  the pre-upgrade implementation; XRP secp256k1 family-seed derivation and
-  classic/X-address conversion pinned with characterization tests.
-- `Bech32Validations` / `SegwitValidations` declared as `mixin` (Dart 3 language
-  level no longer permits using a plain class as a mixin).
-
-### Notes
-
-- No public API changes beyond the SDK floor; all 782 unit tests pass.
+- BTC address generation and validation now consistently honor the selected
+  network, including legacy, SegWit v0, BIP86 Taproot, custom HRPs, and
+  fail-closed handling for explicitly configured networks without a valid HRP.
+- Taproot key tweaking now follows BIP341 `lift_x` semantics and is pinned to the
+  official BIP86 address and scriptPubKey vector.
+- Bech32, Bech32m, and CashAddr decoding now verifies checksum, network prefix,
+  witness version and length, and canonical bit padding.
+- BCH testnet uses `bchtest` plus testnet version bytes, and BCH validation
+  requires a full network-matching CashAddr to avoid BTC/BCH legacy ambiguity.
 
 ## [1.0.0] - 2024-06-19
 
@@ -334,3 +271,70 @@
 - SC transaction signer (Ed25519) and builder.
 - SC send example.
 
+
+## [2.0.0] - 2026-06-09
+### BREAKING
+
+- Upgrade `blockchain_utils` from `^1.4.1` to `^6.0.0`. Resolves the dependency
+  conflict reported in #20 (consumers using `bitcoin_base 7.x` / `xrpl_dart 7.x`,
+  which require `blockchain_utils ^6.0.0`).
+- Minimum Dart SDK raised to `>=3.7.0` (required by `blockchain_utils 6.0.0`).
+
+### Changed
+
+- Migrated the vendored `bitcoin_base_hd` and `xrpl_dart` forks to the
+  `blockchain_utils` 6.x API: relocated utility imports to the package barrel,
+  `Tuple`/`item1,item2` → Dart records (`$1`,`$2`), `mask*`/`writeUintXLE` →
+  `BinaryOps.*`, `bytesEqual`/`iterableIsEqual` → `BytesUtils`/`CompareUtils`,
+  `Secp256k1*KeyEcdsa` → `Secp256k1*Key`, `BitcoinSigner`/`BitcoinVerifier` →
+  `BitcoinKeySigner`/`BitcoinSignatureVerifier`, `BigintUtils.orderLen` →
+  `BigintUtils.bitlengthInBytes`.
+- ECDSA / Taproot / message signing outputs verified byte-for-byte identical to
+  the pre-upgrade implementation; XRP secp256k1 family-seed derivation and
+  classic/X-address conversion pinned with characterization tests.
+- `Bech32Validations` / `SegwitValidations` declared as `mixin` (Dart 3 language
+  level no longer permits using a plain class as a mixin).
+
+### Notes
+
+- No public API changes beyond the SDK floor; all 782 unit tests pass.
+
+
+## [2.0.2] - 2026-07-02
+### Fixed
+
+- PSBT: parse LTC P2SH / Nested SegWit addresses correctly by plumbing chain-aware
+  version bytes and bech32 HRP through address encoding instead of hard-coding BTC
+  mainnet values.
+- GSPL: support LTC P2SH payment address parsing by detecting the script type
+  (P2PKH vs P2SH) and resolving the correct network version bytes from the bip44
+  path coin-type segment.
+- BTC / LTC chain configs: fill in distinct testnet NetworkType values (previously
+  shared mainnet settings).
+
+## [2.0.1] - 2026-06-12
+### Added
+
+- SC (Sia): native Go FFI transaction bridge (`ScGoFfiBridge`) as a faster,
+  opt-in alternative to the WASM bridge. The default `create()` is unchanged
+  and still uses the WASM bridge (`ScWasmRunBridge`), so existing callers are
+  unaffected. The native library is **not** bundled: the caller builds it for
+  their platform (see `lib/src/forked_lib/sia-wasi/build.sh`), loads it, and
+  passes it via `ScTransactionBuilder.createWithFfi(DynamicLibrary)`.
+
+### Changed
+
+- Minimum Dart SDK raised to `>=3.11.0` (required by the `wasd` WASM
+  interpreter that backs the default SC bridge). Consumers on Dart 3.7–3.10
+  must upgrade.
+
+### Removed
+
+- Pruned dead code from the vendored `bitcoin_base_hd` fork that is never
+  reached by this package (BTC/LTC/BCH only use `ECPrivate`):
+  - the entire `provider/` subtree (Electrum/HTTP API providers and the
+    `BitcoinTransactionBuilder` / BCH builder) and `utils/btc_utils.dart`
+    (~2.2k lines).
+  - `ECPublic.verifyTransactionSignature` and
+    `ECPublic.verifySchnorrTransactionSignature` (unused; their post-upgrade
+    bodies had latent argument-shape issues).

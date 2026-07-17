@@ -108,8 +108,10 @@ class Bech32Decoder extends Converter<String, Bech32> with Bech32Validations {
     }
 
     final encodedData = input.substring(separatorPosition + 1);
-    final dataIncludingChecksum =
-        encodedData.split('').map((c) => charset.indexOf(c)).toList();
+    final dataIncludingChecksum = encodedData
+        .split('')
+        .map((c) => charset.indexOf(c))
+        .toList();
     if (hasOutOfBoundsChars(dataIncludingChecksum)) {
       throw OutOfBoundChars(encodedData);
     }
@@ -280,7 +282,10 @@ List<int> convertBits(data, int from, int to, {bool strictMode = false}) {
   var bits = 0;
 
   for (var i = 0; i < data.length; i++) {
-    var value = data[i];
+    final value = data[i] as int;
+    if (value < 0 || value >> from != 0) {
+      throw ArgumentError('Input value $value exceeds $from bits');
+    }
     accumulator = (accumulator << from) | value;
     bits += from;
     while (bits >= to) {
@@ -293,9 +298,10 @@ List<int> convertBits(data, int from, int to, {bool strictMode = false}) {
   if (!strictMode) {
     if (bits > 0) {
       result[index] = (accumulator << (to - bits)) & mask;
-      index++;
     }
-  } else {}
+  } else if (bits >= from || ((accumulator << (to - bits)) & mask) != 0) {
+    throw ArgumentError('Invalid padding');
+  }
 
   return result;
 }
@@ -334,10 +340,9 @@ Uint8List convertBit(Uint8List buff) {
   String str = '';
   for (var i = 0; i < buff.length; i++) {
     String res = buff[i].toRadixString(2);
-    res =
-        res.length < 8
-            ? '00000000'.substring(0, 8 - res.length) + res
-            : buff[i].toRadixString(2);
+    res = res.length < 8
+        ? '00000000'.substring(0, 8 - res.length) + res
+        : buff[i].toRadixString(2);
 
     str = str + res;
   }

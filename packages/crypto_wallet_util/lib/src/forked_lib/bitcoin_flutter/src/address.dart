@@ -174,32 +174,47 @@ class Address {
 
   static String bchToLegacy(String addr, {String? prefix}) {
     final parts = addr.split(':');
-    if (parts.length != 2 ||
-        (prefix != null && !validateCashAddress(addr, prefix))) {
+    final cashAddressPrefix = (prefix ?? parts.first).toLowerCase();
+    if (parts.length != 2 || !validateCashAddress(addr, cashAddressPrefix)) {
       throw ArgumentError('Invalid CashAddr');
     }
-    final payload = base32Decode(addr.split(':')[1]);
-    final hash = convertBits(
+    final payload = base32Decode(parts[1]);
+    final decoded = convertBits(
       payload.sublist(0, payload.length - 8),
       5,
       8,
       strictMode: true,
     );
-    return bs58check.encode(Uint8List.fromList(hash));
+    final isScriptHash = decoded.first & 0x78 == 8;
+    final isMainnet = cashAddressPrefix == 'bitcoincash';
+    final legacyVersion = isMainnet
+        ? (isScriptHash ? 0x05 : 0x00)
+        : (isScriptHash ? 0xc4 : 0x6f);
+    return bs58check.encode(
+      Uint8List.fromList([legacyVersion, ...decoded.sublist(1)]),
+    );
   }
 
   static String legacyToBch({required String address, required String prefix}) {
     final decode = bs58check.decode(address);
     final hash = decode.sublist(1);
-    final type = 'P2PKH';
+    final normalizedPrefix = prefix.toLowerCase();
+    final isMainnet = normalizedPrefix == 'bitcoincash';
+    final pubKeyHashVersion = isMainnet ? 0x00 : 0x6f;
+    final scriptHashVersion = isMainnet ? 0x05 : 0xc4;
+    final type = decode.first == pubKeyHashVersion
+        ? 'P2PKH'
+        : decode.first == scriptHashVersion
+        ? 'P2SH'
+        : throw ArgumentError('Legacy address does not match CashAddr network');
 
-    final prefixData = prefixToUint5Array(prefix) + [0];
+    final prefixData = prefixToUint5Array(normalizedPrefix) + [0];
     final versionByte = getTypeBits(type) + getHashSizeBits(hash);
     final payloadData = convertBits([versionByte] + hash, 8, 5);
     final checksumData =
         prefixData + payloadData + List.generate(8, (index) => 0);
     final payload = payloadData + checksumToUint5Array(polymod(checksumData));
 
-    return '$prefix:${base32Encode(payload)}';
+    return '$normalizedPrefix:${base32Encode(payload)}';
   }
 }

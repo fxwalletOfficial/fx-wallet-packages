@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:test/test.dart';
 
 import 'package:crypto_wallet_util/crypto_utils.dart';
+import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart'
+    as bitcoin;
 
 void main() async {
   const String mnemonic =
@@ -188,10 +190,18 @@ void main() async {
 
     test('public factory matches the first BIP86 mainnet vector', () async {
       final wallet = await getMnemonicWallet('taproot', bip86Mnemonic);
+      final script = bitcoin.Address.addressToOutputScript(
+        wallet.address,
+        BTCChain().mainnet.networkType,
+      );
 
       expect(
         wallet.address,
         'bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr',
+      );
+      expect(
+        script!.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
+        '5120a60869f0dbcf1dc659c9cecbaf8050135ea9e8cdc487053f1dc6880949dc684c',
       );
     });
 
@@ -271,6 +281,26 @@ void main() async {
       );
     });
 
+    test('Taproot validation rejects non-canonical witness padding', () async {
+      final btcChain = BTCChain();
+      final wallet = await getMnemonicWallet('taproot', bip86Mnemonic);
+      final decoded = bitcoin.bech32.decode(
+        wallet.address,
+        encoding: 'bech32m',
+      );
+      final dataWithNonZeroPadding = List<int>.from(decoded.data);
+      dataWithNonZeroPadding[dataWithNonZeroPadding.length - 1] |= 1;
+      final nonCanonicalAddress = bitcoin.bech32.encode(
+        bitcoin.Bech32(decoded.hrp, dataWithNonZeroPadding),
+        encoding: 'bech32m',
+      );
+
+      expect(
+        AddressUtils.checkAddressValid(nonCanonicalAddress, btcChain.mainnet),
+        isFalse,
+      );
+    });
+
     test('custom regtest and signet-compatible HRPs are supported', () async {
       WalletSetting settingForHrp(String hrp) => WalletSetting(
         bip44Path: BTC_PATH,
@@ -334,9 +364,15 @@ void main() async {
         settingForHrp(' '),
         true,
       );
+      final emptyHrpWallet = await BtcCoin.fromMnemonic(
+        bip86Mnemonic,
+        settingForHrp(''),
+        true,
+      );
 
       expect(() => missingHrpWallet.address, throwsArgumentError);
       expect(() => invalidHrpWallet.address, throwsA(isA<Exception>()));
+      expect(() => emptyHrpWallet.address, throwsA(isA<Exception>()));
     });
   });
 }
