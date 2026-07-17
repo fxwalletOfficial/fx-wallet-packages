@@ -24,6 +24,20 @@ const PSBT_IN_TAP_INTERNAL_KEY = "17";
 
 enum WalletType { SingleSignatureWallet, MultisignatureWallet }
 
+/// Normalise a BCH address to its legacy (base58) form so CashAddr and legacy
+/// representations can be compared. The CashAddr network prefix (`bitcoincash`
+/// or `bchtest`) is inferred from the address itself; a legacy address is
+/// returned unchanged. On any conversion failure the input is returned as-is so
+/// callers fall back to a plain string comparison instead of throwing.
+String _bchToLegacy(String address) {
+  if (!address.contains(':')) return address;
+  try {
+    return bitcoin.Address.bchToLegacy(address);
+  } catch (_) {
+    return address;
+  }
+}
+
 /// Represents a PSBT(BIP-0174).
 class PSBT {
   /// @nodoc
@@ -426,16 +440,18 @@ class PSBT {
       }
     }
     int changeIndex = -1; // total - payoff;
-    if (outputsIndex.isNotEmpty &&
-        (outputs[outputsIndex[0]].address == inputAddress ||
-            (btcInfo.chain.toLowerCase() == 'bch' &&
-                (outputs[outputsIndex[0]].address ==
-                        bitcoin.Address.bchToLegacy(
-                            inputAddress, prefix: 'bitcoincash') ||
-                    outputs[outputsIndex[0]].address ==
-                        bitcoin.Address.legacyToBch(
-                            address: inputAddress, prefix: 'bitcoincash'))))) {
-      changeIndex = outputsIndex[0];
+    if (outputsIndex.isNotEmpty) {
+      final candidate = outputs[outputsIndex[0]].address;
+      bool isChange = candidate == inputAddress;
+      if (!isChange && btcInfo.chain.toLowerCase() == 'bch') {
+        // BCH addresses come in CashAddr and legacy forms, on either mainnet
+        // (`bitcoincash`) or testnet (`bchtest`). Normalise both sides to their
+        // legacy form — inferring the network prefix from each address instead
+        // of hard-coding mainnet — so a testnet CashAddr input matches its
+        // legacy change output.
+        isChange = _bchToLegacy(candidate) == _bchToLegacy(inputAddress);
+      }
+      if (isChange) changeIndex = outputsIndex[0];
     }
 
     // Outputs

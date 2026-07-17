@@ -228,6 +228,34 @@ void main() async {
     );
 
     test(
+      'Taproot address follows later network changes on a shared setting',
+      () async {
+        // The Taproot constructor keeps the caller's setting by reference
+        // instead of snapshotting it, so switching the shared setting's
+        // network propagates to existing and freshly derived wallets alike
+        // (regression for state splitting between mainnet/testnet).
+        final setting = WalletSetting(
+          bip44Path: BTC_PATH,
+          addressType: AddressType.BTC,
+          networkType: BTCChain().mainnet.networkType,
+        );
+        final wallet = await BtcCoin.fromMnemonic(bip86Mnemonic, setting, true);
+        final originalMainnetAddress = wallet.address;
+        expect(originalMainnetAddress, startsWith('bc1p'));
+
+        setting.networkType = BTCChain().testnet.networkType;
+        expect(wallet.address, startsWith('tb1p'));
+
+        final fresh = await BtcCoin.fromMnemonic(bip86Mnemonic, setting, true);
+        expect(fresh.address, equals(wallet.address));
+
+        setting.networkType = BTCChain().mainnet.networkType;
+        expect(wallet.address, originalMainnetAddress);
+        expect(fresh.address, originalMainnetAddress);
+      },
+    );
+
+    test(
       'Taproot validation rejects addresses from the other network',
       () async {
         final btcChain = BTCChain();

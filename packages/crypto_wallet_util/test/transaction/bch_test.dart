@@ -1,7 +1,31 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:crypto_wallet_util/crypto_utils.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart'
     as bitcoin;
+import 'package:crypto_wallet_util/src/forked_lib/psbt/transaction/partially_signed_bitcoin_transaction.dart';
 import 'package:test/test.dart';
+
+PSBT _buildBchPsbtFixture({
+  required String inputAddress,
+  required String changeAddress,
+}) {
+  final fixtures =
+      json.decode(
+            File('./test/psbt/data.json').readAsStringSync(encoding: utf8),
+          )
+          as List<dynamic>;
+  final transferJson =
+      json.decode(json.encode(fixtures.first['data'])) as Map<String, dynamic>;
+  final origin = transferJson['origin'] as Map<String, dynamic>;
+  final outputs = origin['outputs'] as List<dynamic>;
+  transferJson['chain'] = 'bch';
+  transferJson['inputAddress'] = inputAddress;
+  outputs[1]['address'] = changeAddress;
+  outputs[1]['path'] = "m/44'/145'/0'/1/0";
+  return PSBT.fromTransferPsbt(BtcTransferInfo.fromJson(transferJson));
+}
 
 void main() async {
   const String mnemonic =
@@ -304,6 +328,56 @@ void main() async {
         );
       },
     );
+
+    test('BCH testnet CashAddr identifies legacy PSBT change output', () async {
+      final wallet = await BchCoin.fromMnemonic(mnemonic, BCHChain().testnet);
+      final cashAddress = wallet.address;
+      final legacyAddress = bitcoin.Address.bchToLegacy(cashAddress);
+      expect(cashAddress, startsWith('bchtest:'));
+      expect(legacyAddress, anyOf(startsWith('m'), startsWith('n')));
+
+      // Exercise the real PSBT change-detection call chain with a bchtest input
+      // and its equivalent legacy m/n output. Before the fix this threw because
+      // the conversion was forced through the bitcoincash mainnet prefix.
+      final psbt = _buildBchPsbtFixture(
+        inputAddress: cashAddress,
+        changeAddress: legacyAddress,
+      );
+
+      expect(psbt.outputs[0].derivationPath, isNull);
+      expect(psbt.outputs[1].derivationPath, isNotNull);
+      expect(psbt.outputs[1].isChange, isTrue);
+    });
+
+    test('BCH PSBT does not mark a cross-network address as change', () async {
+      final chain = BCHChain();
+      final testnetWallet = await BchCoin.fromMnemonic(mnemonic, chain.testnet);
+      final mainnetWallet = await BchCoin.fromMnemonic(mnemonic, chain.mainnet);
+      final mainnetLegacy = bitcoin.Address.bchToLegacy(mainnetWallet.address);
+
+      final psbt = _buildBchPsbtFixture(
+        inputAddress: testnetWallet.address,
+        changeAddress: mainnetLegacy,
+      );
+
+      expect(psbt.outputs[1].derivationPath, isNull);
+      expect(psbt.outputs[1].isChange, isFalse);
+    });
+
+    for (final inputAddress in ['', 'bchtest:not-valid']) {
+      test('BCH PSBT fails closed for input "$inputAddress"', () async {
+        final wallet = await BchCoin.fromMnemonic(mnemonic, BCHChain().testnet);
+        final legacyAddress = bitcoin.Address.bchToLegacy(wallet.address);
+
+        final psbt = _buildBchPsbtFixture(
+          inputAddress: inputAddress,
+          changeAddress: legacyAddress,
+        );
+
+        expect(psbt.outputs[1].derivationPath, isNull);
+        expect(psbt.outputs[1].isChange, isFalse);
+      });
+    }
 
     test(
       'BCH validation rejects legacy testnet ambiguity and bad checksum',

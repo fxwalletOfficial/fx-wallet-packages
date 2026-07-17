@@ -15,23 +15,12 @@ class BtcCoin extends WalletType {
   final isTaproot;
   WalletSetting? setting;
   BtcCoin({WalletSetting? setting, this.isTaproot = false}) {
-    if (setting == null) {
-      this.setting = isTaproot ? _taproot : _default;
-    } else if (isTaproot) {
-      // The network and derivation scheme are independent choices. A caller
-      // may pass BTCChain().testnet to select testnet, but Taproot keys must
-      // still use the BIP86 path.
-      this.setting = WalletSetting(
-        bip44Path: TAPROOT_PATH,
-        prefix: setting.prefix,
-        networkType: setting.networkType,
-        bech32Length: setting.bech32Length,
-        regExp: setting.regExp,
-        addressType: setting.addressType,
-      );
-    } else {
-      this.setting = setting;
-    }
+    // Keep the caller's setting by reference so any later network state
+    // (`networkType`) stays observable. The network and derivation scheme are
+    // independent choices: a caller may pass BTCChain().testnet to select
+    // testnet, but Taproot keys must still derive on the BIP86 path — that is
+    // handled in [mnemonicToPrivateKey] rather than by copying the setting.
+    this.setting = setting ?? (isTaproot ? _taproot : _default);
   }
 
   static Future<BtcCoin> fromMnemonic(
@@ -56,7 +45,10 @@ class BtcCoin extends WalletType {
 
   @override
   Future<Uint8List> mnemonicToPrivateKey(String mnemonic) async {
-    return HDWallet.bip32DerivePath(mnemonic, setting!.bip44Path);
+    // Taproot always derives on the BIP86 path, independent of the network
+    // carried by [setting]; other script types honour the setting's path.
+    final path = isTaproot ? TAPROOT_PATH : setting!.bip44Path;
+    return HDWallet.bip32DerivePath(mnemonic, path);
   }
 
   @override
