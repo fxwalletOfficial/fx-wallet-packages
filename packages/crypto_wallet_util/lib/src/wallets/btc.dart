@@ -14,19 +14,41 @@ class BtcCoin extends WalletType {
   final _taproot = WalletSetting(bip44Path: TAPROOT_PATH);
   final isTaproot;
   WalletSetting? setting;
-  BtcCoin({setting, this.isTaproot = false}) {
-    this.setting = setting ?? (isTaproot ? _taproot : _default);
+  BtcCoin({WalletSetting? setting, this.isTaproot = false}) {
+    if (setting == null) {
+      this.setting = isTaproot ? _taproot : _default;
+    } else if (isTaproot) {
+      // The network and derivation scheme are independent choices. A caller
+      // may pass BTCChain().testnet to select testnet, but Taproot keys must
+      // still use the BIP86 path.
+      this.setting = WalletSetting(
+        bip44Path: TAPROOT_PATH,
+        prefix: setting.prefix,
+        networkType: setting.networkType,
+        bech32Length: setting.bech32Length,
+        regExp: setting.regExp,
+        addressType: setting.addressType,
+      );
+    } else {
+      this.setting = setting;
+    }
   }
 
-  static Future<BtcCoin> fromMnemonic(String mnemonic,
-      [WalletSetting? setting, bool isTaproot = false]) async {
+  static Future<BtcCoin> fromMnemonic(
+    String mnemonic, [
+    WalletSetting? setting,
+    bool isTaproot = false,
+  ]) async {
     final wallet = BtcCoin(setting: setting, isTaproot: isTaproot);
     await wallet.initFromMnemonic(mnemonic);
     return wallet;
   }
 
-  factory BtcCoin.fromPrivateKey(dynamic privateKey,
-      [WalletSetting? setting, bool isTaproot = false]) {
+  factory BtcCoin.fromPrivateKey(
+    dynamic privateKey, [
+    WalletSetting? setting,
+    bool isTaproot = false,
+  ]) {
     final wallet = BtcCoin(setting: setting, isTaproot: isTaproot);
     wallet.initFromPrivateKey(dynamicToUint8List(privateKey));
     return wallet;
@@ -45,7 +67,11 @@ class BtcCoin extends WalletType {
   @override
   String publicKeyToAddress(Uint8List publicKey) {
     if (isTaproot) {
-      final hrp = setting?.networkType?.bech32 ?? 'bc';
+      final networkType = setting?.networkType;
+      final hrp = networkType == null ? 'bc' : networkType.bech32;
+      if (hrp == null) {
+        throw ArgumentError('Taproot networkType must define a bech32 HRP');
+      }
       return P2PKH.getTaprootAddress(publicKey, hrp);
     } else {
       final addressBytes = sha160fromByte(publicKey);

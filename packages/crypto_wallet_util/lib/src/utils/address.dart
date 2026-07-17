@@ -55,16 +55,14 @@ class AddressUtils {
     return RegExp(ETH_ADDRESS_REG).hasMatch(address);
   }
 
-  static bool checkBtcAddress(String address,
-      [NetworkType? networkType]) {
+  static bool checkBtcAddress(String address, [NetworkType? networkType]) {
     try {
-      if (networkType?.prefix == 'bitcoincash' &&
-          !address.startsWith('1') &&
-          !address.startsWith('3')) {
-        return checkStandardBase32(address);
-      }
-      if (address.startsWith('bc')) {
-        return checkBech32Address(address, 'bc', address.length - 3);
+      final cashAddressPrefix = networkType?.prefix;
+      if (cashAddressPrefix != null) {
+        // BTC and BCH testnet legacy P2PKH addresses share version 0x6f, so
+        // they cannot be classified by address bytes alone. Require the
+        // network-qualified CashAddr form for BCH.
+        return bitcoin.Address.validateCashAddress(address, cashAddressPrefix);
       }
       bitcoin.Address.addressToOutputScript(address, networkType);
       return true;
@@ -85,8 +83,11 @@ class AddressUtils {
     }
   }
 
-  static bool checkBase58Address(String address, String regExp,
-      [int length = 32]) {
+  static bool checkBase58Address(
+    String address,
+    String regExp, [
+    int length = 32,
+  ]) {
     try {
       if (!RegExp(regExp).hasMatch(address)) {
         return false;
@@ -194,8 +195,10 @@ class AddressUtils {
   static bool checkAlgoAddress(String address, conf) {
     if (!RegExp(conf.regExp).hasMatch(address.toLowerCase())) return false;
 
-    final base32Data =
-        Base32.decode(address.toLowerCase(), type: Base32Type.RFC4648);
+    final base32Data = Base32.decode(
+      address.toLowerCase(),
+      type: Base32Type.RFC4648,
+    );
     final data = base32Data.sublist(0, base32Data.length - 4);
     final checkSum = base32Data.sublist(base32Data.length - 4);
     final sha512data = getSHA512256(data.toUint8List());
@@ -253,8 +256,9 @@ bool checkStandardBase32(String address) {
 
 bool checkRFC4648Base32(String address, String prefix) {
   try {
-    String addressData =
-        address.substring(address.indexOf(prefix) + prefix.length);
+    String addressData = address.substring(
+      address.indexOf(prefix) + prefix.length,
+    );
     final decoded =
         Base32.decode(addressData, type: Base32Type.RFC4648).toUint8List();
     final addressEncode = Base32.encode(decoded, type: Base32Type.RFC4648);
@@ -273,8 +277,9 @@ bool checkBase58(String address, {int length = 25}) {
   Uint8List data = decoded.sublist(0, decoded.length - 4);
   Uint8List checksum = decoded.sublist(decoded.length - 4);
   Uint8List midData = Uint8List.fromList(sha256.convert(data).bytes);
-  Uint8List calculatedChecksum =
-      Uint8List.fromList(sha256.convert(midData).bytes.sublist(0, 4));
+  Uint8List calculatedChecksum = Uint8List.fromList(
+    sha256.convert(midData).bytes.sublist(0, 4),
+  );
   for (int i = 0; i < 4; i++) {
     if (checksum[i] != calculatedChecksum[i]) {
       return false;
@@ -319,8 +324,9 @@ String toEthChecksumAddress(String address) {
 /// A method to get [AddressType] by network name([String]).
 AddressType getAddressType(network) {
   return AddressType.values.firstWhere(
-      (e) => (e.toString().split(".").last) == network.toUpperCase(),
-      orElse: () => AddressType.NONE);
+    (e) => (e.toString().split(".").last) == network.toUpperCase(),
+    orElse: () => AddressType.NONE,
+  );
 }
 
 /// [AddressType] enum to [String]
