@@ -94,4 +94,46 @@ void main() async {
       expect(signature, txHash);
     }
   });
+
+  // Regression test for #74: BTC testnet address should not be misidentified as BCH
+  group('testnet address generation and detection', () {
+    test('BTC testnet address should use correct version byte (0x6f)', () async {
+      const mnemonic = 'assault assault assault assault assault assault assault assault assault assault assault about';
+      final btcChain = BTCChain();
+      final wallet = await BtcCoin.fromMnemonic(mnemonic, btcChain.testnet);
+      final address = wallet.address;
+
+      // Should generate testnet format address (m/n... for legacy, tb1... for segwit)
+      expect(address.startsWith('m') || address.startsWith('n') || address.startsWith('tb1'), isTrue,
+          reason: 'BTC testnet address should start with m/n/tb1, got: $address');
+    });
+
+    test('BTC testnet address should be detected as BTC, not BCH', () async {
+      const mnemonic = 'assault assault assault assault assault assault assault assault assault assault assault about';
+      final btcChain = BTCChain();
+      final bchChain = BCHChain();
+
+      final wallet = await BtcCoin.fromMnemonic(mnemonic, btcChain.testnet);
+      final address = wallet.address;
+
+      // Should be valid for BTC testnet
+      final isBtcValid = AddressUtils.checkAddressValid(address, btcChain.testnet);
+      expect(isBtcValid, isTrue, reason: 'BTC testnet address should be valid for BTC testnet');
+
+      // Should NOT be valid for BCH testnet (BCH testnet uses pubKeyHash: 0x00, BTC testnet uses 0x6f)
+      final isBchValid = AddressUtils.checkAddressValid(address, bchChain.testnet);
+      expect(isBchValid, isFalse, reason: 'BTC testnet address should NOT be valid for BCH testnet');
+    });
+
+    test('BTC mainnet address format unchanged', () async {
+      const mnemonic = 'assault assault assault assault assault assault assault assault assault assault assault about';
+      final btcChain = BTCChain();
+      final wallet = await BtcCoin.fromMnemonic(mnemonic, btcChain.mainnet);
+      final address = wallet.address;
+
+      // Mainnet should still generate 1.../bc1... addresses
+      expect(address.startsWith('1') || address.startsWith('3') || address.startsWith('bc1'), isTrue,
+          reason: 'BTC mainnet address should start with 1/3/bc1, got: $address');
+    });
+  });
 }

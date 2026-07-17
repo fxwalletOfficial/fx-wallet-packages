@@ -45,11 +45,12 @@ class BtcCoin extends WalletType {
   @override
   String publicKeyToAddress(Uint8List publicKey) {
     if (isTaproot) {
-      return P2PKH.getTaprootAddress(publicKey, 'bc');
+      final hrp = setting?.networkType?.bech32 ?? 'bc';
+      return P2PKH.getTaprootAddress(publicKey, hrp);
     } else {
       final addressBytes = sha160fromByte(publicKey);
       Uint8List versionedHash = Uint8List(21);
-      versionedHash[0] = 0x00;
+      versionedHash[0] = setting?.networkType?.pubKeyHash ?? 0x00;
       versionedHash.setRange(1, 21, addressBytes);
       return getBase58Address(versionedHash);
     }
