@@ -15,6 +15,11 @@
 - PSBT change detection infers the CashAddr network prefix from the input
   address instead of hard-coding `bitcoincash`, so BCH testnet CashAddr change
   outputs no longer abort transaction construction.
+- `PSBT.fromTransferPsbt` selects the mainnet or testnet chain config from the
+  extended key's BIP32 version bytes, so a standard testnet `tpub`
+  (`0x043587cf`) parses and builds instead of being rejected by the mainnet
+  config and crashing on a null wallet. BTC/BCH testnet BIP32 public version
+  bytes were corrected to `0x043587cf`.
 - Taproot wallets keep the caller's `WalletSetting` by reference and derive the
   BIP86 path at sign time, so switching the setting's network stays consistent
   across existing and freshly derived wallets.

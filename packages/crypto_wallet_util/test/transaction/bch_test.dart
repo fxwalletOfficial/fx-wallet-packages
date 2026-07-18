@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto_wallet_util/crypto_utils.dart';
+import 'package:crypto_wallet_util/src/utils/utils.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart'
     as bitcoin;
 import 'package:crypto_wallet_util/src/forked_lib/psbt/transaction/partially_signed_bitcoin_transaction.dart';
@@ -10,6 +11,7 @@ import 'package:test/test.dart';
 PSBT _buildBchPsbtFixture({
   required String inputAddress,
   required String changeAddress,
+  String? xpubkey,
 }) {
   final fixtures =
       json.decode(
@@ -22,9 +24,21 @@ PSBT _buildBchPsbtFixture({
   final outputs = origin['outputs'] as List<dynamic>;
   transferJson['chain'] = 'bch';
   transferJson['inputAddress'] = inputAddress;
+  if (xpubkey != null) transferJson['xpubkey'] = xpubkey;
   outputs[1]['address'] = changeAddress;
   outputs[1]['path'] = "m/44'/145'/0'/1/0";
   return PSBT.fromTransferPsbt(BtcTransferInfo.fromJson(transferJson));
+}
+
+/// Account-level (`m/44'/145'/0'`) testnet extended public key (`tpub`) derived
+/// from [mnemonic]. Its version bytes (`0x043587cf`) drive network selection in
+/// `PSBT.fromTransferPsbt`.
+String _bchTestnetAccountTpub(String mnemonic) {
+  final seed = HDWallet.mnemonicToSeed(mnemonic);
+  return bitcoin.HDWallet.fromSeed(
+    seed,
+    network: BCHChain().testnet.networkType,
+  ).derivePath("m/44'/145'/0'").base58!;
 }
 
 void main() async {
@@ -345,6 +359,29 @@ void main() async {
       );
 
       expect(psbt.outputs[0].derivationPath, isNull);
+      expect(psbt.outputs[1].derivationPath, isNotNull);
+      expect(psbt.outputs[1].isChange, isTrue);
+    });
+
+    test('BCH testnet tpub builds a PSBT through the production path', () async {
+      final wallet = await BchCoin.fromMnemonic(mnemonic, BCHChain().testnet);
+      final cashAddress = wallet.address;
+      final legacyAddress = bitcoin.Address.bchToLegacy(cashAddress);
+
+      final tpub = _bchTestnetAccountTpub(mnemonic);
+      expect(tpub, startsWith('tpub'));
+
+      // Regression for the deeper F5 finding: a standard testnet tpub must be
+      // recognised (version 0x043587cf → testnet config) and parse through the
+      // real PSBT construction path, instead of being forced through the
+      // mainnet config and crashing with a null check before change detection.
+      final psbt = _buildBchPsbtFixture(
+        inputAddress: cashAddress,
+        changeAddress: legacyAddress,
+        xpubkey: tpub,
+      );
+
+      expect(psbt.serialize(), isNotEmpty);
       expect(psbt.outputs[1].derivationPath, isNotNull);
       expect(psbt.outputs[1].isChange, isTrue);
     });

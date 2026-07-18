@@ -3,8 +3,11 @@ import 'dart:typed_data';
 import 'package:crypto_wallet_util/src/forked_lib/psbt/model/origin.dart';
 import 'package:convert/convert.dart';
 
+import 'package:bs58check/bs58check.dart' as bs58check;
+
 import '../../bitcoin_flutter/bitcoin_flutter.dart' as bitcoin;
 import 'package:crypto_wallet_util/config.dart';
+import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/utils/number.dart';
 import '../model/transfer_info.dart' as fx;
 import '../model/transfer_info.dart';
@@ -36,6 +39,24 @@ String _bchToLegacy(String address) {
   } catch (_) {
     return address;
   }
+}
+
+/// Pick the mainnet or testnet [WalletSetting] for [chain] based on the BIP32
+/// version bytes of [xpubkey]. The extended key itself is the authoritative
+/// source of its network (mainnet `xpub`/`ypub`/... vs testnet `tpub`/...), so
+/// deriving from it keeps [bitcoin.HDWallet.fromBase58] parsing consistent —
+/// passing the wrong network silently yields a null wallet and later NPEs.
+/// Falls back to mainnet when the version cannot be read or does not match.
+WalletSetting _selectNetworkForXpub(ConfChain chain, String xpubkey) {
+  try {
+    final decoded = bs58check.decode(xpubkey);
+    final version =
+        (decoded[0] << 24) | (decoded[1] << 16) | (decoded[2] << 8) | decoded[3];
+    if (version == chain.testnet.networkType?.bip32.public) {
+      return chain.testnet;
+    }
+  } catch (_) {}
+  return chain.mainnet;
 }
 
 /// Represents a PSBT(BIP-0174).
@@ -344,7 +365,8 @@ class PSBT {
   factory PSBT.fromTransferPsbt(BtcTransferInfo btcInfo,
       {WalletType walletType = WalletType.SingleSignatureWallet}) {
     String xpubkey = btcInfo.xpubkey;
-    final chainConf = getChainConfig(btcInfo.chain).mainnet;
+    final chainConf =
+        _selectNetworkForXpub(getChainConfig(btcInfo.chain), xpubkey);
     final hdWallet =
         bitcoin.HDWallet.fromBase58(xpubkey, network: chainConf.networkType);
     final Origin btcTxData = btcInfo.origin;

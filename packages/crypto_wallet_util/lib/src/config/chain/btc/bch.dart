@@ -29,7 +29,8 @@ class BCHChain extends ConfChain {
             pubKeyHash: 0x6f,
             scriptHash: 0xc4,
             prefix: BITCOINCASH_TESTNET_PREFIX,
-            bip32: Bip32Type(public: 70617704, private: 70615956),
+            // tpub/tprv: 0x043587cf / 0x04358394.
+            bip32: Bip32Type(public: 70617039, private: 70615956),
           ),
         ),
       );
