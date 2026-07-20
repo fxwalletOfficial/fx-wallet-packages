@@ -32,12 +32,16 @@ enum Wallet {
   LTC,
   BCH,
   TAPROOT,
-  NONE
+  NONE,
 }
 
-Future<WalletType> getMnemonicWallet(String coin, String mnemonic) async {
+Future<WalletType> getMnemonicWallet(
+  String coin,
+  String mnemonic, {
+  WalletSetting? walletSetting,
+}) async {
   final wallet = getWallet(coin);
-  final setting = getChainConfig(coin).mainnet;
+  final setting = walletSetting ?? getChainConfig(coin).mainnet;
   switch (wallet) {
     case Wallet.NONE:
       throw Exception('Unsupported chain');
@@ -92,13 +96,17 @@ Future<WalletType> getMnemonicWallet(String coin, String mnemonic) async {
     case Wallet.BCH:
       return BchCoin.fromMnemonic(mnemonic, setting);
     case Wallet.TAPROOT:
-      return BtcCoin.fromMnemonic(mnemonic, null, true);
+      return BtcCoin.fromMnemonic(mnemonic, walletSetting, true);
   }
 }
 
-WalletType getPrivateKeyWallet(String coin, String privateKey) {
+WalletType getPrivateKeyWallet(
+  String coin,
+  String privateKey, {
+  WalletSetting? walletSetting,
+}) {
   final wallet = getWallet(coin);
-  final setting = getChainConfig(coin).mainnet;
+  final setting = walletSetting ?? getChainConfig(coin).mainnet;
   switch (wallet) {
     case Wallet.NONE:
       throw Exception('Unsupported chain');
@@ -153,7 +161,7 @@ WalletType getPrivateKeyWallet(String coin, String privateKey) {
     case Wallet.BCH:
       return BchCoin.fromPrivateKey(privateKey, setting);
     case Wallet.TAPROOT:
-      return BtcCoin.fromPrivateKey(privateKey, null, true);
+      return BtcCoin.fromPrivateKey(privateKey, walletSetting, true);
   }
 }
 
@@ -162,8 +170,9 @@ Wallet getWallet(coin) {
   if (coin == 'karlsen') return Wallet.KLS;
   if (coin == 'scp') return Wallet.SCP;
   return Wallet.values.firstWhere(
-      (element) => (element.toString().split(".").last) == coin.toUpperCase(),
-      orElse: () => Wallet.NONE);
+    (element) => (element.toString().split(".").last) == coin.toUpperCase(),
+    orElse: () => Wallet.NONE,
+  );
 }
 
 List<String> supportCrypto() {

@@ -91,6 +91,9 @@ const KLS_PREFIX = "karlsen";
 /// BITCOINCASH_PREFIX: bitcoincash;
 const BITCOINCASH_PREFIX = 'bitcoincash';
 
+/// BITCOINCASH_TESTNET_PREFIX: bchtest;
+const BITCOINCASH_TESTNET_PREFIX = 'bchtest';
+
 /// BTC_ADDRESS_REG: ```^([a-km-zA-HJ-NP-Z1-9]{27,34})|(bitcoincash:[a-z0-9]{42})|(bc[a-zA-Z0-9]{25,87})$```
 const String BTC_ADDRESS_REG =
     r'^([a-km-zA-HJ-NP-Z1-9]{27,34})|(bitcoincash:[a-z0-9]{42})|(bc[a-zA-Z0-9]{25,87})$';

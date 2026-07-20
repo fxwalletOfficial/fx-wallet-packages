@@ -18,11 +18,12 @@
     {
       "name": "bch",
       "address": [
-        "1NXGKidXJKnFKXLANwFu4ukBCPSTdPs4bx",
-        "qrkp86fu8492fksahgjka3zcqw220h7l6qp9j3xjxa",
         "bitcoincash:qrkp86fu8492fksahgjka3zcqw220h7l6qp9j3xjxa"
       ],
-      "error": []
+      "error": [
+        "1NXGKidXJKnFKXLANwFu4ukBCPSTdPs4bx",
+        "qrkp86fu8492fksahgjka3zcqw220h7l6qp9j3xjxa"
+      ]
     },
     {
       "name": "bells",

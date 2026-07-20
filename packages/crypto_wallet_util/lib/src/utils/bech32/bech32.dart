@@ -17,24 +17,51 @@ class Bech32Codec extends Codec<Bech32, String> {
   Bech32Encoder get encoder => Bech32Encoder();
 
   @override
-  String encode(Bech32 input, {maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
-    return Bech32Encoder().convert(input, maxLength: maxLength, encoding: encoding);
+  String encode(
+    Bech32 input, {
+    maxLength = Bech32Validations.maxInputLength,
+    String encoding = 'bech32',
+  }) {
+    return Bech32Encoder().convert(
+      input,
+      maxLength: maxLength,
+      encoding: encoding,
+    );
   }
 
   @override
-  Bech32 decode(String encoded, {maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
-    return Bech32Decoder().convert(encoded, maxLength: maxLength, encoding: encoding);
+  Bech32 decode(
+    String encoded, {
+    maxLength = Bech32Validations.maxInputLength,
+    String encoding = 'bech32',
+  }) {
+    return Bech32Decoder().convert(
+      encoded,
+      maxLength: maxLength,
+      encoding: encoding,
+    );
   }
 }
 
 // This class converts a Bech32 class instance to a String.
 class Bech32Encoder extends Converter<Bech32, String> with Bech32Validations {
   @override
-  String convert(Bech32 input, {int maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
+  String convert(
+    Bech32 input, {
+    int maxLength = Bech32Validations.maxInputLength,
+    String encoding = 'bech32',
+  }) {
     var hrp = input.hrp;
     var data = input.data;
 
-    if (hrp.length + data.length + separator.length + Bech32Validations.checksumLength > maxLength) throw TooLong(hrp.length + data.length + 1 + Bech32Validations.checksumLength);
+    if (hrp.length +
+            data.length +
+            separator.length +
+            Bech32Validations.checksumLength >
+        maxLength)
+      throw TooLong(
+        hrp.length + data.length + 1 + Bech32Validations.checksumLength,
+      );
     if (hrp.isEmpty) throw TooShortHrp();
     if (hasOutOfRangeHrpCharacters(hrp)) throw OutOfRangeHrpCharacters(hrp);
     if (isMixedCase(hrp)) throw MixedCase(hrp);
@@ -58,14 +85,46 @@ class Bech32Encoder extends Converter<Bech32, String> with Bech32Validations {
 /// This class converts a String to a Bech32 class instance.
 class Bech32Decoder extends Converter<String, Bech32> with Bech32Validations {
   @override
-  Bech32 convert(String input, {int maxLength = Bech32Validations.maxInputLength, String encoding = 'bech32'}) {
-    var separatorPosition = input.lastIndexOf(separator);
+  Bech32 convert(
+    String input, {
+    int maxLength = Bech32Validations.maxInputLength,
+    String encoding = 'bech32',
+  }) {
+    if (input.length > maxLength) throw TooLong(input.length);
+    if (isMixedCase(input)) throw MixedCase(input);
+
+    final separatorPosition = input.lastIndexOf(separator);
+    if (hasInvalidSeparator(input) || isHrpTooShort(separatorPosition)) {
+      throw InvalidSeparator(separatorPosition);
+    }
+    if (isChecksumTooShort(separatorPosition, input)) {
+      throw TooShortChecksum();
+    }
+
     input = input.toLowerCase();
-    var hrp = input.substring(0, separatorPosition);
-    var data = input.substring(
-        separatorPosition + 1, input.length - Bech32Validations.checksumLength);
-    var dataBytes = data.split('').map((c) => charset.indexOf(c)).toList();
-    return Bech32(hrp, dataBytes);
+    final hrp = input.substring(0, separatorPosition);
+    if (hasOutOfRangeHrpCharacters(hrp)) {
+      throw OutOfRangeHrpCharacters(hrp);
+    }
+
+    final encodedData = input.substring(separatorPosition + 1);
+    final dataIncludingChecksum = encodedData
+        .split('')
+        .map((c) => charset.indexOf(c))
+        .toList();
+    if (hasOutOfBoundsChars(dataIncludingChecksum)) {
+      throw OutOfBoundChars(encodedData);
+    }
+
+    final checksumStart =
+        dataIncludingChecksum.length - Bech32Validations.checksumLength;
+    final data = dataIncludingChecksum.sublist(0, checksumStart);
+    final checksum = dataIncludingChecksum.sublist(checksumStart);
+    if (isInvalidChecksum(hrp, data, checksum, encoding: encoding)) {
+      throw InvalidChecksum();
+    }
+
+    return Bech32(hrp, data);
   }
 }
 
@@ -87,7 +146,12 @@ mixin Bech32Validations {
     return separatorPosition == 0;
   }
 
-  bool isInvalidChecksum(String hrp, List<int> data, List<int> checksum, {String encoding = 'bech32'}) {
+  bool isInvalidChecksum(
+    String hrp,
+    List<int> data,
+    List<int> checksum, {
+    String encoding = 'bech32',
+  }) {
     return !_verifyChecksum(hrp, data + checksum, encoding: encoding);
   }
 
@@ -116,11 +180,47 @@ class Bech32 {
 const String separator = '1';
 
 const List<String> charset = [
-  'q', 'p', 'z', 'r', 'y', '9', 'x', '8', 'g', 'f', '2', 't', 'v', 'd', 'w', '0',
-  's', '3', 'j', 'n', '5', '4', 'k', 'h', 'c', 'e', '6', 'm', 'u', 'a', '7', 'l'
+  'q',
+  'p',
+  'z',
+  'r',
+  'y',
+  '9',
+  'x',
+  '8',
+  'g',
+  'f',
+  '2',
+  't',
+  'v',
+  'd',
+  'w',
+  '0',
+  's',
+  '3',
+  'j',
+  'n',
+  '5',
+  '4',
+  'k',
+  'h',
+  'c',
+  'e',
+  '6',
+  'm',
+  'u',
+  'a',
+  '7',
+  'l',
 ];
 
-const List<int> generator = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+const List<int> generator = [
+  0x3b6a57b2,
+  0x26508e6d,
+  0x1ea119fa,
+  0x3d4233dd,
+  0x2a1462b3,
+];
 
 int _polymod(List<int> values) {
   var chk = 1;
@@ -144,11 +244,20 @@ List<int> _hrpExpand(String hrp) {
   return result;
 }
 
-bool _verifyChecksum(String hrp, List<int> dataIncludingChecksum, {String encoding = 'bech32'}) {
-  return _polymod(_hrpExpand(hrp) + dataIncludingChecksum) == (encoding == 'bech32' ? 1 : 0x2bc830a3);
+bool _verifyChecksum(
+  String hrp,
+  List<int> dataIncludingChecksum, {
+  String encoding = 'bech32',
+}) {
+  return _polymod(_hrpExpand(hrp) + dataIncludingChecksum) ==
+      (encoding == 'bech32' ? 1 : 0x2bc830a3);
 }
 
-List<int> _createChecksum(String hrp, List<int> data, {String encoding = 'bech32'}) {
+List<int> _createChecksum(
+  String hrp,
+  List<int> data, {
+  String encoding = 'bech32',
+}) {
   final ENCODING_CONST = encoding == 'bech32' ? 1 : 0x2bc830a3;
   var values = _hrpExpand(hrp) + data + [0, 0, 0, 0, 0, 0];
   var polymod = _polymod(values) ^ ENCODING_CONST;
@@ -173,7 +282,10 @@ List<int> convertBits(data, int from, int to, {bool strictMode = false}) {
   var bits = 0;
 
   for (var i = 0; i < data.length; i++) {
-    var value = data[i];
+    final value = data[i] as int;
+    if (value < 0 || value >> from != 0) {
+      throw ArgumentError('Input value $value exceeds $from bits');
+    }
     accumulator = (accumulator << from) | value;
     bits += from;
     while (bits >= to) {
@@ -186,15 +298,19 @@ List<int> convertBits(data, int from, int to, {bool strictMode = false}) {
   if (!strictMode) {
     if (bits > 0) {
       result[index] = (accumulator << (to - bits)) & mask;
-      index++;
     }
-  } else {}
+  } else if (bits >= from || ((accumulator << (to - bits)) & mask) != 0) {
+    throw ArgumentError('Invalid padding');
+  }
 
   return result;
 }
 
-List<int> createChecksum(String hrp, List<int> data,
-    {String encoding = 'bech32'}) {
+List<int> createChecksum(
+  String hrp,
+  List<int> data, {
+  String encoding = 'bech32',
+}) {
   final ENCODING_CONST = encoding == 'bech32' ? 1 : 0x2bc830a3;
   var values = _hrpExpand(hrp) + data + [0, 0, 0, 0, 0, 0];
   var polymod = _polymod(values) ^ ENCODING_CONST;
@@ -207,8 +323,11 @@ List<int> createChecksum(String hrp, List<int> data,
   return result;
 }
 
-bool verifyChecksum(String hrp, List<int> dataIncludingChecksum,
-    {String encoding = 'bech32'}) {
+bool verifyChecksum(
+  String hrp,
+  List<int> dataIncludingChecksum, {
+  String encoding = 'bech32',
+}) {
   return _polymod(_hrpExpand(hrp) + dataIncludingChecksum) ==
       (encoding == 'bech32' ? 1 : 0x2bc830a3);
 }

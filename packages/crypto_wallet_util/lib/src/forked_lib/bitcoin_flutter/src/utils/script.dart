@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:crypto_wallet_util/src/utils/bip32/src/utils/ecurve.dart' show isPoint;
+import 'package:crypto_wallet_util/src/utils/bip32/src/utils/ecurve.dart'
+    show isPoint;
 import 'package:hex/hex.dart';
 import 'package:crypto/crypto.dart';
 import 'package:pointycastle/export.dart';
@@ -13,14 +14,22 @@ import '../utils/push_data.dart' as pushdata;
 import '../utils/check_types.dart';
 
 final secp256k1 = ECCurve_secp256k1();
-final secp256k1P = BigInt.parse('fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f', radix: 16);
+final secp256k1P = BigInt.parse(
+  'fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f',
+  radix: 16,
+);
 
-Map<int, String> REVERSE_OPS = OPS.map((String string, int number) => MapEntry(number, string));
+Map<int, String> REVERSE_OPS = OPS.map(
+  (String string, int number) => MapEntry(number, string),
+);
 final OP_INT_BASE = OPS['OP_RESERVED'];
 final ZERO = Uint8List.fromList([0]);
 
 bool isOPInt(dynamic value) {
-  return (value is num && (value == OPS['OP_0'] || (value >= OPS['OP_1']! && value <= OPS['OP_16']!) || value == OPS['OP_1NEGATE']));
+  return (value is num &&
+      (value == OPS['OP_0'] ||
+          (value >= OPS['OP_1']! && value <= OPS['OP_16']!) ||
+          value == OPS['OP_1NEGATE']));
 }
 
 bool isPushOnlyChunk(dynamic value) {
@@ -106,10 +115,12 @@ List<dynamic>? decompile(dynamic buffer) {
 
 Uint8List? fromASM(String? asm) {
   if (asm == '') return Uint8List.fromList([]);
-  return compile(asm!.split(' ').map((chunkStr) {
-    if (OPS[chunkStr] != null) return OPS[chunkStr];
-    return HEX.decode(chunkStr);
-  }).toList());
+  return compile(
+    asm!.split(' ').map((chunkStr) {
+      if (OPS[chunkStr] != null) return OPS[chunkStr];
+      return HEX.decode(chunkStr);
+    }).toList(),
+  );
 }
 
 String toASM(List<dynamic>? c) {
@@ -119,16 +130,18 @@ String toASM(List<dynamic>? c) {
   } else {
     chunks = c;
   }
-  return chunks!.map((chunk) {
-    // data?
-    if (chunk is Uint8List) {
-      final op = asMinimalOP(chunk);
-      if (op == null) return HEX.encode(chunk);
-      chunk = op;
-    }
-    // opcode!
-    return REVERSE_OPS[chunk];
-  }).join(' ');
+  return chunks!
+      .map((chunk) {
+        // data?
+        if (chunk is Uint8List) {
+          final op = asMinimalOP(chunk);
+          if (op == null) return HEX.encode(chunk);
+          chunk = op;
+        }
+        // opcode!
+        return REVERSE_OPS[chunk];
+      })
+      .join(' ');
 }
 
 int? asMinimalOP(Uint8List buffer) {
@@ -189,8 +202,10 @@ Uint8List bip66encode(r, s) {
   if (lenS > 33) throw ArgumentError('S length is too long');
   if (r[0] & 0x80 != 0) throw ArgumentError('R value is negative');
   if (s[0] & 0x80 != 0) throw ArgumentError('S value is negative');
-  if (lenR > 1 && (r[0] == 0x00) && r[1] & 0x80 == 0) throw ArgumentError('R value excessively padded');
-  if (lenS > 1 && (s[0] == 0x00) && s[1] & 0x80 == 0) throw ArgumentError('S value excessively padded');
+  if (lenR > 1 && (r[0] == 0x00) && r[1] & 0x80 == 0)
+    throw ArgumentError('R value excessively padded');
+  if (lenS > 1 && (s[0] == 0x00) && s[1] & 0x80 == 0)
+    throw ArgumentError('S value excessively padded');
 
   var signature = Uint8List(6 + lenR + lenS as int);
 
@@ -210,8 +225,10 @@ Uint8List encodeSignature(Uint8List signature, int hashType) {
   if (!isUint(hashType, 8)) throw ArgumentError('Invalid hasType $hashType');
   if (signature.length != 64) throw ArgumentError('Invalid signature');
 
-  final hashTypeMod = hashType & ~((hashType & SIGHASH_BITCOINCASHBIP143) > 0 ? 0xc0 : 0x80);
-  if (hashTypeMod <= 0 || hashTypeMod >= 4) throw ArgumentError('Invalid hashType $hashType');
+  final hashTypeMod =
+      hashType & ~((hashType & SIGHASH_BITCOINCASHBIP143) > 0 ? 0xc0 : 0x80);
+  if (hashTypeMod <= 0 || hashTypeMod >= 4)
+    throw ArgumentError('Invalid hashType $hashType');
 
   final hashTypeBuffer = Uint8List(1);
   hashTypeBuffer.buffer.asByteData().setUint8(0, hashType);
@@ -302,12 +319,19 @@ List base32Decode(String data) {
 }
 
 polymod(data) {
-  var GENERATOR = [0x98f2bc8e61, 0x79b76d99e2, 0xf33e5fb3c4, 0xae2eabe2a8, 0x1e4f43e470];
+  var GENERATOR = [
+    0x98f2bc8e61,
+    0x79b76d99e2,
+    0xf33e5fb3c4,
+    0xae2eabe2a8,
+    0x1e4f43e470,
+  ];
   var checksum = BigInt.from(1);
   for (var i = 0; i < data.length; i++) {
     var value = data[i];
     var topBits = checksum >> 35;
-    checksum = ((checksum & BigInt.from(0x07ffffffff)) << 5) ^ BigInt.from(value);
+    checksum =
+        ((checksum & BigInt.from(0x07ffffffff)) << 5) ^ BigInt.from(value);
     for (var j = 0; j < GENERATOR.length; j++) {
       if (((topBits >> j) & BigInt.from(1)).compareTo(BigInt.from(1)) == 0) {
         checksum = checksum ^ BigInt.from(GENERATOR[j]);
@@ -339,12 +363,26 @@ List<int> bigToBytes(BigInt integer) {
   return HEX.decode(hexNum);
 }
 
+List<int> bigTo32Bytes(BigInt integer) {
+  final bytes = bigToBytes(integer);
+  if (bytes.length > 32) {
+    throw ArgumentError('Integer does not fit in 32 bytes');
+  }
+  return List<int>.filled(32 - bytes.length, 0) + bytes;
+}
+
 BigInt bigFromBytes(List<int> bytes) {
   return BigInt.parse(HEX.encode(bytes), radix: 16);
 }
 
 BigInt getE(ECPoint P, List<int> rX, List<int> m) {
-  return bigFromBytes(taggedHash('BIP0340/challenge', rX + bigToBytes(P.x!.toBigInteger()!) + m)) % secp256k1.n;
+  return bigFromBytes(
+        taggedHash(
+          'BIP0340/challenge',
+          rX + bigToBytes(P.x!.toBigInteger()!) + m,
+        ),
+      ) %
+      secp256k1.n;
 }
 
 /// If the spending conditions do not require a script path, the output key should commit to an unSpendable script path
@@ -354,10 +392,25 @@ BigInt getE(ECPoint P, List<int> rX, List<int> m) {
 List<int> taprootConstruct({required ECPoint pubKey, List<int>? merkleRoot}) {
   merkleRoot ??= [];
 
-  final tweak = taggedHash('TapTweak', bigToBytes(pubKey.x!.toBigInteger()!));
-  final mul = secp256k1.G * BigInt.parse(HEX.encode(tweak), radix: 16);
-  final result = mul! + pubKey;
-  return bigToBytes(result!.x!.toBigInteger()!);
+  final internalKey = bigTo32Bytes(pubKey.x!.toBigInteger()!);
+  // BIP340 x-only public keys use lift_x, which always chooses the curve
+  // point with an even Y coordinate. A compressed key with odd Y must not be
+  // tweaked directly.
+  final evenPublicKey =
+      secp256k1.curve.decodePoint(Uint8List.fromList([0x02, ...internalKey]))!;
+  final tweak = BigInt.parse(
+    HEX.encode(taggedHash('TapTweak', internalKey + merkleRoot)),
+    radix: 16,
+  );
+  if (tweak >= secp256k1.n) {
+    throw ArgumentError('Invalid Taproot tweak');
+  }
+
+  final result = (secp256k1.G * tweak)! + evenPublicKey;
+  if (result == null || result.isInfinity) {
+    throw ArgumentError('Invalid Taproot output key');
+  }
+  return bigTo32Bytes(result.x!.toBigInteger()!);
 }
 
 Uint8List toXOnly(Uint8List pubkey) {
