@@ -20,6 +20,9 @@
   (`0x043587cf`) parses and builds instead of being rejected by the mainnet
   config and crashing on a null wallet. BTC/BCH testnet BIP32 public version
   bytes were corrected to `0x043587cf`.
+- BTC PSBT construction remains backward-compatible with the non-standard
+  testnet extended public-key version (`0x04358a68`, `tpw...`) emitted by 2.0.2,
+  while malformed keys and genuinely unknown versions now fail closed.
 - Taproot wallets keep the caller's `WalletSetting` by reference and derive the
   BIP86 path at sign time, so switching the setting's network stays consistent
   across existing and freshly derived wallets.

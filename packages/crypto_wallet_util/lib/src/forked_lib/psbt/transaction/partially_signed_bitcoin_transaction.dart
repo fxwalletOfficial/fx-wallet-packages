@@ -7,7 +7,8 @@ import 'package:bs58check/bs58check.dart' as bs58check;
 
 import '../../bitcoin_flutter/bitcoin_flutter.dart' as bitcoin;
 import 'package:crypto_wallet_util/config.dart';
-import 'package:crypto_wallet_util/src/type/wallet_type.dart';
+import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart'
+    show Bip32Type, NetworkType;
 import 'package:crypto_wallet_util/src/utils/number.dart';
 import '../model/transfer_info.dart' as fx;
 import '../model/transfer_info.dart';
@@ -27,6 +28,11 @@ const PSBT_IN_TAP_INTERNAL_KEY = "17";
 
 enum WalletType { SingleSignatureWallet, MultisignatureWallet }
 
+// crypto_wallet_util 2.0.2 accidentally shipped this BTC testnet BIP32 public
+// version. Existing persisted watch-only keys must remain readable after the
+// corrected standard tpub version was introduced in 2.0.3.
+const int _legacyBtcTestnetBip32Public = 0x04358a68;
+
 /// Normalise a BCH address to its legacy (base58) form so CashAddr and legacy
 /// representations can be compared. The CashAddr network prefix (`bitcoincash`
 /// or `bchtest`) is inferred from the address itself; a legacy address is
@@ -41,22 +47,58 @@ String _bchToLegacy(String address) {
   }
 }
 
-/// Pick the mainnet or testnet [WalletSetting] for [chain] based on the BIP32
-/// version bytes of [xpubkey]. The extended key itself is the authoritative
-/// source of its network (mainnet `xpub`/`ypub`/... vs testnet `tpub`/...), so
-/// deriving from it keeps [bitcoin.HDWallet.fromBase58] parsing consistent —
-/// passing the wrong network silently yields a null wallet and later NPEs.
-/// Falls back to mainnet when the version cannot be read or does not match.
-WalletSetting _selectNetworkForXpub(ConfChain chain, String xpubkey) {
+NetworkType _networkWithBip32Public(NetworkType network, int publicVersion) {
+  return NetworkType(
+    messagePrefix: network.messagePrefix,
+    bech32: network.bech32,
+    prefix: network.prefix,
+    bip32: Bip32Type(
+      public: publicVersion,
+      private: network.bip32.private,
+    ),
+    pubKeyHash: network.pubKeyHash,
+    scriptHash: network.scriptHash,
+    wif: network.wif,
+  );
+}
+
+/// Select the network used to parse [xpubkey] from its BIP32 version bytes.
+///
+/// Besides the configured mainnet and testnet public versions, BTC accepts the
+/// non-standard testnet public version shipped by crypto_wallet_util 2.0.2.
+/// No other fallback is allowed: malformed keys and unknown versions fail
+/// closed instead of being passed to the mainnet parser and failing later.
+NetworkType _selectNetworkForXpub(ConfChain chain, String xpubkey) {
+  late final Uint8List decoded;
   try {
-    final decoded = bs58check.decode(xpubkey);
-    final version =
-        (decoded[0] << 24) | (decoded[1] << 16) | (decoded[2] << 8) | decoded[3];
-    if (version == chain.testnet.networkType?.bip32.public) {
-      return chain.testnet;
-    }
-  } catch (_) {}
-  return chain.mainnet;
+    decoded = bs58check.decode(xpubkey);
+  } catch (_) {
+    throw ArgumentError.value(xpubkey, 'xpubkey', 'Invalid extended public key');
+  }
+  if (decoded.length != 78) {
+    throw ArgumentError.value(xpubkey, 'xpubkey', 'Invalid extended public key');
+  }
+
+  final mainnet = chain.mainnet.networkType;
+  final testnet = chain.testnet.networkType;
+  if (mainnet == null || testnet == null) {
+    throw ArgumentError('Missing BIP32 network configuration for ${chain.name}');
+  }
+
+  final version =
+      (decoded[0] << 24) | (decoded[1] << 16) | (decoded[2] << 8) | decoded[3];
+  if (version == mainnet.bip32.public) return mainnet;
+  if (version == testnet.bip32.public) return testnet;
+  if (chain.name.toLowerCase() == 'btc' &&
+      version == _legacyBtcTestnetBip32Public) {
+    return _networkWithBip32Public(testnet, version);
+  }
+
+  throw ArgumentError.value(
+    version,
+    'xpubkey',
+    'Unsupported extended public key version',
+  );
 }
 
 /// Represents a PSBT(BIP-0174).
@@ -365,10 +407,9 @@ class PSBT {
   factory PSBT.fromTransferPsbt(BtcTransferInfo btcInfo,
       {WalletType walletType = WalletType.SingleSignatureWallet}) {
     String xpubkey = btcInfo.xpubkey;
-    final chainConf =
+    final network =
         _selectNetworkForXpub(getChainConfig(btcInfo.chain), xpubkey);
-    final hdWallet =
-        bitcoin.HDWallet.fromBase58(xpubkey, network: chainConf.networkType);
+    final hdWallet = bitcoin.HDWallet.fromBase58(xpubkey, network: network);
     final Origin btcTxData = btcInfo.origin;
 
     int offset = 0;

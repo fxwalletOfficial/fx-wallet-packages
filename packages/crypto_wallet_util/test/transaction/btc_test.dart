@@ -6,6 +6,39 @@ import 'package:test/test.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart';
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutter.dart'
     as bitcoin;
+import 'package:crypto_wallet_util/src/forked_lib/psbt/transaction/partially_signed_bitcoin_transaction.dart';
+import 'package:crypto_wallet_util/src/utils/utils.dart';
+
+PSBT _buildBtcPsbtFixture(String xpubkey) {
+  final fixtures =
+      json.decode(
+            File('./test/psbt/data.json').readAsStringSync(encoding: utf8),
+          )
+          as List<dynamic>;
+  final transferJson =
+      json.decode(json.encode(fixtures.first['data'])) as Map<String, dynamic>;
+  transferJson['xpubkey'] = xpubkey;
+  return PSBT.fromTransferPsbt(BtcTransferInfo.fromJson(transferJson));
+}
+
+String _btcAccountXpubForVersion(String mnemonic, int publicVersion) {
+  final standardTestnet = BTCChain().testnet.networkType!;
+  final legacyNetwork = NetworkType(
+    messagePrefix: standardTestnet.messagePrefix,
+    bech32: standardTestnet.bech32,
+    bip32: Bip32Type(
+      public: publicVersion,
+      private: standardTestnet.bip32.private,
+    ),
+    pubKeyHash: standardTestnet.pubKeyHash,
+    scriptHash: standardTestnet.scriptHash,
+    wif: standardTestnet.wif,
+  );
+  return bitcoin.HDWallet.fromSeed(
+    HDWallet.mnemonicToSeed(mnemonic),
+    network: legacyNetwork,
+  ).derivePath("m/44'/0'/0'").base58!;
+}
 
 void main() async {
   const String mnemonic =
@@ -19,6 +52,40 @@ void main() async {
 
   final legacyUnsignedPsbt = psbtJson[0]['psbt'];
   final taprootUnsignedPsbt = psbtJson[1]['psbt'];
+
+  group('test extended-key network compatibility', () {
+    test('2.0.2 BTC testnet key builds a PSBT after upgrading', () {
+      const legacyTestnetPublicVersion = 0x04358a68;
+      final legacyTestnetXpub = _btcAccountXpubForVersion(
+        mnemonic,
+        legacyTestnetPublicVersion,
+      );
+
+      expect(legacyTestnetXpub, startsWith('tpw'));
+
+      final psbt = _buildBtcPsbtFixture(legacyTestnetXpub);
+
+      expect(psbt.serialize(), isNotEmpty);
+    });
+
+    test('unknown checksum-valid extended-key version fails closed', () {
+      final unknownVersionXpub = _btcAccountXpubForVersion(
+        mnemonic,
+        0x01020304,
+      );
+
+      expect(
+        () => _buildBtcPsbtFixture(unknownVersionXpub),
+        throwsArgumentError,
+      );
+    });
+
+    for (final invalidXpub in ['', 'not-an-extended-key']) {
+      test('invalid extended key "$invalidXpub" fails closed', () {
+        expect(() => _buildBtcPsbtFixture(invalidXpub), throwsArgumentError);
+      });
+    }
+  });
 
   group('test psbt tx signer', () {
     test('legacy signature generation', () {
