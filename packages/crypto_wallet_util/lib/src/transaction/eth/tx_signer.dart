@@ -40,8 +40,34 @@ class EthTxSigner extends TxSigner {
   bool verify() {
     if (!txData.isSigned) return false;
 
-    return EcdaSignature.isValidEthSignature(
-        txData.data.r!, txData.data.s!, txData.data.v!,
-        chainId: txData.network.chainId);
+    final r = txData.data.r!;
+    final s = txData.data.s!;
+    final v = txData.data.v!;
+
+    // EIP-1559/EIP-7702 store the bare y-parity (0/1) in `v`; only legacy
+    // uses the EIP-155 `recId + chainId*2 + 35` encoding. Feeding a typed
+    // tx's `v` through the EIP-155 formula rejects every valid signature.
+    final isTyped =
+        txData.txType == EthTxType.eip1559 || txData.txType == EthTxType.eip7702;
+
+    if (!EcdaSignature.isValidEthSignature(r, s, v,
+        chainId: txData.network.chainId, vIsBareRecoveryId: isTyped)) {
+      return false;
+    }
+
+    final recoveryId = isTyped
+        ? v
+        : EcdaSignature.calculateEthSigRecovery(v, chainId: txData.network.chainId);
+
+    final recoveredXY =
+        EcdaSignature.recoverPublicKey(r, s, recoveryId, txData.getMessageToSign());
+    if (recoveredXY == null) return false;
+
+    final recoveredAddress =
+        getKeccakDigest(recoveredXY).sublist(12).toHex().toLowerCase();
+    final walletAddress = wallet.publicKeyToAddress(wallet.publicKey).toLowerCase();
+    // A ETH address may (or may not) carry a leading "0x" depending on the
+    // caller; compare only the hex digits.
+    return strip0xHex(recoveredAddress) == strip0xHex(walletAddress);
   }
 }

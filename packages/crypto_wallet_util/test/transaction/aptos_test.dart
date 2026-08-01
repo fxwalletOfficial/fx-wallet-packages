@@ -20,6 +20,6 @@ void main() async {
     final broadcastData = signedTxData.toBroadcast();
     final jsonData = signedTxData.toJson();
     expect(broadcastData['rawPublicKey'], jsonData['rawPublicKey']);
-    assert(signer.verify());
+    expect(signer.verify(), isTrue);
   });
 }

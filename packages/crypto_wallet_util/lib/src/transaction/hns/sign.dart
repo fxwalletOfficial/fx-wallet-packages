@@ -13,6 +13,24 @@ class FxHnsSign {
   String sign() {
     final tx = dynamicToUint8List(mtx.hex);
 
+    // This parser assumes the input count, output count, output address
+    // length, covenant item count, and each covenant item length are all
+    // encoded as a single byte — true for ordinary transactions, but not a
+    // valid assumption once any of those fields reaches 0xfd (253) and a
+    // real CompactSize/varint encoding would switch to a multi-byte
+    // prefix. Fail loudly here rather than silently reading the wrong
+    // offset (and signing over the wrong bytes) once a value crosses that
+    // boundary.
+    const singleByteFieldLimit = 0xfd;
+    if (mtx.inputs.length >= singleByteFieldLimit) {
+      throw Exception(
+          'HNS signing does not support ${mtx.inputs.length} inputs (varint input-count encoding unimplemented)');
+    }
+    if (mtx.outputs.length >= singleByteFieldLimit) {
+      throw Exception(
+          'HNS signing does not support ${mtx.outputs.length} outputs (varint output-count encoding unimplemented)');
+    }
+
     // Version(4) + input count(1) + input count * (transaction hash(32) + output index(4) + sequence(4)) + output count(1)
     int index = 6 + mtx.inputs.length * 40;
 
@@ -20,11 +38,25 @@ class FxHnsSign {
     final outputsHash = <int>[];
     for (var i = 0; i < mtx.outputs.length; i++) {
       var start = index;
-      index += 11 + tx[start + 9]; // Output coin amount, output address length, output address, output protocol type
+      final addressLength = tx[start + 9];
+      if (addressLength >= singleByteFieldLimit) {
+        throw Exception(
+            'HNS signing does not support an output address length of $addressLength (varint length encoding unimplemented)');
+      }
+      index += 11 + addressLength; // Output coin amount, output address length, output address, output protocol type
       var covenantCount = tx[index];
+      if (covenantCount >= singleByteFieldLimit) {
+        throw Exception(
+            'HNS signing does not support $covenantCount covenant items (varint count encoding unimplemented)');
+      }
       index += 1;
       for (var j = 0; j < covenantCount; j++) {
-        index += 1 + tx[index];
+        final itemLength = tx[index];
+        if (itemLength >= singleByteFieldLimit) {
+          throw Exception(
+              'HNS signing does not support a covenant item length of $itemLength (varint length encoding unimplemented)');
+        }
+        index += 1 + itemLength;
       }
       outputsHash.addAll(tx.sublist(start, index));
     }

@@ -101,8 +101,8 @@ void main() async {
       final signedTxData = signer.sign();
       final jsonData = signedTxData.toJson();
       final broadcastData = signedTxData.toBroadcast();
-      assert(jsonData.isNotEmpty);
-      assert(broadcastData.isNotEmpty);
+      expect(jsonData, isNotEmpty);
+      expect(broadcastData, isNotEmpty);
 
       // Verify signatures were added
       expect(signer.verify(), isTrue);
@@ -120,12 +120,22 @@ void main() async {
       final signedTxData = signer.sign();
       final jsonData = signedTxData.toJson();
       final broadcastData = signedTxData.toBroadcast();
-      assert(jsonData.isNotEmpty);
-      assert(broadcastData.isNotEmpty);
+      expect(jsonData, isNotEmpty);
+      expect(broadcastData, isNotEmpty);
 
-      // Verify signatures were added
-      expect(signer.verify(), isTrue);
-      expect(signer.safeVerify(), isTrue);
+      // Verify a signature was added.
+      expect(psbtTxData.psbt.inputs[0].taprootKeySpendSignature, isNotNull);
+
+      // `verify()` now does real BIP340 verification against each input's
+      // *own* prevout output key (see F9 in the signature review). This
+      // fixture's witnessUtxo belongs to a different xpub
+      // (m/86'/0'/0'/0/0 under xpub6DTyU...) than `taprootWallet`, so a
+      // signature from `taprootWallet` correctly fails to verify against
+      // it — the same way a real Bitcoin node would reject it. See
+      // test/psbt/taproot_verify_test.dart for a self-consistent
+      // sign+verify (and tamper) round trip.
+      expect(signer.verify(), isFalse);
+      expect(signer.safeVerify(), isFalse);
     });
   });
 

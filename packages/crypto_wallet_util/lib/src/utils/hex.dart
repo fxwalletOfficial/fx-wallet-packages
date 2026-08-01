@@ -175,14 +175,16 @@ Uint8List encodeInt(int number, int length) {
 }
 
 /// Function for retrieve a random hexadecimal string.
+/// A cryptographically secure random 32-byte value, hex-encoded (64 hex
+/// chars). Used as BIP340 Schnorr signing aux randomness — must be a full
+/// 32 bytes from a CSPRNG, not a smaller value later zero-padded.
 String generateRandomString() {
-  Random random = Random();
-  const chars = '0123456789abcdef'; // Character set can be modified as needed
-  String result = '';
-  for (int i = 0; i < 32; i++) {
-    result += chars[random.nextInt(chars.length)];
+  final random = Random.secure();
+  final bytes = Uint8List(32);
+  for (int i = 0; i < bytes.length; i++) {
+    bytes[i] = random.nextInt(256);
   }
-  return result;
+  return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 }
 
 /// Converts a [Uint8List] to a [int].

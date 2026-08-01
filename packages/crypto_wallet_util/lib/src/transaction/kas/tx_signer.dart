@@ -23,13 +23,18 @@ class KasTxSigner extends TxSigner {
 
   @override
   bool verify() {
-    if (txData.isSigned) {
-      final result = wallet.verify(
-          deleteFixs(txData.inputs.first.signatureScript),
-          txData.messages.first);
-      return result;
+    if (!txData.isSigned) return false;
+    if (txData.inputs.isEmpty ||
+        txData.inputs.length != txData.messages.length) {
+      return false;
     }
-    return false;
+
+    for (int i = 0; i < txData.inputs.length; i++) {
+      final valid = wallet.verify(
+          deleteFixs(txData.inputs[i].signatureScript), txData.messages[i]);
+      if (!valid) return false;
+    }
+    return true;
   }
 
   String addFixs(String signature) {

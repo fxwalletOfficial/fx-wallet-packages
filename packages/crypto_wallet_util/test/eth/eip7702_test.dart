@@ -66,7 +66,7 @@ void main() async {
 
     final hdData =
         deserializedTxData.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
-    assert(hdData.toStr().isNotEmpty);
+    expect(hdData.toStr(), isNotEmpty);
   });
 
   test('gas sponsor demo', () {
@@ -110,7 +110,7 @@ void main() async {
 
     final hdData =
         deserializedTxData.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
-    assert(hdData.toStr().isNotEmpty);
+    expect(hdData.toStr(), isNotEmpty);
   });
 
   test('signIng', () {

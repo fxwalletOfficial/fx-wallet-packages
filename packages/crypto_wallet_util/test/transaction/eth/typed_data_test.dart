@@ -21,8 +21,12 @@ void main() {
 
 		test('signToCompact throws with invalid private key format', () {
 			final msg = u([1,2,3]);
-			final pk = Uint8List(32); // 无效私钥，期望抛错
-			expect(() => signToCompact(message: msg, privateKey: pk), throwsA(isA<FormatException>()));
+			final pk = Uint8List(32); // 无效私钥（全零），期望抛错
+			// EcdaSignature.privateKeyToPublicKey now validates the scalar is in
+			// [1, n-1] up front and throws ArgumentError with a clear message,
+			// instead of letting an all-zero key reach pointycastle's point
+			// encoding and fail there with an incidental FormatException.
+			expect(() => signToCompact(message: msg, privateKey: pk), throwsArgumentError);
 		});
 	});
 

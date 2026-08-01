@@ -55,7 +55,7 @@ void main() async {
 
         // test transfer amount
         final jsonData = psbtTxData.toJson();
-        assert(jsonData.isNotEmpty);
+        expect(jsonData, isNotEmpty);
       });
     }
   });

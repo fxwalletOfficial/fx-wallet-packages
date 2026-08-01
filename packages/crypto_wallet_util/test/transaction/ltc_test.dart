@@ -196,7 +196,7 @@ void main() async {
       expect(signedTxData.isSigned, true);
     });
 
-    test('ltc taproot should use BIP143 signature hash', () async {
+    test('ltc taproot GSPL signing succeeds (uses BIP341, not BIP143)', () async {
       final txData = GsplTxData(
         inputs: [
           GsplItem(

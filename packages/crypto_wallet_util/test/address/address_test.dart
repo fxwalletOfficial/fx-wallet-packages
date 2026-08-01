@@ -21,7 +21,7 @@ void main() {
       final walletSetting = chainConfig.mainnet;
       test(name, () {
         for (final address in addresses) {
-          assert(AddressUtils.checkAddressValid(address, walletSetting));
+          expect(AddressUtils.checkAddressValid(address, walletSetting), isTrue);
         }
       });
 

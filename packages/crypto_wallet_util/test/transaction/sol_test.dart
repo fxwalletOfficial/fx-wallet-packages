@@ -19,7 +19,7 @@ void main() async {
       final signer = SolTxSigner(sol, txData);
       final signedTxData = signer.sign();
       final broadcastData = signedTxData.toBroadcast();
-      assert(signer.verify());
+      expect(signer.verify(), isTrue);
       final expectedCoin = transactionJson['excepted_coin'];
       final signature = broadcastData['messageToSign']['transaction'];
       expect(signature, expectedCoin);
@@ -29,7 +29,7 @@ void main() async {
         expect(signature, expectedToken);
       }
       final jsonData = signedTxData.toJson();
-      assert(jsonData.isNotEmpty);
+      expect(jsonData, isNotEmpty);
     }
   });
 }
