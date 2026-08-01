@@ -72,9 +72,10 @@ class LtcCoin extends WalletType {
   String signWithHashType(String message, int hashType) {
     final ecPrivateKey = ECPrivate.fromBytes(privateKey);
     if (isTaproot) {
-      return ecPrivateKey
-          .signTapRoot(message.toUint8List(), sighash: hashType)
-          .toHex();
+      // Keep the signer/serializer boundary unambiguous: return the raw
+      // 64-byte Schnorr signature here. The GSPL transaction serializer is
+      // the single place that appends a non-default sighash byte to witness.
+      return ecPrivateKey.signTapRoot(message.toUint8List()).toHex();
     } else {
       return ecPrivateKey
           .signInput(message.toUint8List(), sigHash: hashType)

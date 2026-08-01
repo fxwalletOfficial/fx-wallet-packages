@@ -1,7 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
-import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/script.dart' show compile;
+import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/script.dart'
+    as bscript;
 import 'package:crypto_wallet_util/src/type/tx_signer_type.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/transaction/btc/gspl_tx_data.dart';
@@ -120,6 +121,17 @@ class GsplTxSigner extends TxSigner {
       }
 
       final signatureBytes = dynamicToUint8List(sigResult);
+      if (isTaprootInput) {
+        if (signatureBytes.length != 64) {
+          throw StateError(
+            'Taproot signer must return a raw 64-byte signature',
+          );
+        }
+        if (hashType != btc.SIGHASH_DEFAULT &&
+            !_isValidTaprootHashType(hashType)) {
+          throw ArgumentError('Invalid Taproot sighash type: $hashType');
+        }
+      }
 
       // Construct new GsplItem to replace
       signedInputs.add(GsplItem(
@@ -148,7 +160,7 @@ class GsplTxSigner extends TxSigner {
         transactionSigned.ins[i].script = btc.EMPTY_SCRIPT;
       } else {
         final pubkey = wallet.publicKey;
-        final scriptSig = compile([sig, pubkey]);
+        final scriptSig = bscript.compile([sig, pubkey]);
         transactionSigned.ins[i].script = scriptSig;
       }
     }
@@ -184,9 +196,13 @@ class GsplTxSigner extends TxSigner {
     } catch (_) {
       return false;
     }
+    if (tx.ins.length != inputs.length) return false;
 
     final inputAddress = wallet.publicKeyToAddress(wallet.publicKey);
-    final prevOutScript = btc.Address.addressToOutputScript(inputAddress, networkType);
+    final prevOutScript = btc.Address.addressToOutputScript(
+      inputAddress,
+      networkType,
+    );
     if (prevOutScript == null) return false;
 
     final allPrevScripts = <Uint8List>[];
@@ -199,17 +215,83 @@ class GsplTxSigner extends TxSigner {
 
     for (var i = 0; i < inputs.length; i++) {
       final input = inputs[i];
-      final signature = input.signature;
-      if (signature == null) return false;
+      final sidecarSignature = input.signature;
+      if (sidecarSignature == null) return false;
 
-      final hashType = _hashTypeFor(input);
-      final sigHash =
-          _sigHashFor(tx, i, prevOutScript, allPrevScripts, allValues, hashType);
+      final txInput = tx.ins[i];
+      late final Uint8List signature;
+      late final int hashType;
 
-      if (!wallet.verify(dynamicToString(signature), dynamicToString(sigHash))) {
+      if (isTaprootInput) {
+        final witness = txInput.witness;
+        if (txInput.script?.isNotEmpty ?? false) return false;
+        if (witness == null || witness.length != 1 || witness[0] == null) {
+          return false;
+        }
+
+        final encodedSignature = witness[0]!;
+        if (encodedSignature.length == 64) {
+          hashType = btc.SIGHASH_DEFAULT;
+          signature = encodedSignature;
+        } else if (encodedSignature.length == 65) {
+          hashType = encodedSignature[64];
+          if (!_isValidTaprootHashType(hashType)) return false;
+          signature = Uint8List.fromList(encodedSignature.sublist(0, 64));
+        } else {
+          return false;
+        }
+      } else {
+        if (txInput.witness?.isNotEmpty ?? false) return false;
+        final chunks = bscript.decompile(txInput.script);
+        if (chunks == null ||
+            chunks.length != 2 ||
+            chunks[0] is! Uint8List ||
+            chunks[1] is! Uint8List) {
+          return false;
+        }
+
+        signature = chunks[0] as Uint8List;
+        final publicKey = chunks[1] as Uint8List;
+        if (signature.isEmpty ||
+            !bscript.bip66check(signature.sublist(0, signature.length - 1)) ||
+            dynamicToString(publicKey) != dynamicToString(wallet.publicKey)) {
+          return false;
+        }
+        hashType = signature.last;
+      }
+
+      if (hashType != _hashTypeFor(input) ||
+          dynamicToString(signature) != dynamicToString(sidecarSignature)) {
+        return false;
+      }
+
+      final sigHash = _sigHashFor(
+        tx,
+        i,
+        prevOutScript,
+        allPrevScripts,
+        allValues,
+        hashType,
+      );
+
+      if (!wallet.verify(
+        dynamicToString(signature),
+        dynamicToString(sigHash),
+      )) {
         return false;
       }
     }
     return true;
+  }
+
+  bool _isValidTaprootHashType(int hashType) {
+    final outputType = hashType & btc.SIGHASH_OUTPUT_MASK;
+    final inputType = hashType & btc.SIGHASH_INPUT_MASK;
+    return hashType != btc.SIGHASH_DEFAULT &&
+        (outputType == btc.SIGHASH_ALL ||
+            outputType == btc.SIGHASH_NONE ||
+            outputType == btc.SIGHASH_SINGLE) &&
+        (inputType == 0 || inputType == btc.SIGHASH_ANYONECANPAY) &&
+        hashType == (outputType | inputType);
   }
 }
