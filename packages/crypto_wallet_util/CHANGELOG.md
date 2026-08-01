@@ -1,5 +1,58 @@
 # Changelog
 
+## [2.0.4] - 2026-08-02
+### Fixed
+
+- Raw ECDSA signatures now encode `r` and `s` to a fixed 32 bytes instead of
+  copying the shortest big-endian encoding into a fixed-width buffer. A low-S
+  value that fitted in 31 bytes previously threw `Bad state: Too few elements`
+  and aborted signing. Low-S normalisation reduces `s` into `[1, n/2]`, so this
+  affected roughly 1 in 128 signatures; since a transaction signs once per
+  input, multi-input DOGE/BTC/LTC/BCH transactions failed far more often than
+  single-input sends.
+- PSBT and GSPL LTC Taproot signing use a real BIP341 TapSighash instead of
+  reusing the BIP143 SegWit v0 digest, and write the Schnorr signature to the
+  witness stack with an empty `scriptSig` instead of compiling it into
+  `scriptSig`. Verified against the official BIP341 `wallet-test-vectors.json`.
+- PSBT Taproot re-signing preserves each input's original sequence instead of
+  resetting it to `0xffffffff`, which silently dropped RBF and relative
+  timelock semantics and invalidated the signature it had just produced.
+- Local BIP340 Schnorr signing encodes `t`, `P.x`, `R.x`, `s` and the taproot
+  tweak to a fixed 32 bytes, so a leading zero byte no longer corrupts the
+  nonce/challenge hashes or yields a short signature or private key.
+- DOGE/LTC/BCH GSPL signing threads one explicit hashType through both the
+  digest computation and the final signature encoding, so a non-default sighash
+  no longer commits to one type while declaring another.
+- `EthTxSigner.verify()` interprets `v` as a bare y-parity for typed
+  (EIP-1559/EIP-7702) transactions and as EIP-155 only for legacy, and recovers
+  the signer's address rather than checking structural bounds alone.
+- `isValidEthSignature()` accepts scalars whose shortest encoding is under 32
+  bytes and rejects `r`/`s` equal to the curve order, instead of the reverse.
+- `BtcCoin`/`LtcCoin`/`DogeCoin`/`BchCoin.verify()`, `PsbtTxSigner.verify()`,
+  `GsplTxSigner.verify()` and `KasTxSigner.verify()` perform real cryptographic
+  verification over every input, replacing stubs that returned `true`
+  unconditionally or only checked that a signature field was present. Taproot
+  verification checks against the tweaked output key, and non-Taproot
+  verification parses DER plus the trailing sighash byte.
+- PSBT DER-to-raw signature conversion re-encodes `r` and `s` to a fixed 32
+  bytes each, so a legitimately short `r` no longer shifts `s` off offset 32.
+- `DotCoin.verify()` applies the same `0x9c` prefix stripping as `sign()`, and
+  `processMessage()` no longer throws on an empty message.
+- Schnorr aux randomness uses `Random.secure()` over a full 32 bytes instead of
+  `Random()` over 16 bytes zero-padded by the dependency.
+- secp256k1 private keys are validated (32 bytes, in `[1, n-1]`) at the
+  `EcdaSignature.privateKeyToPublicKey` boundary shared by every secp256k1
+  wallet.
+
+### Changed
+
+- HNS transaction signing rejects inputs, outputs, address lengths and covenant
+  fields that would require multi-byte varint encoding, instead of silently
+  misparsing them. The full varint encoding is still unimplemented.
+- The CKB single-lock-script-group assumption is now documented as a known
+  limitation: `CellInput` carries no lock-script data, so this class cannot
+  detect or sign transactions spanning multiple script groups.
+
 ## [2.0.3] - 2026-07-17
 ### Fixed
 

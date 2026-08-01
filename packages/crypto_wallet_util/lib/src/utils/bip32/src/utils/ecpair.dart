@@ -59,7 +59,11 @@ class ECPair {
     final r = bigNumber % secp256k1.n;
     final mod = r >= BigInt.zero ? r : secp256k1.n + r;
 
-    return Uint8List.fromList(bigToBytes(mod));
+    // A private key is a fixed-width 32-byte scalar. The current caller
+    // decodes this back into a BigInt, so a shortest-encoding result would
+    // still work there, but returning a raw key that is short whenever the
+    // scalar has a leading zero byte is a trap for any other caller.
+    return Uint8List.fromList(bigTo32Bytes(mod));
   }
 
   Uint8List signSchnorr({required Uint8List message, String aux = ''}) {
