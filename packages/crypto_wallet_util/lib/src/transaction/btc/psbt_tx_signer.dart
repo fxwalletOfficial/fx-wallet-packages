@@ -10,7 +10,14 @@ class _Prevout {
   final String fullOutputHex;
   final int value;
   final Uint8List? taprootOutputKey;
-  _Prevout(this.scriptHex, this.fullOutputHex, this.value, this.taprootOutputKey);
+  final Uint8List? p2pkhPublicKeyHash;
+  _Prevout(
+    this.scriptHex,
+    this.fullOutputHex,
+    this.value,
+    this.taprootOutputKey,
+    this.p2pkhPublicKeyHash,
+  );
 }
 
 /// PSBT transaction signer for Bitcoin Legacy and Taproot transactions
@@ -78,6 +85,9 @@ class PsbtTxSigner extends TxSigner {
           scriptPubKey.isP2TR()
               ? Uint8List.fromList(scriptPubKey.commands[1])
               : null,
+          scriptPubKey.isP2PKH()
+              ? Uint8List.fromList(scriptPubKey.commands[2])
+              : null,
         ));
       } else if (input.previousTransaction != null) {
         final prevTx = input.previousTransaction!;
@@ -90,6 +100,9 @@ class PsbtTxSigner extends TxSigner {
           prevOutput.amount,
           scriptPubKey.isP2TR()
               ? Uint8List.fromList(scriptPubKey.commands[1])
+              : null,
+          scriptPubKey.isP2PKH()
+              ? Uint8List.fromList(scriptPubKey.commands[2])
               : null,
         ));
       } else {
@@ -156,6 +169,12 @@ class PsbtTxSigner extends TxSigner {
         if (partialSigs == null || partialSigs.length != 2) return false;
         final signature = partialSigs[0];
         final publicKey = fromHex(partialSigs[1]);
+        final expectedPublicKeyHash = prevouts[i].p2pkhPublicKeyHash;
+        if (expectedPublicKeyHash == null ||
+            dynamicToString(sha160fromByte(publicKey)) !=
+                dynamicToString(expectedPublicKeyHash)) {
+          return false;
+        }
 
         final sigHashHex = txData.psbt.unsignedTransaction!.getSigHash(
           i,

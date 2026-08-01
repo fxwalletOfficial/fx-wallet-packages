@@ -137,6 +137,59 @@ void main() async {
     }
   });
 
+  test('LTC legacy: all supported sighash types round-trip', () async {
+    final wallet = await LtcCoin.fromMnemonic(mnemonic);
+    final hashTypes = [
+      btc.SIGHASH_ALL,
+      btc.SIGHASH_NONE,
+      btc.SIGHASH_SINGLE,
+      btc.SIGHASH_ALL | btc.SIGHASH_ANYONECANPAY,
+      btc.SIGHASH_NONE | btc.SIGHASH_ANYONECANPAY,
+      btc.SIGHASH_SINGLE | btc.SIGHASH_ANYONECANPAY,
+    ];
+
+    for (final hashType in hashTypes) {
+      final signer = GsplTxSigner(wallet, buildTxData(hashType: hashType));
+      signer.sign();
+
+      final signedTx = btc.Transaction.fromHex(signer.txData.hex);
+      for (var i = 0; i < signedTx.ins.length; i++) {
+        final chunks = decompile(signedTx.ins[i].script!);
+        expect(chunks, hasLength(2));
+        expect(chunks![0], signer.txData.inputs[i].signature);
+        expect((chunks[0] as Uint8List).last, hashType);
+      }
+      expect(signer.verify(), isTrue, reason: 'hashType=$hashType');
+    }
+  });
+
+  test('BCH: all supported sighash types round-trip', () async {
+    final wallet = await BchCoin.fromMnemonic(mnemonic);
+    final baseHashTypes = [
+      btc.SIGHASH_ALL,
+      btc.SIGHASH_NONE,
+      btc.SIGHASH_SINGLE,
+      btc.SIGHASH_ALL | btc.SIGHASH_ANYONECANPAY,
+      btc.SIGHASH_NONE | btc.SIGHASH_ANYONECANPAY,
+      btc.SIGHASH_SINGLE | btc.SIGHASH_ANYONECANPAY,
+    ];
+
+    for (final baseHashType in baseHashTypes) {
+      final expectedHashType = baseHashType | btc.SIGHASH_BITCOINCASHBIP143;
+      final signer = GsplTxSigner(wallet, buildTxData(hashType: baseHashType));
+      signer.sign();
+
+      final signedTx = btc.Transaction.fromHex(signer.txData.hex);
+      for (var i = 0; i < signedTx.ins.length; i++) {
+        final chunks = decompile(signedTx.ins[i].script!);
+        expect(chunks, hasLength(2));
+        expect(chunks![0], signer.txData.inputs[i].signature);
+        expect((chunks[0] as Uint8List).last, expectedHashType);
+      }
+      expect(signer.verify(), isTrue, reason: 'hashType=$expectedHashType');
+    }
+  });
+
   test('DOGE: verify() rejects a scriptSig removed from signed hex', () async {
     final wallet = await DogeCoin.fromMnemonic(mnemonic);
     final signer = GsplTxSigner(wallet, buildTxData());

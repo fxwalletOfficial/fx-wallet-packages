@@ -88,7 +88,7 @@ void main() async {
   });
 
   group('test psbt tx signer', () {
-    test('legacy signature generation', () {
+    test('legacy verification rejects non-owner wallet', () {
       // Create PSBT transaction data and signer
       final psbtTxData = PsbtTxData.fromHash(
         legacyUnsignedPsbt,
@@ -104,8 +104,18 @@ void main() async {
       expect(jsonData, isNotEmpty);
       expect(broadcastData, isNotEmpty);
 
-      // Verify signatures were added
-      expect(signer.verify(), isTrue);
+      // The fixture belongs to another key, so a correct verifier rejects it.
+      final psbtInput = psbtTxData.psbt.inputs[0];
+      final prevout = psbtInput
+          .previousTransaction!
+          .outputs[psbtTxData.psbt.unsignedTransaction!.inputs[0].index];
+      expect(psbtInput.partialSigs, hasLength(2));
+      expect(prevout.scriptPubKey.isP2PKH(), isTrue);
+      expect(
+        dynamicToHex(sha160fromByte(fromHex(psbtInput.partialSigs![1]))),
+        isNot(dynamicToHex(prevout.scriptPubKey.commands[2])),
+      );
+      expect(signer.verify(), isFalse);
     });
 
     test('taproot signature generation', () {

@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 
 import 'package:crypto_wallet_util/wallets.dart';
+import 'package:crypto_wallet_util/utils.dart';
 import 'package:crypto_wallet_util/src/transaction/btc/psbt_tx_data.dart';
 import 'package:crypto_wallet_util/src/transaction/btc/psbt_tx_signer.dart';
 import 'package:crypto_wallet_util/src/forked_lib/psbt/psbt.dart';
@@ -21,8 +22,13 @@ void main() async {
   final wallet = await BtcCoin.fromMnemonic(mnemonic);
 
   PsbtTxData buildLegacyTxData() {
-    final address = wallet.publicKeyToAddress(wallet.publicKey);
-    final scriptPubKey = ScriptPublicKey.p2pkh(address);
+    final scriptPubKey = ScriptPublicKey([
+      0x76,
+      0xa9,
+      sha160fromByte(wallet.publicKey),
+      0x88,
+      0xac,
+    ]);
 
     final input = TransactionInput.forSending('a1' * 32, 0);
     final output = TransactionOutput(
@@ -61,6 +67,16 @@ void main() async {
     final txData = buildLegacyTxData();
     final signer = PsbtTxSigner(wallet, txData);
     signer.sign();
+    final input = txData.psbt.inputs[0];
+    final prevout = input
+        .previousTransaction!
+        .outputs[txData.psbt.unsignedTransaction!.inputs[0].index];
+    expect(prevout.scriptPubKey.isP2PKH(), isTrue);
+    expect(
+      Converter.bytesToHex(prevout.scriptPubKey.commands[2]),
+      Converter.bytesToHex(sha160fromByte(wallet.publicKey)),
+    );
+    expect(input.partialSigs![1], Converter.bytesToHex(wallet.publicKey));
     expect(signer.verify(), isTrue);
   });
 
@@ -75,6 +91,34 @@ void main() async {
         (int.parse(sig.substring(0, 2), radix: 16) ^ 0xff).toRadixString(16).padLeft(2, '0');
     // Overwrite the partial sig directly (bypasses re-deriving from a key).
     input.partialSigs![0] = tamperedByte + sig.substring(2);
+
+    expect(signer.verify(), isFalse);
+  });
+
+  test('verify rejects a valid signature/public-key pair that does not own '
+      'the P2PKH prevout', () async {
+    final txData = buildLegacyTxData();
+    final signer = PsbtTxSigner(wallet, txData);
+    signer.sign();
+
+    final otherWallet = await BtcCoin.fromMnemonic(
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    );
+    final unsignedInput = txData.psbt.unsignedTransaction!.inputs[0];
+    final prevOutput =
+        txData.psbt.inputs[0].previousTransaction!.outputs[unsignedInput.index];
+    final sigHashHex = txData.psbt.unsignedTransaction!.getSigHash(
+      0,
+      prevOutput.serialize(),
+      false,
+    );
+
+    txData.psbt.inputs[0].partialSigs!
+      ..clear()
+      ..addAll([
+        otherWallet.sign(sigHashHex),
+        Converter.bytesToHex(otherWallet.publicKey),
+      ]);
 
     expect(signer.verify(), isFalse);
   });
