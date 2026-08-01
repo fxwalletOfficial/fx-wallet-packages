@@ -17,13 +17,14 @@ void main() async {
   const mnemonic =
       'few tag video grain jealous light tired vapor shed festival shine tag';
 
-  GsplTxData buildTxData({int? hashType}) => GsplTxData(
+  GsplTxData buildTxData({int? hashType, bool singleOutput = false}) => GsplTxData(
     inputs: [
       GsplItem(path: "m/44'/2'/0'/0/0", amount: 62926, signHashType: hashType),
       GsplItem(path: "m/44'/2'/0'/0/0", amount: 82787, signHashType: hashType),
     ],
-    hex:
-        '0200000002d2bc522ea66a05ba9227b412b2aec5d4d2e98b6d3c84bfabf631154ed83ca7290100000000ffffffffda4b00c6bcc8e12b34906e26cf640e6c604ea5166a6bd15e8b8bf23366b528870100000000ffffffff02f9840100000000001976a9142eb6d82fc6e056c5ae7b98c8fb64e15ce3e8de1288ac91b20000000000001976a9146e13c072a8c2d3216566f710a7d975fb8e593cea88ac00000000',
+    hex: singleOutput
+        ? '0200000002d2bc522ea66a05ba9227b412b2aec5d4d2e98b6d3c84bfabf631154ed83ca7290100000000ffffffffda4b00c6bcc8e12b34906e26cf640e6c604ea5166a6bd15e8b8bf23366b528870100000000ffffffff01f9840100000000001976a9142eb6d82fc6e056c5ae7b98c8fb64e15ce3e8de1288ac00000000'
+        : '0200000002d2bc522ea66a05ba9227b412b2aec5d4d2e98b6d3c84bfabf631154ed83ca7290100000000ffffffffda4b00c6bcc8e12b34906e26cf640e6c604ea5166a6bd15e8b8bf23366b528870100000000ffffffff02f9840100000000001976a9142eb6d82fc6e056c5ae7b98c8fb64e15ce3e8de1288ac91b20000000000001976a9146e13c072a8c2d3216566f710a7d975fb8e593cea88ac00000000',
     change: null,
     dataType: BtcSignDataType.TRANSACTION,
   );
@@ -80,6 +81,22 @@ void main() async {
         }
         expect(signer.verify(), isTrue, reason: 'hashType=$hashType');
       }
+    },
+  );
+
+  test(
+    'LTC Taproot: SIGHASH_SINGLE rejects an input without a matching output',
+    () async {
+      final wallet = await LtcCoin.fromMnemonic(mnemonic, null, true);
+      final signer = GsplTxSigner(
+        wallet,
+        buildTxData(
+          hashType: btc.SIGHASH_SINGLE,
+          singleOutput: true,
+        ),
+      );
+
+      expect(signer.sign, throwsArgumentError);
     },
   );
 

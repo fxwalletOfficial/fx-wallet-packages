@@ -274,6 +274,26 @@ class Transaction {
 
   Uint8List hashForWitnessV1(int inIndex, List<Uint8List> prevOutScripts,
       List<int> values, int hashType, Uint8List? leafHash, Uint8List? annex) {
+    if (inIndex < 0 || inIndex >= ins.length) {
+      throw RangeError.index(inIndex, ins, 'inIndex');
+    }
+    if (prevOutScripts.length != ins.length || values.length != ins.length) {
+      throw ArgumentError(
+          'prevOutScripts/values must cover every transaction input');
+    }
+    const validHashTypes = <int>{
+      SIGHASH_DEFAULT,
+      SIGHASH_ALL,
+      SIGHASH_NONE,
+      SIGHASH_SINGLE,
+      SIGHASH_ALL | SIGHASH_ANYONECANPAY,
+      SIGHASH_NONE | SIGHASH_ANYONECANPAY,
+      SIGHASH_SINGLE | SIGHASH_ANYONECANPAY,
+    };
+    if (!validHashTypes.contains(hashType)) {
+      throw ArgumentError('Invalid Taproot sighash type: $hashType');
+    }
+
     final outputType = hashType == SIGHASH_DEFAULT
         ? SIGHASH_ALL
         : hashType & SIGHASH_OUTPUT_MASK;
@@ -281,6 +301,10 @@ class Transaction {
     final isAnyoneCanPay = inputType == SIGHASH_ANYONECANPAY;
     final isNone = outputType == SIGHASH_NONE;
     final isSingle = outputType == SIGHASH_SINGLE;
+    if (isSingle && inIndex >= outs.length) {
+      throw ArgumentError(
+          'SIGHASH_SINGLE requires an output at input index $inIndex');
+    }
 
     var hashPrevouts = Uint8List.fromList([]);
     var hashAmounts = Uint8List.fromList([]);

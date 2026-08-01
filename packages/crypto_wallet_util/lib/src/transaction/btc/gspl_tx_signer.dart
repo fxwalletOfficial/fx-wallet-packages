@@ -265,14 +265,19 @@ class GsplTxSigner extends TxSigner {
         return false;
       }
 
-      final sigHash = _sigHashFor(
-        tx,
-        i,
-        prevOutScript,
-        allPrevScripts,
-        allValues,
-        hashType,
-      );
+      final Uint8List sigHash;
+      try {
+        sigHash = _sigHashFor(
+          tx,
+          i,
+          prevOutScript,
+          allPrevScripts,
+          allValues,
+          hashType,
+        );
+      } catch (_) {
+        return false;
+      }
 
       if (!wallet.verify(
         dynamicToString(signature),

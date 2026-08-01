@@ -56,4 +56,39 @@ void main() {
     final der = Uint8List.fromList([0x30, 0x44, 0x02, 0x20]); // claims more than it has
     expect(() => EcdaSignature.derToRaw(der), throwsFormatException);
   });
+
+  test('rejects an excessively padded positive integer', () {
+    final r = Uint8List.fromList([0x00, ...List.filled(32, 0x11)]);
+    final s = Uint8List.fromList(List.filled(32, 0x22));
+    final der = buildDer(r, s, trailingByte: 0x01);
+
+    expect(() => EcdaSignature.derToRaw(der), throwsFormatException);
+  });
+
+  test('rejects a negative DER integer with no sign-disambiguation byte', () {
+    final r = Uint8List.fromList([0x80, ...List.filled(31, 0x11)]);
+    final s = Uint8List.fromList(List.filled(32, 0x22));
+    final der = buildDer(r, s, trailingByte: 0x01);
+
+    expect(() => EcdaSignature.derToRaw(der), throwsFormatException);
+  });
+
+  test('rejects a 33-byte integer without a sign-disambiguation zero', () {
+    final r = Uint8List.fromList([0x01, ...List.filled(32, 0x80)]);
+    final s = Uint8List.fromList(List.filled(32, 0x22));
+    final der = buildDer(r, s, trailingByte: 0x01);
+
+    expect(() => EcdaSignature.derToRaw(der), throwsFormatException);
+  });
+
+  test('rejects more than one byte after the DER payload', () {
+    final r = Uint8List.fromList(List.filled(32, 0x11));
+    final s = Uint8List.fromList(List.filled(32, 0x22));
+    final der = Uint8List.fromList([
+      ...buildDer(r, s, trailingByte: 0x01),
+      0x02,
+    ]);
+
+    expect(() => EcdaSignature.derToRaw(der), throwsFormatException);
+  });
 }

@@ -23,6 +23,9 @@
 - DOGE/LTC/BCH GSPL signing threads one explicit hashType through both the
   digest computation and the final signature encoding, so a non-default sighash
   no longer commits to one type while declaring another.
+- Taproot sighash construction rejects unsupported hash types and
+  `SIGHASH_SINGLE` inputs without a corresponding output instead of producing
+  a signature for an invalid BIP341 signing state.
 - `EthTxSigner.verify()` interprets `v` as a bare y-parity for typed
   (EIP-1559/EIP-7702) transactions and as EIP-155 only for legacy, and recovers
   the signer's address rather than checking structural bounds alone.
@@ -34,8 +37,14 @@
   unconditionally or only checked that a signature field was present. Taproot
   verification checks against the tweaked output key, and non-Taproot
   verification parses DER plus the trailing sighash byte.
+- Legacy PSBT verification and finalization bind the serialized sighash suffix
+  to the digest being verified. Finalization also validates inputs backed by a
+  full previous transaction instead of skipping signature verification when
+  `witnessUtxo` is absent.
 - PSBT DER-to-raw signature conversion re-encodes `r` and `s` to a fixed 32
   bytes each, so a legitimately short `r` no longer shifts `s` off offset 32.
+  DER parsing now rejects negative or excessively padded integers, values over
+  256 bits, inconsistent lengths and extra trailing data.
 - `DotCoin.verify()` applies the same `0x9c` prefix stripping as `sign()`, and
   `processMessage()` no longer throws on an empty message.
 - Schnorr aux randomness uses `Random.secure()` over a full 32 bytes instead of

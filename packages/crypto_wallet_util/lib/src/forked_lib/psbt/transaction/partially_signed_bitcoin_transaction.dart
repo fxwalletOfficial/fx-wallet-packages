@@ -789,11 +789,21 @@ class PSBT {
             inputs[i].taprootKeySpendSignature!, inputs[i].taprootInternalKey!);
       }
 
-      if (inputs[i].witnessUtxo == null ||
-          signedTransaction.validateSignature(
-              i, inputs[i].witnessUtxo!.serialize(), addressType)) {
-        continue;
+      final String utxo;
+      if (inputs[i].witnessUtxo != null) {
+        utxo = inputs[i].witnessUtxo!.serialize();
+      } else if (inputs[i].previousTransaction != null) {
+        final outputIndex = unsignedTransaction!.inputs[i].index;
+        final previousOutputs = inputs[i].previousTransaction!.outputs;
+        if (outputIndex >= previousOutputs.length) {
+          throw Exception('Invalid previous output index');
+        }
+        utxo = previousOutputs[outputIndex].serialize();
       } else {
+        throw Exception('Missing UTXO information');
+      }
+
+      if (!signedTransaction.validateSignature(i, utxo, addressType)) {
         throw Exception('Invalid Signatures');
       }
     }

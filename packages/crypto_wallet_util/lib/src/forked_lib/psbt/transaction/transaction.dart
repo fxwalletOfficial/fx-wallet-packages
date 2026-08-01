@@ -392,6 +392,9 @@ class Transaction {
   /// one being signed.
   String getTaprootSigHash(int index, List<String> prevOutScripts,
       List<int> prevOutValues, {int hashType = _sighashDefault}) {
+    if (index < 0 || index >= inputs.length) {
+      throw RangeError.index(index, inputs, 'index');
+    }
     if (prevOutScripts.length != inputs.length ||
         prevOutValues.length != inputs.length) {
       throw ArgumentError(
@@ -404,6 +407,19 @@ class Transaction {
     final isAnyoneCanPay = inputType == _sighashAnyoneCanPay;
     final isNone = outputType == _sighashNone;
     final isSingle = outputType == _sighashSingle;
+    final isValidHashType = hashType == _sighashDefault ||
+        (hashType == (outputType | inputType) &&
+            (outputType == _sighashAll ||
+                outputType == _sighashNone ||
+                outputType == _sighashSingle) &&
+            (inputType == 0 || inputType == _sighashAnyoneCanPay));
+    if (!isValidHashType) {
+      throw ArgumentError('Invalid Taproot sighash type: $hashType');
+    }
+    if (isSingle && index >= outputs.length) {
+      throw ArgumentError(
+          'SIGHASH_SINGLE requires an output at input index $index');
+    }
 
     String hashPrevouts = '';
     String hashAmounts = '';
@@ -534,9 +550,8 @@ class Transaction {
   /// check if the signature is valid in the transaction.
   bool validateSignature(
       int inputIndex, String utxo, BtcAddressType addressType) {
-    String sigHash = getSigHash(inputIndex, utxo, addressType.isSegwit);
-    String signature;
-    String publicKey;
+    dynamic signature;
+    dynamic publicKey;
     if (addressType == BtcAddressType.p2wpkh) {
       signature = inputs[inputIndex].witnessList[0];
       publicKey = inputs[inputIndex].witnessList[1];
@@ -545,9 +560,12 @@ class Transaction {
       publicKey = inputs[inputIndex].scriptSig.commands[1];
     }
 
-    Uint8List sig = Converter.hexToBytes(signature);
+    Uint8List sig = dynamicToUint8List(signature);
+    if (sig.isEmpty || sig.last != _sighashAll) return false;
+    String sigHash = getSigHash(inputIndex, utxo, addressType.isSegwit,
+        hashType: sig.last);
     Uint8List msg = Converter.hexToBytes(sigHash);
-    Uint8List pub = Converter.hexToBytes(publicKey);
+    Uint8List pub = dynamicToUint8List(publicKey);
 
     // sig is DER-encoded (optionally with a trailing sighash byte); decode
     // r/s as integers and re-encode each to a fixed 32 bytes rather than

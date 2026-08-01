@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:test/test.dart';
 
 import 'package:crypto_wallet_util/wallets.dart';
@@ -78,6 +80,7 @@ void main() async {
     );
     expect(input.partialSigs![1], Converter.bytesToHex(wallet.publicKey));
     expect(signer.verify(), isTrue);
+    expect(txData.getSignedTxHex, returnsNormally);
   });
 
   test('verify fails when the DER signature is tampered', () {
@@ -93,6 +96,40 @@ void main() async {
     input.partialSigs![0] = tamperedByte + sig.substring(2);
 
     expect(signer.verify(), isFalse);
+  });
+
+  test('verify and finalization reject a mismatched sighash suffix', () {
+    final txData = buildLegacyTxData();
+    final signer = PsbtTxSigner(wallet, txData);
+    signer.sign();
+
+    final signature = fromHex(txData.psbt.inputs[0].partialSigs![0]);
+    expect(signature.last, 0x01);
+    signature[signature.length - 1] = 0x02;
+    txData.psbt.inputs[0].partialSigs![0] = dynamicToString(signature);
+
+    expect(signer.verify(), isFalse);
+    expect(txData.getSignedTxHex, throwsException);
+  });
+
+  test('verify and finalization reject non-canonical padded DER', () {
+    final txData = buildLegacyTxData();
+    final signer = PsbtTxSigner(wallet, txData);
+    signer.sign();
+
+    final signature = fromHex(txData.psbt.inputs[0].partialSigs![0]);
+    expect(signature[4] & 0x80, 0);
+    final nonCanonical = Uint8List.fromList([
+      ...signature.sublist(0, 4),
+      0,
+      ...signature.sublist(4),
+    ]);
+    nonCanonical[1] += 1;
+    nonCanonical[3] += 1;
+    txData.psbt.inputs[0].partialSigs![0] = dynamicToString(nonCanonical);
+
+    expect(signer.verify(), isFalse);
+    expect(txData.getSignedTxHex, throwsException);
   });
 
   test('verify rejects a valid signature/public-key pair that does not own '

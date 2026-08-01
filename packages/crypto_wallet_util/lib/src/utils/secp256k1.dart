@@ -312,9 +312,8 @@ class EcdaSignature {
         dynamicToUint8List(message), ECSignature(r, s));
   }
 
-  /// Decode a DER-encoded ECDSA signature (optionally followed by extra
-  /// trailing bytes, e.g. a sighash type) into fixed-width raw `r||s` (64
-  /// bytes each padded/truncated to exactly 32 bytes). `r`/`s` are decoded
+  /// Decode a DER-encoded ECDSA signature (optionally followed by one
+  /// sighash byte) into fixed-width raw `r||s` (64 bytes total). `r`/`s` are decoded
   /// as plain big-endian integers rather than copied byte-for-byte, so a
   /// DER integer that is legitimately shorter than 32 bytes (or carries a
   /// sign-disambiguation 0x00 byte) is still re-encoded to the correct
@@ -325,7 +324,10 @@ class EcdaSignature {
     if (der[0] != 0x30) throw const FormatException('Invalid DER sequence tag');
 
     final totalLen = der[1];
-    if (2 + totalLen > der.length) {
+    final derEnd = 2 + totalLen;
+    // Accept either bare DER or DER followed by exactly one sighash byte.
+    // Additional trailing data would otherwise be silently ignored.
+    if (derEnd != der.length && derEnd + 1 != der.length) {
       throw const FormatException('Invalid DER length');
     }
     if (der[2] != 0x02) {
@@ -333,22 +335,24 @@ class EcdaSignature {
     }
 
     final rLen = der[3];
-    if (rLen == 0 || 4 + rLen > der.length) {
+    if (rLen == 0 || rLen > 33 || 4 + rLen > derEnd) {
       throw const FormatException('Invalid DER r length');
     }
     final rBytes = der.sublist(4, 4 + rLen);
+    _validateDerInteger(rBytes, 'r');
 
     var offset = 4 + rLen;
-    if (offset >= der.length || der[offset] != 0x02) {
+    if (offset + 1 >= derEnd || der[offset] != 0x02) {
       throw const FormatException('Invalid DER integer tag for s');
     }
     offset += 1;
     final sLen = der[offset];
     offset += 1;
-    if (sLen == 0 || offset + sLen > der.length) {
+    if (sLen == 0 || sLen > 33 || offset + sLen != derEnd) {
       throw const FormatException('Invalid DER s length');
     }
     final sBytes = der.sublist(offset, offset + sLen);
+    _validateDerInteger(sBytes, 's');
 
     final r = decodeBigInt(rBytes, endian: Endian.big);
     final s = decodeBigInt(sBytes, endian: Endian.big);
@@ -359,13 +363,29 @@ class EcdaSignature {
     return raw;
   }
 
+  static void _validateDerInteger(Uint8List bytes, String name) {
+    if ((bytes[0] & 0x80) != 0) {
+      throw FormatException('DER integer $name is negative');
+    }
+    if (bytes.length > 32 && bytes[0] != 0) {
+      throw FormatException('DER integer $name exceeds 256 bits');
+    }
+    if (bytes.length > 1 && bytes[0] == 0 && (bytes[1] & 0x80) == 0) {
+      throw FormatException('DER integer $name is excessively padded');
+    }
+  }
+
   /// Verify a DER-encoded signature with a trailing sighash byte — the
   /// format DOGE/LTC(non-Taproot)/BCH `sign()` actually produce. Returns
   /// `false` for malformed DER instead of throwing.
   static bool verifyDerWithHashType(
       String message, Uint8List publicKey, String signature) {
     try {
-      final raw = derToRaw(dynamicToUint8List(signature));
+      final encoded = dynamicToUint8List(signature);
+      if (encoded.length < 9 || 2 + encoded[1] + 1 != encoded.length) {
+        return false;
+      }
+      final raw = derToRaw(encoded);
       return verify(message, publicKey, dynamicToString(raw));
     } catch (_) {
       return false;

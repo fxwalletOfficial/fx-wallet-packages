@@ -168,7 +168,17 @@ class PsbtTxSigner extends TxSigner {
         final partialSigs = input.partialSigs;
         if (partialSigs == null || partialSigs.length != 2) return false;
         final signature = partialSigs[0];
-        final publicKey = fromHex(partialSigs[1]);
+        final Uint8List signatureBytes;
+        final Uint8List publicKey;
+        try {
+          signatureBytes = fromHex(signature);
+          publicKey = fromHex(partialSigs[1]);
+        } catch (_) {
+          return false;
+        }
+        if (signatureBytes.isEmpty || signatureBytes.last != 0x01) {
+          return false;
+        }
         final expectedPublicKeyHash = prevouts[i].p2pkhPublicKeyHash;
         if (expectedPublicKeyHash == null ||
             dynamicToString(sha160fromByte(publicKey)) !=
