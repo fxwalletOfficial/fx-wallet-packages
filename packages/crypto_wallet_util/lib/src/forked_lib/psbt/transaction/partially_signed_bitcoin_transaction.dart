@@ -25,6 +25,7 @@ const PSBT_IN_TAP_KEY_SIG = "13";
 const PSBT_IN_TAP_SCRIPT_SIG = "14";
 const PSBT_IN_TAP_BIP32_DERIVATION = "16";
 const PSBT_IN_TAP_INTERNAL_KEY = "17";
+const PSBT_IN_SIGHASH_TYPE = "03";
 
 enum WalletType { SingleSignatureWallet, MultisignatureWallet }
 
@@ -240,6 +241,7 @@ class PSBT {
       String? taprootKeySpendSignature;
       String? taprootKeyBip32DerivationPath;
       String? taprootInternalKey;
+      int? sighashType;
       if (psbtMap["inputs"][i].containsKey("01")) {
         witnessUtxo = TransactionOutput.parse(psbtMap["inputs"][i]["01"]);
       }
@@ -248,6 +250,15 @@ class PSBT {
       }
       if (psbtMap["inputs"][i].containsKey(PSBT_IN_TAP_INTERNAL_KEY)) {
         taprootInternalKey = psbtMap["inputs"][i][PSBT_IN_TAP_INTERNAL_KEY];
+      }
+      if (psbtMap["inputs"][i].containsKey(PSBT_IN_SIGHASH_TYPE)) {
+        final encoded = Converter.hexToBytes(
+            psbtMap["inputs"][i][PSBT_IN_SIGHASH_TYPE]);
+        if (encoded.length != 4) {
+          throw const FormatException(
+              'PSBT_IN_SIGHASH_TYPE must be a 4-byte little-endian integer');
+        }
+        sighashType = Converter.littleEndianToInt(encoded);
       }
       DerivationPath? inputDerivationPath;
       List<String> partialSigs = [];
@@ -278,7 +289,8 @@ class PSBT {
           partialSigs,
           taprootKeySpendSignature,
           taprootKeyBip32DerivationPath,
-          taprootInternalKey));
+          taprootInternalKey,
+          sighashType));
     }
 
     for (int i = 0; i < psbtMap["outputs"].length; i++) {
@@ -647,6 +659,12 @@ class PSBT {
     psbtMap["inputs"][inputIndex]["02$publicKey"] = signature;
   }
 
+  /// Add a Taproot key-path signature to the parsed input and serialized map.
+  void setTaprootKeySpendSignature(int inputIndex, String signature) {
+    inputs[inputIndex].setTaprootKeySpendSignature(signature);
+    psbtMap["inputs"][inputIndex][PSBT_IN_TAP_KEY_SIG] = signature;
+  }
+
   /// @nodoc
   @override
   String toString() {
@@ -828,6 +846,7 @@ class PsbtInput {
   String? _taprootKeySpendSignature;
   String? _taprootKeyBip32DerivationPath;
   final String? _taprootInternalKey;
+  final int? _sighashType;
   String? _xonlypubkey;
 
   Transaction? get previousTransaction => _previousTransaction;
@@ -838,6 +857,7 @@ class PsbtInput {
   String? get xonlypubkey => _taprootInternalKey ?? _xonlypubkey;
   String? get taprootKeyBip32DerivationPath => _taprootKeyBip32DerivationPath;
   String? get taprootInternalKey => _taprootInternalKey;
+  int? get sighashType => _sighashType;
 
   PsbtInput(
       this._previousTransaction,
@@ -846,7 +866,8 @@ class PsbtInput {
       this._partialSigs,
       this._taprootKeySpendSignature,
       this._taprootKeyBip32DerivationPath,
-      this._taprootInternalKey);
+      this._taprootInternalKey,
+      [this._sighashType]);
 
   _addSignature(String signature, String publicKey) {
     _partialSigs.add(signature);

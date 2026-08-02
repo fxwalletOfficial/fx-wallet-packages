@@ -25,7 +25,11 @@ void main() async {
       'few tag video grain jealous light tired vapor shed festival shine tag';
   final wallet = await BtcCoin.fromMnemonic(mnemonic, null, true);
 
-  PsbtTxData buildTaprootTxData({int sequence = 0xffffffff}) {
+  PsbtTxData buildTaprootTxData({
+    int sequence = 0xffffffff,
+    int? sighashType,
+    String? encodedSighashType,
+  }) {
     final address = wallet.publicKeyToAddress(wallet.publicKey);
     final outputScript =
         bf.Address.addressToOutputScript(address, bf.bitcoin)!;
@@ -57,7 +61,14 @@ void main() async {
     final psbtMap = <String, dynamic>{
       'global': <String, dynamic>{'00': unsignedTxHex},
       'inputs': [
-        <String, dynamic>{'01': witnessUtxo.serialize()}
+        <String, dynamic>{
+          '01': witnessUtxo.serialize(),
+          if (sighashType != null || encodedSighashType != null)
+            '03': encodedSighashType ??
+                Converter.bytesToHex(
+                  Converter.intToLittleEndianBytes(sighashType!, 4),
+                ),
+        }
       ],
       'outputs': [
         <String, dynamic>{}
@@ -89,6 +100,74 @@ void main() async {
     final tamperedByte =
         (int.parse(sig.substring(0, 2), radix: 16) ^ 0xff).toRadixString(16).padLeft(2, '0');
     input.setTaprootKeySpendSignature(tamperedByte + sig.substring(2));
+
+    expect(signer.verify(), isFalse);
+  });
+
+  test('explicit Taproot sighash types round-trip through PSBT and witness',
+      () {
+    const hashTypes = [0x01, 0x02, 0x03, 0x81, 0x82, 0x83];
+
+    for (final hashType in hashTypes) {
+      final txData = buildTaprootTxData(sighashType: hashType);
+      final signer = PsbtTxSigner(wallet, txData);
+
+      expect(txData.psbt.inputs[0].sighashType, hashType);
+      signer.sign();
+
+      final signature = txData.psbt.inputs[0].taprootKeySpendSignature!;
+      expect(signature, hasLength(130), reason: 'hashType=$hashType');
+      expect(int.parse(signature.substring(128), radix: 16), hashType);
+      expect(signer.verify(), isTrue, reason: 'hashType=$hashType');
+
+      final reparsed = PSBT.parse(txData.psbt.serialize());
+      expect(reparsed.inputs[0].sighashType, hashType);
+      expect(reparsed.inputs[0].taprootKeySpendSignature, signature);
+
+      final signedTx = bf.Transaction.fromHex(txData.getSignedTxHex());
+      expect(signedTx.ins[0].witness, hasLength(1));
+      expect(signedTx.ins[0].witness![0], hasLength(65));
+      expect(signedTx.ins[0].witness![0]!.last, hashType);
+    }
+  });
+
+  test('verify rejects a Taproot sighash field/signature suffix mismatch', () {
+    final txData = buildTaprootTxData(sighashType: 0x03);
+    final signer = PsbtTxSigner(wallet, txData);
+    signer.sign();
+
+    final input = txData.psbt.inputs[0];
+    final signature = input.taprootKeySpendSignature!;
+    input.setTaprootKeySpendSignature('${signature.substring(0, 128)}02');
+
+    expect(signer.verify(), isFalse);
+  });
+
+  test('unsupported Taproot sighash fails before writing any signature', () {
+    final txData = buildTaprootTxData(sighashType: 0x04);
+    final signer = PsbtTxSigner(wallet, txData);
+
+    expect(signer.sign, throwsArgumentError);
+    expect(txData.psbt.inputs[0].taprootKeySpendSignature, isNull);
+    expect(txData.psbt.psbtMap['inputs'][0], isNot(contains('13')));
+    expect(txData.isSigned, isFalse);
+  });
+
+  test('malformed PSBT sighash field fails during parsing', () {
+    expect(
+      () => buildTaprootTxData(encodedSighashType: '03'),
+      throwsFormatException,
+    );
+  });
+
+  test('verify rejects an unsupported Taproot signature suffix', () {
+    final txData = buildTaprootTxData();
+    final signer = PsbtTxSigner(wallet, txData);
+    signer.sign();
+
+    final input = txData.psbt.inputs[0];
+    input.setTaprootKeySpendSignature(
+        '${input.taprootKeySpendSignature!}04');
 
     expect(signer.verify(), isFalse);
   });

@@ -192,8 +192,31 @@ class Transaction {
   }
 
   Uint8List _serializeTaprootSignature(Uint8List sig, int? type) {
-    if (type == null || type <= 0) return sig;
-    return Uint8List.fromList(Uint8List.fromList([type]) + sig);
+    const validHashTypes = <int>{
+      SIGHASH_DEFAULT,
+      SIGHASH_ALL,
+      SIGHASH_NONE,
+      SIGHASH_SINGLE,
+      SIGHASH_ALL | SIGHASH_ANYONECANPAY,
+      SIGHASH_NONE | SIGHASH_ANYONECANPAY,
+      SIGHASH_SINGLE | SIGHASH_ANYONECANPAY,
+    };
+    if (type != null && !validHashTypes.contains(type)) {
+      throw ArgumentError('Invalid Taproot sighash type: $type');
+    }
+    if (sig.length == 65) {
+      if (!validHashTypes.contains(sig.last) ||
+          sig.last == SIGHASH_DEFAULT ||
+          (type != null && type != SIGHASH_DEFAULT && type != sig.last)) {
+        throw ArgumentError('Invalid encoded Taproot sighash type');
+      }
+      return sig;
+    }
+    if (sig.length != 64) {
+      throw ArgumentError('Taproot signature must be 64 or 65 bytes');
+    }
+    if (type == null || type == SIGHASH_DEFAULT) return sig;
+    return Uint8List.fromList([...sig, type]);
   }
 
   Uint8List hashForWitnessV0(

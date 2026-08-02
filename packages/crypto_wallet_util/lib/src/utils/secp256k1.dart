@@ -220,10 +220,16 @@ class EcdaSignature {
   /// only checking `r`/`s`/`v` are in range.
   static Uint8List? recoverPublicKey(
       BigInt r, BigInt s, int recoveryId, Uint8List messageHash) {
-    final pubKeyBigInt = _recoverFromSignature(
-        recoveryId, ECSignature(r, s), messageHash, secp256k1);
-    if (pubKeyBigInt == null) return null;
-    return encodeBigInt(pubKeyBigInt, endian: Endian.big, bitLength: 512);
+    try {
+      final pubKeyBigInt = _recoverFromSignature(
+          recoveryId, ECSignature(r, s), messageHash, secp256k1);
+      if (pubKeyBigInt == null) return null;
+      return encodeBigInt(pubKeyBigInt, endian: Endian.big, bitLength: 512);
+    } catch (_) {
+      // Invalid points, non-invertible scalars, and infinity are all
+      // untrusted-signature failures, not verifier errors.
+      return null;
+    }
   }
 
   static int getRecid(String pubHex, String message, ECSignature sig) {

@@ -49,6 +49,20 @@ void main() {
       tx.data.v = tx.data.v == 0 ? 1 : 0;
       expect(signer.verify(), isFalse);
     });
+
+    test('unrecoverable but in-range signature fails closed', () {
+      final tx = Eip1559TxData(data: freshTxData(), network: txNetwork);
+      final signer = EthTxSigner(wallet, tx);
+      signer.sign();
+
+      // r=5 is in range, but x=5 cannot be decompressed to a secp256k1
+      // point for recovery id 0.
+      tx.data.r = BigInt.from(5);
+      tx.data.s = BigInt.one;
+      tx.data.v = 0;
+
+      expect(signer.verify(), isFalse);
+    });
   });
 
   group('F8: isValidEthSignature scalar bounds', () {

@@ -22,6 +22,16 @@ class _Prevout {
 
 /// PSBT transaction signer for Bitcoin Legacy and Taproot transactions
 class PsbtTxSigner extends TxSigner {
+  static const _validTaprootSighashTypes = <int>{
+    0x00,
+    0x01,
+    0x02,
+    0x03,
+    0x81,
+    0x82,
+    0x83,
+  };
+
   @override
   final PsbtTxData txData;
 
@@ -119,19 +129,33 @@ class PsbtTxSigner extends TxSigner {
     final prevOutScripts = prevouts.map((p) => p.scriptHex).toList();
     final prevOutValues = prevouts.map((p) => p.value).toList();
 
+    // Validate/hash/sign all inputs before writing any signature so one bad
+    // later input cannot leave a partially signed PSBT.
+    final hashTypes = <int>[];
+    final sigHashes = <String>[];
     for (int i = 0; i < psbtInputs.length; i++) {
-      // BIP341 TapSighash (SIGHASH_DEFAULT key-path spend).
-      final sigHashHex = txData.psbt.unsignedTransaction!.getTaprootSigHash(
+      final hashType = psbtInputs[i].sighashType ?? 0x00;
+      if (!_validTaprootSighashTypes.contains(hashType)) {
+        throw ArgumentError('Invalid Taproot sighash type: $hashType');
+      }
+      hashTypes.add(hashType);
+      sigHashes.add(txData.psbt.unsignedTransaction!.getTaprootSigHash(
         i,
         prevOutScripts,
         prevOutValues,
-      );
+        hashType: hashType,
+      ));
+    }
 
-      // Generate Schnorr signature for Taproot
-      final signature = wallet.sign(sigHashHex);
-
-      // Set taproot key spend signature
-      txData.psbt.inputs[i].setTaprootKeySpendSignature(signature);
+    final signatures = <String>[];
+    for (int i = 0; i < psbtInputs.length; i++) {
+      final rawSignature = wallet.sign(sigHashes[i]);
+      signatures.add(hashTypes[i] == 0x00
+          ? rawSignature
+          : '$rawSignature${hashTypes[i].toRadixString(16).padLeft(2, '0')}');
+    }
+    for (int i = 0; i < signatures.length; i++) {
+      txData.psbt.setTaprootKeySpendSignature(i, signatures[i]);
     }
   }
 
@@ -157,13 +181,43 @@ class PsbtTxSigner extends TxSigner {
         final outputKey = prevouts[i].taprootOutputKey;
         if (sig == null || outputKey == null) return false;
 
-        final sigHashHex =
-            txData.psbt.unsignedTransaction!.getTaprootSigHash(
-          i,
-          prevOutScripts,
-          prevOutValues,
-        );
-        if (!Schnorr.verify(outputKey, sig, sigHashHex)) return false;
+        final Uint8List signatureBytes;
+        try {
+          signatureBytes = fromHex(sig);
+        } catch (_) {
+          return false;
+        }
+        if (signatureBytes.length != 64 && signatureBytes.length != 65) {
+          return false;
+        }
+
+        final signatureHashType =
+            signatureBytes.length == 65 ? signatureBytes.last : 0x00;
+        if (!_validTaprootSighashTypes.contains(signatureHashType) ||
+            (signatureBytes.length == 65 && signatureHashType == 0x00) ||
+            (input.sighashType != null &&
+                input.sighashType != signatureHashType)) {
+          return false;
+        }
+
+        final String sigHashHex;
+        try {
+          sigHashHex = txData.psbt.unsignedTransaction!.getTaprootSigHash(
+            i,
+            prevOutScripts,
+            prevOutValues,
+            hashType: signatureHashType,
+          );
+        } catch (_) {
+          return false;
+        }
+        final rawSignature =
+            dynamicToString(signatureBytes.sublist(0, 64));
+        try {
+          if (!Schnorr.verify(outputKey, rawSignature, sigHashHex)) return false;
+        } catch (_) {
+          return false;
+        }
       } else {
         final partialSigs = input.partialSigs;
         if (partialSigs == null || partialSigs.length != 2) return false;
