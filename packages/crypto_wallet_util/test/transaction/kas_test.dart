@@ -16,10 +16,10 @@ void main() async {
     final txData = KasTxData.fromJson(transactionJson);
     final signer = KasTxSigner(kas, txData);
     final signedTxData = signer.sign();
-    assert(signer.verify());
+    expect(signer.verify(), isTrue);
     final jsonData = signedTxData.toJson();
     final broadcastData = signedTxData.toBroadcast();
-    assert(jsonData.isNotEmpty);
-    assert(broadcastData.isNotEmpty);
+    expect(jsonData, isNotEmpty);
+    expect(broadcastData, isNotEmpty);
   });
 }

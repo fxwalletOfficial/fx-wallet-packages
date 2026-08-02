@@ -66,12 +66,35 @@ class LtcCoin extends WalletType {
     }
   }
 
+  /// Sign with an explicit sighash type, keeping the digest's committed
+  /// hashType consistent with the hashType byte the caller will embed in
+  /// the final signature (GSPL callers compute both from the same value).
+  String signWithHashType(String message, int hashType) {
+    final ecPrivateKey = ECPrivate.fromBytes(privateKey);
+    if (isTaproot) {
+      // Keep the signer/serializer boundary unambiguous: return the raw
+      // 64-byte Schnorr signature here. The GSPL transaction serializer is
+      // the single place that appends a non-default sighash byte to witness.
+      return ecPrivateKey.signTapRoot(message.toUint8List()).toHex();
+    } else {
+      return ecPrivateKey
+          .signInput(message.toUint8List(), sigHash: hashType)
+          .toHex();
+    }
+  }
+
   @override
   bool verify(String signature, String message) {
     if (isTaproot) {
-      return Schnorr.verify(publicKey, signature, message);
+      // A key-path signature verifies against the tweaked output key
+      // committed to by the P2TR address, not the untweaked public key.
+      final outputKey = P2PKH.getTaprootOutputKey(publicKey);
+      return Schnorr.verify(
+          Uint8List.fromList(outputKey), signature, message);
     } else {
-      return EcdaSignature.verify(message, publicKey, signature);
+      // Non-Taproot sign() returns DER + a trailing sighash byte, not raw
+      // 64-byte r||s.
+      return EcdaSignature.verifyDerWithHashType(message, publicKey, signature);
     }
   }
 }

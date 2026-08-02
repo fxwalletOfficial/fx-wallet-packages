@@ -25,9 +25,8 @@ void main() {
       try {
         dynamicToString(error_type);
       } catch (error) {
-        assert(error
-            .toString()
-            .contains('value must be String, List<int> or Uint8List'));
+        expect(error.toString(),
+            contains('value must be String, List<int> or Uint8List'));
       }
     });
 
@@ -40,9 +39,8 @@ void main() {
       try {
         dynamicToHex(error_type);
       } catch (error) {
-        assert(error
-            .toString()
-            .contains('value must be String, List<int> or Uint8List'));
+        expect(error.toString(),
+            contains('value must be String, List<int> or Uint8List'));
       }
     });
 
@@ -54,9 +52,8 @@ void main() {
       try {
         dynamicToUint8List(error_type);
       } catch (error) {
-        assert(error
-            .toString()
-            .contains('value must be String, List<int> or Uint8List'));
+        expect(error.toString(),
+            contains('value must be String, List<int> or Uint8List'));
       }
     });
 
@@ -71,7 +68,7 @@ void main() {
     test('fil', () {
       const address = 'f410fnoxwr77ghbwugw5g2jjstezrezhbi62cdqsv4ua';
       final walletSetting = FILChain().mainnet;
-      assert(AddressUtils.checkAddressValid(address, walletSetting));
+      expect(AddressUtils.checkAddressValid(address, walletSetting), isTrue);
     });
   });
 

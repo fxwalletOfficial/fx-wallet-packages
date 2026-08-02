@@ -379,7 +379,7 @@ BigInt getE(ECPoint P, List<int> rX, List<int> m) {
   return bigFromBytes(
         taggedHash(
           'BIP0340/challenge',
-          rX + bigToBytes(P.x!.toBigInteger()!) + m,
+          rX + bigTo32Bytes(P.x!.toBigInteger()!) + m,
         ),
       ) %
       secp256k1.n;

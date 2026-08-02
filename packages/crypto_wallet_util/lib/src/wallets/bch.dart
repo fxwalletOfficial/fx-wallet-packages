@@ -62,8 +62,17 @@ class BchCoin extends WalletType {
     return ecPrivateKey.signInput(message.toUint8List(), sigHash: sighashType).toHex();
   }
 
+  /// Sign with an explicit sighash type, keeping the digest's committed
+  /// hashType consistent with the hashType byte embedded in the DER
+  /// signature (GSPL callers compute both from the same value).
+  String signWithHashType(String message, int hashType) {
+    final ecPrivateKey = ECPrivate.fromBytes(privateKey);
+    return ecPrivateKey.signInput(message.toUint8List(), sigHash: hashType).toHex();
+  }
+
   @override
   bool verify(String signature, String message) {
-    return EcdaSignature.verify(message, publicKey, signature);
+    // sign() returns DER + a trailing sighash byte, not raw 64-byte r||s.
+    return EcdaSignature.verifyDerWithHashType(message, publicKey, signature);
   }
 }

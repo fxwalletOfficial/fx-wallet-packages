@@ -55,8 +55,18 @@ class DogeCoin extends WalletType {
     return dynamicToString(signature);
   }
 
+  /// Sign with an explicit sighash type, keeping the digest's committed
+  /// hashType consistent with the hashType byte embedded in the DER
+  /// signature (GSPL callers compute both from the same value).
+  String signWithHashType(String message, int hashType) {
+    final sig = ecc.sign(dynamicToUint8List(message), privateKey);
+    final signature = bscript.encodeSignature(sig, hashType);
+    return dynamicToString(signature);
+  }
+
   @override
   bool verify(String signature, String message) {
-    return EcdaSignature.verify(message, publicKey, signature);
+    // sign() returns DER + a trailing sighash byte, not raw 64-byte r||s.
+    return EcdaSignature.verifyDerWithHashType(message, publicKey, signature);
   }
 }

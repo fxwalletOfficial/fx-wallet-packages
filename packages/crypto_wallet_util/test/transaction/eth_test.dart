@@ -20,8 +20,12 @@ void main() {
   final JsonData = txData.toJson();
   final txDataRaw = EthTxDataRaw.fromJson(JsonData);
   group('EIP1559 transition', () {
+    // Each group needs its own EthTxDataRaw: `sign()` mutates `data.r/s/v`
+    // in place, and EIP1559 vs legacy encode `v` differently — sharing one
+    // instance across both groups would let whichever group signs last
+    // clobber the r/s/v the other group's `verify()` reads.
     Eip1559TxData eip1559transaction =
-        Eip1559TxData(data: txData, network: txNetwork);
+        Eip1559TxData(data: EthTxDataRaw.fromJson(JsonData), network: txNetwork);
     const targetSignature =
         "02f85601808080825208881234567890abcdef0a80c080a0fe52d1ef3b2ede9e83b6e3ffccde63c6f125228e28b640d0736509b23b50df17a0535c3c92bf39ddc838f2d1ed0d5c91061d35a4bc4bb4a99f282dbe775181d7a0";
     final signer = EthTxSigner(wallet, eip1559transaction);
@@ -33,7 +37,7 @@ void main() {
       expect(JsonData, txDataRaw.toJson());
       expect(signedTxData.signature.toUint8List(), signature);
       expect(signature.toUint8List(), targetSignature.toUint8List());
-      assert(signer.verify());
+      expect(signer.verify(), isTrue);
 
       final broadcastData = signedTxData.toBroadcast();
       expect(broadcastData['signature'], signature.toStr());
@@ -42,7 +46,7 @@ void main() {
 
       final hdData = eip1559transaction.txsMsg(
           jsonData['v'], jsonData['r'], jsonData['s']);
-      assert(hdData.toStr().isNotEmpty);
+      expect(hdData.toStr(), isNotEmpty);
     });
 
     test('deserialize', () {
@@ -61,7 +65,7 @@ void main() {
 
   group('legacy transition', () {
     LegacyTxData legacyTransaction =
-        LegacyTxData(data: txData, network: txNetwork);
+        LegacyTxData(data: EthTxDataRaw.fromJson(JsonData), network: txNetwork);
     const targetSignature =
         "f8538080825208881234567890abcdef0a8026a0d8a3b9c6322344dbec2e0f947f577dd596cd53ed4adb3f8c0d14ce691474de4da062d12d9194e0c45ba2d0b039be086d5718ee6ace290be0b78a873b0edd829ee2";
     final signer = EthTxSigner(wallet, legacyTransaction);
@@ -71,7 +75,7 @@ void main() {
     test('sign', () {
       expect(signedTxData.signature.toUint8List(), signature);
       expect(signature.toUint8List(), targetSignature.toUint8List());
-      assert(signer.verify());
+      expect(signer.verify(), isTrue);
 
       final broadcastData = signedTxData.toBroadcast();
       expect(broadcastData['signature'], signature.toStr());
@@ -80,7 +84,7 @@ void main() {
 
       final hdData =
           legacyTransaction.txsMsg(jsonData['v'], jsonData['r'], jsonData['s']);
-      assert(hdData.toStr().isNotEmpty);
+      expect(hdData.toStr(), isNotEmpty);
     });
 
     test('deserialize', () {

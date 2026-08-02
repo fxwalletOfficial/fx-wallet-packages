@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
-import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/script.dart' show compile;
+import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/script.dart'
+    as bscript;
 import 'package:crypto_wallet_util/src/type/tx_signer_type.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/src/transaction/btc/gspl_tx_data.dart';
@@ -41,6 +44,34 @@ class GsplTxSigner extends TxSigner {
     }
   }
 
+  bool get isTaprootInput => isLtc && (wallet as LtcCoin).isTaproot;
+
+  /// hashType for input [i], applying the same per-coin default `sign()`
+  /// uses — Taproot key-path spends default to SIGHASH_DEFAULT (not ALL),
+  /// and BCH always carries the BIP143 fork bit.
+  int _hashTypeFor(GsplItem input) {
+    if (isTaprootInput) {
+      return input.signHashType ?? btc.SIGHASH_DEFAULT;
+    }
+    int hashType = input.signHashType ?? btc.SIGHASH_ALL;
+    if (isBch) hashType |= btc.SIGHASH_BITCOINCASHBIP143;
+    return hashType;
+  }
+
+  /// The sighash for input [i] of [tx], using the same prevout script (this
+  /// wallet's own address, shared across every GSPL input) and BIP341
+  /// all-inputs amounts/scripts that `sign()` uses.
+  Uint8List _sigHashFor(btc.Transaction tx, int i, Uint8List prevOutScript,
+      List<Uint8List> allPrevScripts, List<int> allValues, int hashType) {
+    if (isTaprootInput) {
+      return tx.hashForWitnessV1(i, allPrevScripts, allValues, hashType, null, null);
+    } else if (_shouldUseSegwitSignature()) {
+      return tx.hashForWitnessV0(i, prevOutScript, allValues[i], hashType);
+    } else {
+      return tx.hashForSignature(i, prevOutScript, hashType);
+    }
+  }
+
   @override
   GsplTxData sign() {
     // Deserialize and identify transaction information, get readable transaction structure
@@ -51,38 +82,56 @@ class GsplTxSigner extends TxSigner {
       throw Exception('No valid output found in transaction outputs');
     }
 
+    final prevOutScript = btc.Address.addressToOutputScript(inputAddress, networkType)!;
+
+    // BIP341 sighash commits to every spent output's scriptPubKey and
+    // amount, so gather them for all inputs up front (GSPL inputs all
+    // belong to the same wallet address, so the script is shared).
+    final allPrevScripts = <Uint8List>[];
+    final allValues = <int>[];
+    for (final input in txData.inputs) {
+      if (input.amount == null) throw Exception('Input amount required for sigHash');
+      allPrevScripts.add(prevOutScript);
+      allValues.add(input.amount!);
+    }
+
     // Iterate through inputs, use wallet.sign to sign sigHash
     final List<GsplItem> signedInputs = [];
     for (int i = 0; i < txData.inputs.length; i++) {
       final input = txData.inputs[i];
       if (input.path == null) throw Exception('Input path cannot be null');
-
-      int hashType = input.signHashType ?? btc.SIGHASH_ALL;
-      if (isBch) hashType |= btc.SIGHASH_BITCOINCASHBIP143;
-
       if (input.amount == null) throw Exception('Input amount required for sigHash');
 
-      final prevOutScript = btc.Address.addressToOutputScript(inputAddress, networkType)!;
-      final value = input.amount!;
-
-      // Choose correct signature hash method based on wallet type and configuration
-      final sigHash = _shouldUseSegwitSignature() ?
-        tx.hashForWitnessV0(i, prevOutScript, value, hashType) :
-        tx.hashForSignature(i, prevOutScript, hashType);
+      final hashType = _hashTypeFor(input);
+      final sigHash =
+          _sigHashFor(tx, i, prevOutScript, allPrevScripts, allValues, hashType);
 
       String sigResult;
       final sigHashHex = dynamicToString(sigHash);
-      if (isLtc && (wallet as LtcCoin).isTaproot) {
-        sigResult = (wallet as LtcCoin).sign(sigHashHex);
+      if (isTaprootInput) {
+        sigResult = (wallet as LtcCoin).signWithHashType(sigHashHex, hashType);
+      } else if (isLtc) {
+        sigResult = (wallet as LtcCoin).signWithHashType(sigHashHex, hashType);
       } else if (isDoge) {
-        sigResult = (wallet as DogeCoin).sign(sigHashHex);
+        sigResult = (wallet as DogeCoin).signWithHashType(sigHashHex, hashType);
       } else if (isBch) {
-        sigResult = (wallet as BchCoin).sign(sigHashHex);
+        sigResult = (wallet as BchCoin).signWithHashType(sigHashHex, hashType);
       } else {
         sigResult = wallet.sign(sigHashHex);
       }
 
       final signatureBytes = dynamicToUint8List(sigResult);
+      if (isTaprootInput) {
+        if (signatureBytes.length != 64) {
+          throw StateError(
+            'Taproot signer must return a raw 64-byte signature',
+          );
+        }
+        if (hashType != btc.SIGHASH_DEFAULT &&
+            !_isValidTaprootHashType(hashType)) {
+          throw ArgumentError('Invalid Taproot sighash type: $hashType');
+        }
+      }
 
       // Construct new GsplItem to replace
       signedInputs.add(GsplItem(
@@ -100,9 +149,20 @@ class GsplTxSigner extends TxSigner {
       if (sig == null) {
         throw Exception('Missing signature for input $i');
       }
-      final pubkey = wallet.publicKey;
-      final scriptSig = compile([sig, pubkey]);
-      transactionSigned.ins[i].script = scriptSig;
+      if (isTaprootInput) {
+        // P2TR key-path spend: the Schnorr signature goes in the witness
+        // stack, and scriptSig stays empty.
+        final hashType = signedInputs[i].signHashType ?? btc.SIGHASH_DEFAULT;
+        final witnessSig = hashType == btc.SIGHASH_DEFAULT
+            ? sig
+            : Uint8List.fromList([...sig, hashType]);
+        transactionSigned.ins[i].witness = [witnessSig];
+        transactionSigned.ins[i].script = btc.EMPTY_SCRIPT;
+      } else {
+        final pubkey = wallet.publicKey;
+        final scriptSig = bscript.compile([sig, pubkey]);
+        transactionSigned.ins[i].script = scriptSig;
+      }
     }
     final signedHex = transactionSigned.toHex();
     txData.hex = signedHex;
@@ -122,22 +182,121 @@ class GsplTxSigner extends TxSigner {
     // DOGE doesn't support SegWit, use Legacy signature
     if (isDoge) return false;
 
-    // LTC case: Taproot uses BIP143, regular uses Legacy
-    if (isLtc) return (wallet as LtcCoin).isTaproot;
-
     return false;
   }
 
   @override
   bool verify() {
     final inputs = txData.inputs;
+    if (inputs.isEmpty || !txData.isSigned) return false;
+
+    final btc.Transaction tx;
+    try {
+      tx = btc.Transaction.fromHex(txData.hex);
+    } catch (_) {
+      return false;
+    }
+    if (tx.ins.length != inputs.length) return false;
+
+    final inputAddress = wallet.publicKeyToAddress(wallet.publicKey);
+    final prevOutScript = btc.Address.addressToOutputScript(
+      inputAddress,
+      networkType,
+    );
+    if (prevOutScript == null) return false;
+
+    final allPrevScripts = <Uint8List>[];
+    final allValues = <int>[];
+    for (final input in inputs) {
+      if (input.amount == null) return false;
+      allPrevScripts.add(prevOutScript);
+      allValues.add(input.amount!);
+    }
+
     for (var i = 0; i < inputs.length; i++) {
       final input = inputs[i];
-      final signature = input.signature;
-      if (signature == null) {
+      final sidecarSignature = input.signature;
+      if (sidecarSignature == null) return false;
+
+      final txInput = tx.ins[i];
+      late final Uint8List signature;
+      late final int hashType;
+
+      if (isTaprootInput) {
+        final witness = txInput.witness;
+        if (txInput.script?.isNotEmpty ?? false) return false;
+        if (witness == null || witness.length != 1 || witness[0] == null) {
+          return false;
+        }
+
+        final encodedSignature = witness[0]!;
+        if (encodedSignature.length == 64) {
+          hashType = btc.SIGHASH_DEFAULT;
+          signature = encodedSignature;
+        } else if (encodedSignature.length == 65) {
+          hashType = encodedSignature[64];
+          if (!_isValidTaprootHashType(hashType)) return false;
+          signature = Uint8List.fromList(encodedSignature.sublist(0, 64));
+        } else {
+          return false;
+        }
+      } else {
+        if (txInput.witness?.isNotEmpty ?? false) return false;
+        final chunks = bscript.decompile(txInput.script);
+        if (chunks == null ||
+            chunks.length != 2 ||
+            chunks[0] is! Uint8List ||
+            chunks[1] is! Uint8List) {
+          return false;
+        }
+
+        signature = chunks[0] as Uint8List;
+        final publicKey = chunks[1] as Uint8List;
+        if (signature.isEmpty ||
+            !bscript.bip66check(signature.sublist(0, signature.length - 1)) ||
+            dynamicToString(publicKey) != dynamicToString(wallet.publicKey)) {
+          return false;
+        }
+        hashType = signature.last;
+      }
+
+      if (hashType != _hashTypeFor(input) ||
+          dynamicToString(signature) != dynamicToString(sidecarSignature)) {
+        return false;
+      }
+
+      final Uint8List sigHash;
+      try {
+        sigHash = _sigHashFor(
+          tx,
+          i,
+          prevOutScript,
+          allPrevScripts,
+          allValues,
+          hashType,
+        );
+      } catch (_) {
+        return false;
+      }
+
+      if (!wallet.verify(
+        dynamicToString(signature),
+        dynamicToString(sigHash),
+      )) {
         return false;
       }
     }
-    return txData.isSigned;
+    return true;
+  }
+
+  bool _isValidTaprootHashType(int hashType) {
+    final outputType = hashType & btc.SIGHASH_OUTPUT_MASK;
+    final inputType = hashType & btc.SIGHASH_INPUT_MASK;
+    return hashType != btc.SIGHASH_DEFAULT &&
+        (outputType == btc.SIGHASH_ALL ||
+            outputType == btc.SIGHASH_NONE ||
+            outputType == btc.SIGHASH_SINGLE) &&
+        (inputType == 0 || inputType == btc.SIGHASH_ANYONECANPAY) &&
+        hashType == (outputType | inputType);
   }
 }

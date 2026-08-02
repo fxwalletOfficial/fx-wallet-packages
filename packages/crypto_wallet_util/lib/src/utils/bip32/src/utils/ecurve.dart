@@ -76,10 +76,12 @@ bool isOrderScalar(x) {
 }
 
 bool isSignature(Uint8List value) {
+  if (value.length != 64) return false;
   Uint8List r = value.sublist(0, 32);
   Uint8List s = value.sublist(32, 64);
 
-  return value.length == 64 &&
+  return _compare(r, ZERO32) > 0 &&
+      _compare(s, ZERO32) > 0 &&
       _compare(r, EC_GROUP_ORDER as Uint8List) < 0 &&
       _compare(s, EC_GROUP_ORDER as Uint8List) < 0;
 }
@@ -138,8 +140,7 @@ Uint8List sign(Uint8List hash, Uint8List x) {
   ECSignature sig = deterministicGenerateK(hash, x);
   Uint8List buffer = Uint8List(64);
 
-  final r = _encodeBigInt(sig.r);
-  buffer.setRange(32 - r.length, 32, r);
+  buffer.setRange(0, 32, encodeBigIntBe(sig.r, length: 32));
 
   var s;
   if (sig.s.compareTo(nDiv2) > 0) {
@@ -148,7 +149,7 @@ Uint8List sign(Uint8List hash, Uint8List x) {
     s = sig.s;
   }
 
-  buffer.setRange(32, 64, _encodeBigInt(s));
+  buffer.setRange(32, 64, encodeBigIntBe(s, length: 32));
   return buffer;
 }
 

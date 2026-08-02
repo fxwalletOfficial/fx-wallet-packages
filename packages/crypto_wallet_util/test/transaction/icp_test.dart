@@ -16,10 +16,10 @@ void main() async {
     final txData = IcpTxData.fromJson(transactionJson);
     final signer = IcpTxSigner(icp, txData);
     final signedTxData = signer.sign();
-    assert(signer.verify());
+    expect(signer.verify(), isTrue);
     final jsonData = signedTxData.toJson();
     final broadcastData = signedTxData.toBroadcast();
-    assert(jsonData["transaction"].isNotEmpty);
-    assert(broadcastData["transaction"].isNotEmpty);
+    expect(jsonData["transaction"], isNotEmpty);
+    expect(broadcastData["transaction"], isNotEmpty);
   });
 }

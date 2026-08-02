@@ -89,6 +89,20 @@ class CkbTxData extends TxData {
     };
   }
 
+  /// Treats every input as belonging to a single lock-script group and
+  /// signs it with one witness (`groupWitnesses[0]`/`witnesses[0]`).
+  ///
+  /// This is only correct when every input in the transaction is secured
+  /// by the *same* lock script (e.g. every input belongs to this same
+  /// wallet address) — CKB transactions may otherwise mix inputs from
+  /// multiple lock scripts, each requiring its own witness. `CellInput`
+  /// only carries `previous_output`/`since` (see [CellInput] in
+  /// `lib/data_type.dart`), not the lock script of the cell it spends, so
+  /// this class has no way to detect that case from the data it's given —
+  /// callers must guarantee the single-lock-script precondition
+  /// themselves. Treat multi-lock-script-group support as a distinct
+  /// feature (needing input lock-script data threaded through the API),
+  /// not something safe to bolt on here.
   setScriptGroup() {
     scriptGroup = ScriptGroup(regionToList(0, inputs!.length));
   }

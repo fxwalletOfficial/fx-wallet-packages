@@ -116,13 +116,19 @@ class P2PKH {
   }
 
   static String getTaprootAddress(Uint8List publicKey, String prefix) {
-    final pub = _secp256k1.curve.decodePoint(publicKey)!;
-
-    final info = taprootConstruct(pubKey: pub);
+    final info = getTaprootOutputKey(publicKey);
     final words = convertBits(info, 8, 5);
     final addr =
         bech32.encode(Bech32(prefix, [1] + words), encoding: 'bech32m');
     return addr;
+  }
+
+  /// The tweaked 32-byte x-only output key committed to by a P2TR address
+  /// for [publicKey] — i.e. the key a BIP340 key-path signature actually
+  /// verifies against, not the untweaked internal public key.
+  static List<int> getTaprootOutputKey(Uint8List publicKey) {
+    final pub = _secp256k1.curve.decodePoint(publicKey)!;
+    return taprootConstruct(pubKey: pub);
   }
 
   String get bech32Address {

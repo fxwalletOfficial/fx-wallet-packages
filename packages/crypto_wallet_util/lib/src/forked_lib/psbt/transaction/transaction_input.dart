@@ -18,9 +18,16 @@ class TransactionInput {
   /// @nodoc
   late List<dynamic> witness;
 
-  /// Get the previous transaction hash.
+  /// Get the previous transaction hash, in display (RPC/big-endian) byte
+  /// order — i.e. the conventional txid string.
   String get transactionHash =>
       Converter.bytesToHex(_transactionHash.reversed.toList());
+
+  /// Get the previous transaction hash in internal byte order, i.e. exactly
+  /// as it is serialized in the outpoint of a raw transaction (the reverse
+  /// of [transactionHash]). Sighash algorithms (BIP143, BIP341) commit to
+  /// this byte order, not the display order.
+  String get transactionHashInternal => Converter.bytesToHex(_transactionHash);
 
   /// Get the index of previous transaction.
   int get index => Converter.littleEndianToInt(_index);

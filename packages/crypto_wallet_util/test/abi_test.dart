@@ -23,7 +23,9 @@ void main() {
       final signature = EthDataDecoder.paraSwap.signatures;
       expect(functions, isNotEmpty);
       expect(signature, isNotEmpty);
-      assert(EthDataDecoder.paraSwap.hasFunction(exampleData.substring(0, 10)));
+      expect(
+          EthDataDecoder.paraSwap.hasFunction(exampleData.substring(0, 10)),
+          isTrue);
       final selector = AbiDecoder.compute4BytesSignature(functionSignature!);
       expect(selector, exampleData.substring(0, 10));
     });

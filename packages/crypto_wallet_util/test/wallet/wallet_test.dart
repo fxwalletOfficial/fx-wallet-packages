@@ -43,9 +43,9 @@ void main() async {
         });
         test('sign', () {
           String signedMessage = mnemonicWallet.sign(message);
-          assert(mnemonicWallet.verify(signedMessage, message));
+          expect(mnemonicWallet.verify(signedMessage, message), isTrue);
           signedMessage = privateKeyWallet.sign(message);
-          assert(privateKeyWallet.verify(signedMessage, message));
+          expect(privateKeyWallet.verify(signedMessage, message), isTrue);
         });
       });
     }

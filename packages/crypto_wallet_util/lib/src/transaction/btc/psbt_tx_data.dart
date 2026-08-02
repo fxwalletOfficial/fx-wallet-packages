@@ -181,7 +181,7 @@ class PsbtTxData extends TxData {
             inputs[i].coin.address, chainConf.networkType);
 
         btcTx.addInput(prevoutHash, inputs[i].prevout.index,
-            value: value, prevoutScript: script);
+            sequence: inputs[i].sequence, value: value, prevoutScript: script);
       }
 
       for (var i = 0; i < outputs.length; i++) {

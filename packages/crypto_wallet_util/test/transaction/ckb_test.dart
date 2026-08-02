@@ -30,7 +30,7 @@ void main() async {
     final txData = CkbTxData.fromJson(transactionJson);
     final txSigner = CkbTxSigner(ckb, txData);
     final signedTxData = txSigner.sign();
-    assert(txSigner.verify());
+    expect(txSigner.verify(), isTrue);
     expect(signedTxData.witnesses, [
       '0x5500000010000000550000005500000041000000f434e961907533ad999daa7cd6de1aead0232a72be562bd5fa043f64f260fd337d8963799cd802502c178008b99222b265116e137c74359cf678c014361cf1f400',
       '0x'

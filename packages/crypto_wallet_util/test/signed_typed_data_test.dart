@@ -45,7 +45,7 @@ void main() {
 
     test('signToCompact', () {
       final result = signToCompact(message: message, privateKey: privateKey);
-      assert(result.startsWith('0x'));
+      expect(result.startsWith('0x'), isTrue);
     });
 
     test('fromRpcSig', () {

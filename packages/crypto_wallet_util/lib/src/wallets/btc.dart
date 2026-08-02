@@ -87,11 +87,16 @@ class BtcCoin extends WalletType {
 
   @override
   bool verify(String signature, String message) {
-    // if (isTaproot) {
-    //   return Schnorr.verify(publicKey, signature, message);
-    // } else {
-    //   return EcdaSignature.verify(message, publicKey, signature);
-    // }
-    return true;
+    if (isTaproot) {
+      // A key-path signature verifies against the tweaked output key
+      // committed to by the P2TR address, not the untweaked public key.
+      final outputKey = P2PKH.getTaprootOutputKey(publicKey);
+      return Schnorr.verify(
+          Uint8List.fromList(outputKey), signature, message);
+    } else {
+      // Non-Taproot sign() returns DER + a trailing sighash byte, not raw
+      // 64-byte r||s.
+      return EcdaSignature.verifyDerWithHashType(message, publicKey, signature);
+    }
   }
 }

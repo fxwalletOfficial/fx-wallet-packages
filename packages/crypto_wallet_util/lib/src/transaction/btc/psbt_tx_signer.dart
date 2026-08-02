@@ -1,10 +1,37 @@
+import 'dart:typed_data';
+
 import 'package:crypto_wallet_util/src/transaction/btc/psbt_tx_data.dart';
 import 'package:crypto_wallet_util/src/type/tx_signer_type.dart';
 import 'package:crypto_wallet_util/src/type/wallet_type.dart';
 import 'package:crypto_wallet_util/utils.dart';
 
+class _Prevout {
+  final String scriptHex;
+  final String fullOutputHex;
+  final int value;
+  final Uint8List? taprootOutputKey;
+  final Uint8List? p2pkhPublicKeyHash;
+  _Prevout(
+    this.scriptHex,
+    this.fullOutputHex,
+    this.value,
+    this.taprootOutputKey,
+    this.p2pkhPublicKeyHash,
+  );
+}
+
 /// PSBT transaction signer for Bitcoin Legacy and Taproot transactions
 class PsbtTxSigner extends TxSigner {
+  static const _validTaprootSighashTypes = <int>{
+    0x00,
+    0x01,
+    0x02,
+    0x03,
+    0x81,
+    0x82,
+    0x83,
+  };
+
   @override
   final PsbtTxData txData;
 
@@ -47,46 +74,179 @@ class PsbtTxSigner extends TxSigner {
     }
   }
 
+  /// Gather every input's prevout scriptPubKey/amount (and, for Taproot,
+  /// the tweaked x-only output key straight out of the P2TR scriptPubKey).
+  /// BIP341 key-path sighash commits to every spent output, not just the
+  /// one being signed, so this must cover *all* inputs regardless of which
+  /// one is being signed or verified.
+  List<_Prevout> _gatherPrevouts() {
+    final psbtInputs = txData.psbt.inputs;
+    final unsignedInputs = txData.psbt.unsignedTransaction!.inputs;
+    final prevouts = <_Prevout>[];
+
+    for (int i = 0; i < psbtInputs.length; i++) {
+      final input = psbtInputs[i];
+      if (input.witnessUtxo != null) {
+        final scriptPubKey = input.witnessUtxo!.scriptPubKey;
+        prevouts.add(_Prevout(
+          scriptPubKey.serialize(),
+          input.witnessUtxo!.serialize(),
+          input.witnessUtxo!.amount,
+          scriptPubKey.isP2TR()
+              ? Uint8List.fromList(scriptPubKey.commands[1])
+              : null,
+          scriptPubKey.isP2PKH()
+              ? Uint8List.fromList(scriptPubKey.commands[2])
+              : null,
+        ));
+      } else if (input.previousTransaction != null) {
+        final prevTx = input.previousTransaction!;
+        final outputIndex = unsignedInputs[i].index;
+        final prevOutput = prevTx.outputs[outputIndex];
+        final scriptPubKey = prevOutput.scriptPubKey;
+        prevouts.add(_Prevout(
+          scriptPubKey.serialize(),
+          prevOutput.serialize(),
+          prevOutput.amount,
+          scriptPubKey.isP2TR()
+              ? Uint8List.fromList(scriptPubKey.commands[1])
+              : null,
+          scriptPubKey.isP2PKH()
+              ? Uint8List.fromList(scriptPubKey.commands[2])
+              : null,
+        ));
+      } else {
+        throw Exception('No UTXO information found for input $i');
+      }
+    }
+    return prevouts;
+  }
+
   /// Sign Taproot P2TR transaction inputs
   void _signTaprootInputs() {
-    for (int i = 0; i < txData.psbt.inputs.length; i++) {
-      final input = txData.psbt.inputs[i];
+    final psbtInputs = txData.psbt.inputs;
+    final prevouts = _gatherPrevouts();
+    final prevOutScripts = prevouts.map((p) => p.scriptHex).toList();
+    final prevOutValues = prevouts.map((p) => p.value).toList();
 
-      // Taproot transactions use witness UTXO
-      if (input.witnessUtxo != null) {
-        final utxo = input.witnessUtxo!;
-
-        // Use SegWit signature hash for Taproot (SegWit v1)
-        final utxoSerialized = utxo.serialize();
-        final sigHashHex = txData.psbt.unsignedTransaction!.getSigHash(
-          i,
-          utxoSerialized,
-          true, // isSegwit - true for Taproot
-        );
-
-        // Generate Schnorr signature for Taproot
-        final signature = wallet.sign(sigHashHex);
-
-        // Set taproot key spend signature
-        txData.psbt.inputs[i].setTaprootKeySpendSignature(signature);
+    // Validate/hash/sign all inputs before writing any signature so one bad
+    // later input cannot leave a partially signed PSBT.
+    final hashTypes = <int>[];
+    final sigHashes = <String>[];
+    for (int i = 0; i < psbtInputs.length; i++) {
+      final hashType = psbtInputs[i].sighashType ?? 0x00;
+      if (!_validTaprootSighashTypes.contains(hashType)) {
+        throw ArgumentError('Invalid Taproot sighash type: $hashType');
       }
+      hashTypes.add(hashType);
+      sigHashes.add(txData.psbt.unsignedTransaction!.getTaprootSigHash(
+        i,
+        prevOutScripts,
+        prevOutValues,
+        hashType: hashType,
+      ));
+    }
+
+    final signatures = <String>[];
+    for (int i = 0; i < psbtInputs.length; i++) {
+      final rawSignature = wallet.sign(sigHashes[i]);
+      signatures.add(hashTypes[i] == 0x00
+          ? rawSignature
+          : '$rawSignature${hashTypes[i].toRadixString(16).padLeft(2, '0')}');
+    }
+    for (int i = 0; i < signatures.length; i++) {
+      txData.psbt.setTaprootKeySpendSignature(i, signatures[i]);
     }
   }
 
   @override
   bool verify() {
-    // Verify all inputs have been signed
-    for (int i = 0; i < txData.psbt.inputs.length; i++) {
-      final input = txData.psbt.inputs[i];
+    final psbtInputs = txData.psbt.inputs;
+    if (psbtInputs.isEmpty) return false;
+
+    final List<_Prevout> prevouts;
+    try {
+      prevouts = _gatherPrevouts();
+    } catch (_) {
+      return false;
+    }
+    final prevOutScripts = prevouts.map((p) => p.scriptHex).toList();
+    final prevOutValues = prevouts.map((p) => p.value).toList();
+
+    for (int i = 0; i < psbtInputs.length; i++) {
+      final input = psbtInputs[i];
 
       if (txData.isTaproot) {
-        // Check if Taproot signature exists
-        if (input.taprootKeySpendSignature == null) {
+        final sig = input.taprootKeySpendSignature;
+        final outputKey = prevouts[i].taprootOutputKey;
+        if (sig == null || outputKey == null) return false;
+
+        final Uint8List signatureBytes;
+        try {
+          signatureBytes = fromHex(sig);
+        } catch (_) {
+          return false;
+        }
+        if (signatureBytes.length != 64 && signatureBytes.length != 65) {
+          return false;
+        }
+
+        final signatureHashType =
+            signatureBytes.length == 65 ? signatureBytes.last : 0x00;
+        if (!_validTaprootSighashTypes.contains(signatureHashType) ||
+            (signatureBytes.length == 65 && signatureHashType == 0x00) ||
+            (input.sighashType != null &&
+                input.sighashType != signatureHashType)) {
+          return false;
+        }
+
+        final String sigHashHex;
+        try {
+          sigHashHex = txData.psbt.unsignedTransaction!.getTaprootSigHash(
+            i,
+            prevOutScripts,
+            prevOutValues,
+            hashType: signatureHashType,
+          );
+        } catch (_) {
+          return false;
+        }
+        final rawSignature =
+            dynamicToString(signatureBytes.sublist(0, 64));
+        try {
+          if (!Schnorr.verify(outputKey, rawSignature, sigHashHex)) return false;
+        } catch (_) {
           return false;
         }
       } else {
-        // Check if Legacy signature exists
-        if (input.partialSigs == null || input.partialSigs!.isEmpty) {
+        final partialSigs = input.partialSigs;
+        if (partialSigs == null || partialSigs.length != 2) return false;
+        final signature = partialSigs[0];
+        final Uint8List signatureBytes;
+        final Uint8List publicKey;
+        try {
+          signatureBytes = fromHex(signature);
+          publicKey = fromHex(partialSigs[1]);
+        } catch (_) {
+          return false;
+        }
+        if (signatureBytes.isEmpty || signatureBytes.last != 0x01) {
+          return false;
+        }
+        final expectedPublicKeyHash = prevouts[i].p2pkhPublicKeyHash;
+        if (expectedPublicKeyHash == null ||
+            dynamicToString(sha160fromByte(publicKey)) !=
+                dynamicToString(expectedPublicKeyHash)) {
+          return false;
+        }
+
+        final sigHashHex = txData.psbt.unsignedTransaction!.getSigHash(
+          i,
+          prevouts[i].fullOutputHex,
+          false,
+        );
+        if (!EcdaSignature.verifyDerWithHashType(
+            sigHashHex, publicKey, signature)) {
           return false;
         }
       }

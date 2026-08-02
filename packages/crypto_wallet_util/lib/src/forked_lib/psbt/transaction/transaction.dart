@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/utils/utils.dart';
+import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/script.dart'
+    as bscript;
 
 import '../transaction/script_signature.dart';
 import '../transaction/transaction_input.dart';
@@ -8,6 +10,14 @@ import '../transaction/transaction_output.dart';
 import '../utils/address_type.dart';
 import '../utils/converter.dart';
 import '../utils/varints.dart';
+
+const int _sighashDefault = 0x00;
+const int _sighashAll = 0x01;
+const int _sighashNone = 0x02;
+const int _sighashSingle = 0x03;
+const int _sighashAnyoneCanPay = 0x80;
+const int _sighashOutputMask = 0x03;
+const int _sighashInputMask = 0x80;
 
 /// Represents a transaction.
 class Transaction {
@@ -375,6 +385,110 @@ class Transaction {
     return sha256fromHex(sha256fromHex(sigHash));
   }
 
+  /// BIP341 TapSighash for a Taproot key-path spend (no script-path/annex
+  /// support). Unlike BIP143, the sighash for input [index] commits to every
+  /// spent output's scriptPubKey and amount, so callers must supply the
+  /// prevout script/value for *all* inputs (in input order), not just the
+  /// one being signed.
+  String getTaprootSigHash(int index, List<String> prevOutScripts,
+      List<int> prevOutValues, {int hashType = _sighashDefault}) {
+    if (index < 0 || index >= inputs.length) {
+      throw RangeError.index(index, inputs, 'index');
+    }
+    if (prevOutScripts.length != inputs.length ||
+        prevOutValues.length != inputs.length) {
+      throw ArgumentError(
+          'prevOutScripts/prevOutValues must cover every input');
+    }
+
+    final outputType =
+        hashType == _sighashDefault ? _sighashAll : hashType & _sighashOutputMask;
+    final inputType = hashType & _sighashInputMask;
+    final isAnyoneCanPay = inputType == _sighashAnyoneCanPay;
+    final isNone = outputType == _sighashNone;
+    final isSingle = outputType == _sighashSingle;
+    final isValidHashType = hashType == _sighashDefault ||
+        (hashType == (outputType | inputType) &&
+            (outputType == _sighashAll ||
+                outputType == _sighashNone ||
+                outputType == _sighashSingle) &&
+            (inputType == 0 || inputType == _sighashAnyoneCanPay));
+    if (!isValidHashType) {
+      throw ArgumentError('Invalid Taproot sighash type: $hashType');
+    }
+    if (isSingle && index >= outputs.length) {
+      throw ArgumentError(
+          'SIGHASH_SINGLE requires an output at input index $index');
+    }
+
+    String hashPrevouts = '';
+    String hashAmounts = '';
+    String hashScriptPubKeys = '';
+    String hashSequences = '';
+    String hashOutputs = '';
+
+    if (!isAnyoneCanPay) {
+      String prevoutsConcat = '';
+      String sequencesConcat = '';
+      for (final input in inputs) {
+        prevoutsConcat += input.transactionHashInternal + input.indexHex;
+        sequencesConcat += input.sequenceHex;
+      }
+      hashPrevouts = sha256fromHex(prevoutsConcat);
+      hashSequences = sha256fromHex(sequencesConcat);
+
+      String amountsConcat = '';
+      for (final value in prevOutValues) {
+        amountsConcat +=
+            Converter.bytesToHex(Converter.intToLittleEndianBytes(value, 8));
+      }
+      hashAmounts = sha256fromHex(amountsConcat);
+
+      hashScriptPubKeys = sha256fromHex(prevOutScripts.join());
+    }
+
+    if (!(isNone || isSingle)) {
+      String outputsConcat = '';
+      for (final output in outputs) {
+        outputsConcat += output.serialize();
+      }
+      hashOutputs = sha256fromHex(outputsConcat);
+    } else if (isSingle && index < outputs.length) {
+      hashOutputs = sha256fromHex(outputs[index].serialize());
+    }
+
+    const spendType = 0; // key-path spend, no leaf script, no annex
+
+    String sigMsg = '';
+    sigMsg += Converter.bytesToHex(Converter.intToLittleEndianBytes(hashType, 1));
+    sigMsg += version;
+    sigMsg += lockTime;
+    sigMsg += hashPrevouts;
+    sigMsg += hashAmounts;
+    sigMsg += hashScriptPubKeys;
+    sigMsg += hashSequences;
+    if (!(isNone || isSingle)) sigMsg += hashOutputs;
+
+    sigMsg +=
+        Converter.bytesToHex(Converter.intToLittleEndianBytes(spendType, 1));
+    if (isAnyoneCanPay) {
+      final input = inputs[index];
+      sigMsg += input.transactionHashInternal + input.indexHex;
+      sigMsg += Converter.bytesToHex(
+          Converter.intToLittleEndianBytes(prevOutValues[index], 8));
+      sigMsg += prevOutScripts[index];
+      sigMsg += input.sequenceHex;
+    } else {
+      sigMsg += Converter.bytesToHex(Converter.intToLittleEndianBytes(index, 4));
+    }
+
+    if (isSingle) sigMsg += hashOutputs;
+
+    final tagged = bscript.taggedHash(
+        'TapSighash', [0x00] + Converter.hexToBytes(sigMsg));
+    return Converter.bytesToHex(tagged);
+  }
+
   //BIP143
   String _getSegwitSigHash(int index, String utxo, int hashType) {
     String sigHash = '';
@@ -436,9 +550,8 @@ class Transaction {
   /// check if the signature is valid in the transaction.
   bool validateSignature(
       int inputIndex, String utxo, BtcAddressType addressType) {
-    String sigHash = getSigHash(inputIndex, utxo, addressType.isSegwit);
-    String signature;
-    String publicKey;
+    dynamic signature;
+    dynamic publicKey;
     if (addressType == BtcAddressType.p2wpkh) {
       signature = inputs[inputIndex].witnessList[0];
       publicKey = inputs[inputIndex].witnessList[1];
@@ -447,16 +560,23 @@ class Transaction {
       publicKey = inputs[inputIndex].scriptSig.commands[1];
     }
 
-    Uint8List sig = Converter.hexToBytes(signature);
+    Uint8List sig = dynamicToUint8List(signature);
+    if (sig.isEmpty || sig.last != _sighashAll) return false;
+    String sigHash = getSigHash(inputIndex, utxo, addressType.isSegwit,
+        hashType: sig.last);
     Uint8List msg = Converter.hexToBytes(sigHash);
-    Uint8List pub = Converter.hexToBytes(publicKey);
+    Uint8List pub = dynamicToUint8List(publicKey);
 
-    int rLen = sig[3];
-    Uint8List r = sig.sublist(4, 4 + rLen);
-    if (r[0] == 0) r = r.sublist(1);
-    int sLen = sig[4 + rLen + 1];
-    Uint8List s = sig.sublist(4 + rLen + 2, 4 + rLen + 2 + sLen);
-    Uint8List rs = Uint8List.fromList([...r, ...s]);
+    // sig is DER-encoded (optionally with a trailing sighash byte); decode
+    // r/s as integers and re-encode each to a fixed 32 bytes rather than
+    // copying DER bytes directly — a DER integer legitimately shorter than
+    // 32 bytes must not shift where `s` starts.
+    final Uint8List rs;
+    try {
+      rs = EcdaSignature.derToRaw(sig);
+    } catch (_) {
+      return false;
+    }
 
     return EcdaSignature.verify(msg.toStr(), pub, rs.toStr());
   }

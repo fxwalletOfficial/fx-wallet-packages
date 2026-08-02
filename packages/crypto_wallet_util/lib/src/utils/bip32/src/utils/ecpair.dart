@@ -47,7 +47,7 @@ class ECPair {
     final sum = bigFromBytes(private!) + bigFromBytes(key);
     final r = sum % secp256k1.n;
     final mod = r >= BigInt.zero ? r : secp256k1.n + r;
-    final result = Uint8List.fromList(bigToBytes(mod));
+    final result = Uint8List.fromList(bigTo32Bytes(mod));
 
     return ECPair.fromPrivateKey(result, network: network, compressed: compressed);
   }
@@ -59,7 +59,11 @@ class ECPair {
     final r = bigNumber % secp256k1.n;
     final mod = r >= BigInt.zero ? r : secp256k1.n + r;
 
-    return Uint8List.fromList(bigToBytes(mod));
+    // A private key is a fixed-width 32-byte scalar. The current caller
+    // decodes this back into a BigInt, so a shortest-encoding result would
+    // still work there, but returning a raw key that is short whenever the
+    // scalar has a leading zero byte is a trap for any other caller.
+    return Uint8List.fromList(bigTo32Bytes(mod));
   }
 
   Uint8List signSchnorr({required Uint8List message, String aux = ''}) {
@@ -72,17 +76,17 @@ class ECPair {
     final P = (secp256k1.G * d0)!;
     final d = (P.y!.toBigInteger()! % BigInt.two == BigInt.zero) ? d0 : secp256k1.n - d0;
     final t = d ^ bigFromBytes(taggedHash('BIP0340/aux', bAux));
-    final k0 = bigFromBytes(taggedHash('BIP0340/nonce', bigToBytes(t) + bigToBytes(P.x!.toBigInteger()!) + message)) % secp256k1.n;
+    final k0 = bigFromBytes(taggedHash('BIP0340/nonce', bigTo32Bytes(t) + bigTo32Bytes(P.x!.toBigInteger()!) + message)) % secp256k1.n;
 
     if (k0.sign == 0) throw Exception('Message is invalid.');
 
     final R = (secp256k1.G * k0)!;
 
     final k = (R.y!.toBigInteger()! % BigInt.two == BigInt.zero) ? k0 : secp256k1.n - k0;
-    final rX = bigToBytes(R.x!.toBigInteger()!);
+    final rX = bigTo32Bytes(R.x!.toBigInteger()!);
     final e = getE(P, rX, message);
 
-    final signature = rX + bigToBytes((k + e * d) % secp256k1.n);
+    final signature = rX + bigTo32Bytes((k + e * d) % secp256k1.n);
     return Uint8List.fromList(signature);
   }
 

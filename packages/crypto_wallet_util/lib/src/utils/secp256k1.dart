@@ -34,16 +34,33 @@ class EcdaSignature {
     return dynamicToString(dest);
   }
 
+  /// secp256k1 private keys must be exactly 32 bytes and encode a scalar
+  /// in [1, n-1]. Every caller that turns a raw private key into a public
+  /// key goes through here, so a wrong-length or out-of-range key fails
+  /// loudly instead of silently producing a "valid-looking" but wrong key
+  /// (BigInt.parse on the wrong byte count just yields a different scalar).
+  static BigInt _validatedPrivateScalar(Uint8List privateKey) {
+    if (privateKey.length != 32) {
+      throw ArgumentError.value(privateKey.length, 'privateKey.length',
+          'secp256k1 private key must be exactly 32 bytes');
+    }
+    final scalar = hexToBigInt(dynamicToHex(privateKey));
+    if (scalar == BigInt.zero || scalar >= secp256k1.n) {
+      throw ArgumentError('secp256k1 private key is out of range [1, n-1]');
+    }
+    return scalar;
+  }
+
   static Uint8List privateKeyToPublicKey(Uint8List privateKey,
       {bool compress = true}) {
-    final bigPrivateKey = hexToBigInt(dynamicToHex(privateKey));
+    final bigPrivateKey = _validatedPrivateScalar(privateKey);
     return (ECCurve_secp256k1().G * bigPrivateKey)!
         .getEncoded(compress)
         .sublist(compress ? 0 : 1);
   }
 
   static Uint8List getUnCompressedPublicKey(Uint8List privateKey) {
-    final bigPrivateKey = hexToBigInt(dynamicToHex(privateKey));
+    final bigPrivateKey = _validatedPrivateScalar(privateKey);
     return (ECCurve_secp256k1().G * bigPrivateKey)!.getEncoded(false);
   }
 
@@ -155,21 +172,30 @@ class EcdaSignature {
     return recoveryId == 0 || recoveryId == 1;
   }
 
+  /// [vIsBareRecoveryId]: EIP-1559/EIP-7702 typed transactions store the
+  /// bare y-parity (0/1) in `v`, not the legacy EIP-155-encoded value
+  /// (`recId + chainId*2 + 35`). Passing the typed-tx `v` through the
+  /// EIP-155 formula yields a bogus recovery id and rejects every valid
+  /// signature; callers must set this for typed transactions.
   static bool isValidEthSignature(BigInt r, BigInt s, int v,
-      {bool homesteadOrLater = true, int chainId = -1}) {
+      {bool homesteadOrLater = true,
+      int chainId = -1,
+      bool vIsBareRecoveryId = false}) {
     var SECP256K1_N_DIV_2 = hexToBigInt(dynamicToHex(
         '7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0'));
     var SECP256K1_N = hexToBigInt(dynamicToHex(
         'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'));
 
-    if (encodeBigInt(r).length != 32 || encodeBigInt(s).length != 32)
-      return false;
-    if (!isValidEthSigRecovery(calculateEthSigRecovery(v, chainId: chainId)))
-      return false;
+    final recoveryId =
+        vIsBareRecoveryId ? v : calculateEthSigRecovery(v, chainId: chainId);
+    if (!isValidEthSigRecovery(recoveryId)) return false;
+    // r and s are structurally valid whenever 1 <= value < n — the shortest
+    // big-endian encoding may legitimately be under 32 bytes (leading zero
+    // byte), so byte length must not gate validity here.
     if (r == BigInt.zero ||
-        r > SECP256K1_N ||
+        r >= SECP256K1_N ||
         s == BigInt.zero ||
-        s > SECP256K1_N) return false;
+        s >= SECP256K1_N) return false;
     if (homesteadOrLater && s > SECP256K1_N_DIV_2) return false;
 
     return true;
@@ -185,6 +211,25 @@ class EcdaSignature {
       dt = Uint8List.fromList(padLeadingZero + dt);
     }
     return dt;
+  }
+
+  /// Recover the 64-byte uncompressed public key (X‖Y, no 0x04 prefix) that
+  /// produced [r]/[s] over [messageHash] for the given [recoveryId] (0/1),
+  /// or `null` if [recoveryId] doesn't yield a valid point. This lets a
+  /// verifier check a signature against a known address/pubkey instead of
+  /// only checking `r`/`s`/`v` are in range.
+  static Uint8List? recoverPublicKey(
+      BigInt r, BigInt s, int recoveryId, Uint8List messageHash) {
+    try {
+      final pubKeyBigInt = _recoverFromSignature(
+          recoveryId, ECSignature(r, s), messageHash, secp256k1);
+      if (pubKeyBigInt == null) return null;
+      return encodeBigInt(pubKeyBigInt, endian: Endian.big, bitLength: 512);
+    } catch (_) {
+      // Invalid points, non-invertible scalars, and infinity are all
+      // untrusted-signature failures, not verifier errors.
+      return null;
+    }
   }
 
   static int getRecid(String pubHex, String message, ECSignature sig) {
@@ -246,16 +291,110 @@ class EcdaSignature {
     return c.decodePoint(compEnc);
   }
 
-  static verify(String message, Uint8List publicKey, String signature) {
-    ECPoint? Q = secp256k1.curve.decodePoint(publicKey);
-    BigInt r = decodeBigInt(dynamicToUint8List(signature).sublist(0, 32),
-        endian: Endian.big);
-    BigInt s = decodeBigInt(dynamicToUint8List(signature).sublist(32, 64),
-        endian: Endian.big);
+  /// Verify a raw `r||s` signature: the first 32 bytes are `r`, the next 32
+  /// are `s`. Any bytes beyond that are ignored — some callers (e.g. CKB,
+  /// HNS) append a trailing recovery id that this check doesn't need.
+  /// Returns `false` (instead of throwing) for input shorter than 64 bytes
+  /// or a public key that doesn't decode to a point on the curve, so a
+  /// malformed signature fails closed rather than crashing the caller.
+  static bool verify(String message, Uint8List publicKey, String signature) {
+    final sigBytes = dynamicToUint8List(signature);
+    if (sigBytes.length < 64) return false;
+
+    ECPoint? Q;
+    try {
+      Q = secp256k1.curve.decodePoint(publicKey);
+    } catch (_) {
+      return false;
+    }
+    if (Q == null) return false;
+
+    BigInt r = decodeBigInt(sigBytes.sublist(0, 32), endian: Endian.big);
+    BigInt s = decodeBigInt(sigBytes.sublist(32, 64), endian: Endian.big);
 
     final signer = ECDSASigner(null, HMac(SHA256Digest(), 64));
     signer.init(false, PublicKeyParameter(ECPublicKey(Q, secp256k1)));
     return signer.verifySignature(
         dynamicToUint8List(message), ECSignature(r, s));
+  }
+
+  /// Decode a DER-encoded ECDSA signature (optionally followed by one
+  /// sighash byte) into fixed-width raw `r||s` (64 bytes total). `r`/`s` are decoded
+  /// as plain big-endian integers rather than copied byte-for-byte, so a
+  /// DER integer that is legitimately shorter than 32 bytes (or carries a
+  /// sign-disambiguation 0x00 byte) is still re-encoded to the correct
+  /// fixed width instead of shifting the `s` offset. Throws
+  /// [FormatException] on structurally invalid DER.
+  static Uint8List derToRaw(Uint8List der) {
+    if (der.length < 8) throw const FormatException('DER signature too short');
+    if (der[0] != 0x30) throw const FormatException('Invalid DER sequence tag');
+
+    final totalLen = der[1];
+    final derEnd = 2 + totalLen;
+    // Accept either bare DER or DER followed by exactly one sighash byte.
+    // Additional trailing data would otherwise be silently ignored.
+    if (derEnd != der.length && derEnd + 1 != der.length) {
+      throw const FormatException('Invalid DER length');
+    }
+    if (der[2] != 0x02) {
+      throw const FormatException('Invalid DER integer tag for r');
+    }
+
+    final rLen = der[3];
+    if (rLen == 0 || rLen > 33 || 4 + rLen > derEnd) {
+      throw const FormatException('Invalid DER r length');
+    }
+    final rBytes = der.sublist(4, 4 + rLen);
+    _validateDerInteger(rBytes, 'r');
+
+    var offset = 4 + rLen;
+    if (offset + 1 >= derEnd || der[offset] != 0x02) {
+      throw const FormatException('Invalid DER integer tag for s');
+    }
+    offset += 1;
+    final sLen = der[offset];
+    offset += 1;
+    if (sLen == 0 || sLen > 33 || offset + sLen != derEnd) {
+      throw const FormatException('Invalid DER s length');
+    }
+    final sBytes = der.sublist(offset, offset + sLen);
+    _validateDerInteger(sBytes, 's');
+
+    final r = decodeBigInt(rBytes, endian: Endian.big);
+    final s = decodeBigInt(sBytes, endian: Endian.big);
+
+    final raw = Uint8List(64);
+    raw.setRange(0, 32, encodeBigIntBe(r, length: 32));
+    raw.setRange(32, 64, encodeBigIntBe(s, length: 32));
+    return raw;
+  }
+
+  static void _validateDerInteger(Uint8List bytes, String name) {
+    if ((bytes[0] & 0x80) != 0) {
+      throw FormatException('DER integer $name is negative');
+    }
+    if (bytes.length > 32 && bytes[0] != 0) {
+      throw FormatException('DER integer $name exceeds 256 bits');
+    }
+    if (bytes.length > 1 && bytes[0] == 0 && (bytes[1] & 0x80) == 0) {
+      throw FormatException('DER integer $name is excessively padded');
+    }
+  }
+
+  /// Verify a DER-encoded signature with a trailing sighash byte — the
+  /// format DOGE/LTC(non-Taproot)/BCH `sign()` actually produce. Returns
+  /// `false` for malformed DER instead of throwing.
+  static bool verifyDerWithHashType(
+      String message, Uint8List publicKey, String signature) {
+    try {
+      final encoded = dynamicToUint8List(signature);
+      if (encoded.length < 9 || 2 + encoded[1] + 1 != encoded.length) {
+        return false;
+      }
+      final raw = derToRaw(encoded);
+      return verify(message, publicKey, dynamicToString(raw));
+    } catch (_) {
+      return false;
+    }
   }
 }

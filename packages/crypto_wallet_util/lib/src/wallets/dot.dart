@@ -90,11 +90,16 @@ class DotCoin extends WalletType {
 
   @override
   bool verify(String signature, String message) {
+    // sign() strips a leading 0x9c prefix before signing; verify() must
+    // apply the same transformation to the message it checks, or a
+    // prefixed message signed by this wallet fails to verify against
+    // itself.
+    final msg = dynamicToString(processMessage(message));
     switch (_scheme) {
       case DotScheme.sr25519:
-        return SR25519.verify(publicKey, signature, message);
+        return SR25519.verify(publicKey, signature, msg);
       case DotScheme.ed25519:
-        return ED25519.verify(publicKey, signature, message);
+        return ED25519.verify(publicKey, signature, msg);
     }
   }
 }
@@ -102,6 +107,7 @@ class DotCoin extends WalletType {
 /// delete message prefix 0x9c
 Uint8List processMessage(dynamic message) {
   final Uint8List msg = dynamicToUint8List(message);
+  if (msg.isEmpty) return msg;
   // delete prefix 9c
   if (msg[0] == 156) return msg.sublist(1);
   return msg;

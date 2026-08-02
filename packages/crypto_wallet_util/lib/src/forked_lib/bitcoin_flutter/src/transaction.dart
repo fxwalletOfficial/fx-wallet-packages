@@ -192,8 +192,31 @@ class Transaction {
   }
 
   Uint8List _serializeTaprootSignature(Uint8List sig, int? type) {
-    if (type == null || type <= 0) return sig;
-    return Uint8List.fromList(Uint8List.fromList([type]) + sig);
+    const validHashTypes = <int>{
+      SIGHASH_DEFAULT,
+      SIGHASH_ALL,
+      SIGHASH_NONE,
+      SIGHASH_SINGLE,
+      SIGHASH_ALL | SIGHASH_ANYONECANPAY,
+      SIGHASH_NONE | SIGHASH_ANYONECANPAY,
+      SIGHASH_SINGLE | SIGHASH_ANYONECANPAY,
+    };
+    if (type != null && !validHashTypes.contains(type)) {
+      throw ArgumentError('Invalid Taproot sighash type: $type');
+    }
+    if (sig.length == 65) {
+      if (!validHashTypes.contains(sig.last) ||
+          sig.last == SIGHASH_DEFAULT ||
+          (type != null && type != SIGHASH_DEFAULT && type != sig.last)) {
+        throw ArgumentError('Invalid encoded Taproot sighash type');
+      }
+      return sig;
+    }
+    if (sig.length != 64) {
+      throw ArgumentError('Taproot signature must be 64 or 65 bytes');
+    }
+    if (type == null || type == SIGHASH_DEFAULT) return sig;
+    return Uint8List.fromList([...sig, type]);
   }
 
   Uint8List hashForWitnessV0(
@@ -274,6 +297,26 @@ class Transaction {
 
   Uint8List hashForWitnessV1(int inIndex, List<Uint8List> prevOutScripts,
       List<int> values, int hashType, Uint8List? leafHash, Uint8List? annex) {
+    if (inIndex < 0 || inIndex >= ins.length) {
+      throw RangeError.index(inIndex, ins, 'inIndex');
+    }
+    if (prevOutScripts.length != ins.length || values.length != ins.length) {
+      throw ArgumentError(
+          'prevOutScripts/values must cover every transaction input');
+    }
+    const validHashTypes = <int>{
+      SIGHASH_DEFAULT,
+      SIGHASH_ALL,
+      SIGHASH_NONE,
+      SIGHASH_SINGLE,
+      SIGHASH_ALL | SIGHASH_ANYONECANPAY,
+      SIGHASH_NONE | SIGHASH_ANYONECANPAY,
+      SIGHASH_SINGLE | SIGHASH_ANYONECANPAY,
+    };
+    if (!validHashTypes.contains(hashType)) {
+      throw ArgumentError('Invalid Taproot sighash type: $hashType');
+    }
+
     final outputType = hashType == SIGHASH_DEFAULT
         ? SIGHASH_ALL
         : hashType & SIGHASH_OUTPUT_MASK;
@@ -281,6 +324,10 @@ class Transaction {
     final isAnyoneCanPay = inputType == SIGHASH_ANYONECANPAY;
     final isNone = outputType == SIGHASH_NONE;
     final isSingle = outputType == SIGHASH_SINGLE;
+    if (isSingle && inIndex >= outs.length) {
+      throw ArgumentError(
+          'SIGHASH_SINGLE requires an output at input index $inIndex');
+    }
 
     var hashPrevouts = Uint8List.fromList([]);
     var hashAmounts = Uint8List.fromList([]);

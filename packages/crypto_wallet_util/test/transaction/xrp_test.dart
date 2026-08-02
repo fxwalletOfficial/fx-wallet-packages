@@ -21,10 +21,10 @@ void main() async {
       final signer = XrpTxSigner(xrp, txData);
       final XrpTxData tx = signer.sign();
       expect(tx.signedBlob, txResult);
-      assert(signer.verify());
+      expect(signer.verify(), isTrue);
 
       final broadcastData = tx.toBroadcast();
-      assert(broadcastData.isNotEmpty);
+      expect(broadcastData, isNotEmpty);
     });
 
     test('token transaction', () async {
@@ -34,7 +34,7 @@ void main() async {
       final signer = XrpTxSigner(xrp, txData);
       final XrpTxData tx = signer.sign();
       expect(tx.signedBlob, txResult);
-      assert(signer.verify());
+      expect(signer.verify(), isTrue);
     });
 
     test('trust set transaction', () async {
@@ -44,7 +44,7 @@ void main() async {
       final signer = XrpTxSigner(xrp, txData);
       final XrpTxData tx = signer.sign();
       expect(tx.signedBlob, txResult);
-      assert(signer.verify());
+      expect(signer.verify(), isTrue);
     });
 
     test('test XrpTxData class', () {
@@ -62,7 +62,7 @@ void main() async {
       try {
         errorAmount.toJson();
       } catch (error) {
-        assert(error.toString().contains('unsupported amount format'));
+        expect(error.toString(), contains('unsupported amount format'));
       }
       final XrpTxData errorType = XrpTxData(
           account: txJson['Account'],
@@ -75,7 +75,7 @@ void main() async {
       try {
         errorType.toJson();
       } catch (error) {
-        assert(error.toString().contains('unsupported transaction type'));
+        expect(error.toString(), contains('unsupported transaction type'));
       }
     });
   });
