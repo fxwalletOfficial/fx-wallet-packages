@@ -10,6 +10,7 @@ import 'package:flutter_web3_webview/src/config/params.dart';
 import 'package:flutter_web3_webview/src/models/js_callback_data.dart';
 import 'package:flutter_web3_webview/src/models/settings.dart';
 import 'package:flutter_web3_webview/src/utils/provider.dart';
+import 'package:flutter_web3_webview/src/utils/request_controller.dart';
 import 'package:flutter_web3_webview/src/utils/request_dispatcher.dart';
 import 'package:flutter_web3_webview/src/utils/serial_event_queue.dart';
 
@@ -193,6 +194,17 @@ class Web3Webview extends StatefulWidget {
   final Future<String> Function(JsCallBackData data)? solSignMessage;
   final Future<dynamic> Function(JsCallBackData data)? onDefaultCallback;
 
+  /// Handle onto the provider request queue: lets the host see what is in
+  /// flight and cancel by id. Optional — leave it null and the queue behaves
+  /// exactly as before, minus the ability to address requests.
+  final Web3RequestController? requestController;
+
+  /// Ceiling on provider requests waiting for the wallet, excluding the one
+  /// being served. Requests beyond it are rejected with `-32005` instead of
+  /// being queued, so a page cannot flood the bridge. Read once when the
+  /// widget mounts; changing it later has no effect.
+  final int maxPendingRequests;
+
   const Web3Webview(
       {super.key,
       this.settings,
@@ -279,7 +291,9 @@ class Web3Webview extends StatefulWidget {
       this.solAccount,
       this.solSignTransaction,
       this.solSignMessage,
-      this.onDefaultCallback});
+      this.onDefaultCallback,
+      this.requestController,
+      this.maxPendingRequests = SerialEventQueue.defaultMaxPendingEvents});
 
   @override
   Web3WebviewState createState() => Web3WebviewState();
@@ -289,7 +303,33 @@ class Web3Webview extends StatefulWidget {
 
 class Web3WebviewState extends State<Web3Webview> {
   bool get isWeb3 => widget.isWeb3;
-  final SerialEventQueue _eventQueue = SerialEventQueue();
+  late final SerialEventQueue _eventQueue =
+      SerialEventQueue(maxPendingEvents: widget.maxPendingRequests);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.requestController?.attach(_eventQueue);
+  }
+
+  @override
+  void didUpdateWidget(Web3Webview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.requestController, widget.requestController)) {
+      oldWidget.requestController?.detach(_eventQueue);
+      widget.requestController?.attach(_eventQueue);
+    }
+  }
+
+  /// Closing the queue here is what keeps the "no hangs" guarantee true across
+  /// teardown: without it, requests still waiting when the page goes away
+  /// would never run and their in-page promises would stay pending forever.
+  @override
+  void dispose() {
+    widget.requestController?.detach(_eventQueue);
+    _eventQueue.dispose(reason: 'Webview was closed');
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -400,7 +440,11 @@ class Web3WebviewState extends State<Web3Webview> {
             return dispatcher.dispatch(item);
           }
 
-          return _eventQueue.add(() => dispatcher.dispatch(item));
+          return _eventQueue.add(
+            (_) => dispatcher.dispatch(item),
+            id: item.id,
+            method: item.method,
+          );
         });
   }
 

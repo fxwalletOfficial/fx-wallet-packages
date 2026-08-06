@@ -61,6 +61,30 @@ class Web3RpcError implements Exception {
   ]) =>
       Web3RpcError(4200, message);
 
+  /// The request was cancelled by the wallet before it produced a result.
+  ///
+  /// EIP-1193 has no dedicated "cancelled" code, so we reuse `4900`
+  /// (*disconnected*): from the DApp's point of view the provider stopped
+  /// serving that request, which is exactly what `4900` communicates and what
+  /// existing DApp error handling already treats as retryable. `4001` is
+  /// deliberately not used — it means *the user* rejected, and a
+  /// wallet-initiated cancellation (page teardown, account switch, timeout)
+  /// is not a user rejection.
+  factory Web3RpcError.cancelled([
+    String message = 'Request cancelled',
+  ]) =>
+      Web3RpcError(4900, message);
+
+  /// Too many provider requests are already waiting for the wallet.
+  ///
+  /// JSON-RPC 2.0 reserved application code `-32005` ("limit exceeded") is the
+  /// conventional choice here; EIP-1193 defines no provider code for
+  /// back-pressure.
+  factory Web3RpcError.limitExceeded([
+    String message = 'Too many pending requests',
+  ]) =>
+      Web3RpcError(-32005, message);
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'code': code,
         'message': message,

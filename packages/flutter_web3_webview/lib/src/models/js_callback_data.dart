@@ -10,7 +10,22 @@ class JsCallBackData {
   final String method;
   final dynamic params;
 
-  JsCallBackData({this.method = '', this.params = const <String, dynamic>{}});
+  /// Request identity minted by the in-page provider bridge
+  /// (`provider/packages/core/adapter/FlutterBridge.ts`).
+  ///
+  /// Optional on purpose. The bridge payload is reachable from page script —
+  /// a DApp can call `flutter_inappwebview.callHandler('FxWalletHandler', …)`
+  /// itself, and an older injected bundle predates the field — so a payload
+  /// without an `id` stays valid and the queue substitutes a synthetic id
+  /// instead (see `SerialEventQueue.add`). Correlation with the in-page
+  /// promise is simply unavailable for those requests; nothing else changes.
+  final String? id;
+
+  JsCallBackData({
+    this.method = '',
+    this.params = const <String, dynamic>{},
+    this.id,
+  });
 
   static JsCallBackData fromData(dynamic data) {
     final payload = data is List && data.isNotEmpty ? data.first : data;
@@ -19,7 +34,7 @@ class JsCallBackData {
 
     final method = json['method'] is String ? json['method'] as String : '';
     final params = json['params'] ?? [];
-    return JsCallBackData(method: method, params: params);
+    return JsCallBackData(method: method, params: params, id: _asId(json['id']));
   }
 
   JsTransactionObject getTxParams() {
@@ -56,6 +71,16 @@ class JsCallBackData {
     final json = params is List && params.isNotEmpty ? params.first : params;
     return JsAddEthereumChain.fromJson(_asStringKeyedMap(json) ?? {});
   }
+}
+
+/// Normalise the wire `id`. The bridge sends a string, but the payload is
+/// page-controlled and the platform channel may hand a numeric literal back
+/// as `int`/`double`, so accept both and reject anything else (including an
+/// empty string) rather than fabricating an identity.
+String? _asId(dynamic value) {
+  if (value is String) return value.isEmpty ? null : value;
+  if (value is num) return value.toString();
+  return null;
 }
 
 Map<String, dynamic>? _asStringKeyedMap(dynamic value) {

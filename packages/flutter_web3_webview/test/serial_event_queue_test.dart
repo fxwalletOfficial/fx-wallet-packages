@@ -11,17 +11,17 @@ void main() {
       final firstCompleter = Completer<void>();
       final executionOrder = <String>[];
 
-      final first = queue.add(() async {
+      final first = queue.add((_) async {
         executionOrder.add('first-start');
         await firstCompleter.future;
         executionOrder.add('first-end');
         return 'first-result';
       });
-      final second = queue.add(() async {
+      final second = queue.add((_) async {
         executionOrder.add('second');
         return 'second-result';
       });
-      final third = queue.add(() {
+      final third = queue.add((_) {
         executionOrder.add('third');
         return 'third-result';
       });
@@ -48,11 +48,11 @@ void main() {
       final queue = SerialEventQueue();
       final executionOrder = <String>[];
 
-      final failed = queue.add<String>(() {
+      final failed = queue.add<String>((_) {
         executionOrder.add('failed');
         throw StateError('failed event');
       });
-      final succeeded = queue.add(() {
+      final succeeded = queue.add((_) {
         executionOrder.add('succeeded');
         return 'result';
       });
@@ -67,13 +67,13 @@ void main() {
       final blocker = Completer<void>();
       final executionOrder = <String>[];
 
-      final first = queue.add(() async {
+      final first = queue.add((_) async {
         executionOrder.add('first');
         await blocker.future;
       });
       await Future<void>.delayed(Duration.zero);
 
-      final second = queue.add(() => executionOrder.add('second'));
+      final second = queue.add((_) => executionOrder.add('second'));
       blocker.complete();
 
       await Future.wait([first, second]);

@@ -39,10 +39,15 @@ test('request forwards the EIP-1193 payload to the bridge unchanged', async () =
   respond = () => Promise.resolve([account]);
   const ethereum = new EthereumProvider();
 
-  expect(await ethereum.request({ method: 'eth_requestAccounts' })).toEqual([
+  expect(
+    await ethereum.request<string[]>({ method: 'eth_requestAccounts' }),
+  ).toEqual([
     account,
   ]);
-  expect(calls).toEqual([{ method: 'eth_requestAccounts' }]);
+  // `toMatchObject`, not `toEqual`: every bridge payload also carries the
+  // request `id` minted by `callFlutterHandler` (covered in
+  // `core/tests/flutterBridge.spec.ts`).
+  expect(calls).toMatchObject([{ method: 'eth_requestAccounts' }]);
 });
 
 test('request keeps the original method names (no MobileAdapter rewrite)', async () => {
@@ -69,8 +74,10 @@ test('internalRequest is the same single-step pass-through as request', async ()
   respond = () => Promise.resolve('0x1');
   const ethereum = new EthereumProvider();
 
-  expect(await ethereum.internalRequest({ method: 'eth_chainId' })).toBe('0x1');
-  expect(calls).toEqual([{ method: 'eth_chainId' }]);
+  expect(await ethereum.internalRequest<string>({ method: 'eth_chainId' })).toBe(
+    '0x1',
+  );
+  expect(calls).toMatchObject([{ method: 'eth_chainId' }]);
 });
 
 test('enable() proxies to eth_requestAccounts', async () => {
@@ -78,7 +85,10 @@ test('enable() proxies to eth_requestAccounts', async () => {
   const ethereum = new EthereumProvider();
 
   expect(await ethereum.enable()).toEqual([account]);
-  expect(calls).toEqual([{ method: 'eth_requestAccounts' }]);
+  // `toMatchObject`, not `toEqual`: every bridge payload also carries the
+  // request `id` minted by `callFlutterHandler` (covered in
+  // `core/tests/flutterBridge.spec.ts`).
+  expect(calls).toMatchObject([{ method: 'eth_requestAccounts' }]);
 });
 
 test('isMetaMask reflects the overwriteMetamask config', () => {

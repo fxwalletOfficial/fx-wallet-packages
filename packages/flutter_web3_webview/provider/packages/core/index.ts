@@ -65,6 +65,7 @@ export * from './Provider';
 export {
   FLUTTER_HANDLER_NAME,
   callFlutterHandler,
+  nextRequestId,
   type FlutterCallHandler,
   type FlutterWebViewWindow,
   type IFlutterBridgeArgs,
