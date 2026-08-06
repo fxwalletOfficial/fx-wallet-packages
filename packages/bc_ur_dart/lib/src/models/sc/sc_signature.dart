@@ -4,6 +4,7 @@ import 'package:bc_ur_dart/src/models/sc/sc_sign_request.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
 import 'package:cbor/cbor.dart';
 
@@ -69,7 +70,7 @@ class ScSignature extends RegistryItem {
 
   static ScSignature fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.SC_SIGNATURE.type) {
-      throw ArgumentError('Invalid UR type for ScSignature: ${ur.type}');
+      throw InvalidTypeURException(expected: RegistryType.SC_SIGNATURE.type, actual: ur.type);
     }
     return fromCBOR(ur.payload);
   }
@@ -96,5 +97,4 @@ class ScSignature extends RegistryItem {
       origin: request.origin,
     );
   }
-
 }

@@ -172,7 +172,11 @@ void main() {
         outputAddress: 'SomeAddress',
       );
 
-      expect(() => KeystoneSolSignRequest.fromUR(goldshellUR), throwsA(isA<ArgumentError>()));
+      // GoldShell 在 key 4 放的是 outputAddress(CborString)，而 Keystone 把 key 4 读作
+      // address(bytes)。optional 字段 best-effort：类型不符直接跳过而非抛错，因此解码成功
+      // 且 addressBytes 为 null —— GoldShell 的字符串不会“串味”成 Keystone 的地址字节。
+      final decoded = KeystoneSolSignRequest.fromUR(goldshellUR);
+      expect(decoded.addressBytes, isNull);
     });
   });
 }

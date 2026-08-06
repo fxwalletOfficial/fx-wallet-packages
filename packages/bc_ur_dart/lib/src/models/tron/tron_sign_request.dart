@@ -5,7 +5,7 @@ import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 
 enum TronSignRequestKeys {
-  zero, // 0 
+  zero, // 0
   uuid, // 1
   signData, // 2
   derivationPath, // 3
@@ -39,7 +39,6 @@ class TronSignRequest extends RegistryItem {
   CborValue toCborValue() {
     final Map<CborValue, CborValue> map = {};
 
-
     map[CborSmallInt(TronSignRequestKeys.uuid.index)] = cborBytes(
       getRequestId(),
       tags: [RegistryType.UUID.tag],
@@ -58,7 +57,6 @@ class TronSignRequest extends RegistryItem {
 
   @override
   RegistryItem decodeFromCbor(CborMap map) {
-
     return TronSignRequest(
       uuid: RegistryItem.readBytes(map, TronSignRequestKeys.uuid.index),
       signData: RegistryItem.readBytes(map, TronSignRequestKeys.signData.index),
@@ -76,6 +74,14 @@ class TronSignRequest extends RegistryItem {
         derivationPath: CryptoKeypath(),
       ),
     );
+  }
+
+  /// 类型门入口：先校验 ur.type 再委托 fromCBOR。推荐消费方走此入口。
+  static TronSignRequest fromUR(UR ur) {
+    if (ur.type.toLowerCase() != RegistryType.TRON_SIGN_REQUEST.type) {
+      throw InvalidTypeURException(expected: RegistryType.TRON_SIGN_REQUEST.type, actual: ur.type);
+    }
+    return fromCBOR(ur.payload);
   }
 
   static UR generateSignRequest({

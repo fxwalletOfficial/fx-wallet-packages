@@ -6,9 +6,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('CryptoMultiAccountsUR', () {
-    test(
-        'preserves non secp256k1 hdkey entries without rejecting the account set',
-        () {
+    test('preserves non secp256k1 hdkey entries without rejecting the account set', () {
       final ur = CryptoMultiAccountsUR.fromWallet(
         masterFingerprint: BigInt.from(0x21d0ae26),
         device: 'FxWallet',
@@ -101,6 +99,26 @@ void main() {
       expect(parsed.chains[1].path, "m/44'/501'/0'");
       expect(parsed.skippedKeys.length, 1); // corrupt entry skipped, not fatal
       expect(parsed.skippedKeys.single.index, 1);
+      // The skip reason must carry the typed URException contract (crypto-hdkey
+      // now fails closed with InvalidCborURException, not a raw FormatException),
+      // so a revert of that fix is caught here.
+      expect(parsed.skippedKeys.single.reason, contains('crypto-hdkey.public_key'));
+    });
+
+    test('rejects missing chains list with explicit CBOR error', () {
+      final ur = UR.fromCBOR(
+        type: mtiType,
+        value: CborMap({
+          CborSmallInt(1): CborInt(BigInt.from(0x21d0ae26)),
+        }),
+      );
+
+      expect(
+        () => CryptoMultiAccountsUR.fromUR(ur: ur),
+        throwsA(
+          isA<InvalidCborURException>().having((e) => e.message, 'message', contains('crypto-multi-accounts.keys')),
+        ),
+      );
     });
   });
 }

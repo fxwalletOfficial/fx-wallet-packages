@@ -83,6 +83,5 @@ class CryptoCoinInfo extends RegistryItem {
   bool isTestnet() => network == CoinType.TESTNET;
 
   @override
-  String toString() =>
-      '{"coinType":$coinType,"coinName":"${getCoinName()}","network":${network ?? 0}}';
+  String toString() => '{"coinType":$coinType,"coinName":"${getCoinName()}","network":${network ?? 0}}';
 }

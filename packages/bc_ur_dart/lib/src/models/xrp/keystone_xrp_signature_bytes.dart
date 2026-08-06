@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:cbor/cbor.dart';
 import 'package:convert/convert.dart';
 
@@ -21,18 +22,21 @@ class KeystoneXrpSignatureBytes {
     this.payload,
   });
 
-  bool get hasSignatureMaterial =>
-      signature.isNotEmpty || signedBlob.isNotEmpty;
+  bool get hasSignatureMaterial => signature.isNotEmpty || signedBlob.isNotEmpty;
 
   static KeystoneXrpSignatureBytes fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.BYTES.type) {
-      throw ArgumentError(
-          'Invalid UR type for KeystoneXrpSignatureBytes: ${ur.type}');
+      throw InvalidTypeURException(expected: RegistryType.BYTES.type, actual: ur.type);
     }
 
-    final CborValue decoded = ur.decodeCBOR();
+    final CborValue decoded;
+    try {
+      decoded = ur.decodeCBOR();
+    } on Object catch (error) {
+      throw InvalidCborURException(model: 'keystone-xrp-signature', reason: 'invalid CBOR payload', cause: error);
+    }
     if (decoded is! CborBytes) {
-      throw ArgumentError('Keystone XRP signature payload must be cbor bytes');
+      throw InvalidCborURException(model: 'keystone-xrp-signature', reason: 'expected top-level CborBytes, got ${decoded.runtimeType}');
     }
 
     final Uint8List bytes = Uint8List.fromList(decoded.bytes);
@@ -48,18 +52,12 @@ class KeystoneXrpSignatureBytes {
           json,
           ['publicKey', 'pubkey', 'SigningPubKey'],
         ),
-        signedBlob: _readNestedString(json, [
-          'signedBlob',
-          'signedTransaction',
-          'signedTx',
-          'txBlob',
-          'tx_blob'
-        ]),
+        signedBlob: _readNestedString(json, ['signedBlob', 'signedTransaction', 'signedTx', 'txBlob', 'tx_blob']),
         txHash: _readNestedString(json, ['txHash', 'tx_hash', 'hash']),
         payload: json,
       );
       if (!result.hasSignatureMaterial) {
-        throw ArgumentError('Invalid Keystone XRP signature bytes payload');
+        throw InvalidCborURException(model: 'keystone-xrp-signature', reason: 'payload contains no signature material');
       }
       return result;
     }
@@ -68,7 +66,7 @@ class KeystoneXrpSignatureBytes {
     if (trimmed.isEmpty) {
       final String hexBlob = hex.encode(bytes);
       if (hexBlob.isEmpty) {
-        throw ArgumentError('Invalid Keystone XRP signature bytes payload');
+        throw InvalidCborURException(model: 'keystone-xrp-signature', reason: 'payload contains no signature material');
       }
       return KeystoneXrpSignatureBytes(signedBlob: hexBlob);
     }

@@ -32,6 +32,14 @@ class SolSignature extends GsSignature {
     );
   }
 
+  /// 类型门入口：先校验 ur.type 再委托 fromCBOR。推荐消费方走此入口。
+  static SolSignature fromUR(UR ur) {
+    if (ur.type.toLowerCase() != RegistryType.SOL_SIGNATURE.type) {
+      throw InvalidTypeURException(expected: RegistryType.SOL_SIGNATURE.type, actual: ur.type);
+    }
+    return fromCBOR(ur.payload);
+  }
+
   /// 从签名请求 + 签名结果构建 UR，用于钱包返回签名给 dApp
   static UR fromSignature({required SolSignRequest request, required Uint8List signature}) {
     return SolSignature(uuid: request.getRequestId(), signature: signature, origin: request.origin).toUR();

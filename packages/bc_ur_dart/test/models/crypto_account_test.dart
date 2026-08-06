@@ -32,5 +32,39 @@ void main() {
       expect(decoded.hasXfpFormatMarker, isTrue);
       expect(decoded.xfpFormat, equals('canonical'));
     });
+
+    test('rejects master fingerprint outside uint32 range', () {
+      final ur = UR.fromCBOR(
+        type: accountType,
+        value: CborMap({
+          CborSmallInt(1): CborInt(BigInt.from(0x100000000)),
+          CborSmallInt(2): CborList([]),
+        }),
+      );
+
+      expect(
+        () => CryptoAccountUR.fromUR(ur: ur),
+        throwsA(
+          isA<InvalidCborURException>().having((e) => e.message, 'message', contains('crypto-account.master_fingerprint')),
+        ),
+      );
+    });
+
+    test('rejects non-map output entries', () {
+      final ur = UR.fromCBOR(
+        type: accountType,
+        value: CborMap({
+          CborSmallInt(1): CborInt(BigInt.from(0x21d0ae26)),
+          CborSmallInt(2): CborList([CborString('not-hdkey')]),
+        }),
+      );
+
+      expect(
+        () => CryptoAccountUR.fromUR(ur: ur),
+        throwsA(
+          isA<InvalidCborURException>().having((e) => e.message, 'message', contains('crypto-account.outputs[0]')),
+        ),
+      );
+    });
   });
 }

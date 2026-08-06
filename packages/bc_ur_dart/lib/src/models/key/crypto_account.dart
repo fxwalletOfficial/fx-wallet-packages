@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
 import 'package:bc_ur_dart/src/models/key/to_string_fields.dart';
-import 'package:bc_ur_dart/src/registry/registry_item.dart';
+import 'package:bc_ur_dart/src/registry/cbor_field_reader.dart';
 import 'package:convert/convert.dart';
 
 final accountType = RegistryType.CRYPTO_ACCOUNT.type;
@@ -22,37 +22,32 @@ class CryptoAccountUR extends UR {
   }) : super(payload: ur.payload, type: ur.type);
 
   static CryptoAccountUR fromUR({required UR ur}) {
-    if (ur.type.toLowerCase() != accountType) {
-      throw Exception('Invalid type');
-    }
+    final reader = CborFieldReader.fromUr(ur, model: 'crypto-account', expectedType: accountType);
 
-    final data = ur.decodeCBOR() as CborMap;
-    if (!RegistryItem.hasKey(data, 1)) {
-      throw ArgumentError(
-          'Missing required field: master fingerprint (field 1)');
-    }
-    if (!RegistryItem.hasKey(data, 2)) {
-      throw ArgumentError('Missing required field: outputs (field 2)');
-    }
-
-    final fpRaw = (data[CborSmallInt(1)] as CborInt).toInt();
-    final fpBytes = Uint8List(4)
-      ..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
+    final fpRaw = reader.requiredInt(1, field: 'master_fingerprint', min: 0, max: 0xffffffff);
+    final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpRaw, Endian.big);
     final masterFingerprint = hex.encode(fpBytes);
 
-    final outputsRaw = data[CborSmallInt(2)] as CborList;
+    final outputsRaw = reader.requiredList(2, field: 'outputs');
     final outputs = <CryptoHDKeyUR>[];
-    for (final item in outputsRaw) {
-      final keyMap = item as CborMap;
+    for (var i = 0; i < outputsRaw.length; i++) {
+      final item = outputsRaw[i];
+      if (item is! CborMap) {
+        throw InvalidCborURException(model: 'crypto-account', field: 'outputs[$i]', reason: 'expected CborMap, got ${item.runtimeType}');
+      }
       final keyUr = UR(
         type: hdType,
-        payload: Uint8List.fromList(cbor.encode(keyMap)),
+        payload: Uint8List.fromList(cbor.encode(item)),
       );
-      outputs.add(CryptoHDKeyUR.fromUR(ur: keyUr));
+      try {
+        outputs.add(CryptoHDKeyUR.fromUR(ur: keyUr));
+      } on InvalidCborURException catch (error) {
+        throw InvalidCborURException(model: 'crypto-account', field: 'outputs[$i]', reason: error.message, cause: error);
+      }
     }
 
-    final hasXfpFormatMarker = RegistryItem.hasKey(data, 3);
-    final xfpFormat = data[CborSmallInt(3)]?.toString();
+    final hasXfpFormatMarker = reader.has(3);
+    final xfpFormat = reader.optionalText(3, field: 'xfp_format');
 
     return CryptoAccountUR(
       ur: ur,
@@ -74,13 +69,11 @@ class CryptoAccountUR extends UR {
       value: CborMap({
         CborSmallInt(1): CborInt(BigInt.from(fpInt)),
         CborSmallInt(2): CborList(outputs.map((e) => e.decodeCBOR()).toList()),
-        if (xfpFormat != null && xfpFormat.isNotEmpty)
-          CborSmallInt(3): CborString(xfpFormat),
+        if (xfpFormat != null && xfpFormat.isNotEmpty) CborSmallInt(3): CborString(xfpFormat),
       }),
     );
 
-    final fpBytes = Uint8List(4)
-      ..buffer.asByteData().setUint32(0, fpInt, Endian.big);
+    final fpBytes = Uint8List(4)..buffer.asByteData().setUint32(0, fpInt, Endian.big);
     return CryptoAccountUR(
       ur: ur,
       masterFingerprint: hex.encode(fpBytes),

@@ -1,69 +1,152 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-03-18
-**Commit:** 054984f
-**Branch:** feature/gs-transfer
+**Last updated:** 2026-07-02
+**Package:** `bc_ur_dart`
+**Type:** Pure Dart package, not a Flutter package
+**SDK:** Dart `^3.3.4`
 
 ## OVERVIEW
-Dart package for UR (Uniform Resource) encoding/decoding — CBOR-based QR protocol for crypto wallet cold signing. Supports BTC, ETH, SOL, TRON, Cosmos, Aleo.
+
+`bc_ur_dart` implements UR (Uniform Resources) encode/decode for crypto-wallet cold-signing flows. UR payloads are URI-safe CBOR structures from Blockchain Commons and may be split into QR-friendly fragments.
+
+The package currently exposes:
+
+- Core UR encode/decode/fragment read logic.
+- ByteWords, CRC32, registry items, registry types, and key-path helpers.
+- Chain/signing models for BTC, BCH, ETH, SOL, TRON, Cosmos, Aleo, SC, XRP, and key/account payloads.
+- Keystone protobuf-backed helpers for BCH/TRON and selected Keystone payloads.
 
 ## STRUCTURE
-```
+
+```text
 bc_ur_dart/
 ├── lib/
-│   ├── bc_ur_dart.dart        # Public exports
+│   ├── bc_ur_dart.dart            # Public export surface
 │   └── src/
-│       ├── ur.dart             # Core UR class (encode/decode/read/next)
-│       ├── models/             # SignRequest/Signature per chain
-│       │   ├── alph/           # Aleo
-│       │   ├── btc/            # PSBT, GSPL
-│       │   ├── eth/
-│       │   ├── sol/
-│       │   ├── tron/
-│       │   ├── cosmos/
-│       │   ├── key/            # HDKey, MultiAccounts
-│       │   └── common/         # Fragment, Seq
-│       ├── registry/           # RegistryType, CryptoTxEntity
-│       └── utils/              # CRC32, ByteWords, Type, Error
-└── test/                       # 6 test files
+│       ├── ur.dart                # Core UR class: decode(), encode(), read(), next()
+│       ├── models/
+│       │   ├── alph/              # Aleo sign request/signature
+│       │   ├── bch/               # BCH sign request/signature, protobuf-backed transaction fields
+│       │   ├── btc/               # PSBT, GSPL, BTC signature wrappers
+│       │   ├── common/            # FragmentUR, URSeq
+│       │   ├── cosmos/            # Cosmos + Keystone Cosmos models
+│       │   ├── eth/               # ETH sign request/signature and typed transaction data
+│       │   ├── key/               # CryptoAccount, CryptoHDKey, MultiAccounts, CoinInfo
+│       │   ├── sc/                # SC sign request/signature
+│       │   ├── sol/               # SOL + Keystone SOL models
+│       │   ├── tron/              # TRON + Keystone TRON models and protobuf parsing helpers
+│       │   └── xrp/               # Keystone XRP bytes models
+│       ├── registry/              # RegistryItem, RegistryType, CryptoTxEntity, CryptoKeypath, GsSignature
+│       ├── utils/                 # ByteWords, CRC32, type helpers, UR errors
+│       └── gen/keystone/          # Generated protobuf Dart files; do not edit by hand
+├── proto/keystone/                # Source .proto files for generated Keystone models
+├── test/
+│   ├── golden_vectors_test.dart
+│   ├── models/                    # Chain/model-focused tests
+│   ├── registry/                  # Registry/key-path tests
+│   ├── utils/                     # Utility tests
+│   └── ur_test.dart               # Core UR tests
+├── docs/superpowers/plans/        # Local engineering plans/notes
+├── build/                         # Generated Dart/test build cache; do not edit
+├── pubspec.yaml
+├── pubspec_overrides.yaml         # Melos-managed local override for crypto_wallet_util
+└── analysis_options.yaml
 ```
+
+Examples live at the monorepo root, for example `../../examples/bc_ur_dart_demo`, not inside this package.
 
 ## WHERE TO LOOK
-| Task | Location | Notes |
-|------|----------|-------|
-| Add new UR type | `lib/src/models/{chain}/` | Create sign_request + signature pair |
-| Core UR logic | `lib/src/ur.dart` | encode(), decode(), read(), next() |
-| Registry types | `lib/src/registry/` | RegistryType enum, CryptoTxEntity |
-| CBOR encoding | Uses `package:cbor` | External dependency |
 
-## CONVENTIONS
-- **Model pairs**: `{Chain}SignRequest` + `{Chain}Signature` in same dir
-- **Naming**: snake_case files, PascalCase classes
-- **Entry**: `lib/bc_ur_dart.dart` (not `index.dart`)
-- **Tests**: Flat in `test/`, mirror lib structure loosely
+| Task                           | Location                                                                     | Notes                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Core UR behavior               | `lib/src/ur.dart`                                                          | `UR.decode(string)`, `ur.encode()`, `ur.read(fragment)`, `ur.next()` |
+| ByteWords or checksum behavior | `lib/src/utils/byte_words.dart`, `lib/src/utils/crc32.dart`              | Security-sensitive parsing primitives                                        |
+| Registry item encoding         | `lib/src/registry/`                                                        | CBOR registry abstractions and key-path handling                             |
+| Chain model changes            | `lib/src/models/{chain}/`                                                  | Keep sign request/signature pairs consistent                                 |
+| Public API exports             | `lib/bc_ur_dart.dart`                                                      | Add exports intentionally; this is the package surface                       |
+| Keystone protobuf source       | `proto/keystone/`                                                          | Edit source protos only when regenerating generated Dart files               |
+| Generated Keystone Dart        | `lib/src/gen/keystone/`                                                    | Generated by `protoc`; do not hand-edit or format                          |
+| Focused tests                  | `test/models/`, `test/registry/`, `test/utils/`, `test/ur_test.dart` | Prefer narrow tests before full suite                                        |
 
-## ANTI-PATTERNS (THIS PROJECT)
-- No example/ directory (README claims it exists — it's missing)
-- Tests use `flutter test` but this is a pure Dart package (use `dart test`)
+## DEPENDENCIES
 
-## GIT CONSTRAINTS
-- **NEVER run `git commit` or `git push`** — ask user explicitly before any git write operations
-- Only use read-only git commands (`git log`, `git show`, `git diff`, `git status`, etc.)
+- `cbor` handles CBOR values and encoding/decoding.
+- `protobuf` and `fixnum` support generated Keystone message classes.
+- `crypto`, `convert`, `uuid`, and `xrandom` support encoding, hashing, identifiers, and randomness.
+- `crypto_wallet_util` supplies wallet/transaction utilities. In this monorepo it is overridden by `pubspec_overrides.yaml` to `../crypto_wallet_util`.
+- Tests use `package:test`; do not use `flutter test`.
 
-## UNIQUE STYLES
-- Monorepo via Melos (root: fx-wallet-packages)
-- Dependency override via `pubspec_overrides.yaml` (monorepo artifact)
-- 54 linter rules in analysis_options.yaml
+## PROTOBUF / GENERATED CODE
 
-## COMMANDS
-```bash
-dart analyze        # Lint check
-dart test           # Run tests
-dart format .       # Format code
+- Source protobuf definitions are under `proto/keystone/`.
+- Generated Dart files live under `lib/src/gen/keystone/`.
+- `proto/readme.md` documents the generation command:
+
+```powershell
+protoc --dart_out=lib/src/gen --proto_path=proto keystone/base.proto keystone/payload.proto keystone/transaction.proto keystone/sign_transaction_result.proto keystone/chains/btc_transaction.proto keystone/chains/bch_transaction.proto keystone/chains/tron_transaction.proto
 ```
 
+- If protobuf definitions change, regenerate the Dart files as a deliberate generation step and explain the regeneration in the change summary.
+- Do not hand-edit, manually reformat, or opportunistically clean up files under `lib/src/gen/`.
+
+## CONVENTIONS
+
+- **Model pairs:** chain models usually have `{Chain}SignRequest` + `{Chain}Signature`; UR wrapper classes often use a `UR` suffix.
+- **Naming:** files use `snake_case.dart`; classes use `PascalCase`.
+- **Public API:** `lib/bc_ur_dart.dart` is the only public export aggregator.
+- **CBOR keys:** keep registry key enums and parse/encode order stable; malformed input should fail closed.
+- **Keystone wrappers:** keep hand-written wrapper/parser logic outside `lib/src/gen/`.
+- **Tests:** use focused `package:test` files that mirror the affected area loosely.
+
+## ANTI-PATTERNS
+
+- Do not use `flutter test`; this is a pure Dart package.
+- Do not run broad formatting or cleanup while fixing codec/model parsing bugs.
+- Do not edit `build/`; it is generated cache output.
+- Do not hand-edit generated protobuf Dart files under `lib/src/gen/keystone/`.
+- Do not add global mutable parsing switches or migration escape hatches unless the user explicitly accepts the maintenance and safety tradeoff.
+
+## GIT CONSTRAINTS
+
+- **NEVER run `git commit` or `git push`** unless the user explicitly asks for that exact git write action.
+- Read-only git commands are allowed when useful: `git status`, `git diff`, `git log`, `git show`.
+- The worktree may contain user changes. Preserve unrelated changes and do not revert files you did not intentionally modify.
+
+## COMMANDS
+
+```bash
+dart pub get                              # Resolve package dependencies
+dart analyze                              # Static analysis / lint check
+dart test                                 # Full test suite
+dart test test/path/to/file_test.dart     # Focused test file
+```
+
+## VERIFICATION CONSTRAINTS
+
+- Prefer focused tests while developing, then run `dart analyze` and `dart test` before claiming completion when the change affects behavior.
+- If the user interrupts verification, report exactly which command was interrupted and do not claim full verification.
+- For behavior changes in CBOR parsing, add malformed-input tests and valid round-trip tests.
+- For sign-request model changes, include at least one nested model parse test when practical.
+- For generated protobuf changes, verify both the source `.proto` intent and generated Dart output are consistent.
+
+## FORMAT CONSTRAINTS
+
+- Do **not** run `dart format .` unless the user explicitly asks for that exact broad formatting action.
+- For normal code changes, format only the files you changed and only when formatting is necessary.
+- Never format generated files under `lib/src/gen/`; generated code is out of scope for formatter runs.
+- Treat unrelated model files as out of scope for formatting unless the user explicitly requests it.
+- If accidental broad formatting happens, stop and report it before doing more work.
+
+## RELEASE CONSTRAINTS
+
+- Version and changelog updates must describe behavior changes explicitly, especially when lenient parsing becomes fail-closed.
+- For `0.x` versions, remember that `^0.1.25` can accept `0.1.26`; note exact-pin requirements when rollout depends on consumer coordination.
+- Coordinate consumer rollout when `crypto_wallet_util`, exported APIs, or UR parsing semantics change.
+
 ## NOTES
-- No UREncoder/URDecoder — encoding/decoding is in `UR` class itself
-- `UR.decode(string)` → `UR` object
-- `ur.encode()` → UR string
-- `ur.next()` → fragment for large payloads
+
+- There is no separate `UREncoder` or `URDecoder`; encoding/decoding is in `UR`.
+- `UR.decode(string)` returns a `UR` object.
+- `ur.encode()` returns a UR string.
+- `ur.next()` returns the next fragment for large payloads.
+- `ur.read(fragment)` consumes fragment UR strings for reconstruction.

@@ -5,7 +5,7 @@ import 'package:bc_ur_dart/src/registry/crypto_key_path.dart';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 
 enum SolSignRequestKeys {
-  zero, // 0 
+  zero, // 0
   uuid, // 1
   signData, // 2
   derivationPath, // 3
@@ -102,6 +102,16 @@ class SolSignRequest extends RegistryItem {
       cborPayload,
       SolSignRequest(signData: Uint8List(0), signType: SignType.transaction, derivationPath: CryptoKeypath()),
     );
+  }
+
+  /// 类型门入口：先校验 ur.type 再委托 fromCBOR。推荐消费方走此入口以获得 UR-type 保护
+  /// （放错链 → InvalidTypeURException）。注意同 type 的变体（如 KeystoneSolSignRequest）
+  /// 无法靠 type 区分，字段错位由 optional best-effort 跳过来兜底。
+  static SolSignRequest fromUR(UR ur) {
+    if (ur.type.toLowerCase() != RegistryType.SOL_SIGN_REQUEST.type) {
+      throw InvalidTypeURException(expected: RegistryType.SOL_SIGN_REQUEST.type, actual: ur.type);
+    }
+    return fromCBOR(ur.payload);
   }
 
   static UR generateSignRequest({

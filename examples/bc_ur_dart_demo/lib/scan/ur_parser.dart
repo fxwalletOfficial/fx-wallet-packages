@@ -60,7 +60,7 @@ Map<String, dynamic> parseUR(UR ur) {
             },
           };
         } catch (_) {
-          final req = CosmosSignRequest.fromCBOR(ur.payload);
+          final req = CosmosSignRequest.fromUR(ur);
           return {
             'type': ur.type,
             'fields': {
@@ -76,7 +76,7 @@ Map<String, dynamic> parseUR(UR ur) {
         }
 
       case 'cosmos-signature':
-        final sig = CosmosSignature.fromCBOR(ur.payload);
+        final sig = CosmosSignature.fromUR(ur);
         return {
           'type': ur.type,
           'fields': {
@@ -105,7 +105,7 @@ Map<String, dynamic> parseUR(UR ur) {
             },
           };
         } catch (_) {
-          final req = SolSignRequest.fromCBOR(ur.payload);
+          final req = SolSignRequest.fromUR(ur);
           return {
             'type': ur.type,
             'fields': {
@@ -123,7 +123,7 @@ Map<String, dynamic> parseUR(UR ur) {
         }
 
       case 'sol-signature':
-        final sig = SolSignature.fromCBOR(ur.payload);
+        final sig = SolSignature.fromUR(ur);
         return {
           'type': ur.type,
           'fields': {
@@ -135,7 +135,7 @@ Map<String, dynamic> parseUR(UR ur) {
 
       // ── Tron ───────────────────────────────────────────
       case 'tron-sign-request':
-        final req = TronSignRequest.fromCBOR(ur.payload);
+        final req = TronSignRequest.fromUR(ur);
         return {
           'type': ur.type,
           'fields': {
@@ -151,7 +151,7 @@ Map<String, dynamic> parseUR(UR ur) {
         };
 
       case 'tron-signature':
-        final sig = TronSignature.fromCBOR(ur.payload);
+        final sig = TronSignature.fromUR(ur);
         return {
           'type': ur.type,
           'fields': {
@@ -163,7 +163,7 @@ Map<String, dynamic> parseUR(UR ur) {
 
       // ── Alph ────────────────────────────────────
       case 'alph-sign-request':
-        final req = AlphSignRequest.fromCBOR(ur.payload);
+        final req = AlphSignRequest.fromUR(ur);
         return {
           'type': ur.type,
           'fields': {
@@ -180,7 +180,7 @@ Map<String, dynamic> parseUR(UR ur) {
         };
 
       case 'alph-signature':
-        final sig = AlphSignature.fromCBOR(ur.payload);
+        final sig = AlphSignature.fromUR(ur);
         return {
           'type': ur.type,
           'fields': {

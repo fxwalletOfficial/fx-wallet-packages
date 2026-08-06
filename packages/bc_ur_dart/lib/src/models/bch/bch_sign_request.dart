@@ -124,8 +124,7 @@ class BchSignRequestUR extends UR {
       type: RegistryType.KEYSTONE_SIGN_REQUEST.type,
       value: CborMap({
         CborSmallInt(1): CborBytes(signDataBytes),
-        if (origin != null && origin.isNotEmpty)
-          CborSmallInt(2): CborString(origin),
+        if (origin != null && origin.isNotEmpty) CborSmallInt(2): CborString(origin),
       }),
     );
 
@@ -140,34 +139,51 @@ class BchSignRequestUR extends UR {
   }
 
   factory BchSignRequestUR.fromUR({required UR ur, bool bigEndian = true}) {
-    if (ur.type.toUpperCase() !=
-        RegistryType.KEYSTONE_SIGN_REQUEST.type.toUpperCase()) {
-      throw Exception(URExceptionType.invalidType.toString());
+    const model = 'bch-sign-request';
+    if (ur.type.toUpperCase() != RegistryType.KEYSTONE_SIGN_REQUEST.type.toUpperCase()) {
+      throw InvalidTypeURException(expected: RegistryType.KEYSTONE_SIGN_REQUEST.type, actual: ur.type);
     }
 
-    final data = ur.decodeCBOR() as CborMap;
+    final CborValue decoded;
+    try {
+      decoded = ur.decodeCBOR();
+    } on Object catch (error) {
+      throw InvalidCborURException(model: model, reason: 'invalid CBOR payload', cause: error);
+    }
+    if (decoded is! CborMap) {
+      throw InvalidCborURException(model: model, reason: 'expected top-level CborMap, got ${decoded.runtimeType}');
+    }
+    final data = decoded;
 
-    final signDataBytes = Uint8List.fromList(
-      (data[CborSmallInt(1)] as CborBytes).bytes,
-    );
+    final signDataValue = data[CborSmallInt(1)];
+    if (signDataValue is! CborBytes) {
+      throw InvalidCborURException(model: model, field: 'sign_data', reason: 'expected CborBytes, got ${signDataValue.runtimeType}');
+    }
+    final signDataBytes = Uint8List.fromList(signDataValue.bytes);
 
-    // gzip 解压
-    final decompressed = GZipCodec().decode(signDataBytes);
-
-    // 解析 Base Protobuf
-    final base = Base.fromBuffer(decompressed);
-    final payload = base.payloadData;
-
-    // 取出 signTx
-    final signTx = payload.signTx;
-    final signId = signTx.signId;
-    final coinCode = signTx.coinCode;
-    final xfp = payload.xfp;
-    final hdPath = signTx.hdPath;
+    final String signId;
+    final String coinCode;
+    final String xfp;
+    final String hdPath;
+    try {
+      // gzip 解压 + 解析 Base Protobuf
+      final decompressed = GZipCodec().decode(signDataBytes);
+      final base = Base.fromBuffer(decompressed);
+      final payload = base.payloadData;
+      final signTx = payload.signTx;
+      signId = signTx.signId;
+      coinCode = signTx.coinCode;
+      xfp = payload.xfp;
+      hdPath = signTx.hdPath;
+    } on Object catch (error) {
+      throw InvalidCborURException(model: model, field: 'sign_data', reason: 'invalid gzip/protobuf payload', cause: error);
+    }
 
     final originField = data[CborSmallInt(2)];
-    final origin =
-        originField != null ? (originField as CborString).toString() : null;
+    if (originField != null && originField is! CborString) {
+      throw InvalidCborURException(model: model, field: 'origin', reason: 'expected CborString, got ${originField.runtimeType}');
+    }
+    final origin = originField != null ? (originField as CborString).toString() : null;
 
     return BchSignRequestUR(
       ur: ur,
@@ -209,8 +225,7 @@ class BchSignRequestUR extends UR {
         protoOutput.isChange = output.isChange!;
       }
       // 只有 changeAddressPath 不为 null 且非空时才设置
-      if (output.changeAddressPath != null &&
-          output.changeAddressPath!.isNotEmpty) {
+      if (output.changeAddressPath != null && output.changeAddressPath!.isNotEmpty) {
         protoOutput.changeAddressPath = output.changeAddressPath!;
       }
       return protoOutput;

@@ -122,3 +122,10 @@
 - Fix: Preserve non-secp256k1 `CryptoHDKey` entries for every non-secp chain (not just Solana), so a single exotic-chain key can no longer abort a whole `crypto-multi-accounts` import. Corruption is now detected from the key shape (a key encoded like a secp256k1 point — compressed 33-byte `0x02`/`0x03` or uncompressed 65-byte `0x04` — that still fails `BIP32.fromPublicKey`), independent of `use_info`, so a corrupt BTC BIP49/84/86 or LTC/BCH key fails closed even when Keystone omits `use_info`.
 - Fix: `CryptoMultiAccountsUR.fromUR` no longer aborts the whole account set when one key entry is undecodable — it skips that entry and records it in the new `skippedKeys` (`SkippedHDKeyEntry`) list so callers can surface which accounts could not be imported. Single-key `CryptoHDKeyUR.fromUR` still throws.
 - Dependency: Update `crypto_wallet_util` constraint to `^2.0.0` so consumers can resolve current 2.x releases.
+
+## [0.1.27]
+
+- Error contract: all malformed model parses now fail closed with `InvalidCborURException` / `InvalidTypeURException` (never raw `FormatException` / `ArgumentError` / `RangeError` / cast errors), so every UR-decode failure is catchable via `on URException`. Covers the prioritized decoders (via the new shared `CborFieldReader`), the non-prioritized chains (SOL/TRON/Cosmos/SC/ALPH, BCH, Keystone-XRP), `CryptoHDKeyUR.fromUR` and `BtcSignature.fromUR`. Encode-side validation still throws `ArgumentError` for programmer errors.
+- Behavior change (malformed input only): `CryptoKeypath` rejects invalid components (bad source-fingerprint/depth ranges, `Uint8List` view offsets) instead of coercing them; wrong-typed optional metadata (e.g. `use_info`, `children`) is skipped rather than aborting the scan. Required signing fields stay fail-closed. Conformant payloads decode unchanged.
+- Entry points: add additive, type-gated `fromUR(UR)` to `Sol` / `Cosmos` / `Alph` / `Tron` `SignRequest` + `Signature` — validates `ur.type` before delegating to the unchanged `fromCBOR`.
+- Docs: update README capabilities, monorepo example path and pure Dart test commands.

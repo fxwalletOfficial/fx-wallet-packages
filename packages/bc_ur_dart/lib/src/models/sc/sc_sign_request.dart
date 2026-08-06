@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:bc_ur_dart/src/registry/registry_item.dart';
 import 'package:bc_ur_dart/src/registry/registry_type.dart';
 import 'package:bc_ur_dart/src/ur.dart';
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:bc_ur_dart/src/utils/utils.dart';
 import 'package:cbor/cbor.dart';
 
@@ -76,8 +77,7 @@ class ScSignRequest extends RegistryItem {
       CborSmallInt(ScSignRequestKeys.path.index): CborString(path),
       CborSmallInt(ScSignRequestKeys.address.index): CborString(address),
       CborSmallInt(ScSignRequestKeys.publicKey.index): CborString(publicKey),
-      CborSmallInt(ScSignRequestKeys.signingPayloadData.index):
-          cborBytes(RegistryItem.jsonBytes(signingPayloadData)),
+      CborSmallInt(ScSignRequestKeys.signingPayloadData.index): cborBytes(RegistryItem.jsonBytes(signingPayloadData)),
     };
 
     if (origin != null) {
@@ -87,15 +87,13 @@ class ScSignRequest extends RegistryItem {
       map[CborSmallInt(ScSignRequestKeys.fee.index)] = CborString(fee!);
     }
     if (outputs != null) {
-      map[CborSmallInt(ScSignRequestKeys.outputs.index)] =
-          cborBytes(RegistryItem.jsonBytes(outputs));
+      map[CborSmallInt(ScSignRequestKeys.outputs.index)] = cborBytes(RegistryItem.jsonBytes(outputs));
     }
     if (chain.isNotEmpty) {
       map[CborSmallInt(ScSignRequestKeys.chain.index)] = CborString(chain);
     }
     if (crossChainFee != null) {
-      map[CborSmallInt(ScSignRequestKeys.crossChainFee.index)] =
-          CborString(crossChainFee!);
+      map[CborSmallInt(ScSignRequestKeys.crossChainFee.index)] = CborString(crossChainFee!);
     }
 
     return CborMap(map);
@@ -109,18 +107,12 @@ class ScSignRequest extends RegistryItem {
       path: RegistryItem.readText(map, ScSignRequestKeys.path.index),
       address: RegistryItem.readText(map, ScSignRequestKeys.address.index),
       publicKey: RegistryItem.readText(map, ScSignRequestKeys.publicKey.index),
-      signingPayloadData: RegistryItem.readJsonMap(
-          map, ScSignRequestKeys.signingPayloadData.index),
+      signingPayloadData: RegistryItem.readJsonMap(map, ScSignRequestKeys.signingPayloadData.index),
       fee: RegistryItem.readOptionalText(map, ScSignRequestKeys.fee.index),
-      outputs: RegistryItem.readOptionalJsonList(
-          map, ScSignRequestKeys.outputs.index),
-      origin:
-          RegistryItem.readOptionalText(map, ScSignRequestKeys.origin.index),
-      chain:
-          RegistryItem.readOptionalText(map, ScSignRequestKeys.chain.index) ??
-              '',
-      crossChainFee: RegistryItem.readOptionalText(
-          map, ScSignRequestKeys.crossChainFee.index),
+      outputs: RegistryItem.readOptionalJsonList(map, ScSignRequestKeys.outputs.index),
+      origin: RegistryItem.readOptionalText(map, ScSignRequestKeys.origin.index),
+      chain: RegistryItem.readOptionalText(map, ScSignRequestKeys.chain.index) ?? '',
+      crossChainFee: RegistryItem.readOptionalText(map, ScSignRequestKeys.crossChainFee.index),
     );
   }
 
@@ -139,7 +131,7 @@ class ScSignRequest extends RegistryItem {
 
   static ScSignRequest fromUR(UR ur) {
     if (ur.type.toLowerCase() != RegistryType.SC_SIGN_REQUEST.type) {
-      throw ArgumentError('Invalid UR type for ScSignRequest: ${ur.type}');
+      throw InvalidTypeURException(expected: RegistryType.SC_SIGN_REQUEST.type, actual: ur.type);
     }
     return fromCBOR(ur.payload);
   }

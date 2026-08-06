@@ -80,11 +80,19 @@ class CryptoKeypath extends RegistryItem {
 
     // sourceFingerprint：xfp uint32，字节序与 Keystone 基准一致
     if (sourceFingerprint != null) {
-      final fp = sourceFingerprint!.buffer.asByteData().getUint32(0, sourceFingerprintEndian);
+      if (sourceFingerprint!.length != 4) {
+        throw ArgumentError(
+          'crypto-keypath: sourceFingerprint must be 4 bytes, got ${sourceFingerprint!.length}',
+        );
+      }
+      final fp = ByteData.sublistView(sourceFingerprint!).getUint32(0, sourceFingerprintEndian);
       innerMap[CborSmallInt(KeyPathKeys.sourceFingerprint.index)] = CborInt(BigInt.from(fp));
     }
 
     if (depth != null) {
+      if (depth! < 0 || depth! > 255) {
+        throw ArgumentError('crypto-keypath: depth out of uint8 range: $depth');
+      }
       innerMap[CborSmallInt(KeyPathKeys.depth.index)] = CborSmallInt(depth!);
     }
 
@@ -93,35 +101,23 @@ class CryptoKeypath extends RegistryItem {
 
   @override
   RegistryItem decodeFromCbor(CborMap map) {
-    final pathComponents = <PathComponent>[];
     final componentsList = map[CborSmallInt(KeyPathKeys.components.index)];
-
-    if (componentsList is CborList) {
-      final items = componentsList.toList();
-      for (var i = 0; i + 1 < items.length; i += 2) {
-        final pathItem = items[i];
-        final hardenedItem = items[i + 1];
-        final isHardened = hardenedItem is CborBool && hardenedItem.value;
-
-        if (pathItem is CborList && pathItem.isEmpty) {
-          pathComponents.add(PathComponent(hardened: isHardened));
-        } else if (pathItem is CborInt) {
-          pathComponents.add(PathComponent(
-            index: pathItem.toInt(),
-            hardened: isHardened,
-          ));
-        }
-      }
-    }
+    final pathComponents = _decodeComponentsStrict(componentsList);
 
     Uint8List? sourceFingerprint;
     if (RegistryItem.hasKey(map, KeyPathKeys.sourceFingerprint.index)) {
       final fp = RegistryItem.readInt(map, KeyPathKeys.sourceFingerprint.index);
+      if (fp < 0 || fp > 0xFFFFFFFF) {
+        throw ArgumentError('crypto-keypath: sourceFingerprint out of uint32 range: $fp');
+      }
       sourceFingerprint = Uint8List(4);
-      sourceFingerprint.buffer.asByteData().setUint32(0, fp, sourceFingerprintEndian);
+      ByteData.sublistView(sourceFingerprint).setUint32(0, fp, sourceFingerprintEndian);
     }
 
     final depth = RegistryItem.readOptionalInt(map, KeyPathKeys.depth.index);
+    if (depth != null && (depth < 0 || depth > 255)) {
+      throw ArgumentError('crypto-keypath: depth out of uint8 range: $depth');
+    }
 
     return CryptoKeypath(
       components: pathComponents,
@@ -135,9 +131,49 @@ class CryptoKeypath extends RegistryItem {
     Uint8List cborPayload, {
     Endian sourceFingerprintEndian = Endian.big,
   }) {
-    return RegistryItem.fromCBOR<CryptoKeypath>(
-      cborPayload,
-      CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian),
-    );
+    // 保持 registry primitive 语义：抛 ArgumentError，由模型边界（RegistryItem.readKeypath
+    // / RegistryItem.fromCBOR）统一翻译成 InvalidCborURException。不复用被包装的
+    // RegistryItem.fromCBOR，避免在此层就把 ArgumentError 变成 URException 而绕过边界翻译。
+    final decoded = cbor.decode(cborPayload);
+    if (decoded is! CborMap) {
+      throw ArgumentError('crypto-keypath: expected CborMap, got ${decoded.runtimeType}');
+    }
+    return CryptoKeypath(sourceFingerprintEndian: sourceFingerprintEndian).decodeFromCbor(decoded) as CryptoKeypath;
+  }
+
+  static List<PathComponent> _decodeComponentsStrict(CborValue? componentsList) {
+    if (componentsList is! CborList) {
+      throw ArgumentError('crypto-keypath: components must be CborList');
+    }
+    final items = componentsList.toList();
+    if (items.length.isOdd) {
+      throw ArgumentError('crypto-keypath: components length must be even, got ${items.length}');
+    }
+    final result = <PathComponent>[];
+    for (var i = 0; i < items.length; i += 2) {
+      final pathItem = items[i];
+      final hardenedItem = items[i + 1];
+      if (hardenedItem is! CborBool) {
+        throw ArgumentError('crypto-keypath: is-hardened must be CborBool at $i');
+      }
+      final isHardened = hardenedItem.value;
+      if (pathItem is CborList) {
+        if (pathItem.isNotEmpty) {
+          throw ArgumentError('crypto-keypath: wildcard component must be empty list');
+        }
+        result.add(PathComponent(hardened: isHardened));
+      } else if (pathItem is CborInt) {
+        final index = pathItem.toInt();
+        if (index < 0 || index >= PathComponent.HARDENED_BIT) {
+          throw ArgumentError('crypto-keypath: index out of range: $index');
+        }
+        result.add(PathComponent(index: index, hardened: isHardened));
+      } else {
+        throw ArgumentError(
+          'crypto-keypath: component must be uint or empty list, got ${pathItem.runtimeType}',
+        );
+      }
+    }
+    return result;
   }
 }
