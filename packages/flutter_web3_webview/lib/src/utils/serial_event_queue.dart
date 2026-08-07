@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter_web3_webview/src/utils/request_context.dart';
+import 'package:flutter_web3_webview/src/utils/request_family.dart';
 import 'package:flutter_web3_webview/src/utils/web3_rpc_error.dart';
 
 /// A queued unit of work. Receives the [Web3RequestToken] that identifies it,
@@ -13,12 +14,18 @@ class Web3RequestInfo {
   const Web3RequestInfo({
     required this.id,
     required this.method,
+    required this.family,
     required this.isActive,
     required this.isCancelled,
   });
 
   final String id;
   final String method;
+
+  /// Chain family the request routes to (see `Web3RequestDispatcher.familyOf`),
+  /// recorded at enqueue so the host can cancel in-flight requests by chain
+  /// without re-parsing [method].
+  final Web3RequestFamily family;
 
   /// Whether the request is the one currently executing (as opposed to
   /// waiting its turn).
@@ -27,8 +34,8 @@ class Web3RequestInfo {
 
   @override
   String toString() =>
-      'Web3RequestInfo(id: $id, method: $method, active: $isActive, '
-      'cancelled: $isCancelled)';
+      'Web3RequestInfo(id: $id, method: $method, family: $family, '
+      'active: $isActive, cancelled: $isCancelled)';
 }
 
 /// Runs provider requests one at a time, in arrival order.
@@ -99,7 +106,12 @@ class SerialEventQueue {
   ///
   /// Fails with [Web3RpcError.limitExceeded] once [maxPendingEvents] requests
   /// are already waiting, and with [Web3RpcError.cancelled] after [dispose].
-  Future<T> add<T>(SerialEvent<T> event, {String? id, String method = ''}) {
+  Future<T> add<T>(
+    SerialEvent<T> event, {
+    String? id,
+    String method = '',
+    Web3RequestFamily family = Web3RequestFamily.evm,
+  }) {
     if (_isDisposed) {
       return Future<T>.error(Web3RpcError.cancelled('Request queue is closed'));
     }
@@ -109,7 +121,7 @@ class SerialEventQueue {
     }
 
     final token = Web3RequestToken(id: _resolveId(id), method: method);
-    final entry = _QueuedEvent<T>(token, event);
+    final entry = _QueuedEvent<T>(token, event, family);
     _events.add(entry);
     _process();
     return entry.completer.future;
@@ -213,15 +225,17 @@ class SerialEventQueue {
 }
 
 class _QueuedEvent<T> {
-  _QueuedEvent(this.token, this.event);
+  _QueuedEvent(this.token, this.event, this.family);
 
   final Web3RequestToken token;
   final SerialEvent<T> event;
+  final Web3RequestFamily family;
   final Completer<T> completer = Completer<T>();
 
   Web3RequestInfo toInfo({required bool isActive}) => Web3RequestInfo(
         id: token.id,
         method: token.method,
+        family: family,
         isActive: isActive,
         isCancelled: token.isCancelled,
       );

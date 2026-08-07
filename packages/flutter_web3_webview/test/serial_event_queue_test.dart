@@ -1,10 +1,31 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_web3_webview/src/utils/request_family.dart';
 import 'package:flutter_web3_webview/src/utils/serial_event_queue.dart';
 
 void main() {
   group('SerialEventQueue', () {
+    test('records the request family on the snapshot, defaulting to EVM',
+        () async {
+      final queue = SerialEventQueue();
+      final release = Completer<void>();
+
+      // Active request carries an explicit Solana tag; the queued one relies on
+      // the default so the host still sees a family for legacy callers.
+      queue.add((_) => release.future,
+          id: 'sol', method: 'solana_signTransaction',
+          family: Web3RequestFamily.solana);
+      queue.add((_) => 'later', id: 'plain', method: 'eth_sendTransaction');
+      await Future<void>.delayed(Duration.zero);
+
+      final snapshot = {for (final info in queue.snapshot()) info.id: info};
+      expect(snapshot['sol']!.family, Web3RequestFamily.solana);
+      expect(snapshot['plain']!.family, Web3RequestFamily.evm);
+
+      release.complete();
+    });
+
     test('runs events in FIFO order and returns each matching result',
         () async {
       final queue = SerialEventQueue();

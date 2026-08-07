@@ -3,9 +3,61 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_web3_webview/src/models/js_callback_data.dart';
 import 'package:flutter_web3_webview/src/utils/request_dispatcher.dart';
+import 'package:flutter_web3_webview/src/utils/request_family.dart';
 import 'package:flutter_web3_webview/src/utils/web3_rpc_error.dart';
 
 void main() {
+  group('Web3RequestDispatcher.familyOf', () {
+    // Drift red-light: these are exactly the `solana_*` cases in `dispatch`'s
+    // switch. `familyOf` must classify each as Solana; if a Solana method is
+    // ever added to the switch without the `solana_` prefix this list stops
+    // matching the classifier and the assertion fails, forcing familyOf to be
+    // revisited alongside the switch it mirrors.
+    const solanaSwitchMethods = [
+      'solana_account',
+      'solana_signTransaction',
+      'solana_signMessage',
+    ];
+
+    test('classifies every dispatcher solana_* method as Solana', () {
+      for (final method in solanaSwitchMethods) {
+        expect(Web3RequestDispatcher.familyOf(method), Web3RequestFamily.solana,
+            reason: method);
+      }
+    });
+
+    test('classifies eth_* / wallet_* methods as EVM', () {
+      for (final method in const [
+        'eth_accounts',
+        'eth_requestAccounts',
+        'eth_chainId',
+        'eth_sendTransaction',
+        'eth_sign',
+        'personal_sign',
+        'eth_signTypedData_v4',
+        'wallet_switchEthereumChain',
+        'wallet_addEthereumChain',
+        'wallet_requestPermissions',
+        'wallet_revokePermissions',
+        'wallet_getCapabilities',
+      ]) {
+        expect(Web3RequestDispatcher.familyOf(method), Web3RequestFamily.evm,
+            reason: method);
+      }
+    });
+
+    test('classifies unknown and empty methods as EVM (dispatch default:)', () {
+      expect(Web3RequestDispatcher.familyOf('unknown_method'),
+          Web3RequestFamily.evm);
+      expect(Web3RequestDispatcher.familyOf(''), Web3RequestFamily.evm);
+    });
+
+    test('prefix match is case-sensitive (real methods are lowercase)', () {
+      expect(Web3RequestDispatcher.familyOf('Solana_signMessage'),
+          Web3RequestFamily.evm);
+    });
+  });
+
   group('Web3RequestDispatcher.isImmediate', () {
     test('identifies methods that bypass the serial event queue', () {
       final dispatcher = _dispatcher();

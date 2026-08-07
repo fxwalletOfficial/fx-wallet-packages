@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_web3_webview/src/models/js_callback_data.dart';
+import 'package:flutter_web3_webview/src/utils/request_family.dart';
 import 'package:flutter_web3_webview/src/utils/web3_rpc_error.dart';
 
 typedef EvaluateJavascript = Future<dynamic> Function(String source);
@@ -42,6 +43,19 @@ class Web3RequestDispatcher {
         'eth_accounts',
         'eth_chainId',
       }.contains(method);
+
+  /// Which chain family [method] routes to, mirroring [dispatch]'s switch: the
+  /// three `solana_*` cases (`solana_account`, `solana_signTransaction`,
+  /// `solana_signMessage`) are served by the Solana handlers; every other
+  /// method — all `eth_*` / `wallet_*` and the `default:` branch — is EVM. This
+  /// is a prefix test rather than an enumeration, so a new `solana_*` method
+  /// added to the switch classifies correctly without touching this. The queue
+  /// records the result on each [Web3RequestInfo.family] so the host can cancel
+  /// in-flight requests by chain.
+  static Web3RequestFamily familyOf(String method) =>
+      method.startsWith('solana_')
+          ? Web3RequestFamily.solana
+          : Web3RequestFamily.evm;
 
   Future<dynamic> dispatch(JsCallBackData data) {
     switch (data.method) {

@@ -444,6 +444,7 @@ class Web3WebviewState extends State<Web3Webview> {
             (_) => dispatcher.dispatch(item),
             id: item.id,
             method: item.method,
+            family: Web3RequestDispatcher.familyOf(item.method),
           );
         });
   }
