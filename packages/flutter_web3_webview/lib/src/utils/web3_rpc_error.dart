@@ -48,6 +48,36 @@ class Web3RpcError implements Exception {
   ]) =>
       Web3RpcError(4001, message);
 
+  /// The calling document holds no account grant (EIP-1193 `4100`).
+  ///
+  /// Use this for "not connected yet / grant revoked", never for "user said
+  /// no" — the latter is [userRejected] (`4001`).
+  factory Web3RpcError.unauthorized([
+    String message = 'Unauthorized',
+  ]) =>
+      Web3RpcError(4100, message);
+
+  /// The wallet cannot serve the request right now: a state switch is in
+  /// flight, the request was superseded, or a temporary safety gate is closed.
+  ///
+  /// Uses JSON-RPC reserved `-32002` ("resource unavailable"), which DApp
+  /// libraries already treat as retryable. Deliberately not `4001` — a
+  /// wallet-side supersede is not a user rejection.
+  factory Web3RpcError.requestUnavailable([
+    String message = 'Request temporarily unavailable, please retry',
+  ]) =>
+      Web3RpcError(-32002, message);
+
+  /// Internal wallet failure (JSON-RPC `-32603`).
+  ///
+  /// The default message is intentionally fixed and content-free: this is the
+  /// catch-all for unexpected exceptions, whose text may carry RPC endpoints,
+  /// addresses or signing material. Do not pass raw exception strings here.
+  factory Web3RpcError.internal([
+    String message = 'Internal wallet error',
+  ]) =>
+      Web3RpcError(-32603, message);
+
   /// The chain referenced by the request has not been added to the wallet, or
   /// the request did not include a usable chain id.
   factory Web3RpcError.unrecognizedChain([
