@@ -71,3 +71,53 @@ test('passes a non-sentinel rejection through unchanged', async () => {
 
   expect(error).toBe(original);
 });
+
+test('stamps every outgoing payload with a request id', async () => {
+  const payloads: Array<Record<string, unknown>> = [];
+  setBridge((_handler, payload) => {
+    payloads.push(payload as Record<string, unknown>);
+    return Promise.resolve(null);
+  });
+
+  await callFlutterHandler({ method: 'personal_sign', params: ['0x1'] });
+  await callFlutterHandler({ method: 'eth_sendTransaction' });
+
+  // The id is what lets the Dart queue name the request (cancel it, line the
+  // two sides' logs up), so it must be present and unique per call.
+  expect(typeof payloads[0].id).toBe('string');
+  expect(payloads[0].id).not.toBe(payloads[1].id);
+  // method / params still travel verbatim: older Dart hosts read only those
+  // and ignore the extra key.
+  expect(payloads[0].method).toBe('personal_sign');
+  expect(payloads[0].params).toEqual(['0x1']);
+});
+
+test('ids share a per-instance prefix and increment monotonically', async () => {
+  const ids: string[] = [];
+  setBridge((_handler, payload) => {
+    ids.push((payload as { id: string }).id);
+    return Promise.resolve(null);
+  });
+
+  await callFlutterHandler({ method: 'eth_chainId' });
+  await callFlutterHandler({ method: 'eth_chainId' });
+
+  const [first, second] = ids.map((id) => id.split('-'));
+  // The random prefix keeps ids from colliding across frames, which each get
+  // their own bundle instance but share one Dart handler.
+  expect(first[0]).toBe(second[0]);
+  expect(first[0]).toMatch(/^fxw[a-z0-9]+$/);
+  expect(Number(second[1])).toBe(Number(first[1]) + 1);
+});
+
+test('keeps an id the caller supplied instead of minting a new one', async () => {
+  let seen: unknown;
+  setBridge((_handler, payload) => {
+    seen = (payload as { id: unknown }).id;
+    return Promise.resolve(null);
+  });
+
+  await callFlutterHandler({ method: 'eth_chainId', id: 'caller-owned' });
+
+  expect(seen).toBe('caller-owned');
+});

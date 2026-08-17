@@ -21,6 +21,48 @@ void main() {
       ]);
     });
 
+    test('reads the request id minted by the in-page bridge', () {
+      final data = JsCallBackData.fromData([
+        {
+          'method': 'personal_sign',
+          'params': ['0xdeadbeef', '0xaddress'],
+          'id': 'fxwa1b2c3d4-12',
+        }
+      ]);
+
+      expect(data.id, 'fxwa1b2c3d4-12');
+      expect(data.method, 'personal_sign');
+    });
+
+    test('normalises a numeric id sent over the platform channel', () {
+      expect(
+        JsCallBackData.fromData({'method': 'eth_chainId', 'id': 42}).id,
+        '42',
+      );
+    });
+
+    test('reports no id for payloads that predate or omit the field', () {
+      // Older injected bundles and DApps calling `callHandler` by hand send
+      // only method/params; the queue substitutes a synthetic id for these.
+      expect(JsCallBackData.fromData({'method': 'eth_chainId'}).id, isNull);
+      expect(
+        JsCallBackData.fromData({'method': 'eth_chainId', 'id': ''}).id,
+        isNull,
+      );
+      expect(
+        JsCallBackData.fromData({'method': 'eth_chainId', 'id': null}).id,
+        isNull,
+      );
+      expect(
+        JsCallBackData.fromData({
+          'method': 'eth_chainId',
+          'id': {'nested': true},
+        }).id,
+        isNull,
+      );
+      expect(JsCallBackData.fromData('not-a-map').id, isNull);
+    });
+
     test('parses a callback payload passed directly as a map', () {
       final data = JsCallBackData.fromData({
         'method': 'solana_account',

@@ -1,0 +1,13 @@
+{
+  // Specs are excluded from the package build projects (they must not emit
+  // declarations), which leaves them outside every TypeScript project and
+  // strands the editor's language service on an inferred project that cannot
+  // resolve `bun:test`. This config exists purely so the editor type-checks
+  // specs against the workspace's Bun types; `bun test` does not read it.
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "types": ["bun"]
+  }
+}

@@ -8,7 +8,7 @@
     "composite": true,
 
     // Bundler mode
-    "moduleResolution": "node",
+    "moduleResolution": "node10",
 
     // Best practices
     "strict": true,

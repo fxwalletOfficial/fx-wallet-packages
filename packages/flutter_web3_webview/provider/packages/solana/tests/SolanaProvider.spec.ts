@@ -57,7 +57,9 @@ test('connect bridges to solana_account and sets the public key', async () => {
   const sol = new SolanaProvider({ enableAdapter: false });
   const { publicKey } = await sol.connect();
 
-  expect(calls).toEqual([{ method: 'solana_account' }]);
+  // `toMatchObject`, not `toEqual`: every bridge payload also carries the
+  // request `id` minted by `callFlutterHandler`.
+  expect(calls).toMatchObject([{ method: 'solana_account' }]);
   expect(publicKey.toBase58()).toBe(account);
   expect(sol.isConnected).toBe(true);
 });
@@ -69,7 +71,7 @@ test('signMessage bridges the message as hex under solana_signMessage', async ()
   const message = Buffer.from('Random message');
   const { signature } = await sol.signMessage(new Uint8Array(message));
 
-  expect(calls[1]).toEqual({
+  expect(calls[1]).toMatchObject({
     method: 'solana_signMessage',
     params: { raw: '0x' + message.toString('hex') },
   });
@@ -87,7 +89,7 @@ test('signTransaction bridges the message as hex + base64 under solana_signTrans
   const message = tx.serializeMessage();
   await sol.signTransaction(tx);
 
-  expect(calls[1]).toEqual({
+  expect(calls[1]).toMatchObject({
     method: 'solana_signTransaction',
     params: {
       raw: message.toString('hex'),

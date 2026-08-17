@@ -45,6 +45,35 @@ function getBridge(): FlutterCallHandler {
 export interface IFlutterBridgeArgs {
   method: string;
   params?: unknown;
+  /**
+   * Request identity. Normally left unset and minted by
+   * {@link callFlutterHandler}; pass one explicitly only to reuse an id that
+   * already exists (e.g. re-issuing a request under its original identity).
+   */
+  id?: string;
+}
+
+/**
+ * Per-bundle-instance prefix for {@link nextRequestId}.
+ *
+ * A plain counter is not enough: the Dart handler is registered per WebView
+ * controller, but every frame that loads the bundle (the top document and any
+ * iframe) gets its own module instance and its own counter, so counters alone
+ * would collide across frames and let one frame's id address another frame's
+ * request. The prefix makes ids distinct per instance. It is a correlation
+ * token, not a security token — `Math.random` is deliberate, and the Dart side
+ * independently rejects an id that is already in use rather than trusting it.
+ */
+const REQUEST_ID_PREFIX = `fxw${Math.random().toString(36).slice(2, 10)}`;
+
+let requestCounter = 0;
+
+/**
+ * Mint the next request id for this bundle instance.
+ */
+export function nextRequestId(): string {
+  requestCounter += 1;
+  return `${REQUEST_ID_PREFIX}-${requestCounter}`;
 }
 
 /**
@@ -119,12 +148,23 @@ function toProviderError(reason: unknown): unknown {
  * helper does not enforce it at runtime, mirroring the upstream
  * `internalRequest` contract. Rejections that carry a `Web3RpcError`
  * sentinel are converted into a structured EIP-1193 `ProviderRpcError`.
+ *
+ * Every outgoing payload carries an `id` so the same request is nameable on
+ * both sides of the bridge — the Dart queue adopts it verbatim, which is what
+ * lets the wallet cancel a specific request and lets logs on either side be
+ * lined up. Older Dart hosts read only `method` / `params` and ignore the
+ * extra key, so adding it is backwards compatible.
  */
 export function callFlutterHandler<T = unknown>(
   payload: IFlutterBridgeArgs,
 ): Promise<T> {
+  const request: IFlutterBridgeArgs = {
+    ...payload,
+    id: payload.id ?? nextRequestId(),
+  };
+
   return (
-    getBridge().callHandler(FLUTTER_HANDLER_NAME, payload) as Promise<T>
+    getBridge().callHandler(FLUTTER_HANDLER_NAME, request) as Promise<T>
   ).catch((reason) => {
     throw toProviderError(reason);
   });

@@ -1,0 +1,10 @@
+{
+  // See `packages/core/tests/tsconfig.json` — editor-only project so specs
+  // excluded from the build resolve `bun:test`.
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "types": ["bun"]
+  }
+}
