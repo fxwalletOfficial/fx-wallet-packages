@@ -1,3 +1,71 @@
+## [1.1.0]
+
+Provider requests gain an identity and can be cancelled. A wallet that
+switches account, changes chain or tears down a document can now terminate
+requests already queued behind a pending approval, instead of letting them
+reach the signer under state they were never authorized against. Every change
+below is additive — existing hosts compile and behave as before.
+
+### Request identity and cancellation
+
+* NEW: The in-page bridge mints an id per request (`fxw<random>-<counter>`)
+  and the Dart queue tracks it, so a host can correlate a request with its
+  in-page promise and address it by id. `JsCallBackData` gains an optional
+  named `id`; `method` / `params` keep their positions and defaults. A payload
+  without an id (a DApp calling `callHandler` directly, or an older injected
+  bundle) runs under a synthetic `local:<n>` id and stays cancellable. An id
+  the page replays while it is still in flight — and the empty string — is
+  rejected in favour of a synthetic one, so `cancel(id)` cannot be misdirected.
+* NEW: `Web3RequestController` — host-side handle onto the queue. Pass one to
+  `Web3Webview(requestController: ...)` to inspect what is in flight
+  (`requests` / `activeId` / `pendingLength`) and cancel by id (`cancel` /
+  `cancelAll`). It exposes mechanism only; *when* to cancel stays a wallet
+  policy decision. Safe no-op while unattached.
+* NEW: Cancellation is cooperative, deliberately. A request that has not
+  started is dropped and fails with `4900` without ever entering the host
+  callback. A request already executing is only flagged — never
+  force-completed, because completing it would let the queue advance while a
+  signing or broadcast call is still running. Callbacks observe the flag via
+  `Web3RequestContext.throwIfCancelled()`, which travels through a Zone, so no
+  callback signature changed. **Consumers must place checkpoints before
+  signing, not after**: a callback that never checks runs to completion.
+* NEW: `4900` (disconnected) rather than `4001` for wallet-initiated
+  cancellation — `4001` means the *user* rejected, which is a different fact.
+* NEW: Queue depth is bounded by `Web3Webview(maxPendingRequests:)`, default
+  32, rejecting overflow with `-32005`. A fail-closed finite value rather than
+  unbounded, so a page cannot flood the bridge.
+* NEW: Each queued request is tagged with its chain family
+  (`Web3RequestFamily.evm` / `.solana`), derived from the same routing table
+  the dispatcher uses. Hosts filtering by chain read
+  `Web3RequestInfo.family` instead of re-parsing method names, so the
+  classification cannot drift from the dispatcher's.
+
+### API surface
+
+* NEW: `Web3RpcError.unauthorized()` (`4100`),
+  `Web3RpcError.requestUnavailable()` (`-32002`) and `Web3RpcError.internal()`
+  (`-32603`), joining `cancelled()` (`4900`) and `limitExceeded()` (`-32005`).
+  Wallet hosts were maintaining their own copy of this error type because the
+  wallet-facing codes were missing; the sentinel and JSON wire format the
+  injected bridge parses are unchanged.
+* NEW: Export `SerialEventQueue` and the `SerialEvent` typedef. They are the
+  parameter types of the already-exported `Web3RequestController.attach` /
+  `detach`, so a host binding its own queue previously had to import
+  `package:flutter_web3_webview/src/...` and silence
+  `implementation_imports`.
+
+### Build
+
+* `provider.min.js` rebuilt with the dependency set the repo currently
+  resolves (328,835 → 319,868 bytes). Sources unchanged; the diff is entirely
+  minifier identifier renaming, isolated into its own commit so later bundle
+  diffs show only their own delta.
+* Provider spec directories get editor-only TypeScript projects (`noEmit`,
+  `types: ["bun"]`) so the language service can resolve `bun:test`; the build
+  projects keep their exclusions. `moduleResolution` renamed `node` →
+  `node10` at the provider root, removing the `ignoreDeprecations` entries it
+  had forced. Bundle byte-identical.
+
 ## [1.0.0]
 
 First stable release. The injected Web3 provider is now built from vendored

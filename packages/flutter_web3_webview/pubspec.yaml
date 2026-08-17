@@ -1,6 +1,6 @@
 name: flutter_web3_webview
 description: A Flutter WebView widget that bridges in-app web pages to a Web3 wallet over EIP-1193 (EVM) and the Solana wallet standard.
-version: 1.0.0
+version: 1.1.0
 homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packages/flutter_web3_webview
 repository: https://github.com/fxwalletOfficial/fx-wallet-packages
 issue_tracker: https://github.com/fxwalletOfficial/fx-wallet-packages/issues
