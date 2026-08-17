@@ -15,7 +15,9 @@ below is additive — existing hosts compile and behave as before.
   without an id (a DApp calling `callHandler` directly, or an older injected
   bundle) runs under a synthetic `local:<n>` id and stays cancellable. An id
   the page replays while it is still in flight — and the empty string — is
-  rejected in favour of a synthetic one, so `cancel(id)` cannot be misdirected.
+  rejected in favour of a synthetic one, and the synthetic counter skips ids
+  the page has already claimed, so live requests always carry distinct ids and
+  `cancel(id)` cannot be misdirected.
 * NEW: `Web3RequestController` — host-side handle onto the queue. Pass one to
   `Web3Webview(requestController: ...)` to inspect what is in flight
   (`requests` / `activeId` / `pendingLength`) and cancel by id (`cancel` /

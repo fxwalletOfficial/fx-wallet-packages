@@ -193,7 +193,18 @@ class SerialEventQueue {
 
   String _resolveId(String? id) {
     if (id != null && id.isNotEmpty && !_isIdInUse(id)) return id;
-    return 'local:${++_localIdCounter}';
+    // The synthetic namespace is not reserved: a page calling the bridge
+    // directly can claim `local:<n>` before the counter reaches it, so the
+    // counter has to skip whatever is already live. Uniqueness across live
+    // requests is what makes cancel(id) address exactly one of them; without
+    // this, the request the host meant to stop could keep running straight
+    // into the signer. Terminates because the counter only ever advances and
+    // at most maxPendingEvents + 1 ids are live.
+    String synthetic;
+    do {
+      synthetic = 'local:${++_localIdCounter}';
+    } while (_isIdInUse(synthetic));
+    return synthetic;
   }
 
   bool _isIdInUse(String id) {

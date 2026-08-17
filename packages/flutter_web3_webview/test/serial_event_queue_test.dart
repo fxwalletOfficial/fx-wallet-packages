@@ -167,6 +167,126 @@ void main() {
       final queue = SerialEventQueue();
       expect(await queue.add((token) => token.id, id: ''), 'local:1');
     });
+
+    test('a synthetic id skips values the page already occupies', () async {
+      final queue = SerialEventQueue();
+      final blocker = Completer<void>();
+
+      // The synthetic namespace is not reserved: a page calling the bridge
+      // directly can claim `local:1` before the counter ever reaches it. The
+      // counter must not then hand the same string to a second request.
+      queue.add((_) => blocker.future, id: 'local:1');
+      await Future<void>.delayed(Duration.zero);
+      final synthetic = queue.add((token) => token.id);
+
+      final ids = queue.snapshot().map((e) => e.id).toList();
+      expect(ids, hasLength(2));
+      expect(ids.toSet(), hasLength(2), reason: 'request ids must stay unique');
+
+      blocker.complete();
+      expect(await synthetic, isNot('local:1'));
+    });
+
+    test('a duplicate id falls back to a synthetic one that is also free',
+        () async {
+      final queue = SerialEventQueue();
+      final blocker = Completer<void>();
+
+      // Same collision through the other entrance: the page claims `local:1`
+      // and then replays it. The duplicate is rejected in favour of a
+      // synthetic id, which must not be `local:1` either.
+      queue.add((_) => blocker.future, id: 'local:1');
+      await Future<void>.delayed(Duration.zero);
+      final replayed = queue.add((token) => token.id, id: 'local:1');
+
+      expect(queue.snapshot().map((e) => e.id).toSet(), hasLength(2));
+
+      blocker.complete();
+      expect(await replayed, isNot('local:1'));
+    });
+
+    test('the counter skips a whole run of page-claimed ids', () async {
+      final queue = SerialEventQueue();
+      final blocker = Completer<void>();
+
+      // Two claimed values in a row: a single skip is not enough, the counter
+      // has to keep advancing until it finds a free id.
+      queue.add((_) => blocker.future, id: 'local:1');
+      await Future<void>.delayed(Duration.zero);
+      queue.add((token) => token.id, id: 'local:2');
+      final synthetic = queue.add((token) => token.id);
+
+      expect(queue.snapshot().map((e) => e.id), ['local:1', 'local:2', 'local:3']);
+
+      blocker.complete();
+      expect(await synthetic, 'local:3');
+    });
+
+    test('cancel stays exact when the page has occupied a synthetic id',
+        () async {
+      final queue = SerialEventQueue();
+      final blocker = Completer<String>();
+      final ran = <String>[];
+
+      // Active request wears the page-supplied `local:1`.
+      final active = queue.add<String>((_) {
+        ran.add('active');
+        return blocker.future;
+      }, id: 'local:1');
+      await Future<void>.delayed(Duration.zero);
+
+      // Waiting request gets a synthetic id. If it collided with `local:1`,
+      // cancelling the active one would hit this one first, or vice versa.
+      final waiting = queue.add<String>((_) async {
+        ran.add('waiting');
+        return 'waiting-result';
+      });
+      final waitingId = queue.snapshot().last.id;
+      expect(waitingId, isNot('local:1'));
+
+      // Cancelling the waiting request must leave the active one untouched.
+      expect(queue.cancel(waitingId, reason: 'account switched'), isTrue);
+      await expectLater(waiting, throwsWeb3RpcCode(4900));
+      expect(queue.snapshot().single.id, 'local:1');
+      expect(queue.snapshot().single.isCancelled, isFalse);
+
+      blocker.complete('active-result');
+      expect(await active, 'active-result');
+      expect(ran, ['active'], reason: 'the dropped request never runs');
+    });
+
+    test('cancelling the page-claimed active one leaves the waiting one to run',
+        () async {
+      final queue = SerialEventQueue();
+      final blocker = Completer<String>();
+      final ran = <String>[];
+
+      final active = queue.add<String>((_) {
+        ran.add('active');
+        return blocker.future;
+      }, id: 'local:1');
+      await Future<void>.delayed(Duration.zero);
+      final waiting = queue.add<String>((_) async {
+        ran.add('waiting');
+        return 'waiting-result';
+      });
+      final waitingId = queue.snapshot().last.id;
+
+      // The other direction: addressing the active request must not reach the
+      // waiting one, which would otherwise share its id.
+      expect(queue.cancel('local:1', reason: 'wallet switch'), isTrue);
+
+      final snapshot = {for (final info in queue.snapshot()) info.id: info};
+      expect(snapshot['local:1']!.isCancelled, isTrue);
+      expect(snapshot[waitingId]!.isCancelled, isFalse);
+
+      // This callback ignores the flag, so it still delivers; the queue then
+      // advances and the untouched waiting request runs normally.
+      blocker.complete('active-result');
+      expect(await active, 'active-result');
+      expect(await waiting, 'waiting-result');
+      expect(ran, ['active', 'waiting']);
+    });
   });
 
   group('attribution under load', () {
