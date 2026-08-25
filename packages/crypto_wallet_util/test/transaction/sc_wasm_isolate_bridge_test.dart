@@ -79,6 +79,57 @@ void main() {
     expect(fileChecks, 2);
   });
 
+  test(
+    'falls back to a relative path when the package URI file read fails',
+    () async {
+      final wasmBytes = File(
+        './lib/src/transaction/sc/sc.wasm',
+      ).readAsBytesSync();
+      var packageUriReadAttempts = 0;
+
+      final bytes = await loadScWasm(
+        assetLoader: () async => null,
+        packageUriResolver: (_) async => Uri.file('/nonexistent/sc.wasm'),
+        fileExists: (path) => path == 'lib/src/transaction/sc/sc.wasm',
+        fileReader: (path) async {
+          if (path == '/nonexistent/sc.wasm') {
+            packageUriReadAttempts++;
+            throw const FileSystemException('no such file');
+          }
+          return wasmBytes;
+        },
+      );
+
+      expect(packageUriReadAttempts, 1);
+      expect(bytes, wasmBytes);
+    },
+  );
+
+  test(
+    'final fail-closed error retains the package URI read failure',
+    () async {
+      await expectLater(
+        loadScWasm(
+          assetLoader: () async => null,
+          packageUriResolver: (_) async => Uri.file('/nonexistent/sc.wasm'),
+          fileExists: (_) => false,
+          fileReader: (_) async =>
+              throw const FileSystemException('package URI file missing'),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            allOf(
+              contains('Cannot locate sc.wasm in the package bundle.'),
+              contains('package URI file missing'),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
   test('the default builder builds without manual disposal', () async {
     final builder = await ScTransactionBuilder.create();
 

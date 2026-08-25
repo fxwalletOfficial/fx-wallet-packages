@@ -147,14 +147,17 @@ Future<Uint8List> loadScWasm({
   } catch (error) {
     errors.add(error);
   }
+
+  final read = fileReader ?? (path) => File(path).readAsBytes();
   if (pkgUri != null && pkgUri.scheme == 'file') {
-    return (fileReader ?? (path) => File(path).readAsBytes())(
-      pkgUri.toFilePath(),
-    );
+    try {
+      return await read(pkgUri.toFilePath());
+    } catch (error) {
+      errors.add(error);
+    }
   }
 
   final exists = fileExists ?? (path) => File(path).existsSync();
-  final read = fileReader ?? (path) => File(path).readAsBytes();
   for (final path in [
     'lib/src/transaction/sc/sc.wasm',
     'packages/crypto_wallet_util/lib/src/transaction/sc/sc.wasm',
