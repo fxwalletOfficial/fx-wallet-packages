@@ -27,9 +27,15 @@ class ScWasmIsolateBridge extends ScWasmBridgeBase {
       throw StateError('SC WASM bridge was disposed');
     }
 
-    final wasmTransfer = TransferableTypedData.fromList(<Uint8List>[wasmBytes]);
     final task = _queue.then<String>((_) {
-      return Isolate.run<String>(() => _runScWasm(wasmTransfer, jsonString));
+      final currentBytes = _wasmBytes;
+      if (currentBytes == null) {
+        throw StateError('SC WASM bridge was disposed');
+      }
+      final wasmTransfer = TransferableTypedData.fromList(<Uint8List>[
+        currentBytes,
+      ]);
+      return _runScWasmInNewIsolate(wasmTransfer, jsonString);
     });
 
     // Keep the queue usable after a failed request while preserving the
@@ -53,6 +59,13 @@ class ScWasmIsolateBridge extends ScWasmBridgeBase {
   void _checkNotDisposed() {
     if (_disposed) throw StateError('SC WASM bridge was disposed');
   }
+}
+
+Future<String> _runScWasmInNewIsolate(
+  TransferableTypedData wasmTransfer,
+  String jsonString,
+) {
+  return Isolate.run<String>(() => _runScWasm(wasmTransfer, jsonString));
 }
 
 Future<String> _runScWasm(
