@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:crypto_wallet_util/transaction.dart';
 import 'package:test/test.dart';
 
+import 'sc_wasm_asset_test_support.dart';
+
 void main() {
   late ScUnsignedTransaction unsignedTx;
   late ScWasmIsolateBridge bridge;
@@ -55,6 +57,31 @@ void main() {
       'c191c3f2478833e66eb8911038f7fbe4f1810ec16cb3f0628c0ccfe7a4bc2f4d',
     ]);
   });
+
+  test(
+    'the default builder loads the asset without source-relative paths',
+    () async {
+      final originalDirectory = Directory.current;
+      final temporaryDirectory = await Directory.systemTemp.createTemp(
+        'crypto_wallet_util_sc_asset_test_',
+      );
+      configureScWasmAssetForTest(
+        File('./lib/src/transaction/sc/sc.wasm').readAsBytesSync(),
+      );
+      addTearDown(() async {
+        clearScWasmAssetForTest();
+        Directory.current = originalDirectory;
+        await temporaryDirectory.delete(recursive: true);
+      });
+      Directory.current = temporaryDirectory;
+
+      final builder = await ScTransactionBuilder.create();
+      final result = await builder.build(unsignedTx);
+      expect(result.toSign, [
+        'c191c3f2478833e66eb8911038f7fbe4f1810ec16cb3f0628c0ccfe7a4bc2f4d',
+      ]);
+    },
+  );
 
   test('accepts a caller-provided WASM asset loader', () async {
     var loadCount = 0;

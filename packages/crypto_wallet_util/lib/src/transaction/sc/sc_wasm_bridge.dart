@@ -6,15 +6,15 @@ import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/transaction/sc/sc_lib.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_go_ffi_bridge.dart';
+import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_asset_loader.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_isolate_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_run_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/tx_data.dart';
 
 /// Loads the bundled SC WASM bytes.
 ///
-/// Flutter callers can provide a loader backed by `rootBundle`, for example
-/// `packages/crypto_wallet_util/src/transaction/sc/sc.wasm`, so runtime asset
-/// loading does not depend on package URI resolution.
+/// Flutter callers can provide a custom loader backed by `rootBundle` when
+/// they need to override the package asset.
 typedef ScWasmLoader = Future<Uint8List> Function();
 
 /// Bridge for computing SC transaction signing digests.
@@ -78,8 +78,8 @@ class ScTransactionBuilder {
   /// the package bundle. WASM parsing and transaction processing run outside
   /// the caller's isolate. No native library is required.
   ///
-  /// Flutter callers should pass a [wasmLoader] backed by `rootBundle` when
-  /// package URI resolution is unavailable in their runtime.
+  /// Flutter runtimes load the declared package asset automatically. A custom
+  /// [wasmLoader] can be supplied when an application overrides that asset.
   ///
   /// This is the default and matches the long-standing behaviour; existing
   /// callers keep running unchanged.
@@ -99,6 +99,14 @@ class ScTransactionBuilder {
   }
 
   static Future<Uint8List> _loadPackageWasm() async {
+    try {
+      final assetBytes = await loadBundledScWasm();
+      if (assetBytes != null) return assetBytes;
+    } catch (_) {
+      // Continue to the package URI and file fallbacks for runtimes where the
+      // Flutter asset bundle is unavailable or the package asset is missing.
+    }
+
     Uri? pkgUri;
     try {
       pkgUri = await Isolate.resolvePackageUri(

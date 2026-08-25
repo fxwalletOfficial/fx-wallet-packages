@@ -33,6 +33,8 @@ dependencies:
   ffi: ^2.1.0
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   test: ^1.6.2
 
 flutter:
