@@ -99,38 +99,7 @@ class ScTransactionBuilder {
   }
 
   static Future<Uint8List> _loadPackageWasm() async {
-    try {
-      final assetBytes = await loadBundledScWasm();
-      if (assetBytes != null) return assetBytes;
-    } catch (_) {
-      // Continue to the package URI and file fallbacks for runtimes where the
-      // Flutter asset bundle is unavailable or the package asset is missing.
-    }
-
-    Uri? pkgUri;
-    try {
-      pkgUri = await Isolate.resolvePackageUri(
-        Uri.parse('package:crypto_wallet_util/src/transaction/sc/sc.wasm'),
-      );
-    } catch (_) {
-      // Flutter test/release runtimes may not implement package URI
-      // resolution. Continue to the file fallback or a caller-provided
-      // rootBundle loader instead of failing before the fallback is reached.
-    }
-    if (pkgUri != null && pkgUri.scheme == 'file') {
-      return File.fromUri(pkgUri).readAsBytes();
-    }
-
-    // Fallback: walk relative paths.
-    for (final path in [
-      'lib/src/transaction/sc/sc.wasm',
-      'packages/crypto_wallet_util/lib/src/transaction/sc/sc.wasm',
-    ]) {
-      final file = File(path);
-      if (file.existsSync()) return file.readAsBytesSync();
-    }
-
-    throw StateError('Cannot locate sc.wasm in the package bundle.');
+    return loadScWasm();
   }
 
   Future<ScTxData> build(ScUnsignedTransaction unsignedTx) async {
@@ -147,8 +116,52 @@ class ScTransactionBuilder {
     if (!_ownsBridge) return;
     if (wasmBridge case final ScWasmIsolateBridge bridge) {
       bridge.dispose();
-    } else if (wasmBridge case final ScWasmRunBridge bridge) {
-      bridge.dispose();
     }
   }
+}
+
+/// Loads SC WASM through the runtime asset, package URI and file fallbacks.
+///
+/// The optional callbacks are intentionally kept on this internal helper so
+/// each fallback can be tested without changing the public Builder API.
+Future<Uint8List> loadScWasm({
+  Future<Uint8List?> Function()? assetLoader,
+  Future<Uri?> Function(Uri uri)? packageUriResolver,
+  bool Function(String path)? fileExists,
+  Future<Uint8List> Function(String path)? fileReader,
+}) async {
+  final errors = <Object>[];
+  final loadAsset = assetLoader ?? loadBundledScWasm;
+  try {
+    final assetBytes = await loadAsset();
+    if (assetBytes != null) return assetBytes;
+  } catch (error) {
+    errors.add(error);
+  }
+
+  Uri? pkgUri;
+  try {
+    pkgUri = await (packageUriResolver ?? Isolate.resolvePackageUri)(
+      Uri.parse('package:crypto_wallet_util/src/transaction/sc/sc.wasm'),
+    );
+  } catch (error) {
+    errors.add(error);
+  }
+  if (pkgUri != null && pkgUri.scheme == 'file') {
+    return (fileReader ?? (path) => File(path).readAsBytes())(
+      pkgUri.toFilePath(),
+    );
+  }
+
+  final exists = fileExists ?? (path) => File(path).existsSync();
+  final read = fileReader ?? (path) => File(path).readAsBytes();
+  for (final path in [
+    'lib/src/transaction/sc/sc.wasm',
+    'packages/crypto_wallet_util/lib/src/transaction/sc/sc.wasm',
+  ]) {
+    if (exists(path)) return read(path);
+  }
+
+  final detail = errors.isEmpty ? '' : ' Loader errors: ${errors.join(' | ')}';
+  throw StateError('Cannot locate sc.wasm in the package bundle.$detail');
 }

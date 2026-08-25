@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_bridge.dart'
+    show loadScWasm;
 import 'package:crypto_wallet_util/transaction.dart';
 import 'package:test/test.dart';
 
@@ -45,6 +47,37 @@ void main() {
     },
     timeout: Timeout(const Duration(seconds: 90)),
   );
+
+  test('fails closed when every WASM loading path is unavailable', () async {
+    var fileChecks = 0;
+
+    await expectLater(
+      loadScWasm(
+        assetLoader: () async {
+          throw StateError('asset bundle unavailable');
+        },
+        packageUriResolver: (_) async {
+          throw UnsupportedError('package URI unavailable');
+        },
+        fileExists: (_) {
+          fileChecks++;
+          return false;
+        },
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          allOf(
+            contains('Cannot locate sc.wasm in the package bundle.'),
+            contains('package URI unavailable'),
+          ),
+        ),
+      ),
+    );
+
+    expect(fileChecks, 2);
+  });
 
   test('the default builder builds without manual disposal', () async {
     final builder = await ScTransactionBuilder.create();

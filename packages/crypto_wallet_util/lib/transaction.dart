@@ -55,7 +55,7 @@ export 'src/transaction/near/near_lib.dart';
 export 'src/transaction/xrp/xrp_lib.dart';
 export 'src/transaction/filecoin/fil_lib.dart';
 export 'src/transaction/sc/sc_lib.dart';
-export 'src/transaction/sc/sc_wasm_bridge.dart';
+export 'src/transaction/sc/sc_wasm_bridge.dart' hide loadScWasm;
 export 'src/transaction/sc/sc_go_ffi_bridge.dart';
 export 'src/transaction/sc/sc_wasm_isolate_bridge.dart';
 export 'src/transaction/sc/sc_wasm_run_bridge.dart';

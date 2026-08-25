@@ -63,3 +63,9 @@ jobs:
 
     - name: Test
       run: melos run test
+
+    # Keep the package's pure-Dart asset fallback on the CI path as well as
+    # the Flutter path above.
+    - name: Test crypto_wallet_util on Dart VM
+      working-directory: packages/crypto_wallet_util
+      run: dart test test/transaction/sc_wasm_isolate_bridge_test.dart

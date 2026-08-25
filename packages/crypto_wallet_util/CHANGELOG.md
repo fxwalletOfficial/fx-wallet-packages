@@ -11,6 +11,8 @@
   bundle automatically; package URI and file fallbacks remain for Dart
   runtimes and development environments where the Flutter asset bundle is
   unavailable.
+- WASM load failures now retain the underlying asset or package-URI error in
+  the final fail-closed diagnostic instead of hiding every fallback failure.
 - Flutter callers can still provide a custom WASM loader when they need to
   override the package asset.
 
