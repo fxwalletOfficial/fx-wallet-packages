@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.5] - 2026-08-25
+### Changed
+
+- The default SC WASM transaction builder now parses, instantiates and runs the
+  WASM module on a reusable background isolate, preventing the first SC
+  transaction from blocking the UI isolate and releasing the caller's WASM
+  byte buffer after handoff.
+
 ## [2.0.4] - 2026-08-02
 ### Fixed
 

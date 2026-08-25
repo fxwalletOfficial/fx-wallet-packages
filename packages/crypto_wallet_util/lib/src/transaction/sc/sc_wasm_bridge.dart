@@ -6,14 +6,18 @@ import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/src/transaction/sc/sc_lib.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_go_ffi_bridge.dart';
+import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_isolate_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_run_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/tx_data.dart';
 
 /// Bridge for computing SC transaction signing digests.
 ///
-/// Two implementations coexist:
-/// - [ScWasmRunBridge] (default): interprets the bundled `sc.wasm` with
-///   `package:wasd`, pure Dart and runs everywhere, but slower.
+/// The package provides three implementations:
+/// - [ScWasmIsolateBridge] (default through [ScTransactionBuilder.create]):
+///   runs the bundled `sc.wasm` on a dedicated isolate.
+/// - [ScWasmRunBridge]: interprets the bundled `sc.wasm` with `package:wasd`
+///   in the current isolate. It is used by the worker and remains available
+///   for callers that explicitly need a direct bridge.
 /// - [ScGoFfiBridge]: calls a native library through `dart:ffi`, much faster,
 ///   but the caller must supply a library built for their platform.
 abstract class ScWasmBridge {
@@ -44,8 +48,9 @@ abstract class ScWasmBridgeBase implements ScWasmBridge {
 /// Assembles an SC transaction through the signing-digest pipeline.
 ///
 /// Two factories are available:
-/// - [ScTransactionBuilder.create]: pure-Dart WASM bridge ([ScWasmRunBridge]),
-///   the default; loads the bundled `sc.wasm`, no native library needed.
+/// - [ScTransactionBuilder.create]: background-isolate WASM bridge
+///   ([ScWasmIsolateBridge]), the default; loads the bundled `sc.wasm`, no
+///   native library needed.
 /// - [ScTransactionBuilder.createWithFfi]: native Go FFI bridge
 ///   ([ScGoFfiBridge]); much faster, but the caller passes the path to a
 ///   native library they built for their platform.
@@ -59,14 +64,16 @@ class ScTransactionBuilder {
 
   ScTransactionBuilder({required this.wasmBridge});
 
-  /// Creates a builder backed by the pure-Dart WASM bridge ([ScWasmRunBridge]),
-  /// loading `sc.wasm` from the package bundle. No native library required.
+  /// Creates a builder backed by [ScWasmIsolateBridge], loading `sc.wasm` from
+  /// the package bundle. WASM parsing and transaction processing run outside
+  /// the caller's isolate, and the worker is started lazily on the first
+  /// transaction. No native library is required.
   ///
   /// This is the default and matches the long-standing behaviour; existing
   /// callers keep running unchanged.
   static Future<ScTransactionBuilder> create() async {
     final wasmBytes = await _loadPackageWasm();
-    return ScTransactionBuilder(wasmBridge: ScWasmRunBridge(wasmBytes));
+    return ScTransactionBuilder(wasmBridge: ScWasmIsolateBridge(wasmBytes));
   }
 
   /// Creates a builder backed by the native Go FFI bridge ([ScGoFfiBridge]),
@@ -100,5 +107,17 @@ class ScTransactionBuilder {
   Future<ScTxData> build(ScUnsignedTransaction unsignedTx) async {
     final result = await wasmBridge.processUnsignedTransaction(unsignedTx);
     return ScTxData(transaction: result.transaction, toSign: result.toSign);
+  }
+
+  /// Releases resources owned by the built-in bridge, if it has any.
+  ///
+  /// In particular, this stops the background isolate created by the default
+  /// WASM bridge. Custom bridges are left untouched.
+  void dispose() {
+    if (wasmBridge case final ScWasmIsolateBridge bridge) {
+      bridge.dispose();
+    } else if (wasmBridge case final ScWasmRunBridge bridge) {
+      bridge.dispose();
+    }
   }
 }
