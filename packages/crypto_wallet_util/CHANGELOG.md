@@ -4,9 +4,12 @@
 ### Changed
 
 - The default SC WASM transaction builder now parses, instantiates and runs the
-  WASM module on a reusable background isolate, preventing the first SC
-  transaction from blocking the UI isolate and releasing the caller's WASM
-  byte buffer after handoff.
+  WASM module in serialized short-lived background isolates, preventing the
+  first SC transaction from blocking the UI isolate without requiring callers
+  to manage a long-lived worker lifecycle.
+- Flutter callers can provide a `rootBundle`-backed WASM loader; package asset
+  metadata and fallback loading now cover runtimes where package URI
+  resolution is unavailable.
 
 ## [2.0.4] - 2026-08-02
 ### Fixed

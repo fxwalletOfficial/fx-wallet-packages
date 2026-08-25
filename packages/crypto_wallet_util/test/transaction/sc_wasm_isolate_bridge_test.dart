@@ -32,20 +32,59 @@ void main() {
     ]);
   });
 
-  test('reuses the worker for concurrent requests', () async {
-    final results = await Future.wait([
-      bridge.processUnsignedTransaction(unsignedTx),
-      bridge.processUnsignedTransaction(unsignedTx),
-    ]);
+  test(
+    'serializes concurrent requests without sharing a persistent worker',
+    () async {
+      final results = await Future.wait([
+        bridge.processUnsignedTransaction(unsignedTx),
+        bridge.processUnsignedTransaction(unsignedTx),
+      ]);
 
-    expect(results, hasLength(2));
-    expect(results[0].toSign, results[1].toSign);
-  });
+      expect(results, hasLength(2));
+      expect(results[0].toSign, results[1].toSign);
+    },
+  );
 
-  test('the default builder uses the background bridge', () async {
+  test('the default builder builds without manual disposal', () async {
     final builder = await ScTransactionBuilder.create();
-    addTearDown(builder.dispose);
 
     expect(builder.wasmBridge, isA<ScWasmIsolateBridge>());
+    final result = await builder.build(unsignedTx);
+    expect(result.toSign, [
+      'c191c3f2478833e66eb8911038f7fbe4f1810ec16cb3f0628c0ccfe7a4bc2f4d',
+    ]);
   });
+
+  test('accepts a caller-provided WASM asset loader', () async {
+    var loadCount = 0;
+    final builder = await ScTransactionBuilder.create(
+      wasmLoader: () async {
+        loadCount++;
+        return File('./lib/src/transaction/sc/sc.wasm').readAsBytesSync();
+      },
+    );
+    addTearDown(builder.dispose);
+
+    expect(loadCount, 1);
+    expect(builder.wasmBridge, isA<ScWasmIsolateBridge>());
+  });
+
+  test(
+    'disposing a non-owning builder does not dispose a shared bridge',
+    () async {
+      final sharedBridge = ScWasmIsolateBridge(
+        File('./lib/src/transaction/sc/sc.wasm').readAsBytesSync(),
+      );
+      addTearDown(sharedBridge.dispose);
+
+      final firstBuilder = ScTransactionBuilder(wasmBridge: sharedBridge);
+      final secondBuilder = ScTransactionBuilder(wasmBridge: sharedBridge);
+      firstBuilder.dispose();
+
+      final result = await secondBuilder.build(unsignedTx);
+      expect(result.toSign, [
+        'c191c3f2478833e66eb8911038f7fbe4f1810ec16cb3f0628c0ccfe7a4bc2f4d',
+      ]);
+    },
+  );
 }

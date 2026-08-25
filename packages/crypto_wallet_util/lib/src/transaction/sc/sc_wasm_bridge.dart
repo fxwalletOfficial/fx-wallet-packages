@@ -10,11 +10,18 @@ import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_isolate_bridge.dar
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_run_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/tx_data.dart';
 
+/// Loads the bundled SC WASM bytes.
+///
+/// Flutter callers can provide a loader backed by `rootBundle`, for example
+/// `packages/crypto_wallet_util/src/transaction/sc/sc.wasm`, so runtime asset
+/// loading does not depend on package URI resolution.
+typedef ScWasmLoader = Future<Uint8List> Function();
+
 /// Bridge for computing SC transaction signing digests.
 ///
 /// The package provides three implementations:
 /// - [ScWasmIsolateBridge] (default through [ScTransactionBuilder.create]):
-///   runs the bundled `sc.wasm` on a dedicated isolate.
+///   runs the bundled `sc.wasm` in short-lived background isolates.
 /// - [ScWasmRunBridge]: interprets the bundled `sc.wasm` with `package:wasd`
 ///   in the current isolate. It is used by the worker and remains available
 ///   for callers that explicitly need a direct bridge.
@@ -61,19 +68,26 @@ abstract class ScWasmBridgeBase implements ScWasmBridge {
 /// ```
 class ScTransactionBuilder {
   final ScWasmBridge wasmBridge;
+  final bool _ownsBridge;
 
-  ScTransactionBuilder({required this.wasmBridge});
+  ScTransactionBuilder({required this.wasmBridge}) : _ownsBridge = false;
+
+  ScTransactionBuilder._owned({required this.wasmBridge}) : _ownsBridge = true;
 
   /// Creates a builder backed by [ScWasmIsolateBridge], loading `sc.wasm` from
   /// the package bundle. WASM parsing and transaction processing run outside
-  /// the caller's isolate, and the worker is started lazily on the first
-  /// transaction. No native library is required.
+  /// the caller's isolate. No native library is required.
+  ///
+  /// Flutter callers should pass a [wasmLoader] backed by `rootBundle` when
+  /// package URI resolution is unavailable in their runtime.
   ///
   /// This is the default and matches the long-standing behaviour; existing
   /// callers keep running unchanged.
-  static Future<ScTransactionBuilder> create() async {
-    final wasmBytes = await _loadPackageWasm();
-    return ScTransactionBuilder(wasmBridge: ScWasmIsolateBridge(wasmBytes));
+  static Future<ScTransactionBuilder> create({ScWasmLoader? wasmLoader}) async {
+    final wasmBytes = await (wasmLoader ?? _loadPackageWasm)();
+    return ScTransactionBuilder._owned(
+      wasmBridge: ScWasmIsolateBridge(wasmBytes),
+    );
   }
 
   /// Creates a builder backed by the native Go FFI bridge ([ScGoFfiBridge]),
@@ -85,9 +99,16 @@ class ScTransactionBuilder {
   }
 
   static Future<Uint8List> _loadPackageWasm() async {
-    final pkgUri = await Isolate.resolvePackageUri(
-      Uri.parse('package:crypto_wallet_util/src/transaction/sc/sc.wasm'),
-    );
+    Uri? pkgUri;
+    try {
+      pkgUri = await Isolate.resolvePackageUri(
+        Uri.parse('package:crypto_wallet_util/src/transaction/sc/sc.wasm'),
+      );
+    } catch (_) {
+      // Flutter test/release runtimes may not implement package URI
+      // resolution. Continue to the file fallback or a caller-provided
+      // rootBundle loader instead of failing before the fallback is reached.
+    }
     if (pkgUri != null && pkgUri.scheme == 'file') {
       return File.fromUri(pkgUri).readAsBytes();
     }
@@ -109,11 +130,13 @@ class ScTransactionBuilder {
     return ScTxData(transaction: result.transaction, toSign: result.toSign);
   }
 
-  /// Releases resources owned by the built-in bridge, if it has any.
+  /// Releases resources owned by a bridge created by this builder.
   ///
-  /// In particular, this stops the background isolate created by the default
-  /// WASM bridge. Custom bridges are left untouched.
+  /// A builder constructed with the public constructor does not own its
+  /// bridge, so disposing it cannot destroy a bridge shared by another
+  /// builder.
   void dispose() {
+    if (!_ownsBridge) return;
     if (wasmBridge case final ScWasmIsolateBridge bridge) {
       bridge.dispose();
     } else if (wasmBridge case final ScWasmRunBridge bridge) {
