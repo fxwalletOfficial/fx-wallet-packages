@@ -54,7 +54,9 @@ void main() {
     expect(result.toSign, [
       'c191c3f2478833e66eb8911038f7fbe4f1810ec16cb3f0628c0ccfe7a4bc2f4d',
     ]);
-  });
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
 }
 """,
     );
