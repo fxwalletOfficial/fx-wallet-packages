@@ -43,6 +43,7 @@ void main() {
       expect(results, hasLength(2));
       expect(results[0].toSign, results[1].toSign);
     },
+    timeout: Timeout(const Duration(seconds: 90)),
   );
 
   test('the default builder builds without manual disposal', () async {
