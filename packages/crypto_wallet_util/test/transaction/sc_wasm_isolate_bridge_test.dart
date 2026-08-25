@@ -4,8 +4,6 @@ import 'dart:io';
 import 'package:crypto_wallet_util/transaction.dart';
 import 'package:test/test.dart';
 
-import 'sc_wasm_asset_test_support.dart';
-
 void main() {
   late ScUnsignedTransaction unsignedTx;
   late ScWasmIsolateBridge bridge;
@@ -65,11 +63,7 @@ void main() {
       final temporaryDirectory = await Directory.systemTemp.createTemp(
         'crypto_wallet_util_sc_asset_test_',
       );
-      configureScWasmAssetForTest(
-        File('./lib/src/transaction/sc/sc.wasm').readAsBytesSync(),
-      );
       addTearDown(() async {
-        clearScWasmAssetForTest();
         Directory.current = originalDirectory;
         await temporaryDirectory.delete(recursive: true);
       });
