@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.28]
+
+- Feature (SC): add the opt-in deterministic `zlib-json-v1` encoding for `ScSignRequest.signingPayloadData`; legacy uncompressed requests remain byte-compatible and continue to decode.
+- Security (SC): reject corrupted, unknown and over-4-MiB decompressed signing payloads at the `ScSignRequest.fromUR` / `fromCBOR` boundary.
+
 ## [0.1.0]
 
 - Initial version.
