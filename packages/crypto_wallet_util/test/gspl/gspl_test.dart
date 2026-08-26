@@ -286,6 +286,82 @@ void main() async {
       expect(payment['amount'], 10000);
     });
 
+    test('should parse LTC P2WPKH (native SegWit) payment address', () async {
+      final txData = GsplTxData(
+        inputs: [
+          GsplItem(
+            path: "m/44'/2'/0'/0/3",
+            amount: 50000000,
+            signHashType: 1,
+          )
+        ],
+        hex: '020000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff011027000000000000160014c58b07735944be1fe66a4ade56f6535398834b2200000000',
+        change: null,
+        dataType: BtcSignDataType.TRANSACTION,
+      );
+
+      final jsonData = txData.toJson();
+      final payments = jsonData['payments'] as List;
+      expect(payments, hasLength(1));
+
+      final payment = payments.first as Map<String, dynamic>;
+      expect(payment['address'], 'ltc1qck9swu6egjlplen2ft09dajn2wvgxjezr60t9t');
+      expect(payment['amount'], 10000);
+    });
+
+    test('should parse LTC testnet P2WPKH payment address using the wallet\'s NetworkType', () async {
+      final txData = GsplTxData(
+        inputs: [
+          GsplItem(
+            path: "m/44'/2'/0'/0/3",
+            amount: 50000000,
+            signHashType: 1,
+          )
+        ],
+        hex: '020000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff011027000000000000160014c58b07735944be1fe66a4ade56f6535398834b2200000000',
+        change: null,
+        dataType: BtcSignDataType.TRANSACTION,
+        // LTC mainnet and testnet share the same BIP44 coin type, so the
+        // path-derived fallback alone would always pick mainnet's 'ltc'
+        // HRP. The caller (GsplTxSigner) must supply the actual network.
+        networkType: LTCChain().testnet.networkType,
+      );
+
+      final jsonData = txData.toJson();
+      final payments = jsonData['payments'] as List;
+      expect(payments, hasLength(1));
+
+      final payment = payments.first as Map<String, dynamic>;
+      expect(payment['address'], 'tltc1qck9swu6egjlplen2ft09dajn2wvgxjez5gvzkp');
+      expect(payment['amount'], 10000);
+    });
+
+    test('GsplTxSigner wires the wallet\'s testnet NetworkType into txData for address parsing', () async {
+      final mnemonic = 'few tag video grain jealous light tired vapor shed festival shine tag';
+      final wallet = await LtcCoin.fromMnemonic(mnemonic, LTCChain().testnet);
+
+      final txData = GsplTxData(
+        inputs: [
+          GsplItem(
+            path: "m/44'/2'/0'/0/3",
+            amount: 50000000,
+            signHashType: 1,
+          )
+        ],
+        hex: '020000000100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff011027000000000000160014c58b07735944be1fe66a4ade56f6535398834b2200000000',
+        change: null,
+        dataType: BtcSignDataType.TRANSACTION,
+      );
+
+      // Constructing the signer (before any sign()/toJson() call) is enough
+      // to propagate the wallet's real NetworkType onto txData.
+      GsplTxSigner(wallet, txData);
+
+      final payments = txData.toJson()['payments'] as List;
+      final payment = payments.first as Map<String, dynamic>;
+      expect(payment['address'], 'tltc1qck9swu6egjlplen2ft09dajn2wvgxjez5gvzkp');
+    });
+
     test('should resolve network type from non-0/0 input path', () async {
       final txData = GsplTxData(
         inputs: [
