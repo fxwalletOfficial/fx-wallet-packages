@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.6] - 2026-08-26
+### Fixed
+
+- GSPL offline-signing output parsing (`GsplTxData._extractAddress`) now
+  decodes native SegWit P2WPKH (22-byte `OP_0 <20-byte-hash>`) and P2WSH
+  (34-byte `OP_0 <32-byte-hash>`) output scripts to their bech32 address
+  using the chain's configured HRP, instead of returning `null`. LTC `ltc1q...`
+  payment outputs previously parsed to a `null`/empty address in the offline
+  wallet's cold-signing QR flow; only legacy P2PKH and P2SH outputs were
+  handled before.
+
 ## [2.0.5] - 2026-08-25
 ### Changed
 

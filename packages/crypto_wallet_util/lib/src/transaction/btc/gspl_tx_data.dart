@@ -6,6 +6,7 @@ import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/bitcoin_flutte
 import 'package:crypto_wallet_util/src/forked_lib/bitcoin_flutter/src/utils/constants/op.dart';
 import 'package:crypto_wallet_util/src/transaction/btc/sign_data.dart';
 import 'package:crypto_wallet_util/src/type/type.dart';
+import 'package:crypto_wallet_util/src/utils/bech32/segwit.dart';
 import 'package:crypto_wallet_util/src/utils/bip32/bip32.dart' show NetworkType;
 import 'package:crypto_wallet_util/src/utils/utils.dart';
 
@@ -87,6 +88,17 @@ class GsplTxData extends TxData {
         script[1] == 0x14 &&
         script[22] == OPS['OP_EQUAL']) {
       return _generateAddress(script.sublist(2, 22), net.scriptHash);
+    }
+
+    final hrp = net.bech32;
+    if (hrp != null) {
+      if (script.length == 22 && script[0] == OPS['OP_0'] && script[1] == 0x14) {
+        return segwit.encode(Segwit(hrp, 0, script.sublist(2, 22))).address;
+      }
+
+      if (script.length == 34 && script[0] == OPS['OP_0'] && script[1] == 0x20) {
+        return segwit.encode(Segwit(hrp, 0, script.sublist(2, 34))).address;
+      }
     }
 
     return null;
