@@ -42,6 +42,12 @@ class GsplTxSigner extends TxSigner {
     } else {
       throw Exception('Unsupported wallet type for GSPL signing');
     }
+
+    // Mainnet/testnet share the same BIP44 coin-type segment for these
+    // chains, so GsplTxData can't recover the right one from an input path
+    // alone; give it the wallet's actually-selected NetworkType so output
+    // address decoding (e.g. bech32 HRP) matches the signing network.
+    txData.networkType = networkType;
   }
 
   bool get isTaprootInput => isLtc && (wallet as LtcCoin).isTaproot;

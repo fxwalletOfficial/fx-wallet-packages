@@ -16,9 +16,19 @@ class GsplTxData extends TxData {
   String hex;
   final BtcSignDataType dataType;
 
-  GsplTxData({required this.inputs, required this.hex, this.change, required this.dataType});
+  /// The wallet's actually-selected NetworkType (mainnet or testnet), set by
+  /// [GsplTxSigner] from `wallet.setting.networkType`. Mainnet and testnet
+  /// share the same BIP44 coin-type segment for these chains, so it cannot
+  /// be recovered from an input's `path` alone; when unset, [_networkType]
+  /// falls back to a mainnet-only heuristic for backward compatibility.
+  NetworkType? networkType;
+
+  GsplTxData({required this.inputs, required this.hex, this.change, required this.dataType, this.networkType});
 
   NetworkType get _networkType {
+    final explicit = networkType;
+    if (explicit != null) return explicit;
+
     final path = inputs.map((input) => input.path).whereType<String>().firstWhere(
           (value) => value.isNotEmpty,
           orElse: () => change?.path ?? '',
