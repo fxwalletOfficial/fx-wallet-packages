@@ -19,6 +19,7 @@ export 'src/wallets/fil.dart';
 export 'src/wallets/icp.dart';
 export 'src/wallets/trx.dart';
 export 'src/wallets/btc.dart';
+export 'src/wallets/btcb2.dart';
 export 'src/wallets/doge.dart';
 export 'src/wallets/ltc.dart';
 export 'src/wallets/bch.dart';

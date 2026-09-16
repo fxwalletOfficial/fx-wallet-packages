@@ -28,6 +28,7 @@ enum Wallet {
   ALGO,
   TRX,
   BTC,
+  BTCB2,
   DOGE,
   LTC,
   BCH,
@@ -89,6 +90,8 @@ Future<WalletType> getMnemonicWallet(
       return TrxCoin.fromMnemonic(mnemonic, setting);
     case Wallet.BTC:
       return BtcCoin.fromMnemonic(mnemonic, setting);
+    case Wallet.BTCB2:
+      return Btcb2Coin.fromMnemonic(mnemonic, setting);
     case Wallet.DOGE:
       return DogeCoin.fromMnemonic(mnemonic, setting);
     case Wallet.LTC:
@@ -154,6 +157,8 @@ WalletType getPrivateKeyWallet(
       return TrxCoin.fromPrivateKey(privateKey, setting);
     case Wallet.BTC:
       return BtcCoin.fromPrivateKey(privateKey, setting);
+    case Wallet.BTCB2:
+      return Btcb2Coin.fromPrivateKey(privateKey, setting);
     case Wallet.DOGE:
       return DogeCoin.fromPrivateKey(privateKey, setting);
     case Wallet.LTC:
@@ -169,6 +174,7 @@ Wallet getWallet(coin) {
   if (coin == 'kaspa') return Wallet.KAS;
   if (coin == 'karlsen') return Wallet.KLS;
   if (coin == 'scp') return Wallet.SCP;
+  if (BTCB2Chain.matchesName(coin)) return Wallet.BTCB2;
   return Wallet.values.firstWhere(
     (element) => (element.toString().split(".").last) == coin.toUpperCase(),
     orElse: () => Wallet.NONE,
