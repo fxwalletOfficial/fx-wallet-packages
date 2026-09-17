@@ -44,10 +44,38 @@ class Btcb2TransactionAssembler {
 /// Unsigned transaction plus the exact UNIFIED digests to be signed.
 class Btcb2TransactionDraft {
   Btcb2TransactionDraft._(this.state, List<int> publicKeyBytes)
-    : publicKeyBytes = List<int>.unmodifiable(publicKeyBytes);
+    : publicKeyBytes = List<int>.unmodifiable(publicKeyBytes),
+      _sighashInputs = List.unmodifiable(
+        state.inputs.map(
+          (input) => Btcb2SighashInput(
+            transactionId: input.transactionId,
+            outputIndex: input.outputIndex,
+            sequence: input.sequence,
+          ),
+        ),
+      ),
+      _spentOutputs = List.unmodifiable(
+        state.inputs.map(
+          (input) => Btcb2SpentOutput(
+            amountSats: input.amountSats,
+            scriptPubKey: input.scriptPubKey,
+          ),
+        ),
+      ),
+      _outputs = List.unmodifiable(
+        state.outputs.map(
+          (output) => Btcb2SpentOutput(
+            amountSats: output.amountSats,
+            scriptPubKey: output.scriptPubKey,
+          ),
+        ),
+      );
 
   final Btcb2TransactionAssemblyData state;
   final List<int> publicKeyBytes;
+  final List<Btcb2SighashInput> _sighashInputs;
+  final List<Btcb2SpentOutput> _spentOutputs;
+  final List<Btcb2SpentOutput> _outputs;
 
   List<int> get unsignedTransactionBytes => _serializeTransaction(
     state,
@@ -61,37 +89,12 @@ class Btcb2TransactionDraft {
     if (inputIndex < 0 || inputIndex >= state.inputs.length) {
       throw RangeError.index(inputIndex, state.inputs, 'inputIndex');
     }
-    final inputs = state.inputs
-        .map(
-          (input) => Btcb2SighashInput(
-            transactionId: input.transactionId,
-            outputIndex: input.outputIndex,
-            sequence: input.sequence,
-          ),
-        )
-        .toList();
-    final spentOutputs = state.inputs
-        .map(
-          (input) => Btcb2SpentOutput(
-            amountSats: input.amountSats,
-            scriptPubKey: input.scriptPubKey,
-          ),
-        )
-        .toList();
-    final outputs = state.outputs
-        .map(
-          (output) => Btcb2SpentOutput(
-            amountSats: output.amountSats,
-            scriptPubKey: output.scriptPubKey,
-          ),
-        )
-        .toList();
     return Btcb2UnifiedSighash.compute(
       version: state.transactionVersion,
       lockTime: state.lockTime,
-      inputs: inputs,
-      spentOutputs: spentOutputs,
-      outputs: outputs,
+      inputs: _sighashInputs,
+      spentOutputs: _spentOutputs,
+      outputs: _outputs,
       inputIndex: inputIndex,
       scriptCode: state.inputs[inputIndex].scriptCode,
       hashType: Btcb2TransactionAssemblyData.unifiedSighashType,
@@ -105,7 +108,7 @@ class Btcb2TransactionDraft {
   /// Signs every input with a local secp256k1 private key.
   Btcb2SignedTransaction sign(List<int> privateKeyBytes) {
     final key = Secp256k1PrivateKey.fromBytes(privateKeyBytes);
-    if (!_bytesEqual(key.publicKey.compressed, publicKeyBytes)) {
+    if (!BytesUtils.bytesEqual(key.publicKey.compressed, publicKeyBytes)) {
       throw ArgumentError(
         'Private key does not match the assembly public key.',
       );
@@ -394,12 +397,4 @@ List<int> _strictDerToCompactLowS(List<int> der) {
     ...BigintUtils.toBytes(r, length: 32),
     ...BigintUtils.toBytes(s, length: 32),
   ];
-}
-
-bool _bytesEqual(List<int> left, List<int> right) {
-  if (left.length != right.length) return false;
-  for (var i = 0; i < left.length; i++) {
-    if (left[i] != right[i]) return false;
-  }
-  return true;
 }

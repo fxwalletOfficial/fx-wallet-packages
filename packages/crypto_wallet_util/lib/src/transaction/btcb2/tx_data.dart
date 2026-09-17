@@ -102,6 +102,8 @@ class Btcb2TransactionAssemblyData {
     required this.fee,
     required this.transactionVersion,
     required this.lockTime,
+    required this.totalInputSats,
+    required this.totalOutputSats,
   });
 
   static const String payloadType = 'btcb2_unified_transaction_assembly_state';
@@ -117,12 +119,8 @@ class Btcb2TransactionAssemblyData {
   final Btcb2TransactionFee fee;
   final int transactionVersion;
   final int lockTime;
-
-  int get totalInputSats =>
-      inputs.fold(0, (sum, input) => sum + input.amountSats);
-
-  int get totalOutputSats =>
-      outputs.fold(0, (sum, output) => sum + output.amountSats);
+  final int totalInputSats;
+  final int totalOutputSats;
 
   /// Parses and validates a complete BTCB2 transaction assembly response.
   factory Btcb2TransactionAssemblyData.fromServiceResponse(
@@ -206,14 +204,14 @@ class Btcb2TransactionAssemblyData {
           input.derivationPath != senderPath ||
           input.scriptType != 0 ||
           !Btcb2Coin.isP2pkhScript(input.scriptPubKey) ||
-          !_bytesEqual(input.scriptPubKey, input.scriptCode) ||
-          !_bytesEqual(input.scriptPubKey, senderScript)) {
+          !BytesUtils.bytesEqual(input.scriptPubKey, input.scriptCode) ||
+          !BytesUtils.bytesEqual(input.scriptPubKey, senderScript)) {
         throw FormatException('Invalid BTCB2 input metadata for $outpoint.');
       }
     }
     for (final output in outputs) {
       final expected = Btcb2Coin.scriptPubKeyFromAddress(output.address);
-      if (!_bytesEqual(output.scriptPubKey, expected)) {
+      if (!BytesUtils.bytesEqual(output.scriptPubKey, expected)) {
         throw FormatException(
           'Output script does not match address ${output.address}.',
         );
@@ -245,6 +243,8 @@ class Btcb2TransactionAssemblyData {
       fee: fee,
       transactionVersion: transactionVersion,
       lockTime: lockTime,
+      totalInputSats: totalInput,
+      totalOutputSats: totalOutput,
     );
   }
 }
@@ -329,12 +329,4 @@ void _expect(Map<String, dynamic> json, String key, String expected) {
   if (_string(json, key) != expected) {
     throw FormatException('$key must be $expected.');
   }
-}
-
-bool _bytesEqual(List<int> left, List<int> right) {
-  if (left.length != right.length) return false;
-  for (var i = 0; i < left.length; i++) {
-    if (left[i] != right[i]) return false;
-  }
-  return true;
 }

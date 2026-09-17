@@ -5,11 +5,11 @@ import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:crypto_wallet_util/crypto_utils.dart';
 import 'package:test/test.dart';
 
-void main() {
-  const mnemonic =
-      'abandon abandon abandon abandon abandon abandon abandon abandon '
-      'abandon abandon abandon about';
+const _testMnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon '
+    'abandon abandon abandon about';
 
+void main() {
   test(
     'registers BTCB2 without changing the Bitcoin wallet identity',
     () async {
@@ -21,17 +21,17 @@ void main() {
       expect(getChainConfig('XBT').name, 'btcb2');
       expect(supportCrypto(), contains('BTCB2'));
 
-      final wallet = await getMnemonicWallet('btcb2', mnemonic);
+      final wallet = await getMnemonicWallet('btcb2', _testMnemonic);
       expect(wallet, isA<Btcb2Coin>());
       expect(wallet.address, '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA');
 
-      final xbtWallet = await getMnemonicWallet('xbt', mnemonic);
+      final xbtWallet = await getMnemonicWallet('xbt', _testMnemonic);
       expect(xbtWallet.address, wallet.address);
     },
   );
 
   test('derives the standard BTCB2 BIP44 P2PKH account', () async {
-    final wallet = await Btcb2Coin.fromMnemonic(mnemonic);
+    final wallet = await Btcb2Coin.fromMnemonic(_testMnemonic);
 
     expect(wallet.setting.bip44Path, "m/44'/0'/0'/0/0");
     expect(wallet.address, '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA');
@@ -82,33 +82,15 @@ void main() {
   );
 
   test('validates, signs, and serializes a complete BTCB2 assembly', () async {
-    final account = await Btcb2Coin.fromMnemonic(mnemonic);
-    final sourceScript = BytesUtils.toHexString(
-      Btcb2Coin.scriptPubKeyFromAddress(account.address),
-    );
-    const recipient = 'bc1q6j5rye9yudwj02n4taq7hvxuwrpetpmwlztgpf';
-    final recipientScript = BytesUtils.toHexString(
-      Btcb2Coin.scriptPubKeyFromAddress(recipient),
-    );
-    final state = Btcb2TransactionAssemblyData.fromServiceResponse(
-      _assemblyResponse(
-        sender: account.address,
-        sourceScript: sourceScript,
-        recipient: recipient,
-        recipientScript: recipientScript,
-      ),
-    );
-    final draft = Btcb2TransactionAssembler.fromPublicKeyBytes(
-      account.publicKey,
-    ).build(state);
-    final signed = draft.sign(account.privateKey);
+    final fixture = await _validAssemblyFixture();
+    final signed = fixture.draft.sign(fixture.account.privateKey);
 
     expect(
-      draft.signingHashHex(0),
+      fixture.draft.signingHashHex(0),
       'a42e1bc17076cd0ba89d8907217d0bbe5abcc1a98957c02220a6c2ee328a6274',
     );
     expect(
-      draft.unsignedTransactionHex,
+      fixture.draft.unsignedTransactionHex,
       '020000000101000000000000000000000000000000000000000000000000000000000000000000000000fdffffff01905f010000000000160014d4a83264a4e35d27aa755f41ebb0dc70c395876e00000000',
     );
     expect(
@@ -124,49 +106,74 @@ void main() {
     expect(signed.toBroadcast(), {'tx': signed.rawTransactionHex});
   });
 
-  test('accepts xbt as the service assembly chain alias', () async {
-    final account = await Btcb2Coin.fromMnemonic(mnemonic);
-    final sourceScript = BytesUtils.toHexString(
-      Btcb2Coin.scriptPubKeyFromAddress(account.address),
+  test('assembles and signs multiple inputs in service order', () async {
+    final fixture = await _validAssemblyFixture(inputCount: 2);
+    final draft = fixture.draft;
+    final firstInput = fixture.state.inputs[0];
+    final secondInput = fixture.state.inputs[1];
+    final firstHash = draft.signingHashBytes(0);
+    final secondHash = draft.signingHashBytes(1);
+    final signer = Secp256k1SigningKey.fromBytes(
+      keyBytes: fixture.account.privateKey,
     );
-    const recipient = 'bc1q6j5rye9yudwj02n4taq7hvxuwrpetpmwlztgpf';
-    final recipientScript = BytesUtils.toHexString(
-      Btcb2Coin.scriptPubKeyFromAddress(recipient),
-    );
-    final response = _assemblyResponse(
-      sender: account.address,
-      sourceScript: sourceScript,
-      recipient: recipient,
-      recipientScript: recipientScript,
-    );
-    ((response['signing_payload'] as Map)['data'] as Map)['chain'] = 'xbt';
+    final signatures = [
+      signer.signDer(digest: firstHash),
+      signer.signDer(digest: secondHash),
+    ];
 
-    final state = Btcb2TransactionAssemblyData.fromServiceResponse(response);
-    expect(state.senderAddress, account.address);
+    expect(firstInput.transactionId, isNot(secondInput.transactionId));
+    expect(firstHash, isNot(equals(secondHash)));
+    final signed = draft.attachSignatures(signatures);
+    final parsed = _ParsedTransaction.parse(signed.rawTransactionHex);
+
+    expect(parsed.inputs.map((input) => input.transactionId), [
+      firstInput.transactionId,
+      secondInput.transactionId,
+    ]);
+    expect(parsed.inputs.map((input) => input.outputIndex), [
+      firstInput.outputIndex,
+      secondInput.outputIndex,
+    ]);
+    expect(
+      signed.virtualSize,
+      greaterThan(fixture.draft.unsignedTransactionBytes.length),
+    );
+    expect(
+      () => draft.attachSignatures([signatures[1], signatures[0]]),
+      throwsFormatException,
+    );
+
+    final duplicate = _assemblyResponse(
+      sender: fixture.account.address,
+      sourceScript: fixture.sourceScript,
+      recipient: fixture.recipient,
+      recipientScript: fixture.recipientScript,
+      inputCount: 2,
+    );
+    final duplicateInputs =
+        (((duplicate['signing_payload'] as Map)['data'] as Map)['inputs']
+            as List);
+    final firstDuplicate = duplicateInputs[0] as Map;
+    final secondDuplicate = duplicateInputs[1] as Map;
+    secondDuplicate['transactionId'] = firstDuplicate['transactionId'];
+    secondDuplicate['outputIndex'] = firstDuplicate['outputIndex'];
+    expect(
+      () => Btcb2TransactionAssemblyData.fromServiceResponse(duplicate),
+      throwsFormatException,
+    );
+  });
+
+  test('accepts xbt as the service assembly chain alias', () async {
+    final fixture = await _validAssemblyFixture(chain: 'xbt');
+    expect(fixture.state.senderAddress, fixture.account.address);
   });
 
   test(
     'local and external DER signing produce identical transactions',
     () async {
-      final account = await Btcb2Coin.fromMnemonic(mnemonic);
-      final sourceScript = BytesUtils.toHexString(
-        Btcb2Coin.scriptPubKeyFromAddress(account.address),
-      );
-      const recipient = 'bc1q6j5rye9yudwj02n4taq7hvxuwrpetpmwlztgpf';
-      final recipientScript = BytesUtils.toHexString(
-        Btcb2Coin.scriptPubKeyFromAddress(recipient),
-      );
-      final state = Btcb2TransactionAssemblyData.fromServiceResponse(
-        _assemblyResponse(
-          sender: account.address,
-          sourceScript: sourceScript,
-          recipient: recipient,
-          recipientScript: recipientScript,
-        ),
-      );
-      final draft = Btcb2TransactionAssembler.fromPublicKeyBytes(
-        account.publicKey,
-      ).build(state);
+      final fixture = await _validAssemblyFixture();
+      final account = fixture.account;
+      final draft = fixture.draft;
       final externalSigner = Secp256k1SigningKey.fromBytes(
         keyBytes: account.privateKey,
       );
@@ -181,19 +188,12 @@ void main() {
   );
 
   test('rejects invalid assembly metadata before signing', () async {
-    final account = await Btcb2Coin.fromMnemonic(mnemonic);
-    final sourceScript = BytesUtils.toHexString(
-      Btcb2Coin.scriptPubKeyFromAddress(account.address),
-    );
-    const recipient = 'bc1q6j5rye9yudwj02n4taq7hvxuwrpetpmwlztgpf';
-    final recipientScript = BytesUtils.toHexString(
-      Btcb2Coin.scriptPubKeyFromAddress(recipient),
-    );
+    final fixture = await _validAssemblyFixture();
 
     final invalidOutput = _assemblyResponse(
-      sender: account.address,
-      sourceScript: sourceScript,
-      recipient: recipient,
+      sender: fixture.account.address,
+      sourceScript: fixture.sourceScript,
+      recipient: fixture.recipient,
       recipientScript: '00140000000000000000000000000000000000000000',
     );
     expect(
@@ -202,54 +202,30 @@ void main() {
     );
 
     final wrongChain = _assemblyResponse(
-      sender: account.address,
-      sourceScript: sourceScript,
-      recipient: recipient,
-      recipientScript: recipientScript,
+      sender: fixture.account.address,
+      sourceScript: fixture.sourceScript,
+      recipient: fixture.recipient,
+      recipientScript: fixture.recipientScript,
+      chain: 'btc',
     );
-    ((wrongChain['signing_payload'] as Map)['data'] as Map)['chain'] = 'btc';
     expect(
       () => Btcb2TransactionAssemblyData.fromServiceResponse(wrongChain),
       throwsFormatException,
     );
 
     final wrongKey = Btcb2Coin.fromPrivateKey(List<int>.filled(32, 1));
-    final validState = Btcb2TransactionAssemblyData.fromServiceResponse(
-      _assemblyResponse(
-        sender: account.address,
-        sourceScript: sourceScript,
-        recipient: recipient,
-        recipientScript: recipientScript,
-      ),
-    );
     expect(
       () => Btcb2TransactionAssembler.fromPublicKeyBytes(
         wrongKey.publicKey,
-      ).build(validState),
+      ).build(fixture.state),
       throwsFormatException,
     );
   });
 
   test('rejects malformed or high-S external signatures', () async {
-    final account = await Btcb2Coin.fromMnemonic(mnemonic);
-    final sourceScript = BytesUtils.toHexString(
-      Btcb2Coin.scriptPubKeyFromAddress(account.address),
-    );
-    const recipient = 'bc1q6j5rye9yudwj02n4taq7hvxuwrpetpmwlztgpf';
-    final recipientScript = BytesUtils.toHexString(
-      Btcb2Coin.scriptPubKeyFromAddress(recipient),
-    );
-    final state = Btcb2TransactionAssemblyData.fromServiceResponse(
-      _assemblyResponse(
-        sender: account.address,
-        sourceScript: sourceScript,
-        recipient: recipient,
-        recipientScript: recipientScript,
-      ),
-    );
-    final draft = Btcb2TransactionAssembler.fromPublicKeyBytes(
-      account.publicKey,
-    ).build(state);
+    final fixture = await _validAssemblyFixture();
+    final account = fixture.account;
+    final draft = fixture.draft;
 
     expect(
       () => draft.attachSignatures([
@@ -315,12 +291,75 @@ void main() {
   );
 }
 
+final class _Btcb2AssemblyFixture {
+  const _Btcb2AssemblyFixture({
+    required this.account,
+    required this.sourceScript,
+    required this.recipient,
+    required this.recipientScript,
+    required this.state,
+    required this.draft,
+  });
+
+  final Btcb2Coin account;
+  final String sourceScript;
+  final String recipient;
+  final String recipientScript;
+  final Btcb2TransactionAssemblyData state;
+  final Btcb2TransactionDraft draft;
+}
+
+Future<_Btcb2AssemblyFixture> _validAssemblyFixture({
+  String chain = 'btcb2',
+  int inputCount = 1,
+}) async {
+  final account = await Btcb2Coin.fromMnemonic(_testMnemonic);
+  final sourceScript = BytesUtils.toHexString(
+    Btcb2Coin.scriptPubKeyFromAddress(account.address),
+  );
+  const recipient = 'bc1q6j5rye9yudwj02n4taq7hvxuwrpetpmwlztgpf';
+  final recipientScript = BytesUtils.toHexString(
+    Btcb2Coin.scriptPubKeyFromAddress(recipient),
+  );
+  final state = Btcb2TransactionAssemblyData.fromServiceResponse(
+    _assemblyResponse(
+      sender: account.address,
+      sourceScript: sourceScript,
+      recipient: recipient,
+      recipientScript: recipientScript,
+      chain: chain,
+      inputCount: inputCount,
+    ),
+  );
+  final draft = Btcb2TransactionAssembler.fromPublicKeyBytes(
+    account.publicKey,
+  ).build(state);
+  return _Btcb2AssemblyFixture(
+    account: account,
+    sourceScript: sourceScript,
+    recipient: recipient,
+    recipientScript: recipientScript,
+    state: state,
+    draft: draft,
+  );
+}
+
 Map<String, dynamic> _assemblyResponse({
   required String sender,
   required String sourceScript,
   required String recipient,
   required String recipientScript,
+  String chain = 'btcb2',
+  int inputCount = 1,
 }) {
+  if (inputCount < 1) {
+    throw ArgumentError.value(inputCount, 'inputCount');
+  }
+  final inputAmounts = List<int>.generate(
+    inputCount,
+    (index) => 100000 * (index + 1),
+  );
+  final totalInput = inputAmounts.fold<int>(0, (sum, amount) => sum + amount);
   return {
     'status': 'success',
     'code': 20000,
@@ -328,26 +367,28 @@ Map<String, dynamic> _assemblyResponse({
       'type': 'btcb2_unified_transaction_assembly_state',
       'data': {
         'version': 2,
-        'chain': 'btcb2',
+        'chain': chain,
         'network': 'mainnet',
         'sender': {'address': sender, 'derivationPath': "m/44'/0'/0'/0/0"},
-        'inputs': [
-          {
-            'transactionId': '${List.filled(31, '00').join()}01',
-            'outputIndex': 0,
+        'inputs': List<Map<String, dynamic>>.generate(
+          inputCount,
+          (index) => {
+            'transactionId':
+                '${List.filled(31, '00').join()}${(index + 1).toRadixString(16).padLeft(2, '0')}',
+            'outputIndex': index,
             'sequence': 0xfffffffd,
-            'amountSats': '100000',
+            'amountSats': '${inputAmounts[index]}',
             'address': sender,
             'scriptPubKey': sourceScript,
             'scriptCode': sourceScript,
             'scriptType': 0,
             'derivationPath': "m/44'/0'/0'/0/0",
           },
-        ],
+        ),
         'outputs': [
           {
             'address': recipient,
-            'amountSats': '90000',
+            'amountSats': '${totalInput - 10000}',
             'scriptPubKey': recipientScript,
           },
         ],
