@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.1.0] - 2026-09-16
+## [2.1.0] - 2026-09-17
 ### Added
 
 - Added BTCB2 wallet support with Bitcoin mainnet-compatible BIP44/P2PKH
