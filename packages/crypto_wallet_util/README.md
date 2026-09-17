@@ -13,6 +13,8 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
 - APTOS
 - BCH
 - BTC
+- BTCB2
+  - aliases: `btcb2`, `xbt`
 - CKB
 - COSMOS
 - DOGE
@@ -45,6 +47,8 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
 - BTC
   - PSBT
   - GSPL
+- BTCB2
+  - UNIFIED
 - CKB
 - COSMOS
 - ETH
@@ -69,6 +73,7 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
   - LTC
   - DOGE
   - BTC
+  - BTCB2
   - BCH
   - BELL
 - BECH32

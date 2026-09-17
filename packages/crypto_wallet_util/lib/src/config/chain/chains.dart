@@ -12,6 +12,7 @@ export './base32/algo.dart';
 
 export './btc/bch.dart';
 export './btc/btc.dart';
+export './btc/btcb2.dart';
 export './btc/doge.dart';
 export './btc/ltc.dart';
 export './btc/bel.dart';

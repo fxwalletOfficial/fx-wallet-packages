@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.0] - 2026-09-17
+### Added
+
+- Added BTCB2 wallet support with Bitcoin mainnet-compatible BIP44/P2PKH
+  derivation. The wallet accepts both `btcb2` and `xbt` as chain names.
+- Added offline BTCB2 transaction assembly and signing with UNIFIED sighash
+  `0x21`, including strict assembly validation, external signature attachment,
+  txid and vsize output.
+
 ## [2.0.6] - 2026-08-26
 ### Fixed
 

@@ -6,6 +6,7 @@ final List<ConfChain> chainConfigs = [
   LTCChain(),
   DOGEChain(),
   BTCChain(),
+  BTCB2Chain(),
   BCHChain(),
   BELChain(),
   // bech32 type address
@@ -40,7 +41,7 @@ final List<ConfChain> chainConfigs = [
   ICPChain(),
   ALGOChain(),
   // none type
-  DefaultChain()
+  DefaultChain(),
 ];
 
 /// Obtain chain configuration through unique index [name].
@@ -48,6 +49,7 @@ ConfChain getChainConfig(String name) {
   if (name == 'kaspa') return KASChain();
   if (name == 'karlsen') return KLSChain();
   if (name == 'scp') return SCPChain();
+  if (BTCB2Chain.matchesName(name)) return BTCB2Chain();
   for (final chainConfig in chainConfigs) {
     if (chainConfig.name == name) {
       return chainConfig;

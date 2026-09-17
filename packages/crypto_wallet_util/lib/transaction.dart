@@ -77,3 +77,7 @@ export 'src/transaction/btc/gspl_tx_signer.dart';
 export 'src/transaction/btc/gspl_tx_data.dart';
 
 export 'src/transaction/btc/sign_data.dart';
+
+/// export BTCB2 assembly and signing
+export 'src/transaction/btcb2/tx_data.dart';
+export 'src/transaction/btcb2/tx_signer.dart';
