@@ -259,6 +259,53 @@ void main() {
     await endpointSource.dispose();
   });
 
+  for (final toggles in const <(bool, bool)>[
+    (true, false),
+    (false, true),
+  ]) {
+    test(
+      'serializes ${toggles.$1} then ${toggles.$2} desired-state writes',
+      () async {
+        final storage = DelayedDesiredStateStorage();
+        final transport = RecordingTransport();
+        final endpointSource = FxPushEndpointSource(_apns('aabbccdd'));
+        final client = FxPushClient(
+          serviceUrl: _serviceUrl,
+          appId: _appId,
+          secureStorage: storage,
+          endpointSource: endpointSource,
+          transport: transport,
+          retryDelays: _noDelay,
+        );
+        await client.start();
+        storage.delayNextDesiredStateWrite();
+
+        final first = client.setActive(toggles.$1);
+        await storage.delayedWriteStarted.future;
+        final second = client.setActive(toggles.$2);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(
+          storage.desiredStateWrites,
+          <String>[toggles.$1.toString()],
+          reason: 'the second write must wait for the first write',
+        );
+        storage.releaseDelayedWrite.complete();
+        await Future.wait(<Future<void>>[first, second]);
+
+        expect(storage.desiredStateWrites, <String>[
+          toggles.$1.toString(),
+          toggles.$2.toString(),
+        ]);
+        expect(storage.desiredActive, toggles.$2.toString());
+        expect(client.state.value.desiredActive, toggles.$2);
+        expect(transport.requests.last.body['active'], toggles.$2);
+        await client.dispose();
+        await endpointSource.dispose();
+      },
+    );
+  }
+
   test(
     'serializes concurrent changes and sends the latest desired state',
     () async {
@@ -472,6 +519,38 @@ class BlockingReadStorage extends MemorySecureStorage {
       await releaseRead.future;
     }
     return super.read(key);
+  }
+}
+
+class DelayedDesiredStateStorage extends MemorySecureStorage {
+  final Completer<void> delayedWriteStarted = Completer<void>();
+  final Completer<void> releaseDelayedWrite = Completer<void>();
+  final List<String> desiredStateWrites = <String>[];
+  var _delayNext = false;
+
+  String? get desiredActive {
+    for (final entry in values.entries) {
+      if (entry.key.endsWith('.desired_active')) return entry.value;
+    }
+    return null;
+  }
+
+  void delayNextDesiredStateWrite() {
+    desiredStateWrites.clear();
+    _delayNext = true;
+  }
+
+  @override
+  Future<void> write(String key, String value) async {
+    if (key.endsWith('.desired_active')) {
+      desiredStateWrites.add(value);
+      if (_delayNext) {
+        _delayNext = false;
+        delayedWriteStarted.complete();
+        await releaseDelayedWrite.future;
+      }
+    }
+    await super.write(key, value);
   }
 }
 

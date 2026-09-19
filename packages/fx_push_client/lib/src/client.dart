@@ -156,6 +156,7 @@ class FxPushClient with WidgetsBindingObserver {
 
   Future<void>? _initialization;
   Future<void>? _drainFuture;
+  Future<void> _desiredStateWriteTail = Future<void>.value();
   StreamSubscription<FxPushEndpoint?>? _endpointSubscription;
   Completer<void>? _retryWake;
   late String _installationId;
@@ -202,7 +203,16 @@ class FxPushClient with WidgetsBindingObserver {
   /// Persists the desired state before attempting the network request.
   ///
   /// A failed disable therefore remains disabled across retries and restarts.
-  Future<void> setActive(bool active) async {
+  Future<void> setActive(bool active) {
+    _checkNotDisposed();
+    final write = _desiredStateWriteTail.then<void>(
+      (_) => _persistDesiredActive(active),
+    );
+    _desiredStateWriteTail = _ignoreFailure(write);
+    return _synchronizeAfterDesiredStateWrite(write);
+  }
+
+  Future<void> _persistDesiredActive(bool active) async {
     _checkNotDisposed();
     await _initialize();
     _checkNotDisposed();
@@ -212,10 +222,23 @@ class FxPushClient with WidgetsBindingObserver {
     _setState(
       _state.value._copyWith(desiredActive: active, clearLastError: true),
     );
+  }
+
+  Future<void> _synchronizeAfterDesiredStateWrite(Future<void> write) async {
+    await write;
     if (!_started) {
       await start();
     } else {
       await synchronize();
+    }
+  }
+
+  static Future<void> _ignoreFailure(Future<void> operation) async {
+    try {
+      await operation;
+    } on Object {
+      // Preserve invocation order while returning the original error only to
+      // the caller whose write failed. Later desired-state writes may proceed.
     }
   }
 
