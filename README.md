@@ -3,7 +3,8 @@
 A collection of open source Dart/Flutter packages used in the [FxWallet](https://www.fxwallet.com) app.
 These packages are modular, independently maintained, and can be reused in any Web3 Flutter application.
 
-> 📦 All packages in this repo are published individually on [pub.dev](https://pub.dev/), and actively maintained.
+> 📦 Packages are independently versioned and maintained. Each package's
+> `pubspec.yaml` is the source of truth for its version and publication metadata.
 
 ---
 
@@ -14,29 +15,35 @@ fx-wallet-packages/
 ├── packages/
 │   ├── k_chart_flutter/         # Interactive candle & line charts for crypto assets
 │   ├── flutter_web3_webview/    # Web3 WebView bridge for dApp integration
-│   ├── crypto_utils/            # General crypto utilities: hash, sign, encode
+│   ├── fx_push_client/          # APNs/FCM subscription and notification event client
+│   ├── crypto_wallet_util/       # General cryptocurrency wallet utilities
 │   ├── bc_ur_dart/              # UR (Uniform Resources) encoding/decoding for QR sharing
-│   └── aleo_dart/               # Aleo blockchain SDK (FFI to aleo_ffi)
+│   ├── aleo_dart/               # Aleo blockchain SDK (FFI to aleo_ffi)
+│   └── aleo_flutter/            # Flutter integration for Aleo native artifacts
 ├── rust/
 │   ├── aleo_ffi/                # Native Rust crate (clean-room, Apache-2.0) backing aleo_dart
 │   └── vendor/                  # Vendored + patched snarkVM crates (Apache-2.0)
 ├── examples/
-│   └── chart_demo_app/          # (Optional) Demo app showing k_chart_flutter usage
+│   ├── bc_ur_dart_demo/         # BC-UR integration example
+│   ├── k_chart_demo/            # k_chart_flutter integration example
+│   └── web3_webview_demo/       # flutter_web3_webview integration example
 ├── melos.yaml                   # (Optional) Melos workspace config for multi-package management
 └── README.md
-````
+```
 
 ---
 
 ## 📦 Included Packages
 
-| Package                                                                 | Pub.dev | Description                                           |
-| ----------------------------------------------------------------------- | ------- | ----------------------------------------------------- |
-| [`k_chart_flutter`](https://pub.dev/packages/k_chart_flutter)           | ✅       | Candlestick & line chart library optimized for crypto |
-| [`flutter_web3_webview`](https://pub.dev/packages/flutter_web3_webview) | ✅       | Inject Web3 provider into WebView for dApp support    |
-| [`crypto_utils`](https://pub.dev/packages/crypto_utils)                 | ✅       | Cryptographic tools (ECDSA, hashing, encoding)        |
-| [`bc_ur_dart`](https://pub.dev/packages/bc_ur_dart)                     | ✅       | Dart implementation of the BC-UR protocol             |
-| [`aleo_dart`](https://pub.dev/packages/aleo_dart)                       | 🆕       | Aleo blockchain Dart SDK (FFI to `aleo_ffi`)         |
+| Package | Description |
+| --- | --- |
+| [`k_chart_flutter`](packages/k_chart_flutter) | Candlestick and line chart library optimized for crypto |
+| [`flutter_web3_webview`](packages/flutter_web3_webview) | Web3 provider bridge for in-app WebViews |
+| [`fx_push_client`](packages/fx_push_client) | APNs/FCM subscription synchronization and notification event normalization |
+| [`crypto_wallet_util`](packages/crypto_wallet_util) | Cryptocurrency wallet utilities |
+| [`bc_ur_dart`](packages/bc_ur_dart) | BC-UR encoding and decoding |
+| [`aleo_dart`](packages/aleo_dart) | Aleo blockchain Dart SDK backed by `aleo_ffi` |
+| [`aleo_flutter`](packages/aleo_flutter) | Flutter integration for Aleo native artifacts |
 
 ---
 
