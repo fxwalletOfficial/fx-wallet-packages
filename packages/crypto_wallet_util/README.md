@@ -157,7 +157,9 @@ try {
 The initial `sia-v2-siacoin-transfer-v1` profile accepts ordinary siacoin
 transfers only. Unsupported V2 transaction categories, malformed or
 non-canonical payloads, missing required fields, zero-value outputs, and
-out-of-range input/output counts fail closed.
+out-of-range input/output counts fail closed. Canonical semantic bytes are
+limited to 32 KiB so every successful extraction fits the SC V2 UR wire
+contract.
 
 ## Feature requests and bugs ##
 

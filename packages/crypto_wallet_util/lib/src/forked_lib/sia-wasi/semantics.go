@@ -15,7 +15,8 @@ const (
 	semanticProfile    = "sia-v2-siacoin-transfer-v1"
 	maxTransferInputs  = 1000
 	maxTransferOutputs = 1000
-	maxSemanticBytes   = 89 + 32*maxTransferInputs + 48*maxTransferOutputs
+	// Keep successful extraction and inspection within the SC V2 UR wire cap.
+	maxSemanticBytes = 32 * 1024
 )
 
 type semanticRequest struct {

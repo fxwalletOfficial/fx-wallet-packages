@@ -4,10 +4,11 @@ import 'package:convert/convert.dart';
 
 /// The only SC V2 semantic signing profile currently supported.
 const scV2SiacoinTransferProfile = 'sia-v2-siacoin-transfer-v1';
+
+/// Maximum semantic payload accepted by the SC V2 UR wire protocol.
+const scV2MaxSemanticTransactionBytes = 32 * 1024;
 const _scV2MaxTransferInputs = 1000;
 const _scV2MaxTransferOutputs = 1000;
-const _scV2MaxSemanticBytes =
-    89 + 32 * _scV2MaxTransferInputs + 48 * _scV2MaxTransferOutputs;
 
 /// A normalized SC V2 siacoin output safe to display before signing.
 class ScV2SemanticOutput {
@@ -104,7 +105,7 @@ class ScV2TransactionSemantics {
     final digestPattern = RegExp(r'^[0-9a-f]{64}$');
     final parentPattern = RegExp(r'^[0-9a-f]{64}$');
     if (bytes.length != byteLength ||
-        bytes.length > _scV2MaxSemanticBytes ||
+        bytes.length > scV2MaxSemanticTransactionBytes ||
         inputCount < 1 ||
         inputCount > _scV2MaxTransferInputs ||
         inputCount != parentIds.length ||

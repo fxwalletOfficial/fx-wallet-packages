@@ -13,7 +13,8 @@
   default isolate-backed WASM builder, direct WASM bridge, and caller-supplied
   native FFI bridge. The parser rejects missing semantic fields, zero-value
   outputs, unsupported transaction categories, non-canonical bytes, invalid
-  parent IDs, and payloads outside the documented profile bounds.
+  parent IDs, and payloads outside the documented profile bounds, including
+  the SC V2 UR protocol's 32 KiB semantic payload limit.
 
 ## [2.1.0] - 2026-09-17
 ### Added

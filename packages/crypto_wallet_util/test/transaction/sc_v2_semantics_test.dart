@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto_wallet_util/transaction.dart';
+import 'package:convert/convert.dart' show hex;
 import 'package:test/test.dart';
 
 void main() {
@@ -138,6 +139,11 @@ void main() {
         'parentIds': [List.filled(64, '0').join()],
       },
       zeroOutput,
+      {
+        ...extracted.toJson(),
+        'semantics': hex.encode(Uint8List(32 * 1024 + 1)),
+        'byteLength': 32 * 1024 + 1,
+      },
     ];
 
     for (final response in cases) {

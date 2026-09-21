@@ -486,14 +486,9 @@ func TestMaximumSemanticSizeBoundary(t *testing.T) {
 	if err := json.Unmarshal(fixtureJSON(t), &txn); err != nil {
 		t.Fatal(err)
 	}
-	baseInput := txn.SiacoinInputs[0]
 	baseOutput := txn.SiacoinOutputs[0]
-	txn.SiacoinInputs = make([]types.V2SiacoinInput, maxTransferInputs)
-	for i := range txn.SiacoinInputs {
-		txn.SiacoinInputs[i] = baseInput
-		binary.LittleEndian.PutUint64(txn.SiacoinInputs[i].Parent.ID[:8], uint64(i+1))
-	}
-	txn.SiacoinOutputs = make([]types.SiacoinOutput, maxTransferOutputs)
+	const boundaryOutputCount = 680
+	txn.SiacoinOutputs = make([]types.SiacoinOutput, boundaryOutputCount)
 	for i := range txn.SiacoinOutputs {
 		txn.SiacoinOutputs[i] = baseOutput
 	}
@@ -502,14 +497,60 @@ func TestMaximumSemanticSizeBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(semantic) != maxSemanticBytes {
-		t.Fatalf("maximum semantic bytes: got %d, want %d", len(semantic), maxSemanticBytes)
+	const boundarySemanticBytes = 89 + 32 + 48*boundaryOutputCount
+	if len(semantic) != boundarySemanticBytes {
+		t.Fatalf("boundary semantic bytes: got %d, want %d", len(semantic), boundarySemanticBytes)
 	}
 	if _, err := transactionFromSemantics(semantic); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := transactionFromSemantics(append(semantic, 0)); err == nil {
-		t.Fatal("expected payload above maximum semantic size to be rejected")
+	rawTransaction := fixtureMap(t)
+	rawOutput := rawTransaction["siacoinOutputs"].([]any)[0]
+	rawOutputs := make([]any, boundaryOutputCount)
+	for i := range rawOutputs {
+		rawOutputs[i] = rawOutput
+	}
+	rawTransaction["siacoinOutputs"] = rawOutputs
+	request, err := json.Marshal(semanticRequest{Transaction: mustJSON(t, rawTransaction)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := extractV2TransactionSemanticsJSON(request); err != nil {
+		t.Fatalf("extract boundary semantics: %v", err)
+	}
+	inspectRequest, err := json.Marshal(semanticInspectRequest{Semantics: hex.EncodeToString(semantic)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := inspectV2TransactionSemanticsJSON(inspectRequest); err != nil {
+		t.Fatalf("inspect boundary semantics: %v", err)
+	}
+
+	txn.SiacoinOutputs = append(txn.SiacoinOutputs, baseOutput)
+	oversized, err := encodeV2TransactionSemantics(txn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(oversized) <= maxSemanticBytes {
+		t.Fatalf("oversized semantic bytes: got %d, cap %d", len(oversized), maxSemanticBytes)
+	}
+	if _, err := transactionFromSemantics(oversized); err == nil || !strings.Contains(err.Error(), "exceeds 32768 bytes") {
+		t.Fatalf("expected cold-side size rejection, got %v", err)
+	}
+	rawTransaction["siacoinOutputs"] = append(rawOutputs, rawOutput)
+	request, err = json.Marshal(semanticRequest{Transaction: mustJSON(t, rawTransaction)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := extractV2TransactionSemanticsJSON(request); err == nil || !strings.Contains(err.Error(), "exceeds 32768 bytes") {
+		t.Fatalf("expected hot-side size rejection, got %v", err)
+	}
+	inspectRequest, err = json.Marshal(semanticInspectRequest{Semantics: hex.EncodeToString(oversized)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := inspectV2TransactionSemanticsJSON(inspectRequest); err == nil || !strings.Contains(err.Error(), "exceeds 32768 bytes") {
+		t.Fatalf("expected inspection size rejection, got %v", err)
 	}
 }
 
