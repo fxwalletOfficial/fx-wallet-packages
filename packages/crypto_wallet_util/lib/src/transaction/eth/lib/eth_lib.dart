@@ -1,5 +1,3 @@
-library eth_lib;
-
 export 'txNetwork.dart';
 export './utils.dart';
 export './rlp.dart';

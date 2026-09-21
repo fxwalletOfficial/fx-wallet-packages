@@ -9,7 +9,9 @@ import 'package:crypto_wallet_util/src/transaction/sc/sc_go_ffi_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_asset_loader.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_isolate_bridge.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/sc_wasm_run_bridge.dart';
+import 'package:crypto_wallet_util/src/transaction/sc/sc_v2_semantics.dart';
 import 'package:crypto_wallet_util/src/transaction/sc/tx_data.dart';
+import 'package:convert/convert.dart';
 
 /// Loads the bundled SC WASM bytes.
 ///
@@ -33,23 +35,85 @@ abstract class ScWasmBridge {
   );
 }
 
+/// Optional semantic-signing capability implemented by the bundled SC
+/// bridges. It is separate from [ScWasmBridge] so existing custom bridges that
+/// only implement full transaction construction remain source-compatible.
+abstract class ScV2SemanticBridge {
+  Future<ScV2TransactionSemantics> extractV2TransactionSemantics(
+    Map<String, dynamic> unsignedTransaction, {
+    Iterable<String> changeAddresses = const [],
+  });
+
+  Future<ScV2TransactionSemantics> inspectV2TransactionSemantics(
+    Uint8List semanticBytes, {
+    Iterable<String> changeAddresses = const [],
+  });
+}
+
 /// Base [ScWasmBridge] that serializes the unsigned transaction to JSON and
 /// delegates the actual digest computation to [processJson].
-abstract class ScWasmBridgeBase implements ScWasmBridge {
+abstract class ScWasmBridgeBase implements ScWasmBridge, ScV2SemanticBridge {
   @override
   Future<ScWasmResult> processUnsignedTransaction(
     ScUnsignedTransaction unsignedTx,
   ) async {
     final jsonString = json.encode(unsignedTx.toJson());
     final resultJson = await processJson(jsonString);
-    return ScWasmResult.fromJson(
-      json.decode(resultJson) as Map<String, dynamic>,
+    return ScWasmResult.fromJson(_decodeResult(resultJson));
+  }
+
+  @override
+  Future<ScV2TransactionSemantics> extractV2TransactionSemantics(
+    Map<String, dynamic> unsignedTransaction, {
+    Iterable<String> changeAddresses = const [],
+  }) async {
+    final resultJson = await extractV2TransactionSemanticsJson(
+      json.encode({
+        'transaction': unsignedTransaction,
+        'changeAddresses': changeAddresses.toList(),
+      }),
     );
+    return ScV2TransactionSemantics.fromJson(_decodeResult(resultJson));
+  }
+
+  @override
+  Future<ScV2TransactionSemantics> inspectV2TransactionSemantics(
+    Uint8List semanticBytes, {
+    Iterable<String> changeAddresses = const [],
+  }) async {
+    final resultJson = await inspectV2TransactionSemanticsJson(
+      json.encode({
+        'semantics': hex.encode(semanticBytes),
+        'changeAddresses': changeAddresses.toList(),
+      }),
+    );
+    return ScV2TransactionSemantics.fromJson(_decodeResult(resultJson));
+  }
+
+  Map<String, dynamic> _decodeResult(String resultJson) {
+    final result = json.decode(resultJson);
+    if (result is! Map) {
+      throw const FormatException('SC bridge returned a non-object response');
+    }
+    final mapped = Map<String, dynamic>.from(result);
+    final error = mapped['error'];
+    if (error != null) {
+      throw StateError('SC bridge rejected the request: $error');
+    }
+    return mapped;
   }
 
   /// Implementation-specific: take the unsigned transaction JSON, compute the
   /// signing digests, and return the result transaction JSON string.
   Future<String> processJson(String jsonString);
+
+  Future<String> extractV2TransactionSemanticsJson(String jsonString) {
+    throw UnsupportedError('SC V2 semantic extraction is not implemented');
+  }
+
+  Future<String> inspectV2TransactionSemanticsJson(String jsonString) {
+    throw UnsupportedError('SC V2 semantic inspection is not implemented');
+  }
 }
 
 /// Assembles an SC transaction through the signing-digest pipeline.
@@ -105,6 +169,42 @@ class ScTransactionBuilder {
   Future<ScTxData> build(ScUnsignedTransaction unsignedTx) async {
     final result = await wasmBridge.processUnsignedTransaction(unsignedTx);
     return ScTxData(transaction: result.transaction, toSign: result.toSign);
+  }
+
+  /// Extracts canonical signing semantics from the complete unsigned V2
+  /// transaction map and computes its InputSigHash through Sia core.
+  Future<ScV2TransactionSemantics> extractV2TransactionSemantics(
+    Map<String, dynamic> unsignedTransaction, {
+    Iterable<String> changeAddresses = const [],
+  }) {
+    final bridge = wasmBridge;
+    if (bridge is! ScV2SemanticBridge) {
+      throw UnsupportedError(
+        'This custom SC bridge does not support V2 transaction semantics',
+      );
+    }
+    return (bridge as ScV2SemanticBridge).extractV2TransactionSemantics(
+      unsignedTransaction,
+      changeAddresses: changeAddresses,
+    );
+  }
+
+  /// Strictly parses canonical semantic bytes and recomputes InputSigHash
+  /// through the same Sia core implementation used by the hot side.
+  Future<ScV2TransactionSemantics> inspectV2TransactionSemantics(
+    Uint8List semanticBytes, {
+    Iterable<String> changeAddresses = const [],
+  }) {
+    final bridge = wasmBridge;
+    if (bridge is! ScV2SemanticBridge) {
+      throw UnsupportedError(
+        'This custom SC bridge does not support V2 transaction semantics',
+      );
+    }
+    return (bridge as ScV2SemanticBridge).inspectV2TransactionSemantics(
+      semanticBytes,
+      changeAddresses: changeAddresses,
+    );
   }
 
   /// Releases resources owned by a bridge created by this builder.

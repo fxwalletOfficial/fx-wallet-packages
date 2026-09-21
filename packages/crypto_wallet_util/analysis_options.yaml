@@ -66,5 +66,8 @@ linter:
 
 analyzer:
   exclude:
+    - lib/src/forked_lib/bitcoin_base_hd
     - lib/src/forked_lib/bitcoin_flutter
     - lib/src/forked_lib/cosmos_dart
+    - lib/src/forked_lib/tweetnacl-dart
+    - lib/src/forked_lib/xrpl_dart

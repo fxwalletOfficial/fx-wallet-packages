@@ -1,8 +1,11 @@
-# crypto_utils
+# crypto_wallet_util
 
 Crypto &amp; Blockchain Toolkit
 
-This package is a convenient and powerful cryptographic toolkit, written in pure "Dart", designed to offer user-friendly multi-chain address generation and  transaction assembly tools for developers, enterprises, and blockchain  enthusiasts. The toolkit provides encoding and decoding for various data formats and cryptographic algorithms, enabling swift and seamless  support for additional cryptocurrencies beyond those initially  supported.
+This package provides multi-chain address generation, transaction assembly,
+signing, verification, and encoding utilities for wallet applications. SC
+transaction support uses the bundled WebAssembly asset by default and also
+offers a caller-supplied native FFI bridge.
 
 ## Features
 
@@ -62,6 +65,9 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
 - SOL
 - SUI
 - XRP
+- SC
+  - V2 transaction assembly
+  - V2 semantic signing and cold-side inspection
 
 ### Support address check
 
@@ -115,6 +121,45 @@ This package is a convenient and powerful cryptographic toolkit, written in pure
 - Bech32 Encoding/Decoding
 - Hex Encoding/Decoding
 - BigInt Encoding/Decoding
+
+## SC V2 semantic signing
+
+`ScTransactionBuilder` can extract the exact Sia V2 transaction semantics that
+are committed by `InputSigHash`, without forwarding Merkle proofs, parent
+outputs, policies, signatures, or other witness data to the cold side.
+
+```dart
+import 'package:crypto_wallet_util/transaction.dart';
+
+final builder = await ScTransactionBuilder.create();
+try {
+  final hotSide = await builder.extractV2TransactionSemantics(
+    unsignedV2Transaction,
+    changeAddresses: knownWalletAddresses,
+  );
+
+  // Transfer hotSide.bytes to the cold side. The cold side parses the bytes
+  // again and recomputes the digest through the pinned Sia core implementation.
+  final coldSide = await builder.inspectV2TransactionSemantics(
+    hotSide.bytes,
+    changeAddresses: knownWalletAddresses,
+  );
+
+  print(coldSide.inputSigHash);
+  print(coldSide.externalOutputs);
+  print(coldSide.changeOutputs);
+  print(coldSide.minerFee);
+} finally {
+  builder.dispose();
+}
+```
+
+The initial `sia-v2-siacoin-transfer-v1` profile accepts ordinary siacoin
+transfers only. Unsupported V2 transaction categories, malformed or
+non-canonical payloads, missing required fields, zero-value outputs, and
+out-of-range input/output counts fail closed. Canonical semantic bytes are
+limited to 32 KiB so every successful extraction fits the SC V2 UR wire
+contract.
 
 ## Feature requests and bugs ##
 

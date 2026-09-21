@@ -17,9 +17,8 @@ void main() async {
   /// Load the same unsigned transaction fixture used in the JS reference
   /// script (`FIXED_UNSIGNED_TX`).
   final unsignedJson = json.decode(
-    File(
-      './test/transaction/data/sc_unsigned.json',
-    ).readAsStringSync(encoding: utf8),
+    File('./test/transaction/data/sc_unsigned.json')
+        .readAsStringSync(encoding: utf8),
   );
   final unsignedTx = ScUnsignedTransaction.fromJson(unsignedJson);
 
@@ -33,8 +32,8 @@ void main() async {
   // test fixture only. Run the FFI cases there and skip on other platforms.
   const ffiLibPath = './test/native/libsc_transaction_darwin_arm64.dylib';
   String? ffiSkip;
-  if (!Platform.isMacOS) {
-    ffiSkip = 'native SC library is only provided for macOS in tests';
+  if (!Platform.isMacOS || Abi.current() != Abi.macosArm64) {
+    ffiSkip = 'native SC library is only provided for macOS arm64 in tests';
   } else if (!File(ffiLibPath).existsSync()) {
     ffiSkip =
         'native SC library not found at $ffiLibPath '

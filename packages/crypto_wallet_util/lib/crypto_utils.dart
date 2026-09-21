@@ -4,8 +4,6 @@
 /// transaction assembly,
 /// address verification,
 /// etc.
-library crypto_utils;
-
 export '../wallets.dart';
 export '../src/wallet.dart';
 export '../src/type/type.dart';

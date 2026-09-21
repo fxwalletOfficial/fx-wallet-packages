@@ -1,6 +1,4 @@
 /// This module exports a selection of commonly used encryption algorithms and tools.
-library utils;
-
 export './address.dart';
 export './base32.dart';
 export './digest.dart';

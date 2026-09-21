@@ -1,6 +1,4 @@
 /// Export support wallets.
-library wallets;
-
 export 'src/wallets/alph.dart';
 export 'src/wallets/algo.dart';
 export 'src/wallets/aptos.dart';

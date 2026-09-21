@@ -1,5 +1,3 @@
-library nacl;
-
 import 'dart:typed_data';
 
 import 'package:pinenacl/tweetnacl.dart' show TweetNaCl;

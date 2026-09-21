@@ -33,15 +33,25 @@ class ScWasmRunBridge extends ScWasmBridgeBase {
       int v => v,
       BigInt v => v.toInt(),
       num v => v.toInt(),
-      _ =>
-        throw StateError(
-          'Expected WASM integer result, got ${value.runtimeType}.',
-        ),
+      _ => throw StateError(
+        'Expected WASM integer result, got ${value.runtimeType}.',
+      ),
     };
   }
 
   @override
-  Future<String> processJson(String jsonString) async {
+  Future<String> processJson(String jsonString) =>
+      _processExport('getUnsignedV2Transaction', jsonString);
+
+  @override
+  Future<String> extractV2TransactionSemanticsJson(String jsonString) =>
+      _processExport('getV2TransactionSemantics', jsonString);
+
+  @override
+  Future<String> inspectV2TransactionSemanticsJson(String jsonString) =>
+      _processExport('inspectV2TransactionSemantics', jsonString);
+
+  Future<String> _processExport(String exportName, String jsonString) async {
     _ensureInitialized();
     final memory = _memory!;
     final bytes = utf8.encode(jsonString);
@@ -51,9 +61,7 @@ class ScWasmRunBridge extends ScWasmBridgeBase {
     memory.buffer.asUint8List().setRange(ptr, ptr + bytes.length, bytes);
 
     try {
-      final packed = _toInt(
-        _getFunc('getUnsignedV2Transaction')([ptr, bytes.length]),
-      );
+      final packed = _toInt(_getFunc(exportName)([ptr, bytes.length]));
       final resultPtr = _toInt(_getFunc('resultPtr')([packed]));
       final resultLen = _toInt(_getFunc('resultLen')([packed]));
 

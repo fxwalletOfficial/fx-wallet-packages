@@ -1,6 +1,4 @@
 /// Export chain config supported in this repository.
-library chains;
-
 export './type/chain_type.dart';
 export './type/default.dart';
 export './chain_configs.dart';
