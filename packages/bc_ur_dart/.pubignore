@@ -1,0 +1,6 @@
+.dart_tool/
+build/
+*.lock
+AGENTS.md
+docs/superpowers/
+pubspec_overrides.yaml
