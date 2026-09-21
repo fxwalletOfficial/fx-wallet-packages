@@ -21,6 +21,20 @@ class ScWasmIsolateBridge extends ScWasmBridgeBase {
 
   @override
   Future<String> processJson(String jsonString) {
+    return _processExport('getUnsignedV2Transaction', jsonString);
+  }
+
+  @override
+  Future<String> extractV2TransactionSemanticsJson(String jsonString) {
+    return _processExport('getV2TransactionSemantics', jsonString);
+  }
+
+  @override
+  Future<String> inspectV2TransactionSemanticsJson(String jsonString) {
+    return _processExport('inspectV2TransactionSemantics', jsonString);
+  }
+
+  Future<String> _processExport(String exportName, String jsonString) {
     _checkNotDisposed();
     final wasmBytes = _wasmBytes;
     if (wasmBytes == null) {
@@ -35,7 +49,7 @@ class ScWasmIsolateBridge extends ScWasmBridgeBase {
       final wasmTransfer = TransferableTypedData.fromList(<Uint8List>[
         currentBytes,
       ]);
-      return _runScWasmInNewIsolate(wasmTransfer, jsonString);
+      return _runScWasmInNewIsolate(wasmTransfer, exportName, jsonString);
     });
 
     // Keep the queue usable after a failed request while preserving the
@@ -63,15 +77,28 @@ class ScWasmIsolateBridge extends ScWasmBridgeBase {
 
 Future<String> _runScWasmInNewIsolate(
   TransferableTypedData wasmTransfer,
+  String exportName,
   String jsonString,
 ) {
-  return Isolate.run<String>(() => _runScWasm(wasmTransfer, jsonString));
+  return Isolate.run<String>(
+    () => _runScWasm(wasmTransfer, exportName, jsonString),
+  );
 }
 
 Future<String> _runScWasm(
   TransferableTypedData wasmTransfer,
+  String exportName,
   String jsonString,
 ) async {
   final bridge = ScWasmRunBridge(wasmTransfer.materialize().asUint8List());
-  return bridge.processJson(jsonString);
+  return switch (exportName) {
+    'getUnsignedV2Transaction' => bridge.processJson(jsonString),
+    'getV2TransactionSemantics' => bridge.extractV2TransactionSemanticsJson(
+      jsonString,
+    ),
+    'inspectV2TransactionSemantics' => bridge.inspectV2TransactionSemanticsJson(
+      jsonString,
+    ),
+    _ => throw UnsupportedError('Unknown SC WASM export: $exportName'),
+  };
 }

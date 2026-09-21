@@ -18,6 +18,18 @@ class ScGoFfiBridge extends ScWasmBridgeBase {
         int Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>)
       >('process_sc_transaction');
 
+  late final _extractV2TransactionSemantics = _lib
+      .lookupFunction<
+        ffi.Int32 Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>),
+        int Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>)
+      >('extract_sc_v2_transaction_semantics');
+
+  late final _inspectV2TransactionSemantics = _lib
+      .lookupFunction<
+        ffi.Int32 Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>),
+        int Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>)
+      >('inspect_sc_v2_transaction_semantics');
+
   late final _freeString = _lib
       .lookupFunction<
         ffi.Void Function(ffi.Pointer<Utf8>),
@@ -28,12 +40,26 @@ class ScGoFfiBridge extends ScWasmBridgeBase {
   ScGoFfiBridge(this._lib);
 
   @override
-  Future<String> processJson(String jsonString) async {
+  Future<String> processJson(String jsonString) =>
+      _call(_processScTransaction, jsonString);
+
+  @override
+  Future<String> extractV2TransactionSemanticsJson(String jsonString) =>
+      _call(_extractV2TransactionSemantics, jsonString);
+
+  @override
+  Future<String> inspectV2TransactionSemanticsJson(String jsonString) =>
+      _call(_inspectV2TransactionSemantics, jsonString);
+
+  Future<String> _call(
+    int Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Pointer<Utf8>>) function,
+    String jsonString,
+  ) async {
     final inputPtr = jsonString.toNativeUtf8();
     final outputPtrPtr = malloc<ffi.Pointer<Utf8>>();
 
     try {
-      final result = _processScTransaction(inputPtr, outputPtrPtr);
+      final result = function(inputPtr, outputPtrPtr);
       final outputPtr = outputPtrPtr.value;
 
       if (result != 0) {

@@ -7,6 +7,7 @@ import 'lib/rlp.dart' as rlp;
 
 class Eip7702TxData extends EthTxData {
   final Uint8List TxTypeBuffer = Uint8List.fromList([4]);
+  @override
   Eip7702Authorization authorization;
 
   Eip7702TxData(

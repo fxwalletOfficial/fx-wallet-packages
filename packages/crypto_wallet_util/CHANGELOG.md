@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.1] - 2026-09-21
+### Added
+
+- SC V2 semantic signing now extracts canonical `V2TransactionSemantics`
+  bytes and strictly reconstructs their `InputSigHash` through the pinned Sia
+  core implementation. The initial profile accepts only siacoin transfers and
+  returns a key-free typed preview model with all outputs, change markers,
+  miner fee, parent IDs, and input count. Existing full-transaction assembly
+  and signing APIs remain available unchanged.
+- Hot-side extraction and cold-side inspection are available through the
+  default isolate-backed WASM builder, direct WASM bridge, and caller-supplied
+  native FFI bridge. The parser rejects missing semantic fields, zero-value
+  outputs, unsupported transaction categories, non-canonical bytes, invalid
+  parent IDs, and payloads outside the documented profile bounds.
+
 ## [2.1.0] - 2026-09-17
 ### Added
 
