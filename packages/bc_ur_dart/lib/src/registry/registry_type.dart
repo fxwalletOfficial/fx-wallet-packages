@@ -59,4 +59,6 @@ class RegistryType {
 
   static const RegistryType SC_SIGN_REQUEST = RegistryType("sc-sign-request", 8120);
   static const RegistryType SC_SIGNATURE = RegistryType("sc-signature", 8121);
+  static const RegistryType SC_V2_SIGN_REQUEST = RegistryType("sc-v2-sign-request", 8122);
+  static const RegistryType SC_V2_SIGNATURE = RegistryType("sc-v2-signature", 8123);
 }

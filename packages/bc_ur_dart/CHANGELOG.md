@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.29] - 2026-09-21
+
+- Feature (SC V2): add independent `sc-v2-sign-request` and `sc-v2-signature` registry types for deterministic raw-byte cold-signing exchange. Requests carry only protocol version, UUID, SC/SCP profile, master fingerprint, signer core address and opaque canonical semantic transaction bytes; responses carry only protocol version, the matching UUID and a 64-byte Ed25519 signature.
+- Security (SC V2): require canonical definite-length CBOR with the exact ordered integer-key schema, reject unknown versions/profiles, missing/unknown/duplicate fields, invalid tags or byte lengths, and cap semantic transaction payloads at 32 KiB.
+- Compatibility: retain the existing `ScSignRequest` / `ScSignature` registry types and decoders unchanged; V2 types never negotiate or silently downgrade to the legacy JSON formats.
+
 ## [0.1.28]
 
 - Feature (SC): add the opt-in deterministic `zlib-json-v1` encoding for `ScSignRequest.signingPayloadData`; legacy uncompressed requests remain byte-compatible and continue to decode.
