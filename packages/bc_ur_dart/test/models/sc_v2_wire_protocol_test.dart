@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bc_ur_dart/bc_ur_dart.dart';
+import 'package:convert/convert.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -20,6 +21,29 @@ void main() {
   }
 
   group('SC V2 sign request', () {
+    test('matches the fixed CBOR and complete UR golden vector', () {
+      const expectedCborHex = 'a6010202d82550123e4567e89b12d3a45642661417400003010444a1b2c3d4055820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f0644007f80ff';
+      const expectedUr =
+          'UR:SC-V2-SIGN-REQUEST/OLADAOAOTPDAGDBGFMFEIOVSNDBGTEOXHFFWIYBBCHFZAEAXADAAFYOYPRSRTYAHHDCXAEADAOAXAAAHAMATAYASBKBDBNBTBABSBEBYBGBWBBBZCMCHCSCFCYCWCECACKCTAMFYAELBLAZMONZEAELY';
+      final ur = ScV2SignRequest.buildUR(
+        requestId: requestId,
+        profile: ScV2Profile.scp,
+        masterFingerprint: fingerprint,
+        signerCoreAddress: signerAddress,
+        semanticTransaction: Uint8List.fromList(<int>[0x00, 0x7f, 0x80, 0xff]),
+      );
+
+      expect(hex.encode(ur.payload), expectedCborHex);
+      expect(ur.encode(), expectedUr);
+
+      final decoded = ScV2SignRequest.fromUR(UR.decode(expectedUr));
+      expect(decoded.requestIdString, requestId);
+      expect(decoded.profile, ScV2Profile.scp);
+      expect(decoded.masterFingerprint, fingerprint);
+      expect(decoded.signerCoreAddress, signerAddress);
+      expect(decoded.semanticTransaction, <int>[0x00, 0x7f, 0x80, 0xff]);
+    });
+
     test('round trips deterministic opaque bytes for both profiles', () {
       for (final profile in ScV2Profile.values) {
         final original = request(profile: profile);
@@ -116,6 +140,24 @@ void main() {
   });
 
   group('SC V2 signature', () {
+    test('matches the fixed CBOR and complete UR golden vector', () {
+      const expectedCborHex =
+          'a3010202d82550123e4567e89b12d3a456426614174000035840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f';
+      const expectedUr =
+          'UR:SC-V2-SIGNATURE/OTADAOAOTPDAGDBGFMFEIOVSNDBGTEOXHFFWIYBBCHFZAEAXHDFZAEADAOAXAAAHAMATAYASBKBDBNBTBABSBEBYBGBWBBBZCMCHCSCFCYCWCECACKCTCXCLCPCNDKDADSDIDEDTDRDNDWDPDMDLDYEHEYEOEEECENEMETESFTFRFNFSFMFHLGTAAMHL';
+      final ur = ScV2Signature.buildUR(
+        requestId: requestId,
+        signature: Uint8List.fromList(List<int>.generate(64, (index) => index)),
+      );
+
+      expect(hex.encode(ur.payload), expectedCborHex);
+      expect(ur.encode(), expectedUr);
+
+      final decoded = ScV2Signature.fromUR(UR.decode(expectedUr));
+      expect(decoded.requestIdString, requestId);
+      expect(decoded.signature, List<int>.generate(64, (index) => index));
+    });
+
     test('round trips UUID and raw Ed25519 signature deterministically', () {
       final signatureBytes = Uint8List.fromList(List<int>.generate(64, (index) => 255 - index));
       final original = ScV2Signature(requestId: requestIdBytes, signature: signatureBytes);
