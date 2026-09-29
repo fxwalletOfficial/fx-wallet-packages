@@ -8,6 +8,9 @@ import 'package:crypto_wallet_util/utils.dart' hide fromHex;
 
 const String ETH_SIGN_REQUEST = 'ETH-SIGN-REQUEST';
 
+/// ERC-20 `transfer(address,uint256)` 的 function selector。
+const String ERC20_TRANSFER_SELECTOR = 'a9059cbb';
+
 class EthSignRequestUR extends UR {
   final Uint8List uuid;
   final int chainId;
@@ -128,14 +131,43 @@ class EthSignRequestUR extends UR {
 
     _value = tx.data.value;
     _to = _tx.data.to;
+    _token = '';
     final input = stringToBytes(tx.data.data);
-    if (input.length != 68) return;
+    _selector = input.length >= 4 ? hex.encode(input.sublist(0, 4)) : '';
+
+    if (input.isEmpty) {
+      _callKind = EthCallKind.nativeTransfer;
+      return;
+    }
+    if (!_isErc20Transfer(input)) {
+      // approve / increaseAllowance 等同为 68 字节，不能按转账展示。
+      _callKind = EthCallKind.contractCall;
+      return;
+    }
 
     // Handle ERC-20 Simple token transfer information.
+    _callKind = EthCallKind.erc20Transfer;
     _to = '0x${hex.encode(input.sublist(16, 36))}';
     _token = tx.data.to;
     _value = BigInt.parse(hex.encode(input.sublist(36)), radix: 16);
   }
+
+  /// 仅 `transfer(address,uint256)` 且 address 参数高 12 字节为 0 时才视为 ERC-20 转账。
+  static bool _isErc20Transfer(Uint8List input) {
+    if (input.length != 68) return false;
+    if (hex.encode(input.sublist(0, 4)) != ERC20_TRANSFER_SELECTOR) return false;
+    return input.sublist(4, 16).every((b) => b == 0);
+  }
+
+  EthCallKind? _callKind;
+
+  /// 交易 calldata 的调用类型；非交易类请求（消息、typed data）为 null。
+  EthCallKind? get callKind => _callKind;
+
+  String _selector = '';
+
+  /// calldata 前 4 字节的 function selector（小写 hex，无 0x）；calldata 不足 4 字节时为空。
+  String get selector => _selector;
 
   BigInt _value = BigInt.zero;
   BigInt get value => _value;
@@ -148,3 +180,15 @@ class EthSignRequestUR extends UR {
 }
 
 enum EthSignDataType { NONE, ETH_TRANSACTION_DATA, ETH_TYPED_DATA, ETH_RAW_BYTES, ETH_TYPED_TRANSACTION }
+
+/// 交易 calldata 的调用类型，供签名端选择展示方式。
+enum EthCallKind {
+  /// calldata 为空的原生币转账。
+  nativeTransfer,
+
+  /// 标准 ERC-20 `transfer(address,uint256)`。
+  erc20Transfer,
+
+  /// 其他任意合约调用（含 approve 等 68 字节调用）。
+  contractCall,
+}
