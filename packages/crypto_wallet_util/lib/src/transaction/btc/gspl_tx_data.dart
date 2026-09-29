@@ -158,14 +158,34 @@ class GsplTxData extends TxData {
 class GsplItem {
   final String? path;
   final String? address;
-  final int? amount;
+
+  /// Exact amount in the chain's smallest unit. Use this for chains whose
+  /// amounts can exceed int64 (e.g. ALPH in attoALPH).
+  final BigInt? amountBigInt;
   final int? signHashType;
   final Uint8List? signature;
 
-  GsplItem({this.path, this.amount, this.signature, this.address, this.signHashType});
+  /// Pass either [amount] (int) or [amountBigInt], not both.
+  GsplItem({this.path, int? amount, BigInt? amountBigInt, this.signature, this.address, this.signHashType})
+      : amountBigInt = amountBigInt ?? (amount == null ? null : BigInt.from(amount)) {
+    if (amount != null && amountBigInt != null) {
+      throw ArgumentError('Pass either amount or amountBigInt, not both');
+    }
+  }
+
+  /// Amount as int. Throws [StateError] when the amount does not fit in an
+  /// int rather than silently truncating it; use [amountBigInt] instead.
+  int? get amount {
+    final value = amountBigInt;
+    if (value == null) return null;
+    if (!value.isValidInt) {
+      throw StateError('Amount $value does not fit in int; use amountBigInt');
+    }
+    return value.toInt();
+  }
 
   Map<String, dynamic> toJson() => {
-    'amount': amount.toString(),
+    'amount': amountBigInt?.toString(),
     'path': path,
     'address': address,
     'signHashType': signHashType,
