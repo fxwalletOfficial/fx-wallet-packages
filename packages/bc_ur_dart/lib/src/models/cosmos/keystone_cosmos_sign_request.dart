@@ -85,22 +85,25 @@ class KeystoneCosmosSignRequest extends RegistryItem {
   @override
   RegistryItem decodeFromCbor(CborMap map) {
     final int dataTypeIndex = RegistryItem.readInt(map, _KeystoneCosmosKeys.dataType.index);
-    final CborValue? derivationPathValue = map[CborSmallInt(_KeystoneCosmosKeys.derivationPaths.index)];
-    if (derivationPathValue is! CborList) {
-      throw Exception(
-        'KeystoneCosmosSignRequest: key ${_KeystoneCosmosKeys.derivationPaths.index} '
-        'must be a list of crypto-keypath values.',
-      );
+    final model = getRegistryType().type;
+    final derivationPathItems = RegistryItem.readOptionalStrictList<CborMap>(
+      map,
+      _KeystoneCosmosKeys.derivationPaths.index,
+      model: model,
+      field: 'derivationPaths',
+    );
+    if (derivationPathItems == null || derivationPathItems.isEmpty) {
+      throw InvalidCborURException(model: model, field: 'derivationPaths', reason: 'must be a non-empty list of crypto-keypath values');
     }
 
-    final derivationPaths = derivationPathValue.toList().whereType<CborMap>().map((item) => CryptoKeypath().decodeFromCbor(item) as CryptoKeypath).toList();
+    final derivationPaths = derivationPathItems.map((item) => CryptoKeypath().decodeFromCbor(item) as CryptoKeypath).toList();
 
-    if (derivationPaths.isEmpty) {
-      throw Exception('KeystoneCosmosSignRequest: derivationPaths must not be empty.');
-    }
-
-    final addressesValue = map[CborSmallInt(_KeystoneCosmosKeys.addresses.index)];
-    final List<String>? addresses = addressesValue is CborList ? addressesValue.toList().whereType<CborString>().map((item) => item.toString()).toList() : null;
+    final List<String>? addresses = RegistryItem.readOptionalStrictList<CborString>(
+      map,
+      _KeystoneCosmosKeys.addresses.index,
+      model: model,
+      field: 'addresses',
+    )?.map((item) => item.toString()).toList();
 
     return KeystoneCosmosSignRequest(
       requestId: RegistryItem.readOptionalBytes(map, _KeystoneCosmosKeys.requestId.index),

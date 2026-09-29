@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- Fix (ALPH / Cosmos): `AlphSignRequest.outputs` and `KeystoneCosmosSignRequest.derivationPaths` / `addresses` no longer silently drop malformed items. A present field that is not a `CborList`, or that contains any item of the wrong type, now throws `InvalidCborURException`; an empty Cosmos `derivationPaths` also throws `InvalidCborURException` instead of a bare `Exception` (#88).
+- Fix: `bigIntToBytes` rejects negative and non-decimal input with `URException(invalidParams)` instead of encoding negatives as the wrong positive value or throwing `FormatException` (#88).
+
 ## [0.1.29] - 2026-09-21
 
 - Feature (SC V2): add independent `sc-v2-sign-request` and `sc-v2-signature` registry types for deterministic raw-byte cold-signing exchange. Requests carry only protocol version, UUID, SC/SCP profile, master fingerprint, signer core address and opaque canonical semantic transaction bytes; responses carry only protocol version, the matching UUID and a 64-byte Ed25519 signature.

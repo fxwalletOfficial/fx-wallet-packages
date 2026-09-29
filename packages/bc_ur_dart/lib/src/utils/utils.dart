@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:bc_ur_dart/src/utils/error.dart';
 import 'package:cbor/cbor.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart' as crypto;
@@ -111,8 +112,14 @@ Uint8List toUtf8Bytes(String str) {
   return Uint8List.fromList(utf8);
 }
 
-/// 将BigInt的字符串转换为字节数组（Uint8List）
+/// 将非负 BigInt 的十进制字符串转换为大端字节数组（Uint8List）
+///
+/// 负数或非法字符串抛 [URException]（invalidParams）：无符号编码会丢失负号，
+/// 编码成一个错误的正数。
 Uint8List bigIntToBytes(String bigIntStr) {
+  if (!RegExp(r'^[0-9]+$').hasMatch(bigIntStr)) {
+    throw URException(type: URExceptionType.invalidParams, message: 'bigIntToBytes expects a non-negative decimal integer, got "$bigIntStr"');
+  }
   BigInt bigIntValue = BigInt.parse(bigIntStr);
 
   int byteLength = (bigIntValue.bitLength + 7) ~/ 8;

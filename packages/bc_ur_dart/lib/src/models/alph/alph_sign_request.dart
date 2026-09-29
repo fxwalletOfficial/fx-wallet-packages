@@ -80,12 +80,13 @@ class AlphSignRequest extends RegistryItem {
       derivationPath = RegistryItem.readKeypath(map, AlphSignRequestKeys.derivationPath.index);
     }
 
-    // outputs 是 optional CborList，每个元素是 tagged CborMap
-    List<CryptoTxEntity>? outputs;
-    final outputsValue = map[CborSmallInt(AlphSignRequestKeys.outputs.index)];
-    if (outputsValue is CborList) {
-      outputs = outputsValue.toList().whereType<CborMap>().map((e) => CryptoTxEntity().decodeFromCbor(e) as CryptoTxEntity).toList();
-    }
+    // outputs 是 optional CborList，每个元素是 tagged CborMap；存在但畸形时必须失败
+    final outputs = RegistryItem.readOptionalStrictList<CborMap>(
+      map,
+      AlphSignRequestKeys.outputs.index,
+      model: getRegistryType().type,
+      field: 'outputs',
+    )?.map((e) => CryptoTxEntity().decodeFromCbor(e) as CryptoTxEntity).toList();
     final dataTypeIndex = RegistryItem.readOptionalInt(map, AlphSignRequestKeys.dataType.index) ?? GsplDataType.transaction.index;
 
     return AlphSignRequest(
