@@ -174,4 +174,123 @@ void main() {
       );
     });
   });
+
+  group('EthSignRequestUR calldata classification', () {
+    const token = '0xdac17f958d2ee523a2206206994597c13d831ec7';
+    const recipient = '742d35cc6634c0532925a3b8d4c9db96c4b4d8b6';
+    const zeroPad = '000000000000000000000000';
+    const amountWord = '00000000000000000000000000000000000000000000000000000000000f4240'; // 1_000_000
+
+    String call(String selector, {String pad = zeroPad, String address = recipient, String word = amountWord}) => '0x$selector$pad$address$word';
+
+    // 同时校验直接工厂与 UR 往返：两条路径的分类字段必须一致，且签名 payload 不变。
+    EthSignRequestUR roundTrip(EthTxData tx) {
+      final unsigned = tx.serialize(sig: false);
+      final request = EthSignRequestUR.fromTypedTransaction(tx: tx, address: '0x$recipient', path: "m/44'/60'/0'/0/0", origin: '', xfp: '12345678');
+      final parsed = EthSignRequestUR.fromUR(ur: UR.decode(request.encode()));
+
+      expect(request.data, unsigned);
+      expect(parsed.data, unsigned);
+      expect(request.callKind, parsed.callKind);
+      expect(request.selector, parsed.selector);
+      expect(request.to, parsed.to);
+      expect(request.token, parsed.token);
+      expect(request.value, parsed.value);
+      return parsed;
+    }
+
+    EthSignRequestUR eip1559({String to = token, String data = '', BigInt? value}) => roundTrip(Eip1559TxData(
+          data: EthTxDataRaw(nonce: 1, gasLimit: 60000, maxFeePerGas: 2, maxPriorityFeePerGas: 1, to: to, value: value ?? BigInt.zero, data: data),
+          network: TxNetwork(chainId: 1),
+        ));
+
+    test('native transfer keeps tx recipient and value', () {
+      final parsed = eip1559(to: '0x$recipient', value: BigInt.from(1000));
+
+      expect(parsed.callKind, EthCallKind.nativeTransfer);
+      expect(parsed.selector, '');
+      expect(parsed.to, '0x$recipient');
+      expect(parsed.token, '');
+      expect(parsed.value, BigInt.from(1000));
+    });
+
+    test('ERC-20 transfer decodes recipient, token and amount', () {
+      final parsed = eip1559(data: call(ERC20_TRANSFER_SELECTOR));
+
+      expect(parsed.callKind, EthCallKind.erc20Transfer);
+      expect(parsed.selector, ERC20_TRANSFER_SELECTOR);
+      expect(parsed.to, '0x$recipient');
+      expect(parsed.token, token);
+      expect(parsed.value, BigInt.from(1000000));
+    });
+
+    test('legacy ERC-20 transfer decodes the same way', () {
+      final parsed = roundTrip(LegacyTxData(
+        data: EthTxDataRaw(nonce: 1, gasLimit: 60000, gasPrice: 1, to: token, value: BigInt.zero, data: call(ERC20_TRANSFER_SELECTOR)),
+        network: TxNetwork(chainId: 1),
+      ));
+
+      expect(parsed.callKind, EthCallKind.erc20Transfer);
+      expect(parsed.to, '0x$recipient');
+      expect(parsed.token, token);
+      expect(parsed.value, BigInt.from(1000000));
+    });
+
+    // approve / increaseAllowance / decreaseAllowance 与 transfer 同为 68 字节。
+    for (final selector in ['095ea7b3', '39509351', 'a457c2d7', 'deadbeef']) {
+      test('68-byte call with selector $selector is a contract call, not a transfer', () {
+        final parsed = eip1559(data: call(selector), value: BigInt.from(7));
+
+        expect(parsed.callKind, EthCallKind.contractCall);
+        expect(parsed.selector, selector);
+        expect(parsed.to, token);
+        expect(parsed.token, '');
+        expect(parsed.value, BigInt.from(7));
+      });
+    }
+
+    test('transfer selector with dirty address padding is a contract call', () {
+      final parsed = eip1559(data: call(ERC20_TRANSFER_SELECTOR, pad: '000000000000000000000001'));
+
+      expect(parsed.callKind, EthCallKind.contractCall);
+      expect(parsed.to, token);
+      expect(parsed.token, '');
+      expect(parsed.value, BigInt.zero);
+    });
+
+    test('transfer selector with extra trailing bytes is a contract call', () {
+      final parsed = eip1559(data: '${call(ERC20_TRANSFER_SELECTOR)}00');
+
+      expect(parsed.callKind, EthCallKind.contractCall);
+      expect(parsed.to, token);
+      expect(parsed.token, '');
+    });
+
+    test('non-68-byte call is a contract call', () {
+      final parsed = eip1559(data: '0x12345678');
+
+      expect(parsed.callKind, EthCallKind.contractCall);
+      expect(parsed.selector, '12345678');
+      expect(parsed.to, token);
+      expect(parsed.token, '');
+    });
+
+    test('message requests have no call kind', () {
+      final request = EthSignRequestUR.fromMessage(
+        dataType: EthSignDataType.ETH_RAW_BYTES,
+        address: '',
+        path: "m/44'/60'/0'/0/0",
+        origin: '',
+        xfp: '12345678',
+        signData: '0x1234',
+        chainId: 1,
+      );
+      final parsed = EthSignRequestUR.fromUR(ur: UR.decode(request.encode()));
+
+      expect(request.callKind, isNull);
+      expect(request.selector, '');
+      expect(parsed.callKind, isNull);
+      expect(parsed.selector, '');
+    });
+  });
 }

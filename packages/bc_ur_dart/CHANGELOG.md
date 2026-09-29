@@ -1,8 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.30]
 
 - Fix (ALPH / Cosmos): `AlphSignRequest.outputs` and `KeystoneCosmosSignRequest.derivationPaths` / `addresses` no longer silently drop malformed items. A present field that is not a `CborList`, or that contains any item of the wrong type, now throws `InvalidCborURException`; an empty Cosmos `derivationPaths` also throws `InvalidCborURException` instead of a bare `Exception` (#88).
+- Fix (ETH): `EthSignRequestUR` no longer decodes every 68-byte calldata as an ERC-20 transfer. `to` / `token` / `value` are rewritten from calldata only when the selector is `transfer(address,uint256)` (`0xa9059cbb`) and the address word has zero upper padding; `approve`, `increaseAllowance` and any other 68-byte call now keep `to = tx.to`, `value = tx.value`, `token = ''`. These fields are display-only; signing payloads are unchanged.
+- Feature (ETH): add `EthSignRequestUR.callKind` (`EthCallKind.nativeTransfer / erc20Transfer / contractCall`, `null` for message requests), `EthSignRequestUR.selector`, and the `ERC20_TRANSFER_SELECTOR` constant so signers can render contract calls explicitly instead of inferring from `token.isEmpty`. Both `fromUR` and `fromTypedTransaction` (via `setTx`) populate `to` / `token` / `value` / `callKind` / `selector` identically; previously the direct factory left `to` empty and `value` zero.
 - Fix: `bigIntToBytes` rejects negative and non-decimal input with `URException(invalidParams)` instead of encoding negatives as the wrong positive value or throwing `FormatException` (#88).
 
 ## [0.1.29] - 2026-09-21

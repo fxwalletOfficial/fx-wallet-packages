@@ -1,6 +1,6 @@
 name: bc_ur_dart
 description: A pure Dart package for encoding and decoding Uniform Resources (URs), the URI-encoded CBOR format developed by Blockchain Commons.
-version: 0.1.29
+version: 0.1.30
 homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packages/bc_ur_dart
 
 environment:
