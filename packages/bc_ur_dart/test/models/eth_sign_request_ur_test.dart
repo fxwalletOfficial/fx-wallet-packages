@@ -183,9 +183,20 @@ void main() {
 
     String call(String selector, {String pad = zeroPad, String address = recipient, String word = amountWord}) => '0x$selector$pad$address$word';
 
+    // 同时校验直接工厂与 UR 往返：两条路径的分类字段必须一致，且签名 payload 不变。
     EthSignRequestUR roundTrip(EthTxData tx) {
+      final unsigned = tx.serialize(sig: false);
       final request = EthSignRequestUR.fromTypedTransaction(tx: tx, address: '0x$recipient', path: "m/44'/60'/0'/0/0", origin: '', xfp: '12345678');
-      return EthSignRequestUR.fromUR(ur: UR.decode(request.encode()));
+      final parsed = EthSignRequestUR.fromUR(ur: UR.decode(request.encode()));
+
+      expect(request.data, unsigned);
+      expect(parsed.data, unsigned);
+      expect(request.callKind, parsed.callKind);
+      expect(request.selector, parsed.selector);
+      expect(request.to, parsed.to);
+      expect(request.token, parsed.token);
+      expect(request.value, parsed.value);
+      return parsed;
     }
 
     EthSignRequestUR eip1559({String to = token, String data = '', BigInt? value}) => roundTrip(Eip1559TxData(
@@ -276,6 +287,8 @@ void main() {
       );
       final parsed = EthSignRequestUR.fromUR(ur: UR.decode(request.encode()));
 
+      expect(request.callKind, isNull);
+      expect(request.selector, '');
       expect(parsed.callKind, isNull);
       expect(parsed.selector, '');
     });

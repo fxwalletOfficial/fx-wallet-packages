@@ -118,7 +118,10 @@ class EthSignRequestUR extends UR {
     return item;
   }
 
-  void setTx(EthTxData item) => _tx = item;
+  void setTx(EthTxData item) {
+    _tx = item;
+    _classifyCall();
+  }
 
   void decodeTransaction() {
     if (data.first == 2) {
@@ -129,6 +132,11 @@ class EthSignRequestUR extends UR {
       _tx = LegacyTxData.deserialize(hex.encode(data), chainId: chainId);
     }
 
+    _classifyCall();
+  }
+
+  /// 按当前 [tx] 的 calldata 计算展示字段；直接工厂与 UR 解析共用，保证两条路径结果一致。
+  void _classifyCall() {
     _value = tx.data.value;
     _to = _tx.data.to;
     _token = '';
