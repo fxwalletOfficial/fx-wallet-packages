@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+### Fixed
+
+- `GsplItem.toJson()` now emits `null` for a missing amount instead of the
+  string `'null'`, which made downstream `bigIntToBytes` throw (#87).
+- `GsplItem` can now hold amounts above int64 via the new `amountBigInt`
+  constructor parameter / field (e.g. ALPH amounts in attoALPH), and
+  `toJson()` serializes the exact decimal value. The existing `int? amount`
+  parameter and getter keep working; reading `amount` for a value that does
+  not fit in an int throws `StateError` instead of silently truncating (#87).
+
 ## [2.1.1] - 2026-09-21
 ### Added
 
