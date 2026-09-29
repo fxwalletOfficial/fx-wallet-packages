@@ -116,6 +116,30 @@ abstract class RegistryItem {
     return map.containsKey(CborSmallInt(key));
   }
 
+  /// optional 列表字段：缺失返回 null；一旦存在则 fail-closed ——
+  /// 值不是 CborList，或任一元素不是 [T]，都抛 InvalidCborURException。
+  /// 不能像 readOptionalXxx 那样 best-effort：静默过滤元素会让后续元素前移，
+  /// 冷端按下标读取时会拿到另一项（issue #88）。
+  static List<T>? readOptionalStrictList<T extends CborValue>(
+    CborMap map,
+    int key, {
+    required String model,
+    required String field,
+  }) {
+    if (!hasKey(map, key)) return null;
+    final value = map[CborSmallInt(key)];
+    if (value is! CborList) {
+      throw InvalidCborURException(model: model, field: field, reason: 'expected CborList, got ${value.runtimeType}');
+    }
+    final items = value.toList();
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] is! T) {
+        throw InvalidCborURException(model: model, field: field, reason: 'item[$i] expected $T, got ${items[i].runtimeType}');
+      }
+    }
+    return items.cast<T>();
+  }
+
   static CryptoKeypath readKeypath(
     CborMap map,
     int key, {

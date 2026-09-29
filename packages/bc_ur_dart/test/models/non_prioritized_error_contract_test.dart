@@ -85,7 +85,11 @@ void main() {
 
   group('问题 3: optional best-effort vs required fail-closed', () {
     // 合法 keypath：components = [44, hardened]
-    final keypath = CborMap({CborSmallInt(1): CborList([CborSmallInt(44), CborBool(true)])}, tags: [304]);
+    final keypath = CborMap({
+      CborSmallInt(1): CborList([CborSmallInt(44), CborBool(true)])
+    }, tags: [
+      304
+    ]);
 
     CborMap solMap({required CborValue signData, CborValue? fee, CborValue? origin}) {
       return CborMap({
@@ -143,6 +147,127 @@ void main() {
       final decoded = SolSignRequest.fromUR(ur);
       expect(decoded.signData, equals(Uint8List.fromList([0xde, 0xad, 0xbe, 0xef])));
       expect(decoded.signType, equals(SignType.transaction));
+    });
+  });
+
+  group('issue #88: 列表字段中的畸形项必须失败，不得静默过滤', () {
+    // 以合法请求为底，替换指定 key 的值后重新编码，模拟被篡改/畸形的 payload。
+    Uint8List replaceKey(Uint8List payload, int key, CborValue value) {
+      final map = Map<CborValue, CborValue>.from(cbor.decode(payload) as CborMap);
+      map[CborSmallInt(key)] = value;
+      return Uint8List.fromList(cbor.encode(CborMap(map)));
+    }
+
+    CborMap decodeMap(Uint8List payload) => cbor.decode(payload) as CborMap;
+
+    final alphPayload = AlphSignRequest.generateSignRequest(
+      signData: 'deadbeef',
+      path: "m/44'/1234'/0'/0/0",
+      xfp: '12345678',
+      outputs: [
+        {'address': 'addr-1', 'amount': '1000'},
+        {'address': 'addr-2', 'amount': '2000'},
+      ],
+    ).payload;
+
+    final cosmosPayload = KeystoneCosmosSignRequest.constructCosmosRequest(
+      signDataHex: 'deadbeef',
+      dataType: CosmosDataType.amino,
+      paths: ["m/44'/118'/0'/0/0", "m/44'/118'/0'/0/1"],
+      xfps: ['12345678', '12345678'],
+      addresses: ['cosmos1a', 'cosmos1b'],
+    ).payload;
+
+    test('ALPH 合法 outputs 仍按顺序完整解码', () {
+      final decoded = AlphSignRequest.fromCBOR(alphPayload);
+      expect(parseTxOutputs(decoded.outputs), [
+        {'address': 'addr-1', 'amount': '1000'},
+        {'address': 'addr-2', 'amount': '2000'},
+      ]);
+    });
+
+    test('ALPH outputs 中混入非 CborMap 项 → InvalidCborURException', () {
+      final outputs = (decodeMap(alphPayload)[CborSmallInt(4)] as CborList).toList();
+      final tampered = replaceKey(alphPayload, 4, CborList([CborSmallInt(1), ...outputs]));
+      expect(() => AlphSignRequest.fromCBOR(tampered), throwsA(isA<InvalidCborURException>()));
+    });
+
+    test('ALPH outputs 不是 CborList → InvalidCborURException', () {
+      final tampered = replaceKey(alphPayload, 4, CborString('not-a-list'));
+      expect(() => AlphSignRequest.fromCBOR(tampered), throwsA(isA<InvalidCborURException>()));
+    });
+
+    test('Cosmos 合法 derivationPaths / addresses 仍完整解码', () {
+      final decoded = KeystoneCosmosSignRequest.fromUR(UR(type: RegistryType.COSMOS_SIGN_REQUEST.type, payload: cosmosPayload));
+      expect(decoded.getDerivationPaths(), ["m/44'/118'/0'/0/0", "m/44'/118'/0'/0/1"]);
+      expect(decoded.addresses, ['cosmos1a', 'cosmos1b']);
+    });
+
+    UR cosmosUR(Uint8List payload) => UR(type: RegistryType.COSMOS_SIGN_REQUEST.type, payload: payload);
+
+    test('Cosmos derivationPaths 中混入非 CborMap 项 → InvalidCborURException', () {
+      final paths = (decodeMap(cosmosPayload)[CborSmallInt(4)] as CborList).toList();
+      final tampered = replaceKey(cosmosPayload, 4, CborList([CborSmallInt(1), ...paths]));
+      expect(() => KeystoneCosmosSignRequest.fromUR(cosmosUR(tampered)), throwsA(isA<InvalidCborURException>()));
+    });
+
+    test('Cosmos derivationPaths 不是 CborList → InvalidCborURException', () {
+      final tampered = replaceKey(cosmosPayload, 4, CborString('not-a-list'));
+      expect(() => KeystoneCosmosSignRequest.fromUR(cosmosUR(tampered)), throwsA(isA<InvalidCborURException>()));
+    });
+
+    test('Cosmos derivationPaths 为空 → InvalidCborURException', () {
+      final tampered = replaceKey(cosmosPayload, 4, CborList([]));
+      expect(() => KeystoneCosmosSignRequest.fromUR(cosmosUR(tampered)), throwsA(isA<InvalidCborURException>()));
+    });
+
+    test('Cosmos addresses 中混入非 CborString 项 → InvalidCborURException', () {
+      final tampered = replaceKey(cosmosPayload, 5, CborList([CborSmallInt(1), CborString('cosmos1a'), CborString('cosmos1b')]));
+      expect(() => KeystoneCosmosSignRequest.fromUR(cosmosUR(tampered)), throwsA(isA<InvalidCborURException>()));
+    });
+
+    test('Cosmos addresses 不是 CborList → InvalidCborURException', () {
+      final tampered = replaceKey(cosmosPayload, 5, CborString('cosmos1a'));
+      expect(() => KeystoneCosmosSignRequest.fromUR(cosmosUR(tampered)), throwsA(isA<InvalidCborURException>()));
+    });
+  });
+
+  group('issue #88: bigIntToBytes 拒绝负数和非法输入', () {
+    test('合法非负整数按大端编码', () {
+      expect(bigIntToBytes('0'), isEmpty);
+      expect(bigIntToBytes('255'), [0xff]);
+      expect(bigIntToBytes('256'), [0x01, 0x00]);
+    });
+
+    test('负数 → URException(invalidParams)', () {
+      expect(
+        () => bigIntToBytes('-1'),
+        throwsA(isA<URException>().having((e) => e.type, 'type', URExceptionType.invalidParams)),
+      );
+    });
+
+    test('非数字字符串 → URException(invalidParams)', () {
+      for (final input in ['', 'abc', '1.5', '12a']) {
+        expect(
+          () => bigIntToBytes(input),
+          throwsA(isA<URException>().having((e) => e.type, 'type', URExceptionType.invalidParams)),
+          reason: input,
+        );
+      }
+    });
+
+    test('ALPH 构造请求时负数 amount 失败而不是编码成错误的正数', () {
+      expect(
+        () => AlphSignRequest.generateSignRequest(
+          signData: 'deadbeef',
+          path: "m/44'/1234'/0'/0/0",
+          xfp: '12345678',
+          outputs: [
+            {'address': 'addr-1', 'amount': '-1000'},
+          ],
+        ),
+        throwsA(isA<URException>()),
+      );
     });
   });
 }
