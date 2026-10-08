@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.1.2] - 2026-10-08
+## [2.1.2] - 2026-10-09
 ### Added
 
 - XRP Payment signing now supports the XRPL `DestinationTag` field for native
