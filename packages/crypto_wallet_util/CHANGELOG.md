@@ -4,7 +4,7 @@
 ### Added
 
 - XRP Payment signing now supports the XRPL `DestinationTag` field for native
-  XRP and token payments.
+  XRP and token payments, and rejects values outside `0` to `4294967295`.
 
 ### Fixed
 

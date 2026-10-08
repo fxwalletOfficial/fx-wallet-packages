@@ -15,7 +15,18 @@ class XrpTxData extends TxData {
     required this.sequence,
     required this.fee,
     required this.lastLedgerSequence,
-  });
+  }) {
+    final tag = destinationTag;
+    if (tag != null && (tag < 0 || tag > 4294967295)) {
+      throw RangeError.range(
+        tag,
+        0,
+        4294967295,
+        'DestinationTag',
+        'DestinationTag must be between 0 and 4294967295',
+      );
+    }
+  }
   final String account;
   final String transactionType;
   final String? destination;

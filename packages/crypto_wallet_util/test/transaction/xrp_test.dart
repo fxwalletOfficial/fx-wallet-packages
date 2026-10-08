@@ -73,6 +73,57 @@ void main() async {
     addDestinationTagTests('native XRP payment', 'payment_xrp');
     addDestinationTagTests('token payment', 'payment_token');
 
+    Matcher destinationTagRangeError() => throwsA(
+      isA<RangeError>().having(
+        (error) => error.toString(),
+        'message',
+        contains('DestinationTag'),
+      ),
+    );
+
+    void addOutOfRangeDestinationTagTests(String label, String fixtureKey) {
+      for (final destinationTag in [4294967296, -1]) {
+        test('$label fromJson rejects DestinationTag $destinationTag', () {
+          final txJson = Map<String, dynamic>.from(transactionJson[fixtureKey])
+            ..['DestinationTag'] = destinationTag;
+
+          expect(() => XrpTxData.fromJson(txJson), destinationTagRangeError());
+        });
+
+        test('$label constructor rejects DestinationTag $destinationTag', () {
+          final txJson = transactionJson[fixtureKey];
+          final XrpAmountType amount;
+          if (txJson['Amount'] is String) {
+            amount = XrpAmount(amount: txJson['Amount']);
+          } else {
+            amount = XrpTokenAmount(
+              currency: txJson['Amount']['currency'],
+              issuer: txJson['Amount']['issuer'],
+              value: txJson['Amount']['value'],
+            );
+          }
+
+          expect(
+            () => XrpTxData(
+              account: txJson['Account'],
+              transactionType: txJson['TransactionType'],
+              destination: txJson['Destination'],
+              destinationTag: destinationTag,
+              amount: amount,
+              flags: txJson['Flags'],
+              sequence: txJson['Sequence'],
+              fee: txJson['Fee'],
+              lastLedgerSequence: txJson['LastLedgerSequence'],
+            ),
+            destinationTagRangeError(),
+          );
+        });
+      }
+    }
+
+    addOutOfRangeDestinationTagTests('native XRP payment', 'payment_xrp');
+    addOutOfRangeDestinationTagTests('token payment', 'payment_token');
+
     test('trust set transaction', () async {
       final txJson = transactionJson['trust_set'];
       final txResult = txJson['txSignature'];
