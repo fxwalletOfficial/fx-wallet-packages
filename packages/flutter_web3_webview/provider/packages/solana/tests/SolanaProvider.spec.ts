@@ -3,6 +3,7 @@ import { test, expect, beforeEach } from 'bun:test';
 import { SolanaProvider } from '../SolanaProvider';
 import { window as walletWindow } from './mocks/window';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { readFileSync } from 'node:fs';
 
 const account = '3z9vL1zjN6qyAFHhHQdWYRTFAcy69pJydkZmSFBKHg1R';
 // 64-byte base58 signature (signTransaction reply, attached via addSignature).
@@ -52,6 +53,26 @@ function makeTransaction(): Transaction {
 }
 
 beforeEach(setBridge);
+
+test('wallet-standard registration uses the configured Solana name and icon', () => {
+  const name = 'Custom Wallet';
+  const icon = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4=';
+  const sol = new SolanaProvider({ solana: { name, icon } });
+
+  expect(walletWindow.wallet.name).toBe(name);
+  expect(walletWindow.wallet.icon).toBe(icon);
+  expect(sol.getInstanceWithAdapter().name).toBe(name);
+  expect(sol.getInstanceWithAdapter().icon).toBe(icon);
+});
+
+test('wallet-standard registration defaults to the Dart built-in wallet icon', () => {
+  const params = readFileSync(new URL('../../../../lib/src/config/params.dart', import.meta.url), 'utf8');
+  const defaultIcon = params.match(/WALLET_ICON\s*=\s*'([^']+)'/)![1];
+  new SolanaProvider();
+
+  expect(walletWindow.wallet.name).toBe('FxWallet');
+  expect<string>(walletWindow.wallet.icon).toBe(defaultIcon);
+});
 
 test('connect bridges to solana_account and sets the public key', async () => {
   const sol = new SolanaProvider({ enableAdapter: false });

@@ -54,6 +54,15 @@ stream / url / util / zlib) and writes the IIFE bundle to the
 `flutter_web3_webview` asset path, so a successful build refreshes the
 Flutter package in place.
 
+Run the bundled-provider regression after building:
+
+```bash
+bun test ./packages/solana/tests/providerBundle.spec.ts
+```
+
+This test executes `lib/js/provider.min.js` and checks the registered wallet
+metadata. It also runs with the other provider tests under `bun test`.
+
 > `lib/js/provider.min.js` is built from this source tree — the ~321 KB
 > bundle currently shipped was produced by `bun run build:flutter`. See
 > [RECOVERY.md](./RECOVERY.md) for how the WebView bridge was recovered from

@@ -59,13 +59,12 @@ class Providers {
     final overwriteMetamask = settings?.eth?.overwriteMetamask ?? false;
 
     // NOTE on the config shape: `EthereumProvider` / `SolanaProvider` read
-    // their options from the *top level* of this object (`config.chainId`,
+    // their RPC / behavior options from the *top level* (`config.chainId`,
     // `config.overwriteMetamask`, `config.isFxWallet`, …). The nested
-    // `ethereum` / `solana` blocks below are legacy from the pre-rebuild
-    // fork and are NOT read by the vendored providers — they are kept only
-    // for backwards-compatibility with anything that might inspect them.
-    // Anything that must actually reach a provider has to be a top-level
-    // field, which is why `overwriteMetamask` lives here and not under
+    // `ethereum.chainId` / `solana.cluster` fields below are legacy from
+    // the pre-rebuild fork and are NOT read by the vendored providers.
+    // Solana wallet metadata is read from `solana.name` / `solana.icon`.
+    // `overwriteMetamask` must live at the top level rather than under
     // `ethereum`. (`chainId` / `cluster` are intentionally NOT promoted:
     // chain id is served by the Dart `ethChainId` callback, and promoting
     // `cluster: 'mainnet-beta'` would make SolanaProvider construct a

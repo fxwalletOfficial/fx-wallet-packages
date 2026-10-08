@@ -11,6 +11,7 @@ import {
 } from '@solana/web3.js';
 import { FxWalletEventEmitter } from '../adapter/window';
 import { FxWallet } from '../adapter/wallet';
+import type { WalletIcon } from '@wallet-standard/base';
 
 export interface ISolanaProviderConfig {
   isFxWallet?: boolean;
@@ -18,6 +19,10 @@ export interface ISolanaProviderConfig {
   cluster?: string;
   disableMobileAdapter?: boolean;
   useLegacySign?: boolean;
+  solana?: {
+    name?: string;
+    icon?: WalletIcon;
+  };
 }
 
 export interface ConnectOptions {

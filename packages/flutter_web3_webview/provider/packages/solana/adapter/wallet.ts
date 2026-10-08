@@ -43,8 +43,8 @@ export class FxWallet implements Wallet {
     [E in StandardEventsNames]?: StandardEventsListeners[E][];
   } = {};
   readonly #version = '1.0.0' as const;
-  readonly #name = 'FxWallet' as const;
-  readonly #icon = icon;
+  readonly #name: Wallet['name'];
+  readonly #icon: Wallet['icon'];
   #account: FxWalletAccount | null = null;
   readonly #fx: ISolanaProvider;
 
@@ -107,12 +107,14 @@ export class FxWallet implements Wallet {
     return this.#account ? [this.#account] : [];
   }
 
-  constructor(fx: ISolanaProvider) {
+  constructor(fx: ISolanaProvider, metadata?: Partial<Pick<Wallet, 'name' | 'icon'>>) {
     if (new.target === FxWallet) {
       Object.freeze(this);
     }
 
     this.#fx = fx;
+    this.#name = metadata?.name ?? 'FxWallet';
+    this.#icon = metadata?.icon ?? icon;
 
     fx.on('connect', this.#connected, this);
     fx.on('disconnect', this.#disconnected, this);
