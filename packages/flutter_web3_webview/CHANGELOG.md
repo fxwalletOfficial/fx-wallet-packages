@@ -1,3 +1,23 @@
+## [1.1.1]
+
+### Fixes
+
+* Honor the configured wallet name and Solana icon when registering the
+  Solana Wallet Standard adapter. Flutter hosts now use `Web3Settings.name`
+  and `Web3SolSettings.icon` instead of the hard-coded `FxWallet` name and
+  blue-green shield icon. The fallback icon matches the built-in FxWallet
+  icon; direct JavaScript provider usage retains the default `FxWallet` name.
+* Rebuild the injected `lib/js/provider.min.js` with the metadata fix and add
+  regression tests that execute the final bundle with custom and default
+  wallet metadata. Connection, signing and transaction bridge behavior is
+  unchanged.
+
+### Documentation and tooling
+
+* Document custom EVM/Solana wallet metadata, image Data URI requirements,
+  defaults and provider bundle regression test commands.
+* Exclude generated `build/**` output from Dart analysis.
+
 ## [1.1.0]
 
 Provider requests gain an identity and can be cancelled. A wallet that
