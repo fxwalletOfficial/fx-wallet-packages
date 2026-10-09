@@ -33,6 +33,7 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
   static NETWORK = 'solana';
 
   #enableAdapter = true;
+  #walletMetadata: ISolanaProviderConfig['solana'];
 
   connection!: Connection;
 
@@ -72,6 +73,7 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
 
   constructor(config?: ISolanaProviderConfig) {
     super();
+    this.#walletMetadata = config?.solana;
 
     if (config) {
       if (typeof config.enableAdapter !== 'undefined') {
@@ -93,7 +95,7 @@ export class SolanaProvider extends BaseProvider implements ISolanaProvider {
   }
 
   getInstanceWithAdapter(): FxWallet {
-    return new FxWallet(this);
+    return new FxWallet(this, this.#walletMetadata);
   }
 
   /**

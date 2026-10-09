@@ -86,6 +86,48 @@ Returning a value resolves the DApp's request; throwing rejects it. To
 surface a real wallet rejection, throw an error whose `toString()` carries
 the EIP-1193 `4001` shape.
 
+## Wallet name and icons
+
+`Web3Settings.name` sets the display name for both EIP-6963 and Solana
+Wallet Standard. EVM and Solana icons are configured independently; set
+both if they should use the same logo.
+
+Icons must be complete image data URIs, such as `data:image/png;base64,...`
+or `data:image/svg+xml;base64,...`. Encode your image bytes instead of
+passing a Flutter asset path:
+
+```dart
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:flutter_web3_webview/flutter_web3_webview.dart';
+
+Future<Web3Settings> loadWalletSettings() async {
+  final logo = await rootBundle.load('assets/wallet_logo.png');
+  final logoBytes = logo.buffer.asUint8List(logo.offsetInBytes, logo.lengthInBytes);
+  final logoDataUri = 'data:image/png;base64,${base64Encode(logoBytes)}';
+
+  return Web3Settings(
+    name: 'My Wallet',
+    eth: Web3EthSettings(
+      icon: logoDataUri,
+      rdns: 'com.example.wallet',
+    ),
+    sol: Web3SolSettings(
+      icon: logoDataUri,
+    ),
+  );
+}
+```
+
+Declare the logo in your app's Flutter assets. After initializing the
+Flutter binding, await `loadWalletSettings()` and pass the result to
+`Web3Webview.settings` before creating the WebView.
+
+When omitted, the display name defaults to `Web3Wallet`, each
+icon defaults to the built-in FxWallet icon, and the EVM reverse-DNS
+identifier defaults to `io.web3wallet`. Host apps should supply their own
+name, icons, and reverse-DNS identifier.
+
 ## Wallet callbacks
 
 | Callback | Triggered by | Returns |
