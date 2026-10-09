@@ -8,16 +8,29 @@ class XrpTxData extends TxData {
     required this.account,
     required this.transactionType,
     this.destination,
+    this.destinationTag,
     this.amount,
     this.limitAmount,
     this.flags = 0,
     required this.sequence,
     required this.fee,
     required this.lastLedgerSequence,
-  });
+  }) {
+    final tag = destinationTag;
+    if (tag != null && (tag < 0 || tag > 4294967295)) {
+      throw RangeError.range(
+        tag,
+        0,
+        4294967295,
+        'DestinationTag',
+        'DestinationTag must be between 0 and 4294967295',
+      );
+    }
+  }
   final String account;
   final String transactionType;
   final String? destination;
+  final int? destinationTag;
   final XrpAmountType? amount;
   final XrpTokenAmount? limitAmount;
   final int flags;
@@ -31,42 +44,49 @@ class XrpTxData extends TxData {
   factory XrpTxData.fromJson(Map<String, dynamic> txJson) {
     if (txJson['TransactionType'] == XrpTransactionType.trustSet) {
       final limitAmount = XrpTokenAmount(
-          currency: txJson['LimitAmount']['currency'],
-          issuer: txJson['LimitAmount']['issuer'],
-          value: txJson['LimitAmount']['value']);
+        currency: txJson['LimitAmount']['currency'],
+        issuer: txJson['LimitAmount']['issuer'],
+        value: txJson['LimitAmount']['value'],
+      );
       return XrpTxData(
-          account: txJson['Account'],
-          transactionType: txJson['TransactionType'],
-          sequence: txJson['Sequence'],
-          fee: txJson['Fee'],
-          lastLedgerSequence: txJson['LastLedgerSequence'],
-          limitAmount: limitAmount,
-          flags: txJson['Flags']);
+        account: txJson['Account'],
+        transactionType: txJson['TransactionType'],
+        sequence: txJson['Sequence'],
+        fee: txJson['Fee'],
+        lastLedgerSequence: txJson['LastLedgerSequence'],
+        limitAmount: limitAmount,
+        flags: txJson['Flags'],
+      );
     } else if (txJson['Amount'] is String) {
       final XrpAmountType xrpAmount = XrpAmount(amount: txJson['Amount']);
       return XrpTxData(
-          account: txJson['Account'],
-          transactionType: txJson['TransactionType'],
-          sequence: txJson['Sequence'],
-          fee: txJson['Fee'],
-          lastLedgerSequence: txJson['LastLedgerSequence'],
-          destination: txJson['Destination'],
-          amount: xrpAmount,
-          flags: txJson['Flags']);
+        account: txJson['Account'],
+        transactionType: txJson['TransactionType'],
+        sequence: txJson['Sequence'],
+        fee: txJson['Fee'],
+        lastLedgerSequence: txJson['LastLedgerSequence'],
+        destination: txJson['Destination'],
+        destinationTag: txJson['DestinationTag'],
+        amount: xrpAmount,
+        flags: txJson['Flags'],
+      );
     } else if (txJson['Amount'] is Object) {
       final XrpAmountType tokenAmount = XrpTokenAmount(
-          currency: txJson['Amount']['currency'],
-          issuer: txJson['Amount']['issuer'],
-          value: txJson['Amount']['value']);
+        currency: txJson['Amount']['currency'],
+        issuer: txJson['Amount']['issuer'],
+        value: txJson['Amount']['value'],
+      );
       return XrpTxData(
-          account: txJson['Account'],
-          transactionType: txJson['TransactionType'],
-          sequence: txJson['Sequence'],
-          fee: txJson['Fee'],
-          lastLedgerSequence: txJson['LastLedgerSequence'],
-          destination: txJson['Destination'],
-          amount: tokenAmount,
-          flags: txJson['Flags']);
+        account: txJson['Account'],
+        transactionType: txJson['TransactionType'],
+        sequence: txJson['Sequence'],
+        fee: txJson['Fee'],
+        lastLedgerSequence: txJson['LastLedgerSequence'],
+        destination: txJson['Destination'],
+        destinationTag: txJson['DestinationTag'],
+        amount: tokenAmount,
+        flags: txJson['Flags'],
+      );
     } else {
       throw Exception('Error transaction type');
     }
@@ -81,11 +101,14 @@ class XrpTxData extends TxData {
       'Sequence': sequence,
       'Fee': fee,
       'LastLedgerSequence': lastLedgerSequence,
-      'SigningPubKey': signingPubKey
+      'SigningPubKey': signingPubKey,
     };
     switch (transactionType) {
       case XrpTransactionType.payment:
         json = {...json, 'Destination': destination};
+        if (destinationTag != null) {
+          json = {...json, 'DestinationTag': destinationTag};
+        }
         if (amount is XrpAmount) {
           return {...json, 'Amount': amount!.amount};
         } else if (amount is XrpTokenAmount) {
@@ -103,9 +126,7 @@ class XrpTxData extends TxData {
   @override
   Map<String, dynamic> toBroadcast() {
     if (!isSigned) return {};
-    Map<String, dynamic> json = {
-      'tx_blob': signature,
-    };
+    Map<String, dynamic> json = {'tx_blob': signature};
     return json;
   }
 }

@@ -12,12 +12,15 @@ void main() async {
   final xrp = await XrpCoin.fromMnemonic(mnemonic);
 
   group('test xrp signature', () {
-    final transactionJson = json.decode(File('./test/transaction/data/xrp.json')
-        .readAsStringSync(encoding: utf8));
+    final transactionJson = json.decode(
+      File('./test/transaction/data/xrp.json').readAsStringSync(encoding: utf8),
+    );
     test('transaction', () async {
       final txJson = transactionJson['payment_xrp'];
       final txResult = txJson['txSignature'];
       final txData = XrpTxData.fromJson(txJson);
+      expect(txData.destinationTag, isNull);
+      expect(txData.toJson().containsKey('DestinationTag'), isFalse);
       final signer = XrpTxSigner(xrp, txData);
       final XrpTxData tx = signer.sign();
       expect(tx.signedBlob, txResult);
@@ -31,11 +34,95 @@ void main() async {
       final txJson = transactionJson['payment_token'];
       final txResult = txJson['txSignature'];
       final txData = XrpTxData.fromJson(txJson);
+      expect(txData.destinationTag, isNull);
+      expect(txData.toJson().containsKey('DestinationTag'), isFalse);
       final signer = XrpTxSigner(xrp, txData);
       final XrpTxData tx = signer.sign();
       expect(tx.signedBlob, txResult);
       expect(signer.verify(), isTrue);
     });
+
+    void addDestinationTagTests(String label, String fixtureKey) {
+      for (final destinationTag in [12345, 0, 4294967295]) {
+        test('$label signs DestinationTag $destinationTag', () async {
+          final txJson = Map<String, dynamic>.from(transactionJson[fixtureKey])
+            ..['DestinationTag'] = destinationTag;
+          final txData = XrpTxData.fromJson(txJson);
+          final paymentJson = txData.toJson();
+
+          expect(txData.destinationTag, destinationTag);
+          expect(paymentJson, containsPair('DestinationTag', destinationTag));
+          expect(
+            XrpTxData.fromJson(paymentJson).toJson(),
+            containsPair('DestinationTag', destinationTag),
+          );
+
+          final signer = XrpTxSigner(xrp, txData);
+          final XrpTxData signedTx = signer.sign();
+          expect(signer.verify(), isTrue);
+
+          final decodedTx = XRPTransaction.fromBlob(signedTx.signedBlob!);
+          expect(
+            decodedTx.toXrpl(),
+            containsPair('DestinationTag', destinationTag),
+          );
+        });
+      }
+    }
+
+    addDestinationTagTests('native XRP payment', 'payment_xrp');
+    addDestinationTagTests('token payment', 'payment_token');
+
+    Matcher destinationTagRangeError() => throwsA(
+      isA<RangeError>().having(
+        (error) => error.toString(),
+        'message',
+        contains('DestinationTag'),
+      ),
+    );
+
+    void addOutOfRangeDestinationTagTests(String label, String fixtureKey) {
+      for (final destinationTag in [4294967296, -1]) {
+        test('$label fromJson rejects DestinationTag $destinationTag', () {
+          final txJson = Map<String, dynamic>.from(transactionJson[fixtureKey])
+            ..['DestinationTag'] = destinationTag;
+
+          expect(() => XrpTxData.fromJson(txJson), destinationTagRangeError());
+        });
+
+        test('$label constructor rejects DestinationTag $destinationTag', () {
+          final txJson = transactionJson[fixtureKey];
+          final XrpAmountType amount;
+          if (txJson['Amount'] is String) {
+            amount = XrpAmount(amount: txJson['Amount']);
+          } else {
+            amount = XrpTokenAmount(
+              currency: txJson['Amount']['currency'],
+              issuer: txJson['Amount']['issuer'],
+              value: txJson['Amount']['value'],
+            );
+          }
+
+          expect(
+            () => XrpTxData(
+              account: txJson['Account'],
+              transactionType: txJson['TransactionType'],
+              destination: txJson['Destination'],
+              destinationTag: destinationTag,
+              amount: amount,
+              flags: txJson['Flags'],
+              sequence: txJson['Sequence'],
+              fee: txJson['Fee'],
+              lastLedgerSequence: txJson['LastLedgerSequence'],
+            ),
+            destinationTagRangeError(),
+          );
+        });
+      }
+    }
+
+    addOutOfRangeDestinationTagTests('native XRP payment', 'payment_xrp');
+    addOutOfRangeDestinationTagTests('token payment', 'payment_token');
 
     test('trust set transaction', () async {
       final txJson = transactionJson['trust_set'];
@@ -52,26 +139,28 @@ void main() async {
       final errorAmountType = ErrorAmount();
       ErrorAmount().toJson();
       final XrpTxData errorAmount = XrpTxData(
-          account: txJson['Account'],
-          transactionType: txJson['TransactionType'],
-          sequence: txJson['Sequence'],
-          fee: txJson['Fee'],
-          lastLedgerSequence: txJson['LastLedgerSequence'],
-          destination: txJson['Destination'],
-          amount: errorAmountType);
+        account: txJson['Account'],
+        transactionType: txJson['TransactionType'],
+        sequence: txJson['Sequence'],
+        fee: txJson['Fee'],
+        lastLedgerSequence: txJson['LastLedgerSequence'],
+        destination: txJson['Destination'],
+        amount: errorAmountType,
+      );
       try {
         errorAmount.toJson();
       } catch (error) {
         expect(error.toString(), contains('unsupported amount format'));
       }
       final XrpTxData errorType = XrpTxData(
-          account: txJson['Account'],
-          transactionType: 'error_type',
-          sequence: txJson['Sequence'],
-          fee: txJson['Fee'],
-          lastLedgerSequence: txJson['LastLedgerSequence'],
-          destination: txJson['Destination'],
-          amount: XrpAmount(amount: txJson['Amount']));
+        account: txJson['Account'],
+        transactionType: 'error_type',
+        sequence: txJson['Sequence'],
+        fee: txJson['Fee'],
+        lastLedgerSequence: txJson['LastLedgerSequence'],
+        destination: txJson['Destination'],
+        amount: XrpAmount(amount: txJson['Amount']),
+      );
       try {
         errorType.toJson();
       } catch (error) {

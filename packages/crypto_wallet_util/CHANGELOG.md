@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [2.1.2] - 2026-10-09
+### Added
+
+- XRP Payment signing now supports the XRPL `DestinationTag` field for native
+  XRP and token payments, and rejects values outside `0` to `4294967295`.
+
 ### Fixed
 
 - `GsplItem.toJson()` now emits `null` for a missing amount instead of the
