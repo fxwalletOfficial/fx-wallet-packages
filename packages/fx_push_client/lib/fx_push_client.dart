@@ -4,6 +4,7 @@
 /// secure-storage implementation, notification display, and navigation.
 library fx_push_client;
 
+export 'src/binding_data.dart';
 export 'src/endpoint.dart';
 export 'src/http_transport.dart';
 export 'src/client.dart';

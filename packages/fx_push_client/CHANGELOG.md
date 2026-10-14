@@ -1,3 +1,25 @@
+## 0.1.1
+
+### Added
+
+- Explicit, side-effect-free `FxPushClient.getBindingData()` returning an
+  immutable `FxPushBindingData` with the subscription ID, installation ID, and
+  registration key after a successful active synchronization.
+- Returns no binding data before registration, during synchronization, while
+  disabled, or after a failure; disposed calls throw the existing `StateError`.
+- Redacted snapshot text output and explicit sensitive JSON encoding, with
+  authenticated HTTPS backend handoff guidance and a host-owned example.
+
+### Security and compatibility
+
+- Credentials remain outside observable state and diagnostics. The trusted
+  backend must verify the transient credential with its HMAC/read identity and
+  separately authorize the business user or wallet before binding.
+- Existing registration, synchronization, activation, state, and notification
+  APIs are unchanged. No dependencies or backend verification calls are added.
+- Snapshots can become stale; backend verification and real App/Backend
+  integration remain required. First-registration claiming is unchanged.
+
 ## 0.1.0
 
 Initial public release.

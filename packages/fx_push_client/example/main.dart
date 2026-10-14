@@ -36,6 +36,24 @@ final class PushIntegration {
   /// Starts subscription synchronization after host configuration is ready.
   Future<void> start() => client.start();
 
+  /// Explicitly submits current binding credentials to the host's backend.
+  ///
+  /// Call only after login and an active synchronization. The supplied host
+  /// callback must use HTTPS to the trusted business backend, disable request
+  /// body logging/capture, and retain neither the snapshot nor its credential.
+  /// The backend authenticates the caller, verifies with its own HMAC/read
+  /// identity, and applies user/wallet authorization before storing a binding.
+  /// Returns false when the client has no currently eligible snapshot. True
+  /// means only that the host callback completed, not that binding is authorized.
+  Future<bool> submitBindingData(
+    Future<void> Function(FxPushBindingData data) submitToAuthenticatedBackend,
+  ) async {
+    final data = client.getBindingData();
+    if (data == null) return false;
+    await submitToAuthenticatedBackend(data);
+    return true;
+  }
+
   /// Supplies the latest Android FCM registration token.
   void updateAndroidFcmToken(String token) {
     endpoints.update(
@@ -48,10 +66,7 @@ final class PushIntegration {
   }
 
   /// Supplies the latest iOS APNs token and its signed environment.
-  void updateIosApnsToken(
-    String token,
-    FxApnsEnvironment environment,
-  ) {
+  void updateIosApnsToken(String token, FxApnsEnvironment environment) {
     endpoints.update(
       FxPushEndpoint(
         provider: FxPushProvider.apns,
@@ -63,21 +78,15 @@ final class PushIntegration {
   }
 
   /// Forwards a normalized foreground provider payload.
-  FxPushNotificationEvent onForeground(
-    Map<Object?, Object?> payload,
-  ) =>
+  FxPushNotificationEvent onForeground(Map<Object?, Object?> payload) =>
       notifications.handleForeground(payload);
 
   /// Forwards a normalized notification-open payload.
-  FxPushNotificationEvent? onOpened(
-    Map<Object?, Object?> payload,
-  ) =>
+  FxPushNotificationEvent? onOpened(Map<Object?, Object?> payload) =>
       notifications.handleOpened(payload);
 
   /// Records a notification that cold-started the application.
-  FxPushNotificationEvent? onInitialOpen(
-    Map<Object?, Object?> payload,
-  ) =>
+  FxPushNotificationEvent? onInitialOpen(Map<Object?, Object?> payload) =>
       notifications.recordInitialOpen(payload);
 
   /// Releases host-owned resources.

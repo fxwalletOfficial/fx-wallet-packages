@@ -43,7 +43,9 @@ token, or credential.
   synchronization;
 - retries network errors, HTTP 429, and HTTP 5xx at most three times (2, 5,
   and 15 seconds), rebuilding every retry from the latest desired state;
-- exposes the stable `subscriptionId`, revision, desired state, and sync phase.
+- exposes the stable `subscriptionId`, revision, desired state, and sync phase;
+- provides binding credentials only through an explicit `getBindingData()` call
+  after a successful active synchronization, outside observable state.
 
 `FxPushMessageCodec` and `FxPushNotificationBridge` provide a separate,
 provider-independent message boundary. They validate APNs/FCM payload shapes,
@@ -259,7 +261,7 @@ await pushClient.setActive(true);
 
 pushClient.state.addListener(() {
   final state = pushClient.state.value;
-  businessBinding.onPushSubscriptionChanged(state.subscriptionId);
+  updatePushStatus(state.phase, state.desiredActive); // Non-secret UI status.
 });
 ```
 
@@ -268,10 +270,61 @@ disable may return `subscriptionId == null`. A failed disable remains the
 desired state and is retried on the next foreground/start; an older queued
 `active=true` body is never replayed as a retry.
 
-The host backend must authenticate the logged-in user before binding the
-returned subscription ID. The ID is an opaque delivery address, not a login
-identity. Account logout/switch must remove the business binding separately;
-disabling the device subscription is not a replacement for session revocation.
+Account logout/switch must remove the business binding separately; disabling
+the device subscription is not a replacement for session revocation.
+
+## Hand off binding credentials explicitly
+
+An opaque subscription ID alone does not prove installation ownership. After
+login and a successful active synchronization, explicitly obtain one immutable
+snapshot for transient submission to the host's trusted business backend:
+
+```dart
+await pushClient.start();
+final bindingData = pushClient.getBindingData();
+if (bindingData != null) {
+  // Host-owned HTTPS client, authenticated as the current business user.
+  // Disable request-body logging, analytics, and crash-report capture.
+  await authenticatedBackend.verifyAndBindPushSubscription(bindingData.toJson());
+}
+```
+
+`FxPushBindingData` contains `subscriptionId`, `installationId`, and
+`registrationKey` from the same installation. `toJson()` explicitly produces
+`subscription_id`, `installation_id`, and `registration_key`; that map contains
+a bearer secret. The snapshot's ordinary `toString()` is redacted. Never log
+the object fields, JSON, HTTP body, or credential, and do not copy the credential
+into business storage. Keep it in memory only for the HTTPS handoff; the SDK's
+existing platform-backed storage remains its source of truth.
+
+`getBindingData()` is synchronous and performs no storage access, enrollment,
+network request, synchronization, or retry. It returns `null` until this client
+has received and persisted a valid active subscription response, including
+after restart with saved IDs. It also returns `null` while synchronizing,
+waiting for an endpoint, disabled, or failed. Calls after `dispose()` throw
+`StateError`, consistently with other client operations. A `start()` or
+`synchronize()` future completing does not by itself prove success: transport
+failures are recorded in observable state, so check the nullable snapshot.
+
+The backend must authenticate the caller, use its own HMAC identity with
+`read` permission to call Push Service's
+[`POST /api/v1/subscriptions:verify`](https://github.com/fxwalletOfficial/fx-push-service/blob/develop/docs/integration/subscriptions.md#backend-校验订阅归属),
+and separately authorize user/wallet binding. The three JSON fields above are
+the verification request body. Only `verified=true` plus successful business
+authorization permits binding; `verified=false`, timeouts, or errors must fail
+closed. The backend must not persist the registration key or capture request
+bodies. HMAC secrets, SSM access, and provider credentials stay in the backend;
+this SDK does not call that endpoint.
+
+The credential can update or disable this installation's subscription. A
+snapshot is local evidence at the time of retrieval and can become stale after
+a disable, disposal, account switch, or server-side change. Previously returned
+objects are not revoked or cleared by the SDK; discard them promptly. Backend
+verification checks a same-product/environment active subscription and matching
+installation/credential at verification time. It does not prove physical-device,
+native-token, user, or wallet ownership and does not handle first-registration
+claiming. See `PushIntegration.submitBindingData` in the example for the
+host-owned handoff boundary.
 
 ## State and error handling
 
@@ -318,7 +371,9 @@ await notificationBridge.dispose();
 ## Security and privacy
 
 - Treat the registration key as a bearer credential and keep it in
-  platform-backed secure storage.
+  platform-backed secure storage. Explicit binding snapshots and their JSON
+  are secret-bearing; use them only for transient authenticated HTTPS handoff
+  to the trusted business backend, with no body logging or persistent copies.
 - Treat provider tokens and subscription IDs as sensitive delivery addresses;
   do not log or include them in crash reports.
 - Keep subscription-service responses bounded; the default transport rejects
@@ -347,4 +402,7 @@ routing, or backend sending. Those require host-app and real-device acceptance.
 Before releasing an application integration, verify at least token rotation,
 enable/disable persistence, provider acceptance, foreground receipt,
 background notification open, terminated-app initial open, deeplink rejection,
-account switching, and logout/unbinding with the real host and backend.
+account switching, and logout/unbinding with the real host and backend. Verify
+binding handoff, backend HMAC/read configuration, accepted and rejected ownership
+checks, and request-body redaction as well. Service deployment and package tests
+alone do not establish successful App/Backend integration.
