@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import 'binding_data.dart';
 import 'endpoint.dart';
 import 'http_transport.dart';
 import 'storage.dart';
@@ -154,6 +155,35 @@ class FxPushClient with WidgetsBindingObserver {
   /// Read-only observable latest state. It is disposed with this client.
   ValueListenable<FxPushState> get state => _state;
 
+  /// Returns an immutable binding snapshot after a successful active sync.
+  ///
+  /// Returns `null` before registration, while synchronizing or waiting for an
+  /// endpoint, after a failure, or while disabled. Persisted IDs alone do not
+  /// qualify: this process must receive an active subscription response first.
+  /// Throws [StateError] after disposal, like the other client operations.
+  ///
+  /// This synchronous read does not initialize storage, register, retry, or
+  /// synchronize. The bearer credential is deliberately absent from [state].
+  /// Send the snapshot only over HTTPS to the logged-in user's trusted backend
+  /// for ownership verification and separate business authorization. It can
+  /// become stale after return; the backend must verify it before binding.
+  FxPushBindingData? getBindingData() {
+    _checkNotDisposed();
+    final current = _state.value;
+    final subscriptionId = current.subscriptionId;
+    if (current.phase != FxPushSyncPhase.synchronized ||
+        !current.desiredActive ||
+        !_subscriptionActive ||
+        subscriptionId == null) {
+      return null;
+    }
+    return FxPushBindingData(
+      subscriptionId: subscriptionId,
+      installationId: _installationId,
+      registrationKey: _registrationKey,
+    );
+  }
+
   Future<void>? _initialization;
   Future<void>? _drainFuture;
   Future<void> _desiredStateWriteTail = Future<void>.value();
@@ -162,6 +192,7 @@ class FxPushClient with WidgetsBindingObserver {
   late String _installationId;
   late String _registrationKey;
   bool _desiredActive = true;
+  bool _subscriptionActive = false;
   bool _started = false;
   bool _syncRequested = false;
   bool _disposed = false;
@@ -315,10 +346,7 @@ class FxPushClient with WidgetsBindingObserver {
       );
     } catch (error) {
       _setState(
-        _state.value._copyWith(
-          phase: FxPushSyncPhase.failed,
-          lastError: error,
-        ),
+        _state.value._copyWith(phase: FxPushSyncPhase.failed, lastError: error),
       );
       rethrow;
     }
@@ -401,6 +429,7 @@ class FxPushClient with WidgetsBindingObserver {
           );
         }
         await _storage.write(_key('revision'), response.revision);
+        _subscriptionActive = response.active;
         retryIndex = 0;
         _setState(
           _state.value._copyWith(
@@ -500,9 +529,9 @@ class FxPushClient with WidgetsBindingObserver {
         '${hex.substring(20)}';
   }
 
-  static String _randomHex(int byteCount) => _secureBytes(byteCount)
-      .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
-      .join();
+  static String _randomHex(int byteCount) => _secureBytes(
+        byteCount,
+      ).map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
 
   static List<int> _secureBytes(int length) {
     final random = Random.secure();

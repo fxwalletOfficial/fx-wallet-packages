@@ -1,6 +1,6 @@
 name: fx_push_client
 description: Flutter client for synchronizing APNs and FCM device subscriptions with fx-push-service and normalizing notification lifecycle events.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/fxwalletOfficial/fx-wallet-packages/tree/main/packages/fx_push_client
 repository: https://github.com/fxwalletOfficial/fx-wallet-packages
 issue_tracker: https://github.com/fxwalletOfficial/fx-wallet-packages/issues

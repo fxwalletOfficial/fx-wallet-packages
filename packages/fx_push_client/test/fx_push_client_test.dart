@@ -27,6 +27,7 @@ void main() {
 
       await first.start();
       final firstRequest = firstTransport.requests.single;
+      final firstBinding = first.getBindingData()!;
       expect(
         firstRequest.body['installation_id'],
         matches(
@@ -47,7 +48,10 @@ void main() {
         transport: secondTransport,
         retryDelays: _noDelay,
       );
+      expect(second.getBindingData(), isNull);
       await second.start();
+      expect(second.getBindingData()!.toJson(), firstBinding.toJson());
+      expect(secondTransport.requests, hasLength(1));
 
       expect(
         secondTransport.requests.single.body['installation_id'],
@@ -82,10 +86,7 @@ void main() {
       expect(transport.requests.single.body, containsPair('active', true));
       expect(transport.requests.single.body, containsPair('provider', 'apns'));
       expect(transport.requests.single.body, containsPair('platform', 'ios'));
-      expect(
-        transport.requests.single.body,
-        containsPair('token', 'aabbccdd'),
-      );
+      expect(transport.requests.single.body, containsPair('token', 'aabbccdd'));
       expect(
         transport.requests.single.body,
         containsPair('apns_environment', 'sandbox'),
@@ -98,6 +99,201 @@ void main() {
       expect(client.state.value.phase, FxPushSyncPhase.synchronized);
       await client.dispose();
       await endpointSource.dispose();
+    },
+  );
+
+  test(
+    'binding reads return one consistent secret snapshot without side effects',
+    () async {
+      final storage = MemorySecureStorage();
+      final transport = RecordingTransport();
+      final endpoints = FxPushEndpointSource(_apns('aabb'));
+      final client = FxPushClient(
+        serviceUrl: _serviceUrl,
+        appId: _appId,
+        secureStorage: storage,
+        endpointSource: endpoints,
+        transport: transport,
+        retryDelays: _noDelay,
+      );
+      final observed = <FxPushState>[];
+      client.state.addListener(() => observed.add(client.state.value));
+
+      expect(client.getBindingData(), isNull);
+      expect(storage.reads, 0);
+      expect(storage.writes, 0);
+      expect(transport.requests, isEmpty);
+      await client.start();
+
+      final request = transport.requests.single;
+      final data = client.getBindingData()!;
+      expect(data.subscriptionId, client.state.value.subscriptionId);
+      expect(data.installationId, request.body['installation_id']);
+      expect(data.installationId, client.state.value.installationId);
+      expect(data.registrationKey, request.registrationKey);
+      expect(
+        data.registrationKey,
+        storage.values['fx_push_client.v1.$_appId.registration_key'],
+      );
+      expect(data.toJson(), <String, String>{
+        'subscription_id': data.subscriptionId,
+        'installation_id': data.installationId,
+        'registration_key': data.registrationKey,
+      });
+      final readCount = storage.reads;
+      final writeCount = storage.writes;
+      final stateCount = observed.length;
+      final originalState = client.state.value;
+      data.toJson()['registration_key'] = 'changed-copy';
+      expect(client.getBindingData()!.registrationKey, request.registrationKey);
+      expect(client.getBindingData()!.toJson(), data.toJson());
+      expect(storage.reads, readCount);
+      expect(storage.writes, writeCount);
+      expect(transport.requests, hasLength(1));
+      expect(observed, hasLength(stateCount));
+      expect(client.state.value, same(originalState));
+      for (final text in <String>[
+        data.toString(),
+        '$data',
+        client.toString(),
+        client.state.toString(),
+        for (final state in observed) '$state ${state.lastError}',
+      ]) {
+        expect(text, isNot(contains(data.registrationKey)));
+      }
+      expect(data.toString(), 'FxPushBindingData(redacted)');
+      expect(data.toString(), isNot(contains(data.subscriptionId)));
+      expect(data.toString(), isNot(contains(data.installationId)));
+
+      await client.dispose();
+      expect(client.getBindingData, throwsStateError);
+      await endpoints.dispose();
+    },
+  );
+
+  test(
+    'waiting for an endpoint and first disable provide no binding data',
+    () async {
+      final transport = RecordingTransport(disabledSubscriptionId: null);
+      final endpoints = FxPushEndpointSource();
+      final client = FxPushClient(
+        serviceUrl: _serviceUrl,
+        appId: _appId,
+        secureStorage: MemorySecureStorage(),
+        endpointSource: endpoints,
+        transport: transport,
+        retryDelays: _noDelay,
+      );
+      await client.start();
+      expect(client.state.value.phase, FxPushSyncPhase.waitingForEndpoint);
+      expect(client.getBindingData(), isNull);
+      expect(transport.requests, isEmpty);
+      await client.setActive(false);
+      expect(client.state.value.subscriptionId, isNull);
+      expect(client.getBindingData(), isNull);
+      expect(transport.requests, hasLength(1));
+      await client.dispose();
+      await endpoints.dispose();
+    },
+  );
+
+  test(
+    'pending enrollment and disposal never expose binding credentials',
+    () async {
+      final transport = BlockingTransport();
+      final endpoints = FxPushEndpointSource(_apns('aabb'));
+      final client = FxPushClient(
+        serviceUrl: _serviceUrl,
+        appId: _appId,
+        secureStorage: MemorySecureStorage(),
+        endpointSource: endpoints,
+        transport: transport,
+        retryDelays: _noDelay,
+      );
+      final start = client.start();
+      await transport.firstStarted.future;
+      expect(client.getBindingData(), isNull);
+      await client.dispose();
+      expect(client.getBindingData, throwsStateError);
+      transport.releaseFirst.complete();
+      await start;
+      expect(client.getBindingData, throwsStateError);
+      await endpoints.dispose();
+    },
+  );
+
+  test('disabled subscription ID cannot be exposed during re-enable', () async {
+    final transport = BlockingNextTransport();
+    final endpoints = FxPushEndpointSource(_apns('aabb'));
+    final client = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      secureStorage: MemorySecureStorage(),
+      endpointSource: endpoints,
+      transport: transport,
+      retryDelays: _noDelay,
+    );
+    await client.start();
+    final original = client.getBindingData()!;
+    await client.setActive(false);
+    expect(client.state.value.subscriptionId, original.subscriptionId);
+    expect(client.getBindingData(), isNull);
+    final duringEnable = <FxPushBindingData?>[];
+    client.state.addListener(() {
+      if (client.state.value.desiredActive) {
+        duringEnable.add(client.getBindingData());
+      }
+    });
+    transport.blockNext = true;
+    final enable = client.setActive(true);
+    await transport.nextStarted.future;
+    expect(duringEnable, isNotEmpty);
+    expect(duringEnable, everyElement(isNull));
+    expect(client.getBindingData(), isNull);
+    transport.releaseNext.complete();
+    await enable;
+    expect(client.getBindingData()!.toJson(), original.toJson());
+    // An already returned snapshot stays immutable; callers must discard it.
+    expect(original.toJson(), client.getBindingData()!.toJson());
+    await client.dispose();
+    await endpoints.dispose();
+  });
+
+  test(
+    'failed disable and failed re-enable with a saved ID fail closed',
+    () async {
+      final transport = SwitchableTransport();
+      final endpoints = FxPushEndpointSource(_apns('aabb'));
+      final client = FxPushClient(
+        serviceUrl: _serviceUrl,
+        appId: _appId,
+        secureStorage: MemorySecureStorage(),
+        endpointSource: endpoints,
+        transport: transport,
+        retryDelays: _noDelay,
+      );
+      await client.start();
+      final data = client.getBindingData()!;
+      transport.fail = true;
+      await client.setActive(false);
+      expect(client.state.value.subscriptionId, data.subscriptionId);
+      expect(client.state.value.phase, FxPushSyncPhase.failed);
+      expect(client.getBindingData(), isNull);
+      await client.setActive(true);
+      expect(client.getBindingData(), isNull);
+      expect(
+        client.state.value.lastError.toString(),
+        isNot(contains(data.registrationKey)),
+      );
+      transport.fail = false;
+      await client.synchronize();
+      expect(client.getBindingData()!.toJson(), data.toJson());
+      endpoints.update(null);
+      await client.synchronize();
+      expect(client.state.value.phase, FxPushSyncPhase.waitingForEndpoint);
+      expect(client.getBindingData(), isNull);
+      await client.dispose();
+      await endpoints.dispose();
     },
   );
 
@@ -127,6 +323,7 @@ void main() {
     );
     expect(client.state.value.phase, FxPushSyncPhase.failed);
     expect(transport.requests, isEmpty);
+    expect(client.getBindingData(), isNull);
 
     await client.dispose();
     await endpointSource.dispose();
@@ -155,35 +352,34 @@ void main() {
     expect(transport.requests.single.body, containsPair('provider', 'fcm'));
     expect(transport.requests.single.body, containsPair('platform', 'android'));
     expect(transport.requests.single.body, containsPair('token', 'fcm-token'));
-    expect(
-      transport.requests.single.body,
-      isNot(contains('apns_environment')),
-    );
+    expect(transport.requests.single.body, isNot(contains('apns_environment')));
     await client.dispose();
     await endpointSource.dispose();
   });
 
-  test('rejects provider and platform combinations that cannot be delivered',
-      () {
-    expect(
-      () => FxPushEndpoint(
-        provider: FxPushProvider.fcm,
-        platform: FxPushPlatform.ios,
-        token: 'fcm-token',
-      ),
-      throwsArgumentError,
-    );
-    expect(() => _apns('not-hex'), throwsArgumentError);
-    expect(
-      () => FxPushEndpoint(
-        provider: FxPushProvider.apns,
-        platform: FxPushPlatform.android,
-        token: 'aabb',
-        apnsEnvironment: FxApnsEnvironment.sandbox,
-      ),
-      throwsArgumentError,
-    );
-  });
+  test(
+    'rejects provider and platform combinations that cannot be delivered',
+    () {
+      expect(
+        () => FxPushEndpoint(
+          provider: FxPushProvider.fcm,
+          platform: FxPushPlatform.ios,
+          token: 'fcm-token',
+        ),
+        throwsArgumentError,
+      );
+      expect(() => _apns('not-hex'), throwsArgumentError);
+      expect(
+        () => FxPushEndpoint(
+          provider: FxPushProvider.apns,
+          platform: FxPushPlatform.android,
+          token: 'aabb',
+          apnsEnvironment: FxApnsEnvironment.sandbox,
+        ),
+        throwsArgumentError,
+      );
+    },
+  );
 
   test('FCM token rotation resynchronizes the same installation', () async {
     final transport = RecordingTransport();
@@ -203,6 +399,7 @@ void main() {
       retryDelays: _noDelay,
     );
     await client.start();
+    final bindingBeforeRotation = client.getBindingData()!;
 
     endpointSource.update(
       FxPushEndpoint(
@@ -216,6 +413,11 @@ void main() {
     }
 
     expect(transport.requests, hasLength(2));
+    await client.synchronize();
+    expect(client.getBindingData()!.toJson(), bindingBeforeRotation.toJson());
+    final requestCount = transport.requests.length;
+    client.getBindingData();
+    expect(transport.requests, hasLength(requestCount));
     expect(transport.requests.first.body['token'], 'fcm-token-old');
     expect(transport.requests.last.body['token'], 'fcm-token-new');
     expect(
@@ -255,14 +457,12 @@ void main() {
       reason: 'desired state must be durable before the request is sent',
     );
     expect(client.state.value.subscriptionId, isNull);
+    expect(client.getBindingData(), isNull);
     await client.dispose();
     await endpointSource.dispose();
   });
 
-  for (final toggles in const <(bool, bool)>[
-    (true, false),
-    (false, true),
-  ]) {
+  for (final toggles in const <(bool, bool)>[(true, false), (false, true)]) {
     test(
       'serializes ${toggles.$1} then ${toggles.$2} desired-state writes',
       () async {
@@ -359,6 +559,9 @@ void main() {
 
       final start = client.start();
       await transport.failed.future;
+      await Future<void>.delayed(Duration.zero);
+      expect(client.state.value.phase, FxPushSyncPhase.retryScheduled);
+      expect(client.getBindingData(), isNull);
       await client.setActive(false);
       await start;
 
@@ -411,6 +614,7 @@ void main() {
 
     expect(transport.calls, 1);
     expect(client.state.value.phase, FxPushSyncPhase.failed);
+    expect(client.getBindingData(), isNull);
     await client.dispose();
     await endpointSource.dispose();
   });
@@ -453,35 +657,39 @@ void main() {
     expect(client.state.value.phase, FxPushSyncPhase.failed);
     expect(client.state.value.lastError, isA<FxPushProtocolException>());
     expect(client.state.value.subscriptionId, isNull);
+    expect(client.getBindingData(), isNull);
     await client.dispose();
     await endpointSource.dispose();
   });
 
-  test('does not attach observers when disposed during initialization',
-      () async {
-    final storage = BlockingReadStorage();
-    final transport = RecordingTransport();
-    final endpointSource = FxPushEndpointSource(_apns('aabbccdd'));
-    final client = FxPushClient(
-      serviceUrl: _serviceUrl,
-      appId: _appId,
-      secureStorage: storage,
-      endpointSource: endpointSource,
-      transport: transport,
-      retryDelays: _noDelay,
-    );
+  test(
+    'does not attach observers when disposed during initialization',
+    () async {
+      final storage = BlockingReadStorage();
+      final transport = RecordingTransport();
+      final endpointSource = FxPushEndpointSource(_apns('aabbccdd'));
+      final client = FxPushClient(
+        serviceUrl: _serviceUrl,
+        appId: _appId,
+        secureStorage: storage,
+        endpointSource: endpointSource,
+        transport: transport,
+        retryDelays: _noDelay,
+      );
 
-    final start = client.start();
-    await storage.readStarted.future;
-    await client.dispose();
-    storage.releaseRead.complete();
+      final start = client.start();
+      await storage.readStarted.future;
+      expect(client.getBindingData(), isNull);
+      await client.dispose();
+      storage.releaseRead.complete();
 
-    await expectLater(start, throwsStateError);
-    endpointSource.update(_apns('eeff'));
-    await Future<void>.delayed(Duration.zero);
-    expect(transport.requests, isEmpty);
-    await endpointSource.dispose();
-  });
+      await expectLater(start, throwsStateError);
+      endpointSource.update(_apns('eeff'));
+      await Future<void>.delayed(Duration.zero);
+      expect(transport.requests, isEmpty);
+      await endpointSource.dispose();
+    },
+  );
 }
 
 const _noDelay = <Duration>[Duration.zero, Duration.zero, Duration.zero];
@@ -495,15 +703,23 @@ FxPushEndpoint _apns(String token) => FxPushEndpoint(
 
 class MemorySecureStorage implements FxPushSecureStorage {
   final Map<String, String> values = <String, String>{};
+  int reads = 0;
+  int writes = 0;
 
   @override
   Future<void> delete(String key) async => values.remove(key);
 
   @override
-  Future<String?> read(String key) async => values[key];
+  Future<String?> read(String key) async {
+    reads++;
+    return values[key];
+  }
 
   @override
-  Future<void> write(String key, String value) async => values[key] = value;
+  Future<void> write(String key, String value) async {
+    writes++;
+    values[key] = value;
+  }
 }
 
 class BlockingReadStorage extends MemorySecureStorage {
@@ -649,4 +865,34 @@ class NullActiveSubscriptionTransport implements FxPushSubscriptionTransport {
         revision: '1',
         active: true,
       );
+}
+
+class BlockingNextTransport extends RecordingTransport {
+  bool blockNext = false;
+  final Completer<void> nextStarted = Completer<void>();
+  final Completer<void> releaseNext = Completer<void>();
+
+  @override
+  Future<FxPushSubscriptionResponse> synchronize(
+    FxPushSubscriptionRequest request,
+  ) async {
+    if (blockNext) {
+      blockNext = false;
+      nextStarted.complete();
+      await releaseNext.future;
+    }
+    return super.synchronize(request);
+  }
+}
+
+class SwitchableTransport extends RecordingTransport {
+  bool fail = false;
+
+  @override
+  Future<FxPushSubscriptionResponse> synchronize(
+    FxPushSubscriptionRequest request,
+  ) async {
+    if (fail) throw const FxPushHttpException(statusCode: 401);
+    return super.synchronize(request);
+  }
 }
