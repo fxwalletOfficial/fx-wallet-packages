@@ -116,11 +116,19 @@ class FxPushStoredStateException implements Exception {
 /// bridge can normalize payloads forwarded by the host's existing callbacks.
 class FxPushClient with WidgetsBindingObserver {
   /// Creates a subscription client for one public App ID and service origin.
+  ///
+  /// Optional [installationId] reuses the host's stable installation identity.
+  /// It must contain 1-128 ASCII letters, digits, underscores, or hyphens and
+  /// is preserved exactly. When omitted, the cached ID or a new UUID is used.
+  /// Initialization throws [StateError] if it differs from the cached ID,
+  /// before any storage write or subscription request. Installation
+  /// authentication and business binding remain the host's responsibility.
   FxPushClient({
     required Uri serviceUrl,
     required String appId,
     required FxPushSecureStorage secureStorage,
     required FxPushEndpointSource endpointSource,
+    String? installationId,
     FxPushSubscriptionTransport? transport,
     List<Duration> retryDelays = const <Duration>[
       Duration(seconds: 2),
@@ -128,6 +136,7 @@ class FxPushClient with WidgetsBindingObserver {
       Duration(seconds: 15),
     ],
   })  : _appId = _validateAppId(appId),
+        _providedInstallationId = _validateInstallationId(installationId),
         _storage = secureStorage,
         _endpointSource = endpointSource,
         _transport = transport ?? FxPushHttpTransport(serviceUrl: serviceUrl),
@@ -143,6 +152,7 @@ class FxPushClient with WidgetsBindingObserver {
   }
 
   final String _appId;
+  final String? _providedInstallationId;
   final FxPushSecureStorage _storage;
   final FxPushEndpointSource _endpointSource;
   final FxPushSubscriptionTransport _transport;
@@ -205,6 +215,20 @@ class FxPushClient with WidgetsBindingObserver {
     }
     return value.toLowerCase();
   }
+
+  static String? _validateInstallationId(String? value) {
+    if (value != null && !_isInstallationId(value)) {
+      throw ArgumentError.value(
+        value,
+        'installationId',
+        'must contain 1-128 ASCII letters, digits, underscores, or hyphens',
+      );
+    }
+    return value;
+  }
+
+  static bool _isInstallationId(String value) =>
+      RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(value);
 
   String get _storagePrefix => 'fx_push_client.v1.$_appId.';
   String _key(String suffix) => '$_storagePrefix$suffix';
@@ -297,15 +321,12 @@ class FxPushClient with WidgetsBindingObserver {
 
   Future<void> _loadIdentityAndState() async {
     try {
-      _installationId = await _readOrCreate(
-        'installation_id',
-        _newInstallationId,
-      );
+      _installationId = await _loadInstallationId();
       _registrationKey = await _readOrCreate(
         'registration_key',
         () => _randomHex(32),
       );
-      if (!RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(_installationId)) {
+      if (!_isInstallationId(_installationId)) {
         throw const FxPushStoredStateException('installation_id');
       }
       if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(_registrationKey)) {
@@ -350,6 +371,19 @@ class FxPushClient with WidgetsBindingObserver {
       );
       rethrow;
     }
+  }
+
+  Future<String> _loadInstallationId() async {
+    final key = _key('installation_id');
+    final saved = await _storage.read(key);
+    final provided = _providedInstallationId;
+    if (provided != null && saved != null && saved != provided) {
+      throw StateError('installationId does not match the stored installation_id');
+    }
+    if (saved != null && saved.isNotEmpty) return saved;
+    final value = provided ?? _newInstallationId();
+    await _storage.write(key, value);
+    return value;
   }
 
   Future<String> _readOrCreate(String suffix, String Function() create) async {

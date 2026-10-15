@@ -12,10 +12,12 @@ final class PushIntegration {
     required String appId,
     required FxPushSecureStorage secureStorage,
     required FxPushDeeplinkValidator deeplinkValidator,
+    String? installationId,
   }) {
     client = FxPushClient(
       serviceUrl: serviceUrl,
       appId: appId,
+      installationId: installationId,
       secureStorage: secureStorage,
       endpointSource: endpoints,
     );
