@@ -1,3 +1,19 @@
+## Unreleased
+
+### Added
+
+- Optional `FxPushClient(installationId: ...)` to reuse the host application's
+  stable installation ID in subscription requests and binding snapshots.
+- Constructor validation and an initialization `StateError` for cached-ID
+  conflicts, before any storage write or subscription request. Existing
+  identity, credential, subscription, and desired state are preserved.
+- Tests for restart compatibility, matching legacy IDs, token refresh, retry
+  stability, invalid input, and conflicts without subscription changes.
+
+Omitting the argument retains automatic identity generation and cached-ID
+reuse. Installation authentication and business binding remain host-owned;
+no business APIs or dependencies are added.
+
 ## 0.1.1
 
 ### Added

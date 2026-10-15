@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:fx_push_client/fx_push_client.dart';
 
 const _appId = '11111111-2222-4333-8444-555555555555';
+const _installationId = 'FxWallet_installation-01';
 final _serviceUrl = Uri.parse('https://notify.example.com');
 
 void main() {
@@ -65,6 +66,217 @@ void main() {
       await endpointSource.dispose();
     },
   );
+
+  for (final restartId in <String?>[_installationId, null]) {
+    test('preserves a supplied identity on restart with installationId=$restartId', () async {
+      final storage = MemorySecureStorage();
+      final endpoints = FxPushEndpointSource(_apns('aabb'));
+      final firstTransport = RecordingTransport();
+      final first = FxPushClient(
+        serviceUrl: _serviceUrl,
+        appId: _appId,
+        installationId: _installationId,
+        secureStorage: storage,
+        endpointSource: endpoints,
+        transport: firstTransport,
+        retryDelays: _noDelay,
+      );
+      await first.start();
+      final original = first.getBindingData()!;
+      expect(firstTransport.requests.single.body['installation_id'], _installationId);
+      expect(first.state.value.installationId, _installationId);
+      expect(original.installationId, _installationId);
+      expect(original.registrationKey, matches(RegExp(r'^[0-9a-f]{64}$')));
+      expect(storage.values['fx_push_client.v1.$_appId.installation_id'], _installationId);
+      expect(storage.values['fx_push_client.v1.$_appId.registration_key'], original.registrationKey);
+      await first.dispose();
+
+      final secondTransport = RecordingTransport();
+      final second = FxPushClient(
+        serviceUrl: _serviceUrl,
+        appId: _appId,
+        installationId: restartId,
+        secureStorage: storage,
+        endpointSource: endpoints,
+        transport: secondTransport,
+        retryDelays: _noDelay,
+      );
+      expect(second.getBindingData(), isNull);
+      await second.start();
+      expect(second.getBindingData()!.toJson(), original.toJson());
+      expect(secondTransport.requests.single.body['installation_id'], _installationId);
+      expect(secondTransport.requests.single.registrationKey, original.registrationKey);
+      await second.dispose();
+      await endpoints.dispose();
+    });
+  }
+
+  test('accepts a supplied ID matching an existing generated identity', () async {
+    final storage = MemorySecureStorage();
+    final endpoints = FxPushEndpointSource(_apns('aabb'));
+    final first = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      secureStorage: storage,
+      endpointSource: endpoints,
+      transport: RecordingTransport(),
+      retryDelays: _noDelay,
+    );
+    await first.start();
+    final original = first.getBindingData()!;
+    await first.dispose();
+
+    final transport = RecordingTransport();
+    final second = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      installationId: original.installationId,
+      secureStorage: storage,
+      endpointSource: endpoints,
+      transport: transport,
+      retryDelays: _noDelay,
+    );
+    await second.start();
+    expect(second.getBindingData()!.toJson(), original.toJson());
+    expect(transport.requests.single.body['installation_id'], original.installationId);
+    expect(transport.requests.single.registrationKey, original.registrationKey);
+    await second.dispose();
+    await endpoints.dispose();
+  });
+
+  test('rejects a conflicting identity without changing the stored subscription', () async {
+    final storage = MemorySecureStorage();
+    final endpoints = FxPushEndpointSource(_apns('aabb'));
+    final first = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      secureStorage: storage,
+      endpointSource: endpoints,
+      transport: RecordingTransport(),
+      retryDelays: _noDelay,
+    );
+    await first.start();
+    await first.setActive(false);
+    await first.dispose();
+    final saved = Map<String, String>.of(storage.values);
+    final writeCount = storage.writes;
+    final transport = RecordingTransport();
+    final client = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      installationId: _installationId,
+      secureStorage: storage,
+      endpointSource: endpoints,
+      transport: transport,
+      retryDelays: _noDelay,
+    );
+    final conflict = isA<StateError>().having(
+      (error) => error.message,
+      'message',
+      'installationId does not match the stored installation_id',
+    );
+    await expectLater(client.start(), throwsA(conflict));
+    await expectLater(client.synchronize(), throwsA(conflict));
+    await expectLater(client.setActive(true), throwsA(conflict));
+    expect(client.state.value.phase, FxPushSyncPhase.failed);
+    expect(client.state.value.lastError, conflict);
+    expect(client.getBindingData(), isNull);
+    expect(storage.values, saved);
+    expect(storage.writes, writeCount);
+    endpoints.update(_apns('ccdd'));
+    await Future<void>.delayed(Duration.zero);
+    expect(transport.requests, isEmpty);
+    await client.dispose();
+
+    final restored = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      secureStorage: storage,
+      endpointSource: endpoints,
+      transport: transport,
+      retryDelays: _noDelay,
+    );
+    await restored.start();
+    expect(restored.state.value.desiredActive, isFalse);
+    expect(transport.requests.single.body['installation_id'], saved['fx_push_client.v1.$_appId.installation_id']);
+    expect(transport.requests.single.registrationKey, saved['fx_push_client.v1.$_appId.registration_key']);
+    await restored.dispose();
+    await endpoints.dispose();
+  });
+
+  test('detects identity conflicts before creating a missing registration key', () async {
+    final storage = MemorySecureStorage();
+    storage.values['fx_push_client.v1.$_appId.installation_id'] = _installationId.toLowerCase();
+    final saved = Map<String, String>.of(storage.values);
+    final endpoints = FxPushEndpointSource(_apns('aabb'));
+    final transport = RecordingTransport();
+    final client = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      installationId: _installationId,
+      secureStorage: storage,
+      endpointSource: endpoints,
+      transport: transport,
+      retryDelays: _noDelay,
+    );
+    await expectLater(client.start(), throwsStateError);
+    expect(storage.values, saved);
+    expect(storage.writes, 0);
+    expect(transport.requests, isEmpty);
+    expect(client.getBindingData(), isNull);
+    await client.dispose();
+    await endpoints.dispose();
+  });
+
+  test('rejects invalid supplied installation IDs before storage or transport', () async {
+    final storage = MemorySecureStorage();
+    final endpoints = FxPushEndpointSource(_apns('aabb'));
+    final transport = RecordingTransport();
+    for (final value in <String>['', 'with space', 'with.dot', 'with/slash', '安装编号', 'x' * 129]) {
+      expect(
+        () => FxPushClient(
+          serviceUrl: _serviceUrl,
+          appId: _appId,
+          installationId: value,
+          secureStorage: storage,
+          endpointSource: endpoints,
+          transport: transport,
+        ),
+        throwsA(isA<ArgumentError>().having((error) => error.name, 'name', 'installationId')),
+      );
+    }
+    expect(storage.reads, 0);
+    expect(storage.writes, 0);
+    expect(transport.requests, isEmpty);
+    await endpoints.dispose();
+  });
+
+  test('retries registration with the same supplied ID and credential', () async {
+    final storage = MemorySecureStorage();
+    final endpoints = FxPushEndpointSource(_apns('aabb'));
+    final transport = FailOnceTransport();
+    final client = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      installationId: _installationId,
+      secureStorage: storage,
+      endpointSource: endpoints,
+      transport: transport,
+      retryDelays: _noDelay,
+    );
+    await client.start();
+    expect(transport.requests, hasLength(2));
+    final binding = client.getBindingData()!;
+    expect(binding.installationId, _installationId);
+    for (final request in transport.requests) {
+      expect(request.body['installation_id'], _installationId);
+      expect(request.registrationKey, binding.registrationKey);
+    }
+    expect(storage.values['fx_push_client.v1.$_appId.installation_id'], _installationId);
+    expect(storage.values['fx_push_client.v1.$_appId.registration_key'], binding.registrationKey);
+    await client.dispose();
+    await endpoints.dispose();
+  });
 
   test(
     'sends full APNs state and exposes the server subscription state',
@@ -381,56 +593,62 @@ void main() {
     },
   );
 
-  test('FCM token rotation resynchronizes the same installation', () async {
-    final transport = RecordingTransport();
-    final endpointSource = FxPushEndpointSource(
-      FxPushEndpoint(
-        provider: FxPushProvider.fcm,
-        platform: FxPushPlatform.android,
-        token: 'fcm-token-old',
-      ),
-    );
-    final client = FxPushClient(
-      serviceUrl: _serviceUrl,
-      appId: _appId,
-      secureStorage: MemorySecureStorage(),
-      endpointSource: endpointSource,
-      transport: transport,
-      retryDelays: _noDelay,
-    );
-    await client.start();
-    final bindingBeforeRotation = client.getBindingData()!;
+  for (final installationId in <String?>[null, _installationId]) {
+    test('FCM token rotation preserves installationId=$installationId and credential', () async {
+      final transport = RecordingTransport();
+      final endpointSource = FxPushEndpointSource(
+        FxPushEndpoint(
+          provider: FxPushProvider.fcm,
+          platform: FxPushPlatform.android,
+          token: 'fcm-token-old',
+        ),
+      );
+      final client = FxPushClient(
+        serviceUrl: _serviceUrl,
+        appId: _appId,
+        installationId: installationId,
+        secureStorage: MemorySecureStorage(),
+        endpointSource: endpointSource,
+        transport: transport,
+        retryDelays: _noDelay,
+      );
+      await client.start();
+      final bindingBeforeRotation = client.getBindingData()!;
+      if (installationId != null) {
+        expect(bindingBeforeRotation.installationId, installationId);
+      }
 
-    endpointSource.update(
-      FxPushEndpoint(
-        provider: FxPushProvider.fcm,
-        platform: FxPushPlatform.android,
-        token: 'fcm-token-new',
-      ),
-    );
-    for (var i = 0; i < 10 && transport.requests.length < 2; i++) {
-      await Future<void>.delayed(Duration.zero);
-    }
+      endpointSource.update(
+        FxPushEndpoint(
+          provider: FxPushProvider.fcm,
+          platform: FxPushPlatform.android,
+          token: 'fcm-token-new',
+        ),
+      );
+      for (var i = 0; i < 10 && transport.requests.length < 2; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
 
-    expect(transport.requests, hasLength(2));
-    await client.synchronize();
-    expect(client.getBindingData()!.toJson(), bindingBeforeRotation.toJson());
-    final requestCount = transport.requests.length;
-    client.getBindingData();
-    expect(transport.requests, hasLength(requestCount));
-    expect(transport.requests.first.body['token'], 'fcm-token-old');
-    expect(transport.requests.last.body['token'], 'fcm-token-new');
-    expect(
-      transport.requests.last.body['installation_id'],
-      transport.requests.first.body['installation_id'],
-    );
-    expect(
-      transport.requests.last.registrationKey,
-      transport.requests.first.registrationKey,
-    );
-    await client.dispose();
-    await endpointSource.dispose();
-  });
+      expect(transport.requests, hasLength(2));
+      await client.synchronize();
+      expect(client.getBindingData()!.toJson(), bindingBeforeRotation.toJson());
+      final requestCount = transport.requests.length;
+      client.getBindingData();
+      expect(transport.requests, hasLength(requestCount));
+      expect(transport.requests.first.body['token'], 'fcm-token-old');
+      expect(transport.requests.last.body['token'], 'fcm-token-new');
+      expect(
+        transport.requests.last.body['installation_id'],
+        bindingBeforeRotation.installationId,
+      );
+      expect(
+        transport.requests.last.registrationKey,
+        bindingBeforeRotation.registrationKey,
+      );
+      await client.dispose();
+      await endpointSource.dispose();
+    });
+  }
 
   test('persists disable first and sends the minimal disabled body', () async {
     final storage = MemorySecureStorage();

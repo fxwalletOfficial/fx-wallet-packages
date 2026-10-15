@@ -35,7 +35,8 @@ token, or credential.
 
 `FxPushClient` owns the client-side subscription state machine:
 
-- creates a UUID installation ID and a 32-byte random enrollment credential;
+- reuses a host-supplied installation ID or creates a UUID, and creates a
+  32-byte random enrollment credential;
 - persists identity, credential, desired active state, subscription ID, and
   revision through a host-provided secure-storage adapter;
 - sends the complete current APNs or FCM state over HTTPS;
@@ -96,6 +97,7 @@ final pushClient = FxPushClient(
   // Both values come from the host's reviewed environment configuration.
   serviceUrl: appConfig.pushServiceUrl,
   appId: appConfig.pushAppId,
+  installationId: appInstallationId, // Optional: omit to generate a UUID.
   secureStorage: PushSecureStorageAdapter(walletSecureStorage),
   endpointSource: endpointSource,
 );
@@ -110,6 +112,27 @@ Every transition to `AppLifecycleState.resumed` synchronizes again.
 The service URL must be an HTTPS origin without credentials, a path, query, or
 fragment. The App ID must be a UUID. Invalid configuration fails before the
 first network request.
+
+If the app already owns a stable installation ID, pass it as `installationId`.
+It must contain 1-128 ASCII letters, digits, underscores, or hyphens. The client
+preserves it exactly, including case, and uses it for subscription requests,
+observable state, and `getBindingData()`. An invalid argument throws
+`ArgumentError` in the constructor before any storage or network work.
+
+On first initialization, the supplied ID is persisted alongside a newly
+generated `registration_key`. Restarts, provider-token refreshes, and retries
+reuse that ID and key. Omitting the argument keeps the existing behavior:
+reuse the cached ID, or generate a UUID when none is stored. A previously
+supplied ID is also reused when a later client omits the argument.
+
+If a supplied ID differs from the cached ID for this App ID, initialization
+throws `StateError` and records it in `state.lastError` with phase `failed`.
+The conflict is checked before any storage write or subscription request;
+the cached identity, key, subscription, and desired active state are preserved.
+Await `start()` and handle this error in the host's installation/migration flow.
+The client does not replace an existing identity or migrate its subscription.
+Reusing the App's ID does not authenticate the installation: installation
+authentication and business binding remain host-app responsibilities.
 
 ## Supply the provider endpoint
 
