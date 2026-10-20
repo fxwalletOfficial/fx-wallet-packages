@@ -11,6 +11,117 @@ final _serviceUrl = Uri.parse('https://notify.example.com');
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  for (final operation in <String>['start', 'synchronize']) {
+    for (final active in <bool>[true, false]) {
+      test('retries initialization via $operation after storage recovers, active=$active', () async {
+        final storage = RecoverableReadStorage();
+        final registrationKey = 'ab' * 32;
+        storage.values.addAll(<String, String>{
+          'fx_push_client.v1.$_appId.installation_id': _installationId,
+          'fx_push_client.v1.$_appId.registration_key': registrationKey,
+          'fx_push_client.v1.$_appId.desired_active': active.toString(),
+          'fx_push_client.v1.$_appId.subscription_id': RecordingTransport.subscriptionId,
+          'fx_push_client.v1.$_appId.revision': active ? '1' : '2',
+        });
+        final saved = Map<String, String>.of(storage.values);
+        final transport = RecordingTransport();
+        final endpoints = FxPushEndpointSource(_apns('aabb'));
+        final client = FxPushClient(
+          serviceUrl: _serviceUrl,
+          appId: _appId,
+          installationId: _installationId,
+          secureStorage: storage,
+          endpointSource: endpoints,
+          transport: transport,
+          retryDelays: _noDelay,
+        );
+        addTearDown(() async {
+          await client.dispose();
+          await endpoints.dispose();
+        });
+
+        await expectLater(client.start(), throwsA(same(storage.readError)));
+        expect(storage.reads, 1);
+        expect(storage.writes, 0);
+        expect(storage.values, saved);
+        expect(transport.requests, isEmpty);
+        expect(client.state.value.phase, FxPushSyncPhase.failed);
+        expect(client.state.value.lastError, same(storage.readError));
+        expect(client.getBindingData(), isNull);
+
+        storage.failReads = false;
+        if (operation == 'start') {
+          await client.start();
+        } else {
+          await client.synchronize();
+        }
+
+        expect(client.state.value.phase, FxPushSyncPhase.synchronized);
+        expect(client.state.value.lastError, isNull);
+        expect(client.state.value.installationId, _installationId);
+        expect(client.state.value.subscriptionId, RecordingTransport.subscriptionId);
+        expect(client.state.value.desiredActive, active);
+        expect(storage.values, saved);
+        expect(storage.writes, 2, reason: 'only the subscription response fields are written');
+        expect(transport.requests, hasLength(1));
+        if (active) {
+          expect(client.getBindingData()!.registrationKey, registrationKey);
+          expect(client.getBindingData()!.installationId, _installationId);
+        } else {
+          expect(client.getBindingData(), isNull);
+        }
+
+        final readsAfterRecovery = storage.reads;
+        await client.start();
+        await client.synchronize();
+        expect(storage.reads, readsAfterRecovery, reason: 'successful initialization remains cached');
+        expect(storage.values, saved);
+        for (final request in transport.requests) {
+          expect(request.body['installation_id'], _installationId);
+          expect(request.registrationKey, registrationKey);
+          expect(request.body['active'], active);
+        }
+      });
+    }
+  }
+
+  test('shares pending initialization between concurrent start and synchronize calls', () async {
+    final storage = BlockingReadStorage();
+    final transport = RecordingTransport();
+    final endpoints = FxPushEndpointSource(_apns('aabb'));
+    final client = FxPushClient(
+      serviceUrl: _serviceUrl,
+      appId: _appId,
+      secureStorage: storage,
+      endpointSource: endpoints,
+      transport: transport,
+      retryDelays: _noDelay,
+    );
+    addTearDown(() async {
+      if (!storage.releaseRead.isCompleted) storage.releaseRead.complete();
+      await client.dispose();
+      await endpoints.dispose();
+    });
+
+    final first = client.start();
+    await storage.readStarted.future;
+    final second = client.start();
+    final sync = client.synchronize();
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.reads, 0, reason: 'all calls wait on the same blocked first read');
+    expect(storage.writes, 0);
+    expect(transport.requests, isEmpty);
+
+    storage.releaseRead.complete();
+    await Future.wait(<Future<void>>[first, second, sync]);
+    expect(client.state.value.phase, FxPushSyncPhase.synchronized);
+    final binding = client.getBindingData()!;
+    final readCount = storage.reads;
+    await client.synchronize();
+    expect(storage.reads, readCount);
+    expect(client.getBindingData()!.toJson(), binding.toJson());
+  });
+
   test(
     'creates stable installation identity and 32-byte lowercase credential',
     () async {
@@ -937,6 +1048,20 @@ class MemorySecureStorage implements FxPushSecureStorage {
   Future<void> write(String key, String value) async {
     writes++;
     values[key] = value;
+  }
+}
+
+class RecoverableReadStorage extends MemorySecureStorage {
+  bool failReads = true;
+  final readError = StateError('secure storage temporarily unavailable');
+
+  @override
+  Future<String?> read(String key) async {
+    if (failReads) {
+      reads++;
+      throw readError;
+    }
+    return super.read(key);
   }
 }
 
