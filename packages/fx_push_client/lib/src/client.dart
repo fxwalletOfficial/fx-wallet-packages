@@ -366,6 +366,7 @@ class FxPushClient with WidgetsBindingObserver {
         ),
       );
     } catch (error) {
+      _initialization = null;
       _setState(
         _state.value._copyWith(phase: FxPushSyncPhase.failed, lastError: error),
       );
