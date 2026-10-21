@@ -9,6 +9,13 @@ const _testMnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon '
     'abandon abandon abandon about';
 
+// Expected addresses for [_testMnemonic], computed with a standalone
+// BIP39/BIP32/hash160/Base58Check implementation outside this package.
+const _subAccountAddresses = {
+  "m/44'/0'/1'/0/0": '15qucUWKf95Fo58FdCBhUTSAtsm22HHE2Q',
+  "m/44'/0'/0'/0/5": '19a7HGg32ecPQo49rDeM2NSFJHPqrwSJto',
+};
+
 void main() {
   test(
     'registers BTCB2 without changing the Bitcoin wallet identity',
@@ -45,6 +52,18 @@ void main() {
     final signature = wallet.sign(digest);
     expect(signature.endsWith('21'), isTrue);
     expect(wallet.verify(signature, digest), isTrue);
+  });
+
+  test('derives BTCB2 sub-accounts on custom BIP44 paths', () async {
+    for (final entry in _subAccountAddresses.entries) {
+      final wallet = await Btcb2Coin.fromMnemonic(
+        _testMnemonic,
+        WalletSetting(bip44Path: entry.key),
+      );
+      expect(wallet.setting.bip44Path, entry.key);
+      expect(wallet.address, entry.value);
+      expect(Btcb2Coin.fromPrivateKey(wallet.privateKey).address, entry.value);
+    }
   });
 
   test(
@@ -159,6 +178,67 @@ void main() {
     secondDuplicate['outputIndex'] = firstDuplicate['outputIndex'];
     expect(
       () => Btcb2TransactionAssemblyData.fromServiceResponse(duplicate),
+      throwsFormatException,
+    );
+  });
+
+  test('assembles, signs, and verifies a sub-account sender', () async {
+    const path = "m/44'/0'/1'/0/0";
+    final fixture = await _validAssemblyFixture(path: path, inputCount: 2);
+    expect(fixture.account.address, _subAccountAddresses[path]);
+    expect(fixture.state.senderAddress, fixture.account.address);
+
+    final signed = fixture.draft.sign(fixture.account.privateKey);
+    expect(
+      signed.rawTransactionHex,
+      contains(BytesUtils.toHexString(fixture.account.publicKey)),
+    );
+    final parsed = _ParsedTransaction.parse(
+      fixture.draft.unsignedTransactionHex,
+    );
+    expect(parsed.inputs.length, 2);
+    final signer = Secp256k1SigningKey.fromBytes(
+      keyBytes: fixture.account.privateKey,
+    );
+    final signatures = <List<int>>[];
+    for (var index = 0; index < parsed.inputs.length; index++) {
+      final digest = fixture.draft.signingHashBytes(index);
+      final signature = signer.signDer(digest: digest);
+      expect(
+        fixture.account.verify(
+          BytesUtils.toHexString([...signature, 0x21]),
+          BytesUtils.toHexString(digest),
+        ),
+        isTrue,
+      );
+      signatures.add(signature);
+    }
+    expect(
+      fixture.draft.attachSignatures(signatures).rawTransactionHex,
+      signed.rawTransactionHex,
+    );
+
+    final defaultAccount = await Btcb2Coin.fromMnemonic(_testMnemonic);
+    expect(
+      () => Btcb2TransactionAssembler.fromPublicKeyBytes(
+        defaultAccount.publicKey,
+      ).build(fixture.state),
+      throwsFormatException,
+    );
+  });
+
+  test('rejects input paths that differ from the sender path', () async {
+    final fixture = await _validAssemblyFixture(path: "m/44'/0'/1'/0/0");
+    final mismatched = _assemblyResponse(
+      sender: fixture.account.address,
+      sourceScript: fixture.sourceScript,
+      recipient: fixture.recipient,
+      recipientScript: fixture.recipientScript,
+      senderPath: "m/44'/0'/1'/0/0",
+      inputPath: "m/44'/0'/0'/0/0",
+    );
+    expect(
+      () => Btcb2TransactionAssemblyData.fromServiceResponse(mismatched),
       throwsFormatException,
     );
   });
@@ -312,8 +392,12 @@ final class _Btcb2AssemblyFixture {
 Future<_Btcb2AssemblyFixture> _validAssemblyFixture({
   String chain = 'btcb2',
   int inputCount = 1,
+  String path = "m/44'/0'/0'/0/0",
 }) async {
-  final account = await Btcb2Coin.fromMnemonic(_testMnemonic);
+  final account = await Btcb2Coin.fromMnemonic(
+    _testMnemonic,
+    WalletSetting(bip44Path: path),
+  );
   final sourceScript = BytesUtils.toHexString(
     Btcb2Coin.scriptPubKeyFromAddress(account.address),
   );
@@ -329,6 +413,8 @@ Future<_Btcb2AssemblyFixture> _validAssemblyFixture({
       recipientScript: recipientScript,
       chain: chain,
       inputCount: inputCount,
+      senderPath: path,
+      inputPath: path,
     ),
   );
   final draft = Btcb2TransactionAssembler.fromPublicKeyBytes(
@@ -351,6 +437,8 @@ Map<String, dynamic> _assemblyResponse({
   required String recipientScript,
   String chain = 'btcb2',
   int inputCount = 1,
+  String senderPath = "m/44'/0'/0'/0/0",
+  String? inputPath,
 }) {
   if (inputCount < 1) {
     throw ArgumentError.value(inputCount, 'inputCount');
@@ -369,7 +457,7 @@ Map<String, dynamic> _assemblyResponse({
         'version': 2,
         'chain': chain,
         'network': 'mainnet',
-        'sender': {'address': sender, 'derivationPath': "m/44'/0'/0'/0/0"},
+        'sender': {'address': sender, 'derivationPath': senderPath},
         'inputs': List<Map<String, dynamic>>.generate(
           inputCount,
           (index) => {
@@ -382,7 +470,7 @@ Map<String, dynamic> _assemblyResponse({
             'scriptPubKey': sourceScript,
             'scriptCode': sourceScript,
             'scriptType': 0,
-            'derivationPath': "m/44'/0'/0'/0/0",
+            'derivationPath': inputPath ?? senderPath,
           },
         ),
         'outputs': [

@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0] - 2026-10-21
+### Changed
+
+- BTCB2 now honours custom derivation paths like BTC: `Btcb2Coin` derives on
+  `WalletSetting.bip44Path` instead of rejecting anything other than
+  `m/44'/0'/0'/0/0`, and BTCB2 assembly payloads accept any sender
+  `derivationPath`. The default path is still `m/44'/0'/0'/0/0`; every input
+  must still match the sender's address and `derivationPath`, and inputs stay
+  P2PKH-only.
+- Callers signing for a sub-account must derive the signing key from their own
+  stored sub-account path, not from the `derivationPath` returned by the
+  assembly service. The assembler still rejects a payload whose sender address
+  does not match the local public key.
+
 ## [2.1.2] - 2026-10-09
 ### Added
 

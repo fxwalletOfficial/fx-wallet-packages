@@ -10,8 +10,11 @@ import 'package:crypto_wallet_util/src/utils/utils.dart';
 /// Create a BTCB2 wallet using a mnemonic or private key.
 ///
 /// BTCB2 uses Bitcoin mainnet BIP44/secp256k1/P2PKH rules for account
-/// derivation. Its transaction signer is exposed separately so BTCB2 does
-/// not accidentally use ordinary Bitcoin transaction sighash rules.
+/// derivation. Like the ordinary BTC wallet, it derives on
+/// [WalletSetting.bip44Path], so sub-accounts can use any BIP44 path;
+/// [defaultDerivationPath] is only the default. Its transaction signer is
+/// exposed separately so BTCB2 does not accidentally use ordinary Bitcoin
+/// transaction sighash rules.
 class Btcb2Coin extends WalletType {
   static const String defaultDerivationPath = BTC_PATH;
 
@@ -40,12 +43,7 @@ class Btcb2Coin extends WalletType {
 
   @override
   Future<Uint8List> mnemonicToPrivateKey(String mnemonic) async {
-    if (setting.bip44Path != defaultDerivationPath) {
-      throw ArgumentError(
-        'BTCB2 only supports derivation path $defaultDerivationPath.',
-      );
-    }
-    return HDWallet.bip32DerivePath(mnemonic, defaultDerivationPath);
+    return HDWallet.bip32DerivePath(mnemonic, setting.bip44Path);
   }
 
   @override
