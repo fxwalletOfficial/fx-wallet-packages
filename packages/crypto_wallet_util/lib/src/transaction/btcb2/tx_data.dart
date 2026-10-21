@@ -150,12 +150,9 @@ class Btcb2TransactionAssemblyData {
 
     final sender = _map(data, 'sender');
     final senderAddress = _string(sender, 'address');
+    // Any sub-account path is accepted, like ordinary BTC. The signer still
+    // checks the sender address against the local public key.
     final senderPath = _string(sender, 'derivationPath');
-    if (senderPath != Btcb2Coin.defaultDerivationPath) {
-      throw FormatException(
-        'BTCB2 only supports derivation path ${Btcb2Coin.defaultDerivationPath}.',
-      );
-    }
 
     final identity = _map(data, 'chainIdentity');
     if (_integer(identity, 'activationHeight') != activationHeight ||
