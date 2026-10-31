@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../entity/candle_entity.dart';
 import '../k_chart_widget.dart' show MainState;
+import '../utils/axis_layout.dart';
 import 'base_chart_renderer.dart';
 
 //For TrendLine
@@ -13,6 +14,9 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
   final MainRendererStyle style;
   final MainState state;
   final bool isLine;
+
+  /// Grid lines and axis prices on round steps. See [ChartStyle.roundYAxisTicks].
+  final bool roundTicks;
 
   //绘制的内容区域
   late Rect _contentRect;
@@ -32,6 +36,7 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
     this.isLine = false,
     required this.scaleX,
     this.maDayList = const [5, 10, 20],
+    this.roundTicks = false,
     super.dataFormat
   }) : super(style: style) {
     mLinePaint = Paint()
@@ -177,8 +182,37 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
     }
   }
 
+  /// Round values for the grid and axis when [roundTicks] is on, or null to split the
+  /// chart into [gridRows] equal rows. Fewer than two round values also falls back.
+  List<double>? _roundTickValues(int gridRows) {
+    if (!roundTicks) return null;
+    final ticks = roundAxisTicks(minValue, maxValue, gridRows);
+    return ticks.length >= 2 ? ticks : null;
+  }
+
+  double _axisTextX(TextPainter tp) {
+    switch (style.yAxisAlignment) {
+      case VerticalTextAlignment.left:
+        return style.padding.left;
+      case VerticalTextAlignment.right:
+        return chartRect.width - tp.width - style.padding.right;
+    }
+  }
+
   @override
   void drawVerticalText(canvas, textStyle, int gridRows) {
+    final ticks = _roundTickValues(gridRows);
+    if (ticks != null) {
+      for (final value in ticks) {
+        final tp = TextPainter(text: TextSpan(text: format(value), style: textStyle), textDirection: TextDirection.ltr)..layout();
+        final y = getY(value);
+        // Each price sits on its line; one that would rise above the chart hangs under it instead.
+        final top = y - tp.height < chartRect.top ? y : y - tp.height;
+        tp.paint(canvas, Offset(_axisTextX(tp), top));
+      }
+      return;
+    }
+
     double rowSpace = chartRect.height / gridRows;
     for (var i = 0; i <= gridRows; ++i) {
       double value = (gridRows - i) * rowSpace / scaleY + minValue;
@@ -186,15 +220,7 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
       TextPainter tp = TextPainter(text: span, textDirection: TextDirection.ltr);
       tp.layout();
 
-      double offsetX;
-      switch (style.yAxisAlignment) {
-        case VerticalTextAlignment.left:
-          offsetX = style.padding.left;
-          break;
-        case VerticalTextAlignment.right:
-          offsetX = chartRect.width - tp.width - style.padding.right;
-          break;
-      }
+      double offsetX = _axisTextX(tp);
 
       if (i == 0) {
         tp.paint(canvas, Offset(offsetX, style.padding.top));
@@ -210,9 +236,17 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
 //    final int gridRows = 4, gridColumns = 4;
     double rowSpace = chartRect.height / gridRows;
     canvas.drawLine(Offset(0, 0), Offset(chartRect.width, 0), gridPaint);
-    for (int i = 0; i <= gridRows; i++) {
-      canvas.drawLine(Offset(0, rowSpace * i + style.padding.top),
-          Offset(chartRect.width, rowSpace * i + style.padding.top), gridPaint);
+    final ticks = _roundTickValues(gridRows);
+    if (ticks != null) {
+      // The top and bottom edges stay as the frame; the lines between follow the round values.
+      for (final y in [chartRect.top, chartRect.bottom, for (final value in ticks) getY(value)]) {
+        canvas.drawLine(Offset(0, y), Offset(chartRect.width, y), gridPaint);
+      }
+    } else {
+      for (int i = 0; i <= gridRows; i++) {
+        canvas.drawLine(Offset(0, rowSpace * i + style.padding.top),
+            Offset(chartRect.width, rowSpace * i + style.padding.top), gridPaint);
+      }
     }
     double columnSpace = chartRect.width / gridColumns;
     for (int i = 0; i <= columnSpace; i++) {

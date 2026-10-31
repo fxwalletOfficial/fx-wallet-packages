@@ -9,6 +9,7 @@ import 'package:k_chart_flutter/renderer/base_chart_renderer.dart';
 import 'package:k_chart_flutter/renderer/main_renderer.dart';
 import 'package:k_chart_flutter/renderer/secondary_renderer.dart';
 import 'package:k_chart_flutter/renderer/vol_renderer.dart';
+import 'package:k_chart_flutter/utils/axis_layout.dart';
 import 'package:k_chart_flutter/utils/date_format_util.dart';
 import 'package:k_chart_flutter/utils/number_util.dart';
 
@@ -41,6 +42,10 @@ class ChartPainter extends BaseChartPainter {
   final bool showNowPrice;
 
   final String Function(double value)? dataFormat;
+
+  /// Main chart grid rows for this paint: [ChartStyle.gridRows], or fewer when
+  /// the rows are too short for the price labels. See [fitGridRows].
+  int mMainGridRows = 4;
 
   ChartPainter({
     required this.style,
@@ -104,8 +109,15 @@ class ChartPainter extends BaseChartPainter {
       style: style.main,
       scaleX: scaleX,
       maDayList: maDayList,
+      roundTicks: style.roundYAxisTicks,
       dataFormat: dataFormat
     );
+    mMainGridRows = mGridRows;
+    if (data?.isNotEmpty ?? false) {
+      final label = getTextPainter(format(mMainMaxValue), style.colors.defaultText);
+      mMainGridRows = fitGridRows(mGridRows, mMainRect.height, label.height);
+      label.dispose();
+    }
     if (mVolRect != null) mVolRenderer = VolRenderer(
       chartRect: mVolRect!,
       maxValue: mVolMaxValue,
@@ -153,7 +165,7 @@ class ChartPainter extends BaseChartPainter {
   @override
   void drawGrid(canvas) {
     if (!hideGrid) {
-      mMainRenderer.drawGrid(canvas, mGridRows, mGridColumns);
+      mMainRenderer.drawGrid(canvas, mMainGridRows, mGridColumns);
       mVolRenderer?.drawGrid(canvas, mGridRows, mGridColumns);
       mSecondaryRenderer?.drawGrid(canvas, mGridRows, mGridColumns);
     }
@@ -184,7 +196,7 @@ class ChartPainter extends BaseChartPainter {
   @override
   void drawVerticalText(canvas) {
     var textStyle = getTextStyle(style.colors.defaultText);
-    if (!hideGrid) mMainRenderer.drawVerticalText(canvas, textStyle, mGridRows);
+    if (!hideGrid) mMainRenderer.drawVerticalText(canvas, textStyle, mMainGridRows);
 
     mVolRenderer?.drawVerticalText(canvas, textStyle, mGridRows);
     mSecondaryRenderer?.drawVerticalText(canvas, textStyle, mGridRows);
@@ -486,11 +498,40 @@ class ChartPainter extends BaseChartPainter {
     return tp;
   }
 
-  String format(double value) {
-    if (dataFormat != null) return dataFormat!(value);
+  String format(double value) => formatValue(value, data: data, dataFormat: dataFormat);
 
-    final length = (data?.isEmpty ?? true) ? 2 : NumberUtil.getMaxDecimalLength(data!.first.open, data!.first.close, data!.first.high, data!.first.low);
+  /// [dataFormat], or [value] with as many decimals as the first candle uses.
+  static String formatValue(double value, {List<KLineEntity>? data, String Function(double value)? dataFormat}) {
+    if (dataFormat != null) return dataFormat(value);
+
+    final length = (data?.isEmpty ?? true) ? 2 : NumberUtil.getMaxDecimalLength(data!.first.open, data.first.close, data.first.high, data.first.low);
     return value.toStringAsFixed(length);
+  }
+
+  /// k_chart's front padding when there are no candles to measure.
+  static const double defaultFrontPadding = 100;
+
+  /// Empty room right of the newest candle, so the price axis does not cover it:
+  /// the wider of the highest and lowest price labels plus [gap], measured at
+  /// [ChartStyle.dataFontSize]. [defaultFrontPadding] when there are no candles.
+  static double autoFrontPadding({required List<KLineEntity>? data, required ChartStyle style, String Function(double value)? dataFormat, double gap = 8}) {
+    if (data == null || data.isEmpty) return defaultFrontPadding;
+    var high = data.first.high;
+    var low = data.first.low;
+    for (final item in data) {
+      if (item.high > high) high = item.high;
+      if (item.low < low) low = item.low;
+    }
+    var widest = 0.0;
+    for (final value in [high, low]) {
+      final tp = TextPainter(
+        text: TextSpan(text: formatValue(value, data: data, dataFormat: dataFormat), style: TextStyle(fontSize: style.dataFontSize, fontFamily: style.fontFamily)),
+        textDirection: TextDirection.ltr
+      )..layout();
+      if (tp.width > widest) widest = tp.width;
+      tp.dispose();
+    }
+    return widest + gap;
   }
 
   String getDate(int? date) => dateFormat(DateTime.fromMillisecondsSinceEpoch(date ?? DateTime.now().millisecondsSinceEpoch), mFormats);
