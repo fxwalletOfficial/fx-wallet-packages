@@ -20,7 +20,9 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
 
   //绘制的内容区域
   late Rect _contentRect;
-  double _contentPadding = 5.0;
+
+  /// Gap between the chart's top and bottom edges and its highest and lowest prices.
+  static const double contentPadding = 5.0;
   List<int> maDayList;
 
   final double mLineStrokeWidth = 1.0;
@@ -45,7 +47,7 @@ class MainRenderer extends BaseChartRenderer<CandleEntity> {
       ..strokeWidth = mLineStrokeWidth
       ..color = style.colors.kLine;
 
-    _contentRect = Rect.fromLTRB(chartRect.left, chartRect.top + _contentPadding, chartRect.right, chartRect.bottom - _contentPadding);
+    _contentRect = Rect.fromLTRB(chartRect.left, chartRect.top + contentPadding, chartRect.right, chartRect.bottom - contentPadding);
 
     if (maxValue == minValue) {
       maxValue *= 1.5;

@@ -39,9 +39,12 @@ abstract class BaseChartRenderer<T> {
 
   double getY(double y) => (maxValue - y) * scaleY + chartRect.top;
 
-  String format(double? n) {
+  String format(double? n) => formatValue(n, dataFormat: dataFormat);
+
+  /// [dataFormat], or [n] with two decimals. The price axis uses this.
+  static String formatValue(double? n, {String Function(double value)? dataFormat}) {
     if (n == null || n.isNaN) return '0.00';
-    if (dataFormat != null) return dataFormat!(n);
+    if (dataFormat != null) return dataFormat(n);
 
     return n.toStringAsFixed(2);
   }

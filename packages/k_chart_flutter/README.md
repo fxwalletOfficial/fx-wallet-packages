@@ -56,7 +56,7 @@ KChartWidget(
 - The price axis, dates and max/min markers use `ChartStyle.dataFontSize`. The renderer styles' `fontSize` only sizes the indicator text (MA, BOLL, VOL, MACD…).
 - On short charts the main chart draws fewer grid rows than `ChartStyle.gridRows`, so the top prices never overlap.
 - `ChartStyle(roundYAxisTicks: true)` puts the main chart's grid lines and prices on round steps (1, 2 or 5 × 10ⁿ) instead of equal rows.
-- `KChartWidget.xFrontPadding` is the empty room right of the newest candle (default 100). Pass `null` to size it to the widest price label plus 8px.
+- `KChartWidget.xFrontPadding` is the empty room right of the newest candle (default 100). Pass `null` to size it to the widest price label the main chart can show plus 8px, at every zoom.
 
 ## Example
 

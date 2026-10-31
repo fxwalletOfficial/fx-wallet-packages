@@ -18,5 +18,5 @@
 
 - FIX: The main chart draws fewer grid rows when its rows are shorter than two price labels plus half a label, so the top two prices no longer overlap on short charts. Tall charts are unchanged.
 - FEAT: `ChartStyle.roundYAxisTicks` (default `false`) puts the main chart's grid lines and prices on round steps (1, 2 or 5 × 10ⁿ).
-- FEAT: `KChartWidget.xFrontPadding` accepts `null` to size the room right of the newest candle to the widest price label plus 8px. The default stays 100.
+- FEAT: `KChartWidget.xFrontPadding` accepts `null` to size the room right of the newest candle to the widest price label the main chart can show plus 8px, at every zoom. The default stays 100.
 - DOCS: `ChartStyle.dataFontSize` drives the price axis; `RendererStyle.fontSize` only sizes the indicator text.

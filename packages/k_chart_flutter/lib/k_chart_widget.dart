@@ -37,8 +37,9 @@ class KChartWidget extends StatefulWidget {
 
   /// Empty room right of the newest candle, in unscaled chart pixels. Keeps the
   /// price axis, which is painted over the chart, off the latest candles.
-  /// Defaults to 100. Pass null to size it to the widest price label plus 8px;
-  /// see [ChartPainter.autoFrontPadding].
+  /// Defaults to 100. Pass null to measure it on every paint: the widest price
+  /// label the main chart can show plus 8px on screen, at every zoom; see
+  /// [ChartPainter.measureFrontPadding].
   final double? xFrontPadding;
   final String Function(double value)? dataFormat;
 
@@ -91,8 +92,12 @@ class _KChartWidgetState extends State<KChartWidget> with TickerProviderStateMix
 
   double getMinScrollX() => mScaleX;
 
-  /// [KChartWidget.xFrontPadding], measured when it is null. Set on every build.
-  double _frontPadding = ChartPainter.defaultFrontPadding;
+  /// The painter from the last build. It measures its front padding while it
+  /// paints when [KChartWidget.xFrontPadding] is null.
+  ChartPainter? _lastPainter;
+
+  /// The front padding the chart was last painted with.
+  double get _frontPadding => _lastPainter?.xFrontPadding ?? ChartPainter.defaultFrontPadding;
 
   double _lastScale = 1.0;
   bool isLongPress = false;
@@ -120,11 +125,10 @@ class _KChartWidgetState extends State<KChartWidget> with TickerProviderStateMix
       mScaleX = 1.0;
     }
 
-    _frontPadding = widget.xFrontPadding ?? ChartPainter.autoFrontPadding(data: widget.data, style: _style, dataFormat: widget.dataFormat);
-    final _painter = ChartPainter(
+    final _painter = _lastPainter = ChartPainter(
       style: _style,
       lines: lines, //For TrendLine
-      xFrontPadding: _frontPadding,
+      xFrontPadding: widget.xFrontPadding,
       isTrendLine: widget.isTrendLine, //For TrendLine
       selectY: mSelectY, //For TrendLine
       data: widget.data,

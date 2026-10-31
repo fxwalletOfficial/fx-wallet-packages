@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:k_chart_flutter/entity/info_window_entity.dart';
 import 'package:k_chart_flutter/entity/k_line_entity.dart';
+import 'package:k_chart_flutter/k_chart_widget.dart' show MainState;
 import 'package:k_chart_flutter/renderer/base_chart_painter.dart';
 import 'package:k_chart_flutter/renderer/base_chart_renderer.dart';
 import 'package:k_chart_flutter/renderer/main_renderer.dart';
@@ -47,6 +48,10 @@ class ChartPainter extends BaseChartPainter {
   /// the rows are too short for the price labels. See [fitGridRows].
   int mMainGridRows = 4;
 
+  /// Whether [xFrontPadding] is measured on every paint, because
+  /// [KChartWidget.xFrontPadding] was null. See [measureFrontPadding].
+  final bool autoFrontPadding;
+
   ChartPainter({
     required this.style,
     required this.lines, //For TrendLine
@@ -57,7 +62,7 @@ class ChartPainter extends BaseChartPainter {
     required scrollX,
     required isLongPass,
     required selectX,
-    required xFrontPadding,
+    required double? xFrontPadding,
     isOnTap,
     isTapShowInfoDialog,
     mainState,
@@ -69,7 +74,7 @@ class ChartPainter extends BaseChartPainter {
     this.showNowPrice = true,
     this.maDayList = const [5, 10, 20],
     this.dataFormat
-  }) : super(
+  }) : autoFrontPadding = xFrontPadding == null, super(
     style: style,
     data: data,
     scaleX: scaleX,
@@ -81,7 +86,7 @@ class ChartPainter extends BaseChartPainter {
     mainState: mainState,
     volHidden: volHidden,
     secondaryState: secondaryState,
-    xFrontPadding: xFrontPadding,
+    xFrontPadding: xFrontPadding ?? defaultFrontPadding,
     isLine: isLine
   ) {
     selectPointPaint = Paint()
@@ -498,40 +503,69 @@ class ChartPainter extends BaseChartPainter {
     return tp;
   }
 
-  String format(double value) => formatValue(value, data: data, dataFormat: dataFormat);
+  String format(double value) {
+    if (dataFormat != null) return dataFormat!(value);
 
-  /// [dataFormat], or [value] with as many decimals as the first candle uses.
-  static String formatValue(double value, {List<KLineEntity>? data, String Function(double value)? dataFormat}) {
-    if (dataFormat != null) return dataFormat(value);
-
-    final length = (data?.isEmpty ?? true) ? 2 : NumberUtil.getMaxDecimalLength(data!.first.open, data.first.close, data.first.high, data.first.low);
+    final length = (data?.isEmpty ?? true) ? 2 : NumberUtil.getMaxDecimalLength(data!.first.open, data!.first.close, data!.first.high, data!.first.low);
     return value.toStringAsFixed(length);
   }
 
-  /// k_chart's front padding when there are no candles to measure.
+  /// k_chart's front padding, also used when there are no candles to measure.
   static const double defaultFrontPadding = 100;
 
-  /// Empty room right of the newest candle, so the price axis does not cover it:
-  /// the wider of the highest and lowest price labels plus [gap], measured at
-  /// [ChartStyle.dataFontSize]. [defaultFrontPadding] when there are no candles.
-  static double autoFrontPadding({required List<KLineEntity>? data, required ChartStyle style, String Function(double value)? dataFormat, double gap = 8}) {
-    if (data == null || data.isEmpty) return defaultFrontPadding;
-    var high = data.first.high;
-    var low = data.first.low;
-    for (final item in data) {
-      if (item.high > high) high = item.high;
-      if (item.low < low) low = item.low;
+  @override
+  void initFrontPadding() {
+    if (autoFrontPadding) xFrontPadding = measureFrontPadding();
+  }
+
+  /// Empty room right of the newest candle, in chart pixels, so the price labels
+  /// painted over it do not cover it: the widest axis or now-price label the main
+  /// chart can show for any part of [data], plus [gap], divided by [scaleX] so it
+  /// stays that wide on screen at every zoom. Needs [mMainRect].
+  /// [defaultFrontPadding] when there are no candles.
+  double measureFrontPadding({double gap = 8}) {
+    final candles = data;
+    if (candles == null || candles.isEmpty) return defaultFrontPadding;
+
+    // The prices getMainMaxMinValue can put in the main chart's range.
+    var high = candles.first.high;
+    var low = candles.first.low;
+    void include(double value) {
+      if (value > high) high = value;
+      if (value < low) low = value;
     }
+    for (final item in candles) {
+      include(item.high);
+      include(item.low);
+      if (mainState == MainState.MA) {
+        for (final ma in item.maValueList ?? const <double>[]) {
+          if (ma != 0) include(ma);
+        }
+      } else if (mainState == MainState.BOLL) {
+        include(item.up ?? 0);
+        include(item.dn ?? 0);
+      }
+    }
+    // The renderers widen a flat range this way.
+    if (high == low) {
+      high *= 1.5;
+      low /= 2;
+    }
+    // With equal rows the top label is the range scaled by the chart height over
+    // the content height, so it sits a little above the highest price.
+    final contentHeight = mMainRect.height - 2 * MainRenderer.contentPadding;
+    if (contentHeight > 0) high += (high - low) * (mMainRect.height / contentHeight - 1);
+
     var widest = 0.0;
     for (final value in [high, low]) {
-      final tp = TextPainter(
-        text: TextSpan(text: formatValue(value, data: data, dataFormat: dataFormat), style: TextStyle(fontSize: style.dataFontSize, fontFamily: style.fontFamily)),
-        textDirection: TextDirection.ltr
-      )..layout();
-      if (tp.width > widest) widest = tp.width;
-      tp.dispose();
+      // The axis formats with the renderer's format; the now-price label with [format].
+      for (final label in {BaseChartRenderer.formatValue(value, dataFormat: dataFormat), format(value)}) {
+        final tp = getTextPainter(label, null);
+        if (tp.width > widest) widest = tp.width;
+        tp.dispose();
+      }
     }
-    return widest + gap;
+    return (widest + gap) / scaleX;
   }
 
   String getDate(int? date) => dateFormat(DateTime.fromMillisecondsSinceEpoch(date ?? DateTime.now().millisecondsSinceEpoch), mFormats);

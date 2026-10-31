@@ -32,6 +32,12 @@ void main() {
       expect(roundAxisTicks(0.38, 0.43, 4), [0.38, 0.4, 0.42]);
     });
 
+    test('keeps ticks that sit on the ends of the range', () {
+      expect(roundAxisTicks(1.1, 1.2, 1), [1.1, 1.2]);
+      expect(roundAxisTicks(0.1, 0.3, 2), [0.1, 0.2, 0.3]);
+      expect(roundAxisTicks(0.3, 0.6, 3), [0.3, 0.4, 0.5, 0.6]);
+    });
+
     test('keeps tiny prices free of float noise', () {
       expect(roundAxisTicks(0.0000047, 0.0000061, 2), [0.000005, 0.000006]);
       expect(roundAxisTicks(0.00000047, 0.00000061, 4),

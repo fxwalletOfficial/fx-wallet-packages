@@ -33,8 +33,11 @@ List<double> roundAxisTicks(double min, double max, int maxSteps) {
       .map((m) => m * magnitude)
       .firstWhere((s) => s >= raw * (1 - 1e-9));
   if (math.max(min.abs(), max.abs()) / step > 1e15) return const [];
-  final first = (min / step).ceil();
-  final last = (max / step).floor();
+  // 1.1 / 0.1 is 11.000000000000002 and 1.2 / 0.1 is 11.999999999999998; the
+  // slack keeps a tick that sits on either end of the range.
+  const slack = 1e-9;
+  final first = (min / step - slack).ceil();
+  final last = (max / step + slack).floor();
   // k * step leaves float noise such as 3.0000000000000004e-7; 12 significant digits drop it.
   return [
     for (var k = first; k <= last; k++)
