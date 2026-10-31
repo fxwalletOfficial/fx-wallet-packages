@@ -34,7 +34,13 @@ class KChartWidget extends StatefulWidget {
   final Function(bool)? isOnDrag;
   final ChartStyle style;
   final bool isTrendLine;
-  final double xFrontPadding;
+
+  /// Empty room right of the newest candle, in unscaled chart pixels. Keeps the
+  /// price axis, which is painted over the chart, off the latest candles.
+  /// Defaults to 100. Pass null to measure it on every paint: the widest price
+  /// label the main chart can show plus 8px on screen, at every zoom; see
+  /// [ChartPainter.measureFrontPadding].
+  final double? xFrontPadding;
   final String Function(double value)? dataFormat;
 
   KChartWidget({
@@ -86,6 +92,13 @@ class _KChartWidgetState extends State<KChartWidget> with TickerProviderStateMix
 
   double getMinScrollX() => mScaleX;
 
+  /// The painter from the last build. It measures its front padding while it
+  /// paints when [KChartWidget.xFrontPadding] is null.
+  ChartPainter? _lastPainter;
+
+  /// The front padding the chart was last painted with.
+  double get _frontPadding => _lastPainter?.xFrontPadding ?? ChartPainter.defaultFrontPadding;
+
   double _lastScale = 1.0;
   bool isLongPress = false;
   bool isOnTap = false;
@@ -112,7 +125,7 @@ class _KChartWidgetState extends State<KChartWidget> with TickerProviderStateMix
       mScaleX = 1.0;
     }
 
-    final _painter = ChartPainter(
+    final _painter = _lastPainter = ChartPainter(
       style: _style,
       lines: lines, //For TrendLine
       xFrontPadding: widget.xFrontPadding,
@@ -179,7 +192,7 @@ class _KChartWidgetState extends State<KChartWidget> with TickerProviderStateMix
           onScaleUpdate: (details) {
             if (isLongPress) return;
             mScaleX = (_lastScale * details.scale).clamp(0.5, 2.2);
-            mScrollX = (details.focalPointDelta.dx / mScaleX + mScrollX).clamp(0.0, ChartPainter.maxScrollX + widget.xFrontPadding).toDouble();
+            mScrollX = (details.focalPointDelta.dx / mScaleX + mScrollX).clamp(0.0, ChartPainter.maxScrollX + _frontPadding).toDouble();
             notifyChanged();
           },
           onScaleEnd: (details) {
@@ -315,9 +328,9 @@ class _KChartWidgetState extends State<KChartWidget> with TickerProviderStateMix
         mScrollX = 0;
         _onLoadMore(true);
         _stopAnimation();
-      } else if (mScrollX >= ChartPainter.maxScrollX - widget.xFrontPadding) {
+      } else if (mScrollX >= ChartPainter.maxScrollX - _frontPadding) {
         _onLoadMore(false);
-        if (mScrollX >= ChartPainter.maxScrollX + widget.xFrontPadding) {
+        if (mScrollX >= ChartPainter.maxScrollX + _frontPadding) {
           mScrollX = ChartPainter.maxScrollX;
            _stopAnimation();
         }

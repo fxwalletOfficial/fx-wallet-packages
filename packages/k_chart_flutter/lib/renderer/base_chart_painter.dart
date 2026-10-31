@@ -102,6 +102,7 @@ abstract class BaseChartPainter extends CustomPainter {
     mDisplayHeight = size.height - style.main.padding.top - style.main.padding.bottom;
     mWidth = size.width;
     initRect(size);
+    initFrontPadding();
     calculateValue();
     initChartRenderer();
 
@@ -124,6 +125,10 @@ abstract class BaseChartPainter extends CustomPainter {
   }
 
   void initChartRenderer();
+
+  /// Sets [xFrontPadding] once the chart areas are laid out, before the visible
+  /// candles are worked out. Keeps it as passed by default.
+  void initFrontPadding() {}
 
   //画背景
   void drawBg(Canvas canvas, Size size);

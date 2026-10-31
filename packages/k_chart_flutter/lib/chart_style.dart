@@ -64,14 +64,28 @@ class ChartStyle {
   //现在价格的线条粗细
   double nowPriceLineWidth;
 
-  /// Chart number data text font size.
+  /// Font size of the price axis, the dates, the max/min markers, the now-price
+  /// label and the cross-line values.
+  ///
+  /// The renderer styles' [RendererStyle.fontSize] does not change these; it
+  /// only sizes the indicator text at the top of each chart (MA, BOLL, VOL, MACD…).
   final double dataFontSize;
 
   final String? fontFamily;
 
+  /// Horizontal grid rows. The main chart uses fewer when its rows would be
+  /// shorter than two price labels plus half a label, so the top prices never
+  /// overlap; the volume and secondary charts always use this value.
   int gridRows;
 
   int gridColumns;
+
+  /// Put the main chart's horizontal grid lines and prices on round steps
+  /// (1, 2 or 5 × 10ⁿ) inside the visible range, at most [gridRows] steps.
+  ///
+  /// Off by default: the range is split into [gridRows] equal rows and each
+  /// price is whatever value falls on a line, such as 132.4 or 130.2.
+  bool roundYAxisTicks;
 
   //下方時間客製化
   List<String>? dateTimeFormat;
@@ -94,6 +108,7 @@ class ChartStyle {
     this.gridColumns = 4,
     this.dateTimeFormat,
     this.dataFontSize = 10,
+    this.roundYAxisTicks = false,
     this.main = const MainRendererStyle(),
     this.secondary = const SecondaryRendererStyle(),
     this.volume = const VolumeRendererStyle(),
@@ -105,6 +120,8 @@ class ChartStyle {
 }
 
 class RendererStyle {
+  /// Size of the indicator text at the top of the chart. The price axis uses
+  /// [ChartStyle.dataFontSize] instead.
   final double fontSize;
   final EdgeInsets padding;
   final RendererColors colors;

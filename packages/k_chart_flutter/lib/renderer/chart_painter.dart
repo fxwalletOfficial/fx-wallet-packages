@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 
 import 'package:k_chart_flutter/entity/info_window_entity.dart';
 import 'package:k_chart_flutter/entity/k_line_entity.dart';
+import 'package:k_chart_flutter/k_chart_widget.dart' show MainState;
 import 'package:k_chart_flutter/renderer/base_chart_painter.dart';
 import 'package:k_chart_flutter/renderer/base_chart_renderer.dart';
 import 'package:k_chart_flutter/renderer/main_renderer.dart';
 import 'package:k_chart_flutter/renderer/secondary_renderer.dart';
 import 'package:k_chart_flutter/renderer/vol_renderer.dart';
+import 'package:k_chart_flutter/utils/axis_layout.dart';
 import 'package:k_chart_flutter/utils/date_format_util.dart';
 import 'package:k_chart_flutter/utils/number_util.dart';
 
@@ -42,6 +44,14 @@ class ChartPainter extends BaseChartPainter {
 
   final String Function(double value)? dataFormat;
 
+  /// Main chart grid rows for this paint: [ChartStyle.gridRows], or fewer when
+  /// the rows are too short for the price labels. See [fitGridRows].
+  int mMainGridRows = 4;
+
+  /// Whether [xFrontPadding] is measured on every paint, because
+  /// [KChartWidget.xFrontPadding] was null. See [measureFrontPadding].
+  final bool autoFrontPadding;
+
   ChartPainter({
     required this.style,
     required this.lines, //For TrendLine
@@ -52,7 +62,7 @@ class ChartPainter extends BaseChartPainter {
     required scrollX,
     required isLongPass,
     required selectX,
-    required xFrontPadding,
+    required double? xFrontPadding,
     isOnTap,
     isTapShowInfoDialog,
     mainState,
@@ -64,7 +74,7 @@ class ChartPainter extends BaseChartPainter {
     this.showNowPrice = true,
     this.maDayList = const [5, 10, 20],
     this.dataFormat
-  }) : super(
+  }) : autoFrontPadding = xFrontPadding == null, super(
     style: style,
     data: data,
     scaleX: scaleX,
@@ -76,7 +86,7 @@ class ChartPainter extends BaseChartPainter {
     mainState: mainState,
     volHidden: volHidden,
     secondaryState: secondaryState,
-    xFrontPadding: xFrontPadding,
+    xFrontPadding: xFrontPadding ?? defaultFrontPadding,
     isLine: isLine
   ) {
     selectPointPaint = Paint()
@@ -104,8 +114,15 @@ class ChartPainter extends BaseChartPainter {
       style: style.main,
       scaleX: scaleX,
       maDayList: maDayList,
+      roundTicks: style.roundYAxisTicks,
       dataFormat: dataFormat
     );
+    mMainGridRows = mGridRows;
+    if (data?.isNotEmpty ?? false) {
+      final label = getTextPainter(format(mMainMaxValue), style.colors.defaultText);
+      mMainGridRows = fitGridRows(mGridRows, mMainRect.height, label.height);
+      label.dispose();
+    }
     if (mVolRect != null) mVolRenderer = VolRenderer(
       chartRect: mVolRect!,
       maxValue: mVolMaxValue,
@@ -153,7 +170,7 @@ class ChartPainter extends BaseChartPainter {
   @override
   void drawGrid(canvas) {
     if (!hideGrid) {
-      mMainRenderer.drawGrid(canvas, mGridRows, mGridColumns);
+      mMainRenderer.drawGrid(canvas, mMainGridRows, mGridColumns);
       mVolRenderer?.drawGrid(canvas, mGridRows, mGridColumns);
       mSecondaryRenderer?.drawGrid(canvas, mGridRows, mGridColumns);
     }
@@ -184,7 +201,7 @@ class ChartPainter extends BaseChartPainter {
   @override
   void drawVerticalText(canvas) {
     var textStyle = getTextStyle(style.colors.defaultText);
-    if (!hideGrid) mMainRenderer.drawVerticalText(canvas, textStyle, mGridRows);
+    if (!hideGrid) mMainRenderer.drawVerticalText(canvas, textStyle, mMainGridRows);
 
     mVolRenderer?.drawVerticalText(canvas, textStyle, mGridRows);
     mSecondaryRenderer?.drawVerticalText(canvas, textStyle, mGridRows);
@@ -491,6 +508,64 @@ class ChartPainter extends BaseChartPainter {
 
     final length = (data?.isEmpty ?? true) ? 2 : NumberUtil.getMaxDecimalLength(data!.first.open, data!.first.close, data!.first.high, data!.first.low);
     return value.toStringAsFixed(length);
+  }
+
+  /// k_chart's front padding, also used when there are no candles to measure.
+  static const double defaultFrontPadding = 100;
+
+  @override
+  void initFrontPadding() {
+    if (autoFrontPadding) xFrontPadding = measureFrontPadding();
+  }
+
+  /// Empty room right of the newest candle, in chart pixels, so the price labels
+  /// painted over it do not cover it: the widest axis or now-price label the main
+  /// chart can show for any part of [data], plus [gap], divided by [scaleX] so it
+  /// stays that wide on screen at every zoom. Needs [mMainRect].
+  /// [defaultFrontPadding] when there are no candles.
+  double measureFrontPadding({double gap = 8}) {
+    final candles = data;
+    if (candles == null || candles.isEmpty) return defaultFrontPadding;
+
+    // The prices getMainMaxMinValue can put in the main chart's range.
+    var high = candles.first.high;
+    var low = candles.first.low;
+    void include(double value) {
+      if (value > high) high = value;
+      if (value < low) low = value;
+    }
+    for (final item in candles) {
+      include(item.high);
+      include(item.low);
+      if (mainState == MainState.MA) {
+        for (final ma in item.maValueList ?? const <double>[]) {
+          if (ma != 0) include(ma);
+        }
+      } else if (mainState == MainState.BOLL) {
+        include(item.up ?? 0);
+        include(item.dn ?? 0);
+      }
+    }
+    // The renderers widen a flat range this way.
+    if (high == low) {
+      high *= 1.5;
+      low /= 2;
+    }
+    // With equal rows the top label is the range scaled by the chart height over
+    // the content height, so it sits a little above the highest price.
+    final contentHeight = mMainRect.height - 2 * MainRenderer.contentPadding;
+    if (contentHeight > 0) high += (high - low) * (mMainRect.height / contentHeight - 1);
+
+    var widest = 0.0;
+    for (final value in [high, low]) {
+      // The axis formats with the renderer's format; the now-price label with [format].
+      for (final label in {BaseChartRenderer.formatValue(value, dataFormat: dataFormat), format(value)}) {
+        final tp = getTextPainter(label, null);
+        if (tp.width > widest) widest = tp.width;
+        tp.dispose();
+      }
+    }
+    return (widest + gap) / scaleX;
   }
 
   String getDate(int? date) => dateFormat(DateTime.fromMillisecondsSinceEpoch(date ?? DateTime.now().millisecondsSinceEpoch), mFormats);
